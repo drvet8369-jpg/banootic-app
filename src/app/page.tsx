@@ -11,7 +11,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
   beauty: BeautyIcon,
   cooking: CookingIcon,
   tailoring: TailoringIcon,
-  handicrafts: HandicraftsIcon,
+  fashion: HandicraftsIcon,
 };
 
 export default function Home() {

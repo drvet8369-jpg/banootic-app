@@ -15,15 +15,15 @@ export const categories: Category[] = [
   },
   {
     id: 3,
-    name: 'خیاطی و مد',
+    name: 'خیاطی و طراحی مد',
     slug: 'tailoring',
     description: 'لباس‌های سفارشی، تعمیرات و طراحی‌های مد منحصر به فرد از بوتیک‌های محلی.',
   },
   {
     id: 4,
-    name: 'صنایع دستی و هنری',
-    slug: 'handicrafts',
-    description: 'جواهرات دست‌ساز نفیس، هنرهای تزئینی و صنایع دستی بی‌نظیر.',
+    name: 'مزون و لباس',
+    slug: 'fashion',
+    description: 'جواهرات دست‌ساز نفیس، هنرهای تزئینی و لباس‌های بی‌نظیر.',
   },
 ];
 
@@ -46,12 +46,12 @@ export const services: Service[] = [
   { name: 'طراحی مانتو مدرن', slug: 'manto-design', categorySlug: 'tailoring' },
   { name: 'خیاطی لباس کودک', slug: 'kids-clothing', categorySlug: 'tailoring' },
   { name: 'لباس مجلسی و شب', slug: 'evening-wear', categorySlug: 'tailoring' },
-  // Handicrafts
-  { name: 'جواهرات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
-  { name: 'سفال‌های تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
-  { name: 'ترمه و گلیم', slug: 'termeh-kilim', categorySlug: 'handicrafts' },
-  { name: 'محصولات چرمی دست‌دوز', slug: 'leather-crafts', categorySlug: 'handicrafts' },
-  { name: 'شمع‌های تزئینی و معطر', slug: 'decorative-candles', categorySlug: 'handicrafts' },
+  // Fashion
+  { name: 'جواهرات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'fashion' },
+  { name: 'سفال‌های تزئینی', slug: 'decorative-pottery', categorySlug: 'fashion' },
+  { name: 'ترمه و گلیم', slug: 'termeh-kilim', categorySlug: 'fashion' },
+  { name: 'محصولات چرمی دست‌دوز', slug: 'leather-crafts', categorySlug: 'fashion' },
+  { name: 'لباس‌های مجلسی آماده', slug: 'ready-evening-wear', categorySlug: 'fashion' },
 ];
 
 export const providers: Provider[] = [
@@ -76,10 +76,10 @@ export const providers: Provider[] = [
   { id: 17, name: 'لباس کودک رنگین‌کمان', service: 'خیاطی لباس کودک', location: 'ارومیه، برق', phone: '09123456789', bio: 'دوخت لباس‌های فانتزی و راحت برای کودکان.', categorySlug: 'tailoring', serviceSlug: 'kids-clothing' },
   { id: 18, name: 'خانه مد آناهیتا', service: 'لباس مجلسی و شب', location: 'ارومیه، خیابان حسنی', phone: '09123456789', bio: 'طراحی و دوخت لباس‌های شب و مجلسی با پارچه‌های خاص.', categorySlug: 'tailoring', serviceSlug: 'evening-wear' },
   
-  // Handicrafts
-  { id: 10, name: 'گالری هنری گیتا', service: 'جواهرات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09123456789', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry' },
-  { id: 11, name: 'سفالگری مینا', service: 'سفال‌های تزئینی', location: 'ارومیه، خیابان بهار', phone: '09123456789', bio: 'سفال‌های زیبا و نقاشی شده برای خانه و باغ شما.', categorySlug: 'handicrafts', serviceSlug: 'decorative-pottery' },
-  { id: 12, name: 'بافت ترمه', service: 'ترمه و گلیم', location: 'ارومیه، بازار', phone: '09123456789', bio: 'پارچه‌های ترمه سنتی ایرانی و گلیم‌های دیواری.', categorySlug: 'handicrafts', serviceSlug: 'termeh-kilim' },
-  { id: 19, name: 'هنر چرم لیلا', service: 'محصولات چرمی دست‌دوز', location: 'ارومیه، همافر', phone: '09123456789', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', categorySlug: 'handicrafts', serviceSlug: 'leather-crafts' },
-  { id: 20, name: 'شمع‌سازی پروانه', service: 'شمع‌های تزئینی و معطر', location: 'ارومیه، مدنی', phone: '09123456789', bio: 'شمع‌های دست‌ساز در طرح‌ها و رایحه‌های متنوع.', categorySlug: 'handicrafts', serviceSlug: 'decorative-candles' },
+  // Fashion
+  { id: 10, name: 'گالری هنری گیتا', service: 'جواهرات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09123456789', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'fashion', serviceSlug: 'handmade-jewelry' },
+  { id: 11, name: 'سفالگری مینا', service: 'سفال‌های تزئینی', location: 'ارومیه، خیابان بهار', phone: '09123456789', bio: 'سفال‌های زیبا و نقاشی شده برای خانه و باغ شما.', categorySlug: 'fashion', serviceSlug: 'decorative-pottery' },
+  { id: 12, name: 'بافت ترمه', service: 'ترمه و گلیم', location: 'ارومیه، بازار', phone: '09123456789', bio: 'پارچه‌های ترمه سنتی ایرانی و گلیم‌های دیواری.', categorySlug: 'fashion', serviceSlug: 'termeh-kilim' },
+  { id: 19, name: 'هنر چرم لیلا', service: 'محصولات چرمی دست‌دوز', location: 'ارومیه، همافر', phone: '09123456789', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', categorySlug: 'fashion', serviceSlug: 'leather-crafts' },
+  { id: 20, name: 'مزون پروانه', service: 'لباس‌های مجلسی آماده', location: 'ارومیه، مدنی', phone: '09123456789', bio: 'مجموعه‌ای از لباس‌های شب و مجلسی از بهترین طراحان.', categorySlug: 'fashion', serviceSlug: 'ready-evening-wear' },
 ];

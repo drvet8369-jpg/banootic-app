@@ -5,7 +5,7 @@ const BeautyIcon = (props: SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     width="24"
     height="24"
-    viewBox="0 0 24 24"
+    viewBox="0 0 64 64"
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
@@ -13,12 +13,24 @@ const BeautyIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <path d="M14.5 13.5a2 2 0 0 1-2.8 0l-4.2-4.2a2 2 0 0 1 0-2.8l1.4-1.4a2 2 0 0 1 2.8 0l4.2 4.2" />
-    <path d="M12 11.5 8.5 8" />
-    <path d="m18 13-1.4-1.4" />
-    <path d="M15.5 15.5 14 14" />
-    <path d="M2.3 21.7a2.4 2.4 0 0 0 3.4 0L17 10.4a2.4 2.4 0 0 0 0-3.4l-1.3-1.3a2.4 2.4 0 0 0-3.4 0L1 17.1a2.4 2.4 0 0 0 0 3.4Z" />
-    <path d="m19 8-2-2" />
+    <path
+      fill="#D6A2A8"
+      stroke="none"
+      d="M26.23,17.41,32,11.64l5.77,5.77a4,4,0,0,1,0,5.66L32,28.84,26.23,23.07A4,4,0,0,1,26.23,17.41Z"
+    />
+    <path
+      fill="#82AAA7"
+      stroke="none"
+      d="M23,26.84V48a3,3,0,0,0,3,3H38a3,3,0,0,0,3-3V26.84Z"
+    />
+    <line
+      x1="23"
+      y1="32"
+      x2="41"
+      y2="32"
+      stroke="#E8F8EF"
+      strokeWidth="2"
+    />
   </svg>
 );
 export default BeautyIcon;

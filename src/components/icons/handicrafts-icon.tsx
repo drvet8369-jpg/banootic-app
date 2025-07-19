@@ -5,7 +5,7 @@ const HandicraftsIcon = (props: SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     width="24"
     height="24"
-    viewBox="0 0 24 24"
+    viewBox="0 0 64 64"
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
@@ -13,12 +13,16 @@ const HandicraftsIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <path d="M14.5 17.5c2.5-3 2.5-8.5 0-11.5" />
-    <path d="M9.5 17.5c-2.5-3-2.5-8.5 0-11.5" />
-    <path d="M12 20.5c-4-4.5-4-12.5 0-17" />
-    <path d="M12 4.5c4 4.5 4 12.5 0 17" />
-    <path d="M4.5 12c-2.5 3-2.5 8.5 0 11.5" />
-    <path d="M19.5 12c2.5 3 2.5 8.5 0 11.5" />
+    <path
+      d="M39.6,22.4a4,4,0,0,1-4-4V12a4,4,0,0,0-8,0v6.4a4,4,0,0,1-4,4"
+      stroke="#D6A2A8"
+      strokeWidth="4"
+    />
+    <path
+      fill="#D6A2A8"
+      stroke="none"
+      d="M20,28.8,16,52H48L44,28.8a4,4,0,0,0-4-4H24A4,4,0,0,0,20,28.8Z"
+    />
   </svg>
 );
 export default HandicraftsIcon;
