@@ -4,6 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
+import { registerUser, type UserRegistrationInput } from '@/ai/flows/registerUser';
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -59,6 +63,9 @@ const formSchema = z.object({
 
 export default function RegisterForm() {
   const { toast } = useToast();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,13 +79,33 @@ export default function RegisterForm() {
 
   const accountType = form.watch('accountType');
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    toast({
-      title: 'ثبت‌نام با موفقیت انجام شد!',
-      description: 'خوش آمدید! اکنون می‌توانید وارد شوید.',
-    });
-    form.reset();
+  async function onSubmit(values: UserRegistrationInput) {
+    setIsLoading(true);
+    try {
+      const result = await registerUser(values);
+      if (result.success) {
+        toast({
+          title: 'ثبت‌نام با موفقیت انجام شد!',
+          description: 'خوش آمدید! اکنون به صفحه ورود هدایت می‌شوید.',
+        });
+        router.push('/login');
+      } else {
+        toast({
+          title: 'خطا در ثبت‌نام',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      toast({
+        title: 'خطا در ثبت‌نام',
+        description: 'مشکلی در ارتباط با سرور پیش آمده است. لطفاً دوباره تلاش کنید.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -97,6 +124,7 @@ export default function RegisterForm() {
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
+                      disabled={isLoading}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
@@ -128,7 +156,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,7 +170,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +183,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>رمز عبور</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="حداقل ۶ کاراکتر" {...field} />
+                    <Input type="password" placeholder="حداقل ۶ کاراکتر" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -170,7 +198,7 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -199,6 +227,7 @@ export default function RegisterForm() {
                           placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
                           className="resize-none"
                           {...field}
+                          disabled={isLoading}
                         />
                       </FormControl>
                       <FormDescription>
@@ -211,7 +240,10 @@ export default function RegisterForm() {
               </>
             )}
             
-            <Button type="submit" className="w-full" size="lg">ثبت‌نام</Button>
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              ثبت‌نام
+            </Button>
             
             <div className="mt-4 text-center text-sm">
               قبلاً ثبت‌نام کرده‌اید؟{" "}
