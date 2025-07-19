@@ -14,14 +14,19 @@ const HandicraftsIcon = (props: SVGProps<SVGSVGElement>) => (
     {...props}
   >
     <path
-      d="M39.6,22.4a4,4,0,0,1-4-4V12a4,4,0,0,0-8,0v6.4a4,4,0,0,1-4,4"
-      stroke="#D6A2A8"
-      strokeWidth="4"
-    />
-    <path
       fill="#D6A2A8"
       stroke="none"
-      d="M20,28.8,16,52H48L44,28.8a4,4,0,0,0-4-4H24A4,4,0,0,0,20,28.8Z"
+      d="M16,24.5a8,8,0,0,1,8-8h16a8,8,0,0,1,8,8V28h-32Z"
+    />
+    <path
+      fill="#82AAA7"
+      stroke="none"
+      d="M16,28H48L44,52H20Z"
+    />
+    <path
+      d="M24,16.5a8,8,0,0,1,16,0"
+      stroke="#D6A2A8"
+      strokeWidth="3"
     />
   </svg>
 );
