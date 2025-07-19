@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu } from 'lucide-react';
+import { Menu, ChevronDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function Header() {
   return (
@@ -11,9 +17,30 @@ export default function Header() {
           <span className="font-headline text-xl font-bold whitespace-nowrap">دستبانو</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
           <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
-          <Link href="/register" className="transition-colors hover:text-foreground/80 text-foreground/60">ثبت‌نام</Link>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="transition-colors hover:text-foreground/80 text-foreground/60 px-2">
+                ثبت‌نام
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/register-customer">ثبت‌نام مشتری</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/register">ثبت‌نام ارائه‌دهنده</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button asChild variant="ghost">
+             <Link href="/login">ورود</Link>
+          </Button>
+
         </nav>
 
         <div className="md:hidden">
@@ -31,7 +58,9 @@ export default function Header() {
                 </Link>
                 <nav className="grid gap-4">
                   <Link href="/#categories" className="py-2 text-lg font-medium">خدمات</Link>
-                  <Link href="/register" className="py-2 text-lg font-medium">ثبت‌نام</Link>
+                  <Link href="/register-customer" className="py-2 text-lg font-medium">ثبت‌نام مشتری</Link>
+                  <Link href="/register" className="py-2 text-lg font-medium">ثبت‌نام ارائه‌دهنده</Link>
+                  <Link href="/login" className="py-2 text-lg font-medium">ورود</Link>
                 </nav>
               </div>
             </SheetContent>

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, Brush } from 'lucide-react';
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
@@ -21,12 +21,15 @@ export default function Home() {
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی پیچیده، بهترین صنعتگران محلی را اینجا پیدا کنید.
         </p>
-        <div className="mt-8 flex justify-center gap-4">
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Button asChild size="lg">
             <Link href="#categories">مشاهده خدمات</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
             <Link href="/register">ارائه‌دهنده شوید</Link>
+          </Button>
+           <Button asChild variant="outline" size="lg">
+            <Link href="/register-customer">ثبت‌نام مشتری</Link>
           </Button>
         </div>
       </section>
