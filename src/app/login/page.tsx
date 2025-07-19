@@ -55,6 +55,7 @@ export default function LoginPage() {
         
         console.log('Simulating login for phone:', values.phone);
         
+        // This is a mock login. In a real app, you'd verify credentials.
         login({ name: 'کاربر هنربانو', phone: values.phone });
 
         toast({

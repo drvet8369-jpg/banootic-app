@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    // This effect runs once on mount to check for a logged-in user.
     try {
       const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
@@ -30,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
+      // Ensure a clean state if localStorage is corrupted
       localStorage.removeItem('honarbanoo-user');
       setUser(null);
     }
@@ -48,6 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem('honarbanoo-user');
       setUser(null);
+      // Redirect to home page for a better user experience
       router.push('/');
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
