@@ -23,18 +23,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  // On component mount, check if user data exists in localStorage
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
         setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
-      // Clear potentially corrupted storage
       localStorage.removeItem('honarbanoo-user');
+      setIsLoggedIn(false);
+      setUser(null);
     }
   }, []);
 
@@ -53,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('honarbanoo-user');
       setUser(null);
       setIsLoggedIn(false);
-      router.push('/'); // Redirect to homepage after logout
+      router.push('/');
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
     }
