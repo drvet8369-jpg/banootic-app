@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface User {
   name: string;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
 
   // On component mount, check if user data exists in localStorage
   useEffect(() => {
@@ -51,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('honarbanoo-user');
       setUser(null);
       setIsLoggedIn(false);
+      router.push('/'); // Redirect to homepage after logout
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
     }
