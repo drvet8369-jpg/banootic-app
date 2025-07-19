@@ -13,11 +13,11 @@ const CookingIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <path d="M2 12h20" />
-    <path d="M2 6h20" />
-    <path d="M12 2v20" />
-    <path d="M18 2a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v-3" />
-    <path d="M6 22a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3" />
+    <path d="M12 2a4 4 0 0 0-4 4v1h8V6a4 4 0 0 0-4-4Z" />
+    <path d="M18 7H6a4 4 0 0 0-4 4v5a4 4 0 0 0 4 4h12a4 4 0 0 0 4-4v-5a4 4 0 0 0-4-4Z" />
+    <path d="M8 12v3" />
+    <path d="M12 12v3" />
+    <path d="M16 12v3" />
   </svg>
 );
 export default CookingIcon;

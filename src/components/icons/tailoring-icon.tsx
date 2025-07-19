@@ -13,12 +13,12 @@ const TailoringIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <circle cx="6" cy="6" r="3" />
-    <circle cx="18" cy="6" r="3" />
-    <path d="M15.1 8.9 9.1 14.9" />
-    <path d="m6 21 6-6" />
-    <path d="m18 21-6-6" />
-    <path d="M9.1 8.9 14.9 14.9" />
+    <path d="M7.7 7.7a3 3 0 1 0-4.24 4.24l9.66 9.66l4.24-4.24L7.7 7.7Z" />
+    <path d="m12 6 6-6" />
+    <path d="m14 8 4-4" />
+    <path d="m6 12-6 6" />
+    <path d="m8 14-4 4" />
+    <path d="M18.4 2.6a3 3 0 1 0-4.24 4.24l4.24-4.24Z" />
   </svg>
 );
 export default TailoringIcon;
