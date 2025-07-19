@@ -19,7 +19,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
@@ -28,15 +27,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-        setUser(null);
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
       localStorage.removeItem('honarbanoo-user');
-      setIsLoggedIn(false);
       setUser(null);
     }
   }, []);
@@ -45,7 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
       setUser(userData);
-      setIsLoggedIn(true);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
     }
@@ -55,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem('honarbanoo-user');
       setUser(null);
-      setIsLoggedIn(false);
       router.push('/');
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
@@ -63,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

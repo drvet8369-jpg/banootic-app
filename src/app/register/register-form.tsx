@@ -80,23 +80,29 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // In a real app, you would save the user to a database.
-    // Here, we'll just log the data and simulate a successful registration.
-    console.log('Registering user with input:', values);
+    try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        console.log('Registering user with input:', values);
 
-    // Automatically log the user in after registration
-    login({ name: values.name, phone: values.phone, accountType: values.accountType });
-    
-    toast({
-      title: 'ثبت‌نام با موفقیت انجام شد!',
-      description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-    });
-    
-    router.push('/');
-    setIsLoading(false);
+        login({ name: values.name, phone: values.phone, accountType: values.accountType });
+        
+        toast({
+          title: 'ثبت‌نام با موفقیت انجام شد!',
+          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        });
+        
+        router.push('/');
+    } catch (error) {
+         console.error("Registration failed:", error);
+         toast({
+            title: 'خطا در ثبت‌نام',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   return (

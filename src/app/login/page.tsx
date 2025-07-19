@@ -50,22 +50,30 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // In a real app, you would verify credentials with a backend.
-    // Here, we'll just simulate a successful login.
-    console.log('Simulating login for phone:', values.phone);
-    
-    login({ name: 'کاربر وارد شده', phone: values.phone });
+    try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('Simulating login for phone:', values.phone);
+        
+        login({ name: 'کاربر هنربانو', phone: values.phone });
 
-    toast({
-      title: 'ورود با موفقیت انجام شد!',
-      description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-    });
-    
-    router.push('/');
-    setIsLoading(false);
+        toast({
+          title: 'ورود با موفقیت انجام شد!',
+          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        });
+        
+        router.push('/');
+
+    } catch (error) {
+        console.error("Login failed:", error);
+        toast({
+            title: 'خطا در ورود',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   return (
