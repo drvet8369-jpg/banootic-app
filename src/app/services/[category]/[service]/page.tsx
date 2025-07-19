@@ -3,7 +3,7 @@ import type { Service, Provider, Category } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -107,12 +107,18 @@ export default function ServiceProvidersPage({ params }: PageProps) {
                   <span>{provider.location}</span>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full">
+              <CardFooter className="flex gap-2">
+                 <Button asChild className="w-full" variant="outline">
                   <a href={`tel:${provider.phone}`}>
                     <Phone className="w-4 h-4 ml-2" />
-                    تماس با ارائه‌دهنده
+                    تماس
                   </a>
+                </Button>
+                <Button asChild className="w-full">
+                  <Link href={`/chat/${provider.id}`}>
+                    <MessageSquare className="w-4 h-4 ml-2" />
+                    ارسال پیام
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
