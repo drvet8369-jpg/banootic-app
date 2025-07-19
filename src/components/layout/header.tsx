@@ -2,9 +2,8 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -16,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Logo } from './logo';
 
 
 export default function Header() {
@@ -34,7 +34,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="هنربانو لوگو" width={32} height={32} className="h-8 w-8" />
+          <Logo className="h-8 w-8" />
           <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
 
@@ -92,7 +92,7 @@ export default function Header() {
               <div className="flex flex-col h-full">
                 <div className="p-6 border-b">
                    <Link href="/" className="flex items-center gap-2">
-                     <Image src="/logo.png" alt="هنربانو لوگو" width={32} height={32} className="h-8 w-8" />
+                     <Logo className="h-8 w-8" />
                     <span className="font-display text-2xl font-bold">هنربانو</span>
                   </Link>
                 </div>
@@ -118,7 +118,7 @@ export default function Header() {
                  {isLoggedIn && (
                   <div className="border-t p-6">
                      <Button onClick={() => {
-                        const sheetClose = document.querySelector('[data-radix-dialog-close]');
+                        const sheetClose = document.querySelector('button[data-radix-dialog-close]');
                         if (sheetClose) {
                           (sheetClose as HTMLElement).click();
                         }

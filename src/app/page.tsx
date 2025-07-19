@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
+import { Logo } from '@/components/layout/logo';
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
@@ -16,14 +16,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-32">
-        <Image
-          src="/logo.png"
-          alt="هنربانو لوگو"
-          width={128}
-          height={128}
-          className="mx-auto mb-6 h-32 w-32"
-          priority
-        />
+        <Logo className="mx-auto mb-6 h-32 w-32" />
         <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
           هنربانو
         </h1>
