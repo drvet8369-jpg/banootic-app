@@ -37,9 +37,6 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  password: z.string().min(6, {
-    message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
-  }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
@@ -71,7 +68,6 @@ export default function RegisterForm() {
     defaultValues: {
       name: '',
       phone: '',
-      password: '',
       accountType: 'customer',
       bio: '',
     },
@@ -171,19 +167,6 @@ export default function RegisterForm() {
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
                     <Input placeholder="09123456789" {...field} disabled={isLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>رمز عبور</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="حداقل ۶ کاراکتر" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -14,7 +14,6 @@ export const UserRegistrationInputSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
   name: z.string().min(2),
   phone: z.string().regex(/^09\d{9}$/),
-  password: z.string().min(6),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
 });

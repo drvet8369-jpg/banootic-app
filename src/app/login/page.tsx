@@ -33,9 +33,6 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  password: z.string().min(1, {
-    message: 'لطفاً رمز عبور خود را وارد کنید.',
-  }),
 });
 
 export default function LoginPage() {
@@ -47,7 +44,6 @@ export default function LoginPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       phone: '',
-      password: '',
     },
   });
 
@@ -60,7 +56,6 @@ export default function LoginPage() {
           accountType: 'customer', // This is arbitrary for the login simulation
           name: 'Logged In User', // This is arbitrary
           phone: values.phone,
-          password: values.password,
       });
 
       if (result.success) {
@@ -94,7 +89,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای دسترسی به حساب خود، شماره تلفن و رمز عبور را وارد کنید.
+            برای دسترسی به حساب خود، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -108,27 +103,6 @@ export default function LoginPage() {
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
                       <Input placeholder="09123456789" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                     <div className="flex items-center">
-                        <FormLabel htmlFor="password">رمز عبور</FormLabel>
-                        <Link
-                          href="#"
-                          className="mr-auto inline-block text-sm underline"
-                        >
-                          رمز عبور خود را فراموش کرده‌اید؟
-                        </Link>
-                      </div>
-                    <FormControl>
-                      <Input type="password" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
