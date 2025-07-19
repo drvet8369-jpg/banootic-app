@@ -5,12 +5,19 @@ export interface Category {
   description: string;
 }
 
+export interface Service {
+  name: string;
+  slug: string;
+  categorySlug: Category['slug'];
+}
+
 export interface Provider {
   id: number;
   name: string;
-  service: string;
+  service: string; // The specific service they provide, e.g., "Manicure"
   location: string;
   phone: string;
   bio: string;
-  categorySlug: 'beauty' | 'cooking' | 'tailoring' | 'handicrafts';
+  categorySlug: Category['slug'];
+  serviceSlug: Service['slug']; // Link to the service
 }
