@@ -1,3 +1,4 @@
+
 import { services, providers, categories } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound } from 'next/navigation';
@@ -70,43 +71,37 @@ export default function ServiceProvidersPage({ params }: PageProps) {
       {serviceProviders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {serviceProviders.map((provider) => (
-            <Card key={provider.id} className="flex flex-col">
-              {provider.portfolio && provider.portfolio.length > 0 && (
-                 <Carousel className="w-full rounded-t-lg overflow-hidden">
-                    <CarouselContent>
-                      {provider.portfolio.map((img, index) => (
-                        <CarouselItem key={index}>
-                          <Image
-                            src={img.src}
-                            alt={`${provider.name} نمونه کار ${index + 1}`}
-                            width={400}
-                            height={250}
-                            className="w-full h-48 object-cover"
-                            data-ai-hint={img.aiHint}
-                          />
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="left-4" />
-                    <CarouselNext className="right-4" />
-                  </Carousel>
-              )}
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
-                    <CardDescription>{provider.service}</CardDescription>
+            <Card key={provider.id} className="flex flex-col group">
+              <Link href={`/provider/${provider.id}`} className="flex flex-col flex-grow">
+                {provider.portfolio && provider.portfolio.length > 0 && (
+                  <div className="overflow-hidden rounded-t-lg">
+                    <Image
+                      src={provider.portfolio[0].src}
+                      alt={`${provider.name} نمونه کار`}
+                      width={400}
+                      height={250}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      data-ai-hint={provider.portfolio[0].aiHint}
+                    />
                   </div>
-                  <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-sm text-muted-foreground mb-4">{provider.bio}</p>
-                <div className="flex items-center text-sm">
-                  <MapPin className="w-4 h-4 ml-2 text-accent" />
-                  <span>{provider.location}</span>
-                </div>
-              </CardContent>
+                )}
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="font-headline text-2xl group-hover:text-accent transition-colors">{provider.name}</CardTitle>
+                      <CardDescription>{provider.service}</CardDescription>
+                    </div>
+                    <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{provider.bio}</p>
+                  <div className="flex items-center text-sm">
+                    <MapPin className="w-4 h-4 ml-2 text-accent" />
+                    <span>{provider.location}</span>
+                  </div>
+                </CardContent>
+              </Link>
               <CardFooter className="flex gap-2">
                  <Button asChild className="w-full" variant="outline">
                   <a href={`tel:${provider.phone}`}>
