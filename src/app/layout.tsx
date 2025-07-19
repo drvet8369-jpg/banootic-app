@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
+import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import { cn } from '@/lib/utils';
+
+const vazirmatn = Vazirmatn({
+  subsets: ['arabic'],
+  variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
   title: 'زن‌محل',
@@ -16,12 +23,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-body antialiased flex flex-col min-h-screen">
+      <body
+        className={cn(
+          'font-sans antialiased flex flex-col min-h-screen',
+          vazirmatn.variable
+        )}
+      >
         <Header />
         <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
           {children}

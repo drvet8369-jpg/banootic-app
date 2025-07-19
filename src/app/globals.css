@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Vazirmatn', sans-serif;
-}
-
 @layer base {
   :root {
     --background: 140 56% 95%; /* #E8F8EF */
