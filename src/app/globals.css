@@ -38,5 +38,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "calt" 1, "liga" 1;
   }
 }
