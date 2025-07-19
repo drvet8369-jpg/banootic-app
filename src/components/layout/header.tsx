@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
-import { Menu, User, LogOut } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
 
   const getInitials = (name: string) => {
+    if (!name) return 'کاربر';
     const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
@@ -118,7 +119,9 @@ export default function Header() {
                   <div className="border-t p-6">
                      <Button onClick={() => {
                         const sheetClose = document.querySelector('[data-radix-dialog-close]');
-                        (sheetClose as HTMLElement)?.click();
+                        if (sheetClose) {
+                          (sheetClose as HTMLElement).click();
+                        }
                         logout();
                       }} 
                       variant="ghost" 

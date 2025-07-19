@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface PageProps {
   params: {
