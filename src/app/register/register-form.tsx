@@ -84,8 +84,6 @@ export default function RegisterForm() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // This is a mock registration. In a real app, you would send this to your backend.
-        // For now, we'll just log the user in directly.
         login({ name: values.name, phone: values.phone, accountType: values.accountType });
         
         toast({
