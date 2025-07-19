@@ -49,15 +49,15 @@ export default function CategoryPage({ params }: PageProps) {
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground mb-4">{provider.bio}</p>
                 <div className="flex items-center text-sm">
-                  <MapPin className="w-4 h-4 mr-2 text-accent" />
+                  <MapPin className="w-4 h-4 ml-2 text-accent" />
                   <span>{provider.location}</span>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full">
                   <a href={`tel:${provider.phone}`}>
-                    <Phone className="w-4 h-4 mr-2" />
-                    Contact Provider
+                    <Phone className="w-4 h-4 ml-2" />
+                    تماس با ارائه‌دهنده
                   </a>
                 </Button>
               </CardFooter>
@@ -66,9 +66,9 @@ export default function CategoryPage({ params }: PageProps) {
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">No providers listed in this category yet.</p>
+          <p className="text-muted-foreground">هنوز هیچ ارائه‌دهنده‌ای در این دسته‌بندی ثبت‌نام نکرده است.</p>
           <Button asChild variant="link" className="mt-2">
-            <Link href="/register">Be the first one!</Link>
+            <Link href="/register">اولین نفر باشید!</Link>
           </Button>
         </div>
       )}

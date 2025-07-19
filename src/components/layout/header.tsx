@@ -8,12 +8,12 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <span className="font-headline text-xl font-bold">ZanMahal</span>
+          <span className="font-headline text-xl font-bold">زن‌محل</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">Services</Link>
-          <Link href="/register" className="transition-colors hover:text-foreground/80 text-foreground/60">Register</Link>
+          <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
+          <Link href="/register" className="transition-colors hover:text-foreground/80 text-foreground/60">ثبت‌نام</Link>
         </nav>
 
         <div className="md:hidden">
@@ -21,17 +21,17 @@ export default function Header() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle Menu</span>
+                <span className="sr-only">باز کردن منو</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
               <div className="grid gap-6 p-6">
                 <Link href="/" className="flex items-center gap-2">
-                  <span className="font-headline text-xl font-bold">ZanMahal</span>
+                  <span className="font-headline text-xl font-bold">زن‌محل</span>
                 </Link>
                 <nav className="grid gap-4">
-                  <Link href="/#categories" className="py-2 text-lg font-medium">Services</Link>
-                  <Link href="/register" className="py-2 text-lg font-medium">Register</Link>
+                  <Link href="/#categories" className="py-2 text-lg font-medium">خدمات</Link>
+                  <Link href="/register" className="py-2 text-lg font-medium">ثبت‌نام</Link>
                 </nav>
               </div>
             </SheetContent>

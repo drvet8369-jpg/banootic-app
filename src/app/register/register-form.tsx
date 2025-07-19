@@ -23,15 +23,15 @@ import { Card, CardContent } from '@/components/ui/card';
 
 const formSchema = z.object({
   name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
+    message: 'نام باید حداقل ۲ حرف داشته باشد.',
   }),
-  serviceType: z.string({ required_error: 'Please select a service type.' }),
+  serviceType: z.string({ required_error: 'لطفاً نوع خدمات را انتخاب کنید.' }),
   phone: z.string().regex(/^09\d{9}$/, {
-    message: 'Please enter a valid Iranian phone number (e.g., 09123456789).',
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
   bio: z.string().max(160, {
-    message: 'Bio must not be longer than 160 characters.',
-  }).min(10, { message: 'Bio must be at least 10 characters.' }),
+    message: 'بیوگرافی نباید بیشتر از ۱۶۰ کاراکتر باشد.',
+  }).min(10, { message: 'بیوگرافی باید حداقل ۱۰ کاراکتر باشد.' }),
 });
 
 export default function RegisterForm() {
@@ -48,8 +48,8 @@ export default function RegisterForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     toast({
-      title: 'Registration Submitted!',
-      description: 'Thank you for registering. We will review your submission shortly.',
+      title: 'ثبت‌نام ارسال شد!',
+      description: 'از ثبت‌نام شما سپاسگزاریم. درخواست شما به‌زودی بررسی خواهد شد.',
     });
     form.reset();
   }
@@ -64,9 +64,9 @@ export default function RegisterForm() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name or Business Name</FormLabel>
+                  <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Sara Beauty Salon" {...field} />
+                    <Input placeholder="مثال: سالن زیبایی سارا" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -77,11 +77,11 @@ export default function RegisterForm() {
               name="serviceType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Service Type</FormLabel>
+                  <FormLabel>نوع خدمات</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a service category" />
+                        <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -101,11 +101,11 @@ export default function RegisterForm() {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
                     <Input placeholder="09123456789" {...field} />
                   </FormControl>
-                  <FormDescription>Your contact number for customers.</FormDescription>
+                  <FormDescription>شماره تماس شما برای مشتریان.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -115,22 +115,22 @@ export default function RegisterForm() {
               name="bio"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Short Bio</FormLabel>
+                  <FormLabel>بیوگرافی کوتاه</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Tell us a little bit about your services"
+                      placeholder="کمی در مورد خدمات خود به ما بگویید"
                       className="resize-none"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    A brief description of what you offer (max 160 characters).
+                    توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" size="lg">Register Now</Button>
+            <Button type="submit" className="w-full" size="lg">همین حالا ثبت‌نام کنید</Button>
           </form>
         </Form>
       </CardContent>

@@ -3,48 +3,48 @@ import type { Category, Provider } from './types';
 export const categories: Category[] = [
   {
     id: 1,
-    name: 'Women’s Beauty Services',
+    name: 'خدمات زیبایی بانوان',
     slug: 'beauty',
-    description: 'Hair, nails, makeup, and skin care services offered by talented local stylists.',
+    description: 'خدمات مو، ناخن، آرایش و مراقبت از پوست توسط متخصصان محلی با استعداد.',
   },
   {
     id: 2,
-    name: 'Homemade Cooking & Food',
+    name: 'آشپزی و غذای خانگی',
     slug: 'cooking',
-    description: 'Delicious, authentic homemade meals, baked goods, and traditional dishes.',
+    description: 'غذاهای خانگی خوشمزه و اصیل، شیرینی‌جات و غذاهای سنتی.',
   },
   {
     id: 3,
-    name: 'Tailoring & Fashion',
+    name: 'خیاطی و مد',
     slug: 'tailoring',
-    description: 'Custom clothing, alterations, and unique fashion designs from local boutiques.',
+    description: 'لباس‌های سفارشی، تعمیرات و طراحی‌های مد منحصر به فرد از بوتیک‌های محلی.',
   },
   {
     id: 4,
-    name: 'Handicrafts & Arts',
+    name: 'صنایع دستی و هنری',
     slug: 'handicrafts',
-    description: 'Exquisite handmade jewelry, decorative arts, and unique crafts.',
+    description: 'جواهرات دست‌ساز نفیس، هنرهای تزئینی و صنایع دستی بی‌نظیر.',
   },
 ];
 
 export const providers: Provider[] = [
   // Beauty
-  { id: 1, name: 'Sara Beauty Salon', service: 'Manicure & Pedicure', location: 'Urmia, Valiasr St.', phone: '09123456789', bio: 'Specializing in modern nail art and design.', categorySlug: 'beauty' },
-  { id: 2, name: 'Laleh Hair Design', service: 'Haircut & Coloring', location: 'Urmia, Sheikh Tappeh', phone: '09123456789', bio: 'Expert in balayage and modern hairstyles.', categorySlug: 'beauty' },
-  { id: 3, name: 'Negin Skincare', service: 'Facials', location: 'Urmia, Ostadan', phone: '09123456789', bio: 'Organic and natural skincare treatments for all skin types.', categorySlug: 'beauty' },
+  { id: 1, name: 'سالن زیبایی سارا', service: 'مانیکور و پدیکور', location: 'ارومیه، خیابان والفجر', phone: '09123456789', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty' },
+  { id: 2, name: 'طراحی مو لاله', service: 'کوتاهی و رنگ مو', location: 'ارومیه، شیخ تپه', phone: '09123456789', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty' },
+  { id: 3, name: 'مراقبت از پوست نگین', service: 'فیشیال صورت', location: 'ارومیه، استادان', phone: '09123456789', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty' },
 
   // Cooking
-  { id: 4, name: 'Maryam’s Kitchen', service: 'Traditional Iranian Food', location: 'Urmia, Ferdowsi St.', phone: '09123456789', bio: 'Serving authentic home-cooked Ghormeh Sabzi and Kebab.', categorySlug: 'cooking' },
-  { id: 5, name: 'Bahar Pastries', service: 'Cakes & Sweets', location: 'Urmia, Keshavarz St.', phone: '09123456789', bio: 'Custom cakes for birthdays, weddings, and special events.', categorySlug: 'cooking' },
-  { id: 6, name: 'Zahra’s Healthy Bites', service: 'Vegan & Vegetarian Meals', location: 'Urmia, Daneshkade', phone: '09123456789', bio: 'Delicious and healthy plant-based meals delivered to your door.', categorySlug: 'cooking' },
+  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی ایرانی', location: 'ارومیه، خیابان فردوسی', phone: '09123456789', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking' },
+  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه، خیابان کشاورز', phone: '09123456789', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking' },
+  { id: 6, name: 'غذای سالم زهرا', service: 'وعده‌های گیاهی و وگان', location: 'ارومیه، دانشکده', phone: '09123456789', bio: 'وعده‌های غذایی گیاهی خوشمزه و سالم با ارسال درب منزل.', categorySlug: 'cooking' },
 
   // Tailoring
-  { id: 7, name: 'Shirin Sews', service: 'Custom Dresses', location: 'Urmia, Modarres St.', phone: '09123456789', bio: 'Creating beautiful, custom-fit dresses for any occasion.', categorySlug: 'tailoring' },
-  { id: 8, name: 'Parvin Design', service: 'Clothing Alterations', location: 'Urmia, Emam St.', phone: '09123456789', bio: 'Professional and quick alterations for a perfect fit.', categorySlug: 'tailoring' },
-  { id: 9, name: 'Afsaneh Boutique', service: 'Modern Manto Design', location: 'Urmia, Khayyam St.', phone: '09123456789', bio: 'Unique and stylish mantos that blend tradition with modern fashion.', categorySlug: 'tailoring' },
+  { id: 7, name: 'خیاطی شیرین', service: 'لباس‌های سفارشی', location: 'ارومیه، خیابان مدرس', phone: '09123456789', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring' },
+  { id: 8, name: 'طراحی پروین', service: 'تعمیرات لباس', location: 'ارومیه، خیابان امام', phone: '09123456789', bio: 'تعمیرات حرفه‌ای و سریع برای فیت عالی لباس.', categorySlug: 'tailoring' },
+  { id: 9, name: 'بوتیک افسانه', service: 'طراحی مانتو مدرن', location: 'ارومیه، خیابان خیام', phone: '09123456789', bio: 'مانتوهای منحصر به فرد و شیک که سنت را با مد مدرن ترکیب می‌کند.', categorySlug: 'tailoring' },
   
   // Handicrafts
-  { id: 10, name: 'Gita Art Gallery', service: 'Handmade Jewelry', location: 'Urmia, Besat St.', phone: '09123456789', bio: 'Unique silver and gemstone jewelry, handcrafted with love.', categorySlug: 'handicrafts' },
-  { id: 11, name: 'Mina Pottery', service: 'Decorative Pottery', location: 'Urmia, Bahar St.', phone: '09123456789', bio: 'Beautifully painted pottery for your home and garden.', categorySlug: 'handicrafts' },
-  { id: 12, name: 'Termeh Weaves', service: 'Termeh and Tapestry', location: 'Urmia, Bazar', phone: '09123456789', bio: 'Traditional Iranian Termeh textiles and wall tapestries.', categorySlug: 'handicrafts' },
+  { id: 10, name: 'گالری هنری گیتا', service: 'جواهرات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09123456789', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts' },
+  { id: 11, name: 'سفالگری مینا', service: 'سفال‌های تزئینی', location: 'ارومیه، خیابان بهار', phone: '09123456789', bio: 'سفال‌های زیبا و نقاشی شده برای خانه و باغ شما.', categorySlug: 'handicrafts' },
+  { id: 12, name: 'بافت ترمه', service: 'ترمه و гобелен', location: 'ارومیه، بازار', phone: '09123456789', bio: 'پارچه‌های ترمه سنتی ایرانی و гобелен‌های دیواری.', categorySlug: 'handicrafts' },
 ];
