@@ -12,8 +12,8 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: 'زن‌محل',
-  description: 'بازاری برای خدمات خانگی بانوان',
+  title: 'دستبانو',
+  description: 'بازاری برای خدمات خانگی بانوان هنرمند',
 };
 
 export default function RootLayout({

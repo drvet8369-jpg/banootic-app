@@ -11,6 +11,11 @@ export interface Service {
   categorySlug: Category['slug'];
 }
 
+export interface PortfolioItem {
+  src: string;
+  aiHint?: string;
+}
+
 export interface Provider {
   id: number;
   name: string;
@@ -20,4 +25,7 @@ export interface Provider {
   bio: string;
   categorySlug: Category['slug'];
   serviceSlug: Service['slug']; // Link to the service
+  rating: number;
+  reviewsCount: number;
+  portfolio: PortfolioItem[];
 }

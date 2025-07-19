@@ -3,8 +3,10 @@ import type { Service, Provider, Category } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone } from 'lucide-react';
+import { MapPin, Phone, Star } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface PageProps {
   params: {
@@ -12,6 +14,28 @@ interface PageProps {
     service: string;
   };
 }
+
+const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
+  const fullStars = Math.floor(rating);
+  const halfStar = rating % 1 !== 0;
+  const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center">
+        {[...Array(fullStars)].map((_, i) => (
+          <Star key={`full-${i}`} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+        ))}
+        {halfStar && <Star key="half" className="w-5 h-5 text-yellow-400" />}
+        {[...Array(emptyStars)].map((_, i) => (
+          <Star key={`empty-${i}`} className="w-5 h-5 text-gray-300" />
+        ))}
+      </div>
+      <span>({reviewsCount} نظر)</span>
+    </div>
+  );
+};
+
 
 export async function generateStaticParams() {
   return services.map((service) => ({
@@ -47,9 +71,34 @@ export default function ServiceProvidersPage({ params }: PageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {serviceProviders.map((provider) => (
             <Card key={provider.id} className="flex flex-col">
+              {provider.portfolio && provider.portfolio.length > 0 && (
+                 <Carousel className="w-full rounded-t-lg overflow-hidden">
+                    <CarouselContent>
+                      {provider.portfolio.map((img, index) => (
+                        <CarouselItem key={index}>
+                          <Image
+                            src={img.src}
+                            alt={`${provider.name} نمونه کار ${index + 1}`}
+                            width={400}
+                            height={250}
+                            className="w-full h-48 object-cover"
+                            data-ai-hint={img.aiHint}
+                          />
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-4" />
+                    <CarouselNext className="right-4" />
+                  </Carousel>
+              )}
               <CardHeader>
-                <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
-                <CardDescription>{provider.service}</CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
+                    <CardDescription>{provider.service}</CardDescription>
+                  </div>
+                  <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
+                </div>
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground mb-4">{provider.bio}</p>

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChefHat, Scissors, Gift, Palette } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
@@ -16,7 +16,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-32">
         <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
-          زن‌محل
+          دستبانو
         </h1>
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی پیچیده، بهترین صنعتگران محلی را اینجا پیدا کنید.
