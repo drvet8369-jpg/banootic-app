@@ -34,7 +34,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <Logo className="h-8 w-8" />
+          <Logo className="h-8 w-8 text-primary-foreground" />
           <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
 
@@ -87,13 +87,12 @@ export default function Header() {
                 <span className="sr-only">باز کردن منو</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right">
-              <SheetTitle className="sr-only">Menu</SheetTitle>
+            <SheetContent side="right" className="p-0">
               <div className="flex flex-col h-full">
-                <div className="p-6 border-b">
+                 <div className="p-6 border-b">
                    <Link href="/" className="flex items-center gap-2">
-                     <Logo className="h-8 w-8" />
-                    <span className="font-display text-2xl font-bold">هنربانو</span>
+                     <Logo className="h-8 w-8 text-primary-foreground" />
+                     <span className="font-display text-2xl font-bold">هنربانو</span>
                   </Link>
                 </div>
                 <nav className="grid gap-4 p-6 flex-grow">
