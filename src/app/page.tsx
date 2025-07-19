@@ -16,11 +16,11 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-32">
-        <Image 
-          src="/logo.png" 
-          alt="هنربانو لوگو" 
-          width={128} 
-          height={128} 
+        <Image
+          src="/logo.png"
+          alt="هنربانو لوگو"
+          width={128}
+          height={128}
           className="mx-auto mb-6 h-32 w-32"
           priority
         />
