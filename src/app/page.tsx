@@ -18,6 +18,9 @@ export default function Home() {
         <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
           دستبانو
         </h1>
+        <p className="mt-4 font-headline text-xl md:text-2xl text-accent-foreground/90">
+          با دستان هنرمندت بدرخش
+        </p>
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی پیچیده، بهترین صنعتگران محلی را اینجا پیدا کنید.
         </p>
