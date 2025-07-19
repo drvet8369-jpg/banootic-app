@@ -2,10 +2,28 @@ import Link from 'next/link';
 import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Utensils, Scissors, Paintbrush } from 'lucide-react';
+import { Utensils, Scissors, Paintbrush } from 'lucide-react';
+
+const LipstickIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" />
+    <path d="M8.5 10a1.5 1.5 0 0 1-1.4-2.2L9.5 4l1-2.5c.2-.5.9-.5 1.1 0l1 2.5 2.4 3.8A1.5 1.5 0 0 1 15.5 10H8.5Z" />
+  </svg>
+);
 
 const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
-  beauty: Sparkles,
+  beauty: LipstickIcon,
   cooking: Utensils,
   tailoring: Scissors,
   handicrafts: Paintbrush,
