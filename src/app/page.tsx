@@ -18,9 +18,11 @@ const LipstickIcon = (props: React.SVGProps<SVGSVGElement>) => (
     {...props}
   >
     <path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" />
-    <path d="M8.5 10a1.5 1.5 0 0 1-1.4-2.2L9.5 4l1-2.5c.2-.5.9-.5 1.1 0l1 2.5 2.4 3.8A1.5 1.5 0 0 1 15.5 10H8.5Z" />
+    <path d="M8.5 10a1.5 1.5 0 0 1-1.4-2.2L9.5 4l1-2.5c.2-.5.9-.5 1.1 0l1 2.5 2.4 3.8A1.5 1.5 0 0 1 15.5 10Z" />
+    <path d="M8.5 10h7" />
   </svg>
 );
+
 
 const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
   beauty: LipstickIcon,
