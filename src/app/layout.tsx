@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
-import { Alegreya } from 'next/font/google';
+import { Vazirmatn } from 'next/font/google'; // Import Vazirmatn
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
 
-const alegreya = Alegreya({
-  subsets: ['latin'], // 'arabic' subset is not available for Alegreya in next/font
+// Configure Vazirmatn font with the 'arabic' subset
+const vazirmatn = Vazirmatn({
+  subsets: ['arabic'],
   display: 'swap',
   variable: '--font-sans',
 });
@@ -27,7 +28,7 @@ export default function RootLayout({
       <body
         className={cn(
           'font-sans antialiased flex flex-col min-h-screen',
-          alegreya.variable
+          vazirmatn.variable // Apply Vazirmatn font variable
         )}
       >
         <Header />
