@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
+import { AuthProvider } from '@/context/AuthContext';
 
 // Configure Vazirmatn font with the 'arabic' subset
 const vazirmatn = Vazirmatn({
@@ -32,12 +33,14 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <Header />
-        <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
-          {children}
-        </main>
-        <Footer />
-        <Toaster />
+        <AuthProvider>
+          <Header />
+          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
+            {children}
+          </main>
+          <Footer />
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

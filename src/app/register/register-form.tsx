@@ -25,7 +25,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
-import { registerUser, type UserRegistrationInput } from '@/ai/flows/registerUser';
+import { useAuth } from '@/context/AuthContext';
+
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -57,13 +58,15 @@ const formSchema = z.object({
     path: ['bio'],
 });
 
+type UserRegistrationInput = z.infer<typeof formSchema>;
 
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -77,31 +80,23 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    try {
-      const result = await registerUser(values);
-      if (result.success) {
-        toast({
-          title: 'ثبت‌نام با موفقیت انجام شد!',
-          description: 'خوش آمدید! اکنون به صفحه ورود هدایت می‌شوید.',
-        });
-        router.push('/login');
-      } else {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Registration failed:', error);
-      toast({
-        title: 'خطا در ثبت‌نام',
-        description: 'مشکلی در ارتباط با سرور پیش آمده است. لطفاً دوباره تلاش کنید.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // In a real app, you would save the user to a database.
+    // Here, we'll just log the data and simulate a successful registration.
+    console.log('Registering user with input:', values);
+
+    // Automatically log the user in after registration
+    login({ name: values.name, phone: values.phone, accountType: values.accountType });
+    
+    toast({
+      title: 'ثبت‌نام با موفقیت انجام شد!',
+      description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+    });
+    
+    router.push('/');
+    setIsLoading(false);
   }
 
   return (

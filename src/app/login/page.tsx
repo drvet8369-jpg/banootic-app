@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,7 +26,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { registerUser } from '@/ai/flows/registerUser';
+import { useAuth } from '@/context/AuthContext';
+
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
@@ -38,6 +38,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,38 +50,22 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-      // We'll reuse the registerUser flow for simulation purposes.
-      // In a real app, this would call a dedicated login flow.
-      const result = await registerUser({
-          accountType: 'customer', // This is arbitrary for the login simulation
-          name: 'Logged In User', // This is arbitrary
-          phone: values.phone,
-      });
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // In a real app, you would verify credentials with a backend.
+    // Here, we'll just simulate a successful login.
+    console.log('Simulating login for phone:', values.phone);
+    
+    login({ name: 'کاربر وارد شده', phone: values.phone });
 
-      if (result.success) {
-        toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-        });
-        router.push('/');
-      } else {
-        toast({
-          title: 'خطا در ورود',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-      toast({
-        title: 'خطا در ورود',
-        description: 'مشکلی در ارتباط با سرور پیش آمده است. لطفاً دوباره تلاش کنید.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: 'ورود با موفقیت انجام شد!',
+      description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+    });
+    
+    router.push('/');
+    setIsLoading(false);
   }
 
   return (
