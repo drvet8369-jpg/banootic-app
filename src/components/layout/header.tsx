@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Menu, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 export default function Header() {
@@ -16,11 +16,11 @@ export default function Header() {
         <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
           <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
           
-          <Button asChild variant="ghost">
-             <Link href="/register">عضویت</Link>
+          <Button asChild variant="secondary" className="w-48">
+             <Link href="/register">عضویت و ارائه خدمات</Link>
           </Button>
 
-          <Button asChild>
+          <Button asChild className="w-48">
              <Link href="/login">ورود</Link>
           </Button>
 
@@ -35,6 +35,7 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
+              <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
               <div className="grid gap-6 p-6">
                 <Link href="/" className="flex items-center gap-2">
                    <Image src="/logo.png" alt="هنربانو لوگو" width={32} height={32} className="h-8 w-8" />
