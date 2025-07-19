@@ -1,7 +1,7 @@
 export interface Category {
   id: number;
   name: string;
-  slug: 'beauty' | 'cooking' | 'tailoring' | 'fashion';
+  slug: 'beauty' | 'cooking' | 'tailoring' | 'handicrafts';
   description: string;
 }
 
