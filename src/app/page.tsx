@@ -3,13 +3,13 @@ import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { LucideIcon } from 'lucide-react';
-import { Gem, ChefHat, Scissors, Brush } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 
 const iconMap: { [key: string]: LucideIcon } = {
-  beauty: Gem,
+  beauty: Palette,
   cooking: ChefHat,
   tailoring: Scissors,
-  handicrafts: Brush,
+  handicrafts: Gift,
 };
 
 export default function Home() {
