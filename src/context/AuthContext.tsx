@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
@@ -22,18 +23,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
+  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    // This effect runs once on mount to check for a logged-in user.
     try {
       const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      // Ensure a clean state if localStorage is corrupted
+      console.error("Failed to parse user from localStorage on initial load", error);
+      // Clean up corrupted data
       localStorage.removeItem('honarbanoo-user');
-      setUser(null);
     }
   }, []);
 

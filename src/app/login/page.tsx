@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,8 +53,6 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        console.log('Simulating login for phone:', values.phone);
         
         // This is a mock login. In a real app, you'd verify credentials.
         login({ name: 'کاربر هنربانو', phone: values.phone });

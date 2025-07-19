@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -83,10 +84,8 @@ export default function RegisterForm() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        console.log('Registering user with input:', values);
-
-        // In a real app, you would send this to your backend to create a user.
-        // Here, we'll just log the user in directly.
+        // This is a mock registration. In a real app, you would send this to your backend.
+        // For now, we'll just log the user in directly.
         login({ name: values.name, phone: values.phone, accountType: values.accountType });
         
         toast({
