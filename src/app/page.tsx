@@ -25,7 +25,7 @@ export default function Home() {
           <Button asChild size="lg">
             <Link href="#categories">مشاهده خدمات</Link>
           </Button>
-          <Button asChild variant="outline" size="lg">
+          <Button asChild variant="secondary" size="lg">
             <Link href="/register">عضویت و ارائه خدمات</Link>
           </Button>
         </div>
