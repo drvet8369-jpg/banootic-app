@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Vazirmatn } from 'next/font/google'; // Import Vazirmatn
+import { Vazirmatn, Amiri } from 'next/font/google'; // Import Amiri
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
@@ -11,6 +11,14 @@ const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
   display: 'swap',
   variable: '--font-sans',
+});
+
+// Configure Amiri font
+const amiri = Amiri({
+  subsets: ['arabic'],
+  display: 'swap',
+  weight: ['400', '700'],
+  variable: '--font-display',
 });
 
 export const metadata: Metadata = {
@@ -28,7 +36,8 @@ export default function RootLayout({
       <body
         className={cn(
           'font-sans antialiased flex flex-col min-h-screen',
-          vazirmatn.variable // Apply Vazirmatn font variable
+          vazirmatn.variable, // Apply Vazirmatn font variable
+          amiri.variable // Apply Amiri font variable
         )}
       >
         <Header />
