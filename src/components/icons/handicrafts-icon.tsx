@@ -13,13 +13,12 @@ const HandicraftsIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <path d="m14 6-4.5 4.5" />
-    <path d="M10 10.5 6 15" />
-    <path d="M18 10c-2 0-4-1-4-4 0-2 2-2.5 4-2.5s4 .5 4 2.5c0 3-2 4-4 4Z" />
-    <path d="M15 11c-1 0-2 1-2 2s1 2.5 2 2.5 2-1.5 2-2.5-1-2-2-2Z" />
-    <path d="M3.5 20.5c0-3 2-4 4-4h1" />
-    <path d="M4 16.5c0-2 2-3 4-3h.5" />
-    <path d="M17.5 13.5c2 0 4 1 4 4s-2 4.5-4 4.5-4-1.5-4-4.5 2-4 4-4Z" />
+    <path d="M14.5 17.5c2.5-3 2.5-8.5 0-11.5" />
+    <path d="M9.5 17.5c-2.5-3-2.5-8.5 0-11.5" />
+    <path d="M12 20.5c-4-4.5-4-12.5 0-17" />
+    <path d="M12 4.5c4 4.5 4 12.5 0 17" />
+    <path d="M4.5 12c-2.5 3-2.5 8.5 0 11.5" />
+    <path d="M19.5 12c2.5 3 2.5 8.5 0 11.5" />
   </svg>
 );
 export default HandicraftsIcon;
