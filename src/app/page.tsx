@@ -16,7 +16,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-32">
         <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
-          دستبانو
+          هنربانو
         </h1>
         <p className="mt-4 font-headline text-xl md:text-2xl text-accent-foreground/90">
           با دستان هنرمندت بدرخش

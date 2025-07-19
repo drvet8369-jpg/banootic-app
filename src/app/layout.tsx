@@ -14,7 +14,7 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: 'دستبانو',
+  title: 'هنربانو',
   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
 };
 
