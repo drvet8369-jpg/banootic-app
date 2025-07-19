@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, Brush } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
