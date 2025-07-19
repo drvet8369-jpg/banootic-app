@@ -16,22 +16,17 @@ const CookingIcon = (props: SVGProps<SVGSVGElement>) => (
     <path
       fill="#82AAA7"
       stroke="none"
-      d="M48,52H16a4,4,0,0,1-4-4V42a4,4,0,0,1,4-4H48a4,4,0,0,1,4,4v6A4,4,0,0,1,48,52Z"
+      d="M32 12C21.5 12 18 18 18 24h28c0-6-3.5-12-14-12z"
     />
     <path
       fill="#82AAA7"
       stroke="none"
-      d="M44,38V22a12,12,0,0,0-24,0V38Z"
+      d="M16 48V28a2 2 0 012-2h28a2 2 0 012 2v20a4 4 0 01-4 4H20a4 4 0 01-4-4z"
     />
-    <path
-      fill="#82AAA7"
-      stroke="none"
-      d="M20,22a12,12,0,0,1,24,0,12,12,0,0,0-24,0Z"
-    />
-    <path
+     <path
       fill="#E8F8EF"
       stroke="none"
-      d="M12,46H52v2a4,4,0,0,1-4,4H16a4,4,0,0,1-4-4Z"
+      d="M16 44h32v4a4 4 0 01-4 4H20a4 4 0 01-4-4v-4z"
     />
   </svg>
 );

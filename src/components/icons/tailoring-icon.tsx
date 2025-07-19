@@ -13,23 +13,21 @@ const TailoringIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
+    {/* Hand */}
     <path 
-      d="M32.5,42.5 C29.4,42.5 27,40.1 27,37 C27,33.9 29.4,31.5 32.5,31.5 C35.6,31.5 38,33.9 38,37 C38,40.1 35.6,42.5 32.5,42.5" 
-      fill="#D6A2A8" 
-      stroke="none" 
+      d="M48,30c0-6.6-5.4-12-12-12h-4c-2.2,0-4,1.8-4,4v14c0,1.1,0.9,2,2,2h4c1.1,0,2-0.9,2-2v-4h2 c2.2,0,4,1.8,4,4s-1.8,4-4,4h-2" 
+      stroke="#D6A2A8" 
+      strokeWidth="2.5"
+      fill="none"
     />
-    <path 
-      d="M23,17 C23,13.7 25.7,11 29,11 C32.3,11 35,13.7 35,17 L35,28 C35,30.2 33.2,32 31,32 L27,32 C24.8,32 23,30.2 23,28 L23,17 Z" 
-      fill="#82AAA7"
-      stroke="none"
-    />
-    <path
-      d="M45,23 C45,21.3 43.7,20 42,20 L35,20 L35,29 C35,30.7 36.3,32 38,32 L42,32 C43.7,32 45,30.7 45,29 L45,23 Z"
-      fill="#82AAA7"
-      stroke="none"
-    />
-     <line x1="32" y1="42" x2="32" y2="54" stroke="#D6A2A8" strokeWidth="2.5" />
-     <line x1="28" y1="54" x2="36" y2="54" stroke="#D6A2A8" strokeWidth="2.5" />
+    {/* Fingers */}
+    <path d="M26,26h-2c-1.1,0-2-0.9-2-2v-2c0-1.1,0.9-2,2-2h2" stroke="#D6A2A8" strokeWidth="2.5" fill="none"/>
+    <path d="M26,32h-4c-1.1,0-2-0.9-2-2v-2c0-1.1,0.9-2,2-2h4" stroke="#D6A2A8" strokeWidth="2.5" fill="none"/>
+    
+    {/* Needle and Thread */}
+    <path d="M42,20 L54,8" stroke="#82AAA7" strokeWidth="2" fill="none" />
+    <path d="M52,10 a2,2 0 1,1 -4,4" stroke="#82AAA7" strokeWidth="2" fill="none" />
+    <path d="M46,24 C50,28 52,34 50,40 C48,46 42,50 36,48" stroke="#82AAA7" strokeWidth="2" fill="none" strokeDasharray="4 4" />
   </svg>
 );
 export default TailoringIcon;

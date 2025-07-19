@@ -42,7 +42,7 @@ export default function Home() {
             return (
               <Link href={`/services/${category.slug}`} key={category.id}>
                 <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
-                  <CardHeader>
+                  <CardHeader className="items-center">
                     {Icon && <Icon className="w-20 h-20 mb-4 text-accent" />}
                     <CardTitle className="font-headline text-2xl">{category.name}</CardTitle>
                   </CardHeader>
