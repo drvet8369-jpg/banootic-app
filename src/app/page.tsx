@@ -22,10 +22,10 @@ export default function Home() {
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی پیچیده، بهترین صنعتگران محلی را اینجا پیدا کنید.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-4">
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="w-48">
             <Link href="#categories">مشاهده خدمات</Link>
           </Button>
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="w-48">
             <Link href="/register">عضویت و ارائه خدمات</Link>
           </Button>
         </div>
