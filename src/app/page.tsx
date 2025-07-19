@@ -3,10 +3,33 @@ import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { LucideIcon } from 'lucide-react';
-import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
+import { ChefHat, Scissors, Gift } from 'lucide-react';
 
-const iconMap: { [key: string]: LucideIcon } = {
-  beauty: Palette,
+const BeautyIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="80"
+    height="80"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M13.5 6.5l4 4" />
+    <path d="M21.5 14.5L19 12l-4.5 4.5 2.5 2.5z" />
+    <path d="M12 2a10 10 0 1 1-10 10c0-4.97 4.03-9 9-9.9" />
+    <path d="M7.5 10.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+    <path d="M5.5 14.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+    <path d="M9.5 16.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+  </svg>
+);
+
+
+const iconMap: { [key: string]: React.ElementType } = {
+  beauty: BeautyIcon,
   cooking: ChefHat,
   tailoring: Scissors,
   handicrafts: Gift,
