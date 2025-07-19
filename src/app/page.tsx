@@ -2,16 +2,13 @@ import Link from 'next/link';
 import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import BeautyIcon from '@/components/icons/beauty-icon';
-import CookingIcon from '@/components/icons/cooking-icon';
-import TailoringIcon from '@/components/icons/tailoring-icon';
-import HandicraftsIcon from '@/components/icons/handicrafts-icon';
+import { Sparkles, Utensils, Scissors, Paintbrush } from 'lucide-react';
 
 const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
-  beauty: BeautyIcon,
-  cooking: CookingIcon,
-  tailoring: TailoringIcon,
-  handicrafts: HandicraftsIcon,
+  beauty: Sparkles,
+  cooking: Utensils,
+  tailoring: Scissors,
+  handicrafts: Paintbrush,
 };
 
 export default function Home() {
