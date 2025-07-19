@@ -1,19 +1,96 @@
-import { Button } from "@/components/ui/button"
+
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import Link from "next/link";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from "@/components/ui/input";
+import { useToast } from '@/hooks/use-toast';
+import { registerUser } from '@/ai/flows/registerUser';
+
+const formSchema = z.object({
+  phone: z.string().regex(/^09\d{9}$/, {
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+  }),
+  password: z.string().min(1, {
+    message: 'لطفاً رمز عبور خود را وارد کنید.',
+  }),
+});
 
 export default function LoginPage() {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      phone: '',
+      password: '',
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    try {
+      // We'll reuse the registerUser flow for simulation purposes.
+      // In a real app, this would call a dedicated login flow.
+      const result = await registerUser({
+          accountType: 'customer', // This is arbitrary for the login simulation
+          name: 'Logged In User', // This is arbitrary
+          phone: values.phone,
+          password: values.password,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'ورود با موفقیت انجام شد!',
+          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        });
+        router.push('/');
+      } else {
+        toast({
+          title: 'خطا در ورود',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      toast({
+        title: 'خطا در ورود',
+        description: 'مشکلی در ارتباط با سرور پیش آمده است. لطفاً دوباره تلاش کنید.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="flex items-center justify-center py-12 md:py-20">
-      <Card className="mx-auto max-w-sm">
+      <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
@@ -21,40 +98,56 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="phone">شماره تلفن</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="09123456789"
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>شماره تلفن</FormLabel>
+                    <FormControl>
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">رمز عبور</Label>
-                <Link
-                  href="#"
-                  className="mr-auto inline-block text-sm underline"
-                >
-                  رمز عبور خود را فراموش کرده‌اید؟
-                </Link>
-              </div>
-              <Input id="password" type="password" required />
-            </div>
-            <Button type="submit" className="w-full">
-              ورود
-            </Button>
-          </div>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                     <div className="flex items-center">
+                        <FormLabel htmlFor="password">رمز عبور</FormLabel>
+                        <Link
+                          href="#"
+                          className="mr-auto inline-block text-sm underline"
+                        >
+                          رمز عبور خود را فراموش کرده‌اید؟
+                        </Link>
+                      </div>
+                    <FormControl>
+                      <Input type="password" {...field} disabled={isLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                ورود
+              </Button>
+            </form>
+          </Form>
           <div className="mt-4 text-center text-sm">
             حساب کاربری ندارید؟{" "}
-            <Link href="/register-customer" className="underline">
+            <Link href="/register" className="underline">
               ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
