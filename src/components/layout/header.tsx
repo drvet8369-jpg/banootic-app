@@ -1,13 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, ChevronDown } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Menu } from 'lucide-react';
 
 export default function Header() {
   return (
@@ -20,24 +14,11 @@ export default function Header() {
         <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
           <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="transition-colors hover:text-foreground/80 text-foreground/60 px-2">
-                ثبت‌نام
-                <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href="/register-customer">ثبت‌نام مشتری</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/register">ثبت‌نام ارائه‌دهنده</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <Button asChild variant="ghost">
+             <Link href="/register">عضویت</Link>
+          </Button>
+
+          <Button asChild>
              <Link href="/login">ورود</Link>
           </Button>
 
@@ -58,8 +39,7 @@ export default function Header() {
                 </Link>
                 <nav className="grid gap-4">
                   <Link href="/#categories" className="py-2 text-lg font-medium">خدمات</Link>
-                  <Link href="/register-customer" className="py-2 text-lg font-medium">ثبت‌نام مشتری</Link>
-                  <Link href="/register" className="py-2 text-lg font-medium">ثبت‌نام ارائه‌دهنده</Link>
+                  <Link href="/register" className="py-2 text-lg font-medium">عضویت</Link>
                   <Link href="/login" className="py-2 text-lg font-medium">ورود</Link>
                 </nav>
               </div>

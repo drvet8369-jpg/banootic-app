@@ -26,10 +26,7 @@ export default function Home() {
             <Link href="#categories">مشاهده خدمات</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/register">ارائه‌دهنده شوید</Link>
-          </Button>
-           <Button asChild variant="outline" size="lg">
-            <Link href="/register-customer">ثبت‌نام مشتری</Link>
+            <Link href="/register">عضویت و ارائه خدمات</Link>
           </Button>
         </div>
       </section>
