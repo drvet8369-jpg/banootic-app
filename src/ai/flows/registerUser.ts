@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const UserRegistrationInputSchema = z.object({
+const UserRegistrationInputSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
   name: z.string().min(2),
   phone: z.string().regex(/^09\d{9}$/),
@@ -19,14 +19,14 @@ export const UserRegistrationInputSchema = z.object({
 });
 export type UserRegistrationInput = z.infer<typeof UserRegistrationInputSchema>;
 
-export const UserRegistrationOutputSchema = z.object({
+const UserRegistrationOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   userId: z.string().optional(),
 });
 export type UserRegistrationOutput = z.infer<typeof UserRegistrationOutputSchema>;
 
-export const registerUserFlow = ai.defineFlow(
+const registerUserFlow = ai.defineFlow(
   {
     name: 'registerUserFlow',
     inputSchema: UserRegistrationInputSchema,
