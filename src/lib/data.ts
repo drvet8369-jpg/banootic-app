@@ -41,11 +41,10 @@ export const services: Service[] = [
   { name: 'فینگرفود', slug: 'finger-food', categorySlug: 'cooking' },
   { name: 'نان خانگی', slug: 'homemade-bread', categorySlug: 'cooking' },
   // Tailoring
-  { name: 'دوخت لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
-  { name: 'تعمیرات لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
-  { name: 'دوخت مانتو', slug: 'manto-design', categorySlug: 'tailoring' },
-  { name: 'دوخت لباس کودک', slug: 'kids-clothing', categorySlug: 'tailoring' },
-  { name: 'دوخت لباس مجلسی', slug: 'evening-wear', categorySlug: 'tailoring' },
+  { name: 'دوخت سفارشی لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
+  { name: 'مزون و طراحی مد', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
+  { name: 'اجاره و فروش لباس عروس', slug: 'bridal-wear', categorySlug: 'tailoring' },
+  { name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
   // Handicrafts
   { name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
   { name: 'سفال تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
@@ -70,11 +69,10 @@ export const providers: Provider[] = [
   { id: 16, name: 'نان خانگی گندم', service: 'نان خانگی', location: 'ارومیه، مولوی', phone: '09123456789', bio: 'پخت روزانه انواع نان‌های حجیم، سنتی و رژیمی.', categorySlug: 'cooking', serviceSlug: 'homemade-bread', rating: 5.0, reviewsCount: 95, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'artisan bread' }, { src: 'https://placehold.co/400x250.png', aiHint: 'fresh bread' }] },
   
   // Tailoring
-  { id: 7, name: 'خیاطی شیرین', service: 'دوخت لباس', location: 'ارومیه، خیابان مدرس', phone: '09123456789', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'custom dress' }, { src: 'https://placehold.co/400x250.png', aiHint: 'sewing machine' }] },
-  { id: 8, name: 'طراحی پروین', service: 'تعمیرات لباس', location: 'ارومیه، خیابان امام', phone: '09123456789', bio: 'تعمیرات حرفه‌ای و سریع برای فیت عالی لباس.', categorySlug: 'tailoring', serviceSlug: 'clothing-repair', rating: 4.7, reviewsCount: 35, portfolio: [] },
-  { id: 9, name: 'بوتیک افسانه', service: 'دوخت مانتو', location: 'ارومیه، خیابان خیام', phone: '09123456789', bio: 'مانتوهای منحصر به فرد و شیک که سنت را با مد مدرن ترکیب می‌کند.', categorySlug: 'tailoring', serviceSlug: 'manto-design', rating: 4.9, reviewsCount: 80, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'fashion designer' }, { src: 'https://placehold.co/400x250.png', aiHint: 'clothing rack' }] },
-  { id: 17, name: 'لباس کودک رنگین‌کمان', service: 'دوخت لباس کودک', location: 'ارومیه، برق', phone: '09123456789', bio: 'دوخت لباس‌های فانتزی و راحت برای کودکان.', categorySlug: 'tailoring', serviceSlug: 'kids-clothing', rating: 4.8, reviewsCount: 42, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'kids fashion' }] },
-  { id: 18, name: 'خانه مد آناهیتا', service: 'دوخت لباس مجلسی', location: 'ارومیه، خیابان حسنی', phone: '09123456789', bio: 'طراحی و دوخت لباس‌های شب و مجلسی با پارچه‌های خاص.', categorySlug: 'tailoring', serviceSlug: 'evening-wear', rating: 5.0, reviewsCount: 33, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'evening gown' }, { src: 'https://placehold.co/400x250.png', aiHint: 'formal dress' }] },
+  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه، خیابان مدرس', phone: '09123456789', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'custom dress' }, { src: 'https://placehold.co/400x250.png', aiHint: 'sewing machine' }] },
+  { id: 8, name: 'طراحی پروین', service: 'تعمیرات تخصصی لباس', location: 'ارومیه، خیابان امام', phone: '09123456789', bio: 'تعمیرات حرفه‌ای و سریع برای فیت عالی لباس.', categorySlug: 'tailoring', serviceSlug: 'clothing-repair', rating: 4.7, reviewsCount: 35, portfolio: [] },
+  { id: 9, name: 'بوتیک افسانه', service: 'مزون و طراحی مد', location: 'ارومیه، خیابان خیام', phone: '09123456789', bio: 'مانتوهای منحصر به فرد و شیک که سنت را با مد مدرن ترکیب می‌کند.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 4.9, reviewsCount: 80, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'fashion designer' }, { src: 'https://placehold.co/400x250.png', aiHint: 'clothing rack' }] },
+  { id: 18, name: 'خانه مد آناهیتا', service: 'اجاره و فروش لباس عروس', location: 'ارومیه، خیابان حسنی', phone: '09123456789', bio: 'طراحی و دوخت لباس‌های شب و مجلسی با پارچه‌های خاص.', categorySlug: 'tailoring', serviceSlug: 'bridal-wear', rating: 5.0, reviewsCount: 33, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'evening gown' }, { src: 'https://placehold.co/400x250.png', aiHint: 'wedding gown' }] },
   
   // Handicrafts
   { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09123456789', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, portfolio: [{ src: 'https://placehold.co/400x250.png', aiHint: 'handmade necklace' }, { src: 'https://placehold.co/400x250.png', aiHint: 'gemstone rings' }] },
