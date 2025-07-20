@@ -100,7 +100,9 @@ export default function ChatPage() {
         }
     };
 
-    getInitialGreeting();
+    if (messages.length === 0) {
+        getInitialGreeting();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProvider.id]);
 
@@ -131,13 +133,10 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-        const history: GenkitMessage[] = currentMessages.map(msg => ({
+        const history: GenkitMessage[] = messages.map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'model',
             content: msg.text,
         }));
-
-        // We only want the history, not the current message
-        history.pop(); 
 
         const chatInput: ChatInput = {
             providerId: currentProvider.id,
