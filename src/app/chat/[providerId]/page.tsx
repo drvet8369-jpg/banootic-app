@@ -28,13 +28,16 @@ interface Message {
 // Helper to build a cache of provider details for quick lookups
 const providerDetailsCache = new Map<string, Provider>();
 providers.forEach(p => {
+    // Store providers by their ID (as string) for easy lookup from URL params
     providerDetailsCache.set(p.id.toString(), p);
+    // Also store by phone number for easy lookup from chat members array
+    providerDetailsCache.set(p.phone, p);
 });
 
 
 export default function ChatPage() {
   const params = useParams();
-  const otherPersonId = params.providerId as string; // This is always a string from the URL
+  const otherPersonIdOrProviderId = params.providerId as string; // This can be a provider ID or a customer phone number
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
 
@@ -46,9 +49,9 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derive a unique and consistent chat ID. The otherPersonId from the URL can be either a provider's ID or a customer's phone.
-  // We need to get the *phone number* of the provider to create the chat ID.
-  const otherPersonPhone = otherPersonDetails?.phone ?? otherPersonId;
+  // Derive the other person's phone number and the chat ID
+  // This logic is now robust enough to work as soon as `user` is available.
+  const otherPersonPhone = otherPersonDetails?.phone ?? otherPersonIdOrProviderId;
   const chatId = user ? [user.phone, otherPersonPhone].sort().join('_') : null;
   
   const getInitials = (name: string) => {
@@ -61,35 +64,32 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    // We get the details of the other person in the chat.
-    // The `otherPersonId` from the URL is the provider's ID. If it's not in our cache, it's a customer's phone number.
-    const details = providerDetailsCache.get(otherPersonId);
+    // This effect finds the details of the other person in the chat.
+    // It runs whenever the ID from the URL changes.
+    const details = providerDetailsCache.get(otherPersonIdOrProviderId);
     if (details) {
-      // The other person is a provider
+      // The other person is a known provider (looked up by ID or phone).
       setOtherPersonDetails(details);
     } else {
-      // The other person is a customer. The `otherPersonId` IS their phone number.
-      setOtherPersonDetails({ name: `مشتری ${otherPersonId.slice(-4)}`, phone: otherPersonId, portfolio: [] });
+      // The other person is a customer. The `otherPersonIdOrProviderId` IS their phone number.
+      setOtherPersonDetails({ name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, phone: otherPersonIdOrProviderId, portfolio: [] });
     }
-  }, [otherPersonId]);
+  }, [otherPersonIdOrProviderId]);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
+    // This effect subscribes to message updates from Firestore.
+    // It only runs when `chatId` is available.
     if (!chatId) {
-       // We can't fetch messages if we don't have a chat ID.
-       // This can happen briefly on first load before the user/otherPersonDetails are resolved.
-       // We set loading to false only if we are certain there's no chat to load.
-       if (!user || !otherPersonId) {
-            setIsLoading(false);
-       }
+       // If we don't have a chatId yet (e.g., user is not logged in), we stop loading.
+       setIsLoading(false);
        return;
     };
 
     setIsLoading(true);
-
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -106,7 +106,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [chatId, user, otherPersonId, toast]);
+  }, [chatId, toast]);
 
 
   if (!isLoggedIn || !user) {
@@ -132,17 +132,18 @@ export default function ChatPage() {
   }
   
   if (!otherPersonDetails) {
+     // This state should ideally not be reached if the logic above is correct, but it's a good fallback.
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <User className="w-8 h-8 text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">کاربر مورد نظر یافت نشد.</p>
+            <p className="mt-4 text-muted-foreground">در حال بارگذاری اطلاعات کاربر...</p>
         </div>
     );
   }
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !chatId || isSending) return;
+    if (!newMessage.trim() || !chatId || isSending || !otherPersonDetails) return;
 
     setIsSending(true);
     
@@ -176,7 +177,7 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
       <Card className="flex-grow flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 border-b">
-           <Link href={user.accountType === 'provider' ? '/inbox' : `/provider/${otherPersonId}`}>
+           <Link href={user.accountType === 'provider' ? '/inbox' : `/provider/${otherPersonIdOrProviderId}`}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
@@ -193,7 +194,7 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
-            {messages.length === 0 && (
+            {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
                 <p>هنوز پیامی رد و بدل نشده است.</p>
                 <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
