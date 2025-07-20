@@ -24,7 +24,7 @@ const MessageSchema = z.object({
 
 const ChatInputSchema = z.object({
   providerId: z.number().describe("The ID of the service provider."),
-  history: z.array(MessageSchema).describe("The history of the conversation so far. If empty, generate a welcome message."),
+  history: z.array(MessageSchema).optional().describe("The history of the conversation so far. If empty or undefined, a welcome message will be generated."),
 });
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
@@ -83,19 +83,32 @@ const chatFlow = ai.defineFlow(
     - شماره تلفن: ${provider.phone} (فقط در صورتی که کاربر مستقیماً درخواست کرد، آن را ارائه دهید و تاکید کنید که برای رزرو نهایی تماس بگیرند).
 
     وظایف شما:
-    1.  **اگر تاریخچه گفتگو خالی است، با یک پیام خوشامدگویی دوستانه شروع کن.** از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
+    1.  **اگر مکالمه تازه شروع شده، با یک پیام خوشامدگویی دوستانه شروع کن.** از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
     2.  پاسخگویی به سوالات متداول در مورد خدمات, قیمت‌ها (اگر می‌دانی), و زمان‌بندی کلی.
     3.  تشویق مشتریان به رزرو وقت یا خرید.
     4.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگو که پیامش را به خانم "${provider.name}" منتقل می‌کنی و ایشان به زودی پاسخ خواهند داد.
     5.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
     `;
     
-    // The history contains the full conversation. If it's empty, the model will generate a welcome message based on the system prompt.
-    const { output } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
-      system: systemPrompt,
-      history: input.history,
-    });
+    // Determine the parameters for the generate call based on history
+    let generateParams: any;
+    if (!input.history || input.history.length === 0) {
+        // This is the initial call to start the conversation.
+        generateParams = {
+            model: 'googleai/gemini-1.5-flash-latest',
+            system: systemPrompt,
+            prompt: "سلام، لطفا به عنوان دستیار هوشمند، مکالمه را با یک خوشامدگویی شروع کن.",
+        };
+    } else {
+        // This is a follow-up message.
+        generateParams = {
+            model: 'googleai/gemini-1.5-flash-latest',
+            system: systemPrompt,
+            history: input.history,
+        };
+    }
+    
+    const { output } = await ai.generate(generateParams);
     
     if (!output || !output.text) {
       return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
