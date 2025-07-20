@@ -2,7 +2,7 @@
 'use client';
 
 import { providers } from '@/lib/data';
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,15 +28,13 @@ interface Message {
 // Helper to build a cache of provider details for quick lookups
 const providerDetailsCache = new Map<string, Provider>();
 providers.forEach(p => {
-    // Providers are identified by their ID in the URL, which is a number. We need to store it as a string for lookup.
     providerDetailsCache.set(p.id.toString(), p);
 });
 
 
 export default function ChatPage() {
-  const params = useParams<{ providerId: string }>();
-  // The 'providerId' from the URL is actually the 'other person's ID'
-  const otherPersonId = params.providerId as string;
+  const params = useParams();
+  const otherPersonId = params.providerId as string; // This is always a string from the URL
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
 
@@ -48,8 +46,10 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derive a unique and consistent chat ID between the logged-in user and the other person.
-  const chatId = user ? [user.phone, otherPersonId].sort().join('_') : null;
+  // Derive a unique and consistent chat ID. The otherPersonId from the URL can be either a provider's ID or a customer's phone.
+  // We need to get the *phone number* of the provider to create the chat ID.
+  const otherPersonPhone = otherPersonDetails?.phone ?? otherPersonId;
+  const chatId = user ? [user.phone, otherPersonPhone].sort().join('_') : null;
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -61,16 +61,14 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    // Determine whose details we need to show at the top of the chat.
-    // It's always the *other* person in the chat.
-    // In our system, the providerId is the ID for providers, but the phone number for customers.
+    // We get the details of the other person in the chat.
+    // The `otherPersonId` from the URL is the provider's ID. If it's not in our cache, it's a customer's phone number.
     const details = providerDetailsCache.get(otherPersonId);
     if (details) {
       // The other person is a provider
       setOtherPersonDetails(details);
     } else {
-      // The other person is a customer (not in the providers list)
-      // We create a mock object for them. The `otherPersonId` IS their phone number.
+      // The other person is a customer. The `otherPersonId` IS their phone number.
       setOtherPersonDetails({ name: `مشتری ${otherPersonId.slice(-4)}`, phone: otherPersonId, portfolio: [] });
     }
   }, [otherPersonId]);
@@ -80,7 +78,16 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId) {
+       // We can't fetch messages if we don't have a chat ID.
+       // This can happen briefly on first load before the user/otherPersonDetails are resolved.
+       // We set loading to false only if we are certain there's no chat to load.
+       if (!user || !otherPersonId) {
+            setIsLoading(false);
+       }
+       return;
+    };
+
     setIsLoading(true);
 
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
@@ -99,7 +106,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [chatId, toast]);
+  }, [chatId, user, otherPersonId, toast]);
 
 
   if (!isLoggedIn || !user) {
@@ -115,10 +122,20 @@ export default function ChatPage() {
     );
   }
 
-  if (isLoading || !otherPersonDetails) {
+  if (isLoading) {
      return (
-        <div className="flex justify-center items-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
+        </div>
+    );
+  }
+  
+  if (!otherPersonDetails) {
+     return (
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <User className="w-8 h-8 text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">کاربر مورد نظر یافت نشد.</p>
         </div>
     );
   }
@@ -129,8 +146,7 @@ export default function ChatPage() {
 
     setIsSending(true);
     
-    // The otherPerson's ID is their ID for a provider, but their phone for a customer.
-    // The sendMessage flow expects a phone number for the receiver.
+    // The receiverId is always the phone number of the other person.
     const receiverId = otherPersonDetails.phone;
 
     try {
