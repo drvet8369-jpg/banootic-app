@@ -67,44 +67,6 @@ export default function ChatPage() {
   // To satisfy TypeScript, create a new variable that is guaranteed to be non-null
   const currentProvider = provider;
 
-   // Fetch initial greeting from AI when component mounts
-  useEffect(() => {
-    const getInitialGreeting = async () => {
-        setIsLoading(true);
-        try {
-            const chatInput: ChatInput = {
-                providerId: currentProvider.id,
-                history: [], // History is empty, so AI knows to start the conversation
-            };
-
-            const response = await chat(chatInput);
-
-            const providerMessage: Message = {
-                id: Date.now(),
-                text: response.reply,
-                sender: 'provider',
-            };
-            setMessages([providerMessage]);
-
-        } catch (error) {
-            console.error("AI initial greeting failed:", error);
-            const errorMessage: Message = {
-                id: Date.now(),
-                text: "سلام! متاسفانه در حال حاضر دستیار هوشمند در دسترس نیست.",
-                sender: 'provider',
-            };
-            setMessages([errorMessage]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (messages.length === 0) {
-        getInitialGreeting();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProvider.id]);
-
 
   const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -185,6 +147,12 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
+            {messages.length === 0 && !isLoading && (
+              <div className="text-center text-muted-foreground p-8">
+                <p>گفتگو را با ارسال یک پیام شروع کنید.</p>
+                <p className="text-xs mt-2">دستیار هوشمند به نمایندگی از هنرمند پاسخ خواهد داد.</p>
+              </div>
+            )}
             {messages.map((message) => (
               <div 
                 key={message.id} 
@@ -208,7 +176,7 @@ export default function ChatPage() {
                 )}
             </div>
             ))}
-            {isLoading && messages.length > 0 && (
+            {isLoading && (
                <div className="flex items-start gap-2">
                  <Avatar className="h-8 w-8">
                       {currentProvider.portfolio && currentProvider.portfolio.length > 0 ? (
