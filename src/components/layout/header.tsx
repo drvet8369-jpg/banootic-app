@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -63,11 +63,11 @@ export default function Header() {
             </SheetClose>
           </>
         ) : (
-           user && (
+           user?.accountType === 'provider' && (
             <SheetClose asChild>
-              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                 <UserPlus className="h-5 w-5" />
-                 ارائه خدمات
+              <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                 <UserRound className="h-5 w-5" />
+                 پروفایل من
               </Link>
             </SheetClose>
            )
@@ -127,6 +127,14 @@ export default function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                 {user.accountType === 'provider' && (
+                    <Link href="/profile">
+                        <DropdownMenuItem>
+                            <UserRound className="ml-2 h-4 w-4" />
+                            <span>پروفایل من</span>
+                        </DropdownMenuItem>
+                    </Link>
+                )}
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="ml-2 h-4 w-4" />
                   <span>خروج</span>
