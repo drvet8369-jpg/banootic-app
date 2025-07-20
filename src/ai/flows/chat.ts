@@ -18,7 +18,7 @@ import type { Message as GenkitMessage } from 'genkit';
 
 // Define the structure for a single message in the chat history
 const MessageSchema = z.object({
-  role: z.enum(['user', 'model', 'system']),
+  role: z.enum(['user', 'model']),
   content: z.string(),
 });
 
@@ -93,14 +93,10 @@ const chatFlow = ai.defineFlow(
     
     // The history contains the full conversation, with the last entry being the user's newest message.
     // If history is empty, the system prompt will instruct the model to start the conversation.
-    const messagesForAI: GenkitMessage[] = [
-        { role: 'system', content: systemPrompt },
-        ...input.history,
-    ];
-
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
-      history: messagesForAI,
+      system: systemPrompt,
+      history: input.history,
     });
     
     if (!output || !output.text) {
