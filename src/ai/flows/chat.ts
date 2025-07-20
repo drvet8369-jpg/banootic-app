@@ -23,7 +23,8 @@ const MessageSchema = z.object({
 
 const ChatInputSchema = z.object({
   providerId: z.number().describe("The ID of the service provider."),
-  history: z.array(MessageSchema).describe("The history of the conversation so far, including the latest user message."),
+  message: z.string().describe("The user's latest message."),
+  history: z.array(MessageSchema).describe("The history of the conversation so far."),
 });
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
@@ -50,11 +51,9 @@ const chatFlow = ai.defineFlow(
 
     if (input.providerId === 99) {
         // This is a mock provider for testing from the profile page.
-        // In a real app, you would fetch this from a database.
-        // For now, we create a temporary object. The AI won't know the name/phone unless passed in the prompt.
         provider = {
             id: 99,
-            name: "هنرمند تستی", // Name is not available here, so we use a placeholder.
+            name: "هنرمند تستی", 
             service: "خدمات تستی",
             bio: "این یک پروفایل تستی برای بررسی دستیار هوشمند است.",
             location: "نامشخص",
@@ -86,21 +85,20 @@ const chatFlow = ai.defineFlow(
 
     وظایف شما:
     1.  اگر تاریخچه گفتگو خالی است، با یک پیام خوشامدگویی دوستانه شروع کن. از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
-    2.  پاسخگویی به سوالات متداول در مورد خدمات، قیمت‌ها (اگر می‌دانی)، و زمان‌بندی کلی.
+    2.  پاسخگویی به سوالات متداول در مورد خدمات, قیمت‌ها (اگر می‌دانی), و زمان‌بندی کلی.
     3.  تشویق مشتریان به رزرو وقت یا خرید.
     4.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگو که پیامش را به خانم "${provider.name}" منتقل می‌کنی و ایشان به زودی پاسخ خواهند داد.
     5.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
     `;
 
-    const history = input.history.length > 0 ? input.history : [{ role: 'user', content: 'سلام، لطفا مکالمه را شروع کن.' }];
-
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
       system: systemPrompt,
-      history: history,
+      history: input.history,
+      prompt: input.message,
     });
     
-    if (!output) {
+    if (!output || !output.text) {
       return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
     }
 
