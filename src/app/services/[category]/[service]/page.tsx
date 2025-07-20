@@ -63,7 +63,7 @@ export default function ServiceProvidersPage({ params }: PageProps) {
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground">
-          ارائه‌دهندگان خدمات برای <span className="font-semibold">{service.name}</span> در دسته‌ی <Link href={`/services/${category.slug}`} className="font-semibold hover:underline text-foreground">{category.name}</Link>
+          ارائه‌دهندگان خدمات برای <span className="font-semibold">{service.name}</span> در دسته‌ی <Link href={`/services/${category.slug}`} className="font-semibold hover:underline">{category.name}</Link>
         </p>
       </div>
 
