@@ -2,7 +2,7 @@
 'use client';
 
 import { providers } from '@/lib/data';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,10 @@ import { ArrowLeft, Send, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect } from 'react';
-import { chat, ChatInput } from '@/ai/flows/chat';
+import { chat } from '@/ai/flows/chat';
+import type { ChatInput } from '@/ai/flows/chat';
 import type { Message as GenkitMessage } from 'genkit';
 
-interface PageProps {
-  params: {
-    providerId: string;
-  };
-}
 
 interface Message {
   id: number;
@@ -26,9 +22,13 @@ interface Message {
 }
 
 
-export default function ChatPage({ params }: PageProps) {
-  const provider = providers.find(p => p.id.toString() === params.providerId);
-  const [messages, setMessages] = useState<Message[]>([
+export default function ChatPage() {
+  const params = useParams<{ providerId: string }>();
+  const providerId = params.providerId;
+
+  const provider = providers.find(p => p.id.toString() === providerId);
+  
+  const [messages, setMessages] = useState<Message[]>(() => [
     { id: 1, text: `سلام! من دستیار هوشمند ${provider?.name} هستم. چطور میتونم در مورد خدمات '${provider?.service}' کمکتون کنم؟`, sender: 'provider' }
   ]);
   const [newMessage, setNewMessage] = useState('');
