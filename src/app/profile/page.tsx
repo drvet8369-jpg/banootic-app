@@ -10,6 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // A mock StarRating component for the profile preview
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
@@ -131,12 +132,20 @@ export default function ProfilePage() {
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
-                <Button asChild className="w-full">
-                    <Link href={`/chat/${mockProvider.id}`}>
-                        <MessageSquare className="w-4 h-4 ml-2" />
-                        تست دستیار هوشمند
-                    </Link>
-                </Button>
+                 <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                             <Button className="w-full" disabled>
+                                <MessageSquare className="w-4 h-4 ml-2" />
+                                تست دستیار هوشمند
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>این ویژگی به طور موقت غیرفعال شده است.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                 </TooltipProvider>
+
                 <Button asChild className="w-full" variant="outline">
                     <a href={`tel:${mockProvider.phone}`}>
                         <Phone className="w-4 h-4 ml-2" />
