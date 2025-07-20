@@ -128,12 +128,12 @@ export default function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                  {user.accountType === 'provider' && (
-                    <Link href="/profile">
-                        <DropdownMenuItem>
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
-                        </DropdownMenuItem>
-                    </Link>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                          <UserRound className="ml-2 h-4 w-4" />
+                          <span>پروفایل من</span>
+                      </Link>
+                    </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="ml-2 h-4 w-4" />
