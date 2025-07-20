@@ -10,7 +10,6 @@ import { ArrowLeft, Send, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect } from 'react';
-import { chat } from '@/ai/flows/chat';
 
 
 interface PageProps {
@@ -29,7 +28,7 @@ interface Message {
 export default function ChatPage({ params }: PageProps) {
   const provider = providers.find(p => p.id.toString() === params.providerId);
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: 'سلام! چطور میتونم کمکتون کنم؟', sender: 'provider' }
+    { id: 1, text: `سلام! چطور میتونم در مورد خدمات '${provider?.service}' کمکتون کنم؟`, sender: 'provider' }
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -65,35 +64,14 @@ export default function ChatPage({ params }: PageProps) {
     setNewMessage('');
     setIsLoading(true);
 
-    try {
-      const response = await chat({
-        providerName: provider.name,
-        serviceName: provider.service,
-        history: messages.map(m => ({
-          role: m.sender === 'user' ? 'user' : 'model',
-          content: [{ text: m.text }],
-        })),
-        message: newMessage,
-      });
-
-      const aiMessage: Message = {
-        id: Date.now() + 1,
-        text: response.answer,
-        sender: 'provider',
-      };
-      setMessages(prev => [...prev, aiMessage]);
-
-    } catch (error) {
-      console.error("Error getting AI response:", error);
-      const errorMessage: Message = {
-        id: Date.now() + 1,
-        text: 'متاسفانه مشکلی پیش آمده. لطفاً کمی بعد دوباره تلاش کنید.',
-        sender: 'provider',
-      };
-       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
+    // In a real app, this would send the message to a server/database (e.g., Firestore)
+    // and wait for a response from the other user.
+    // For this demo, we'll just simulate a delay.
+    setTimeout(() => {
+        // Here you would listen for incoming messages.
+        // For now, we don't simulate a provider response to avoid confusion with AI.
+        setIsLoading(false);
+    }, 1000);
   };
 
   return (
@@ -141,21 +119,16 @@ export default function ChatPage({ params }: PageProps) {
             </div>
             ))}
             {isLoading && (
-               <div className="flex items-end gap-2">
-                  <Avatar className="h-8 w-8">
-                     {provider.portfolio && provider.portfolio.length > 0 ? (
-                          <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
-                      ) : null }
-                      <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="bg-muted p-3 rounded-lg max-w-xs flex items-center">
+               <div className="flex justify-end">
+                  <div className="flex items-center gap-2 p-3">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">درحال ارسال...</span>
                   </div>
               </div>
             )}
             <div ref={messagesEndRef} />
              <div className="text-center text-xs text-muted-foreground pt-4">
-               این یک نسخه نمایشی است. پیام ها ذخیره نمی شوند.
+               این یک چت مستقیم است. پیام ها در حال حاضر ذخیره نمی‌شوند.
             </div>
         </CardContent>
         <form onSubmit={handleSubmit} className="p-4 border-t">
@@ -169,7 +142,7 @@ export default function ChatPage({ params }: PageProps) {
               disabled={isLoading}
             />
             <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isLoading || !newMessage.trim()}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <Send className="w-4 h-4" />
             </Button>
           </div>
         </form>
@@ -177,4 +150,3 @@ export default function ChatPage({ params }: PageProps) {
     </div>
   );
 }
-
