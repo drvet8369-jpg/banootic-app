@@ -57,7 +57,7 @@ export default function Header() {
             <SheetClose asChild>
               <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                 <UserPlus className="h-5 w-5" />
-                عضویت و ارائه خدمات
+                ثبت‌نام
               </Link>
             </SheetClose>
           </>
@@ -135,7 +135,7 @@ export default function Header() {
           ) : (
             <>
               <Button asChild variant="secondary">
-                 <Link href="/register">عضویت و ارائه خدمات</Link>
+                 <Link href="/register">ثبت‌نام</Link>
               </Button>
               <Button asChild>
                  <Link href="/login">ورود</Link>

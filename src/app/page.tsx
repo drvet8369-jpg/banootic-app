@@ -32,7 +32,7 @@ export default function Home() {
             <Link href="#categories">مشاهده خدمات</Link>
           </Button>
           <Button asChild variant="secondary" size="lg" className="w-48">
-            <Link href="/register">عضویت و ارائه خدمات</Link>
+            <Link href="/register">ثبت‌نام</Link>
           </Button>
         </div>
       </section>
