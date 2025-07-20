@@ -55,7 +55,7 @@ export const services: Service[] = [
 
 export const providers: Provider[] = [
   // Beauty
-  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09000000001', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'nail art' }, { src: 'https://placehold.co/400x250', aiHint: 'pedicure' }] },
+  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09112223344', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'nail art' }, { src: 'https://placehold.co/400x250', aiHint: 'pedicure' }] },
   { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'hair color' }, { src: 'https://placehold.co/400x250', aiHint: 'hairstyle' }] },
   { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه، استادان', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'facial mask' }, { src: 'https://placehold.co/400x250', aiHint: 'skincare product' }] },
   { id: 13, name: 'آرایشگاه رؤیا', service: 'آرایش صورت', location: 'ارومیه، خیابان کاشانی', phone: '09000000013', bio: 'گریم تخصصی عروس و آرایش حرفه‌ای برای مهمانی‌ها.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5.0, reviewsCount: 25, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'bridal makeup' }, { src: 'https://placehold.co/400x250', aiHint: 'evening makeup' }] },
@@ -80,7 +80,6 @@ export const providers: Provider[] = [
   { id: 12, name: 'بافتنی صبا', service: 'بافتنی‌ها', location: 'ارومیه، بازار', phone: '09000000012', bio: 'انواع لباس‌ها و وسایل بافتنی دستباف.', categorySlug: 'handicrafts', serviceSlug: 'termeh-kilim', rating: 4.8, reviewsCount: 48, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'knitting yarn' }, { src: 'https://placehold.co/400x250', aiHint: 'handmade sweater' }] },
   { id: 19, name: 'هنر چرم لیلا', service: 'چرم‌دوزی', location: 'ارومیه، همافر', phone: '09000000019', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', categorySlug: 'handicrafts', serviceSlug: 'leather-crafts', rating: 4.9, reviewsCount: 58, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'leather bag' }] },
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'scented candle' }, { src: 'https://placehold.co/400x250', aiHint: 'handmade soap' }] },
-
-  // Test Provider to fix the inbox issue for newly registered providers
-  { id: 21, name: 'هنرمند تستی جدید', service: 'خدمات تستی', location: 'نامشخص', phone: '09112223344', bio: 'این یک پروفایل تستی برای هنرمندان جدید است.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5, reviewsCount: 0, portfolio: [] }
 ];
+
+    
