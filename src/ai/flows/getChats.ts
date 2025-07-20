@@ -63,6 +63,12 @@ const getChatsFlow = ai.defineFlow(
     outputSchema: GetChatsOutputSchema,
   },
   async ({ userId }) => {
+     if (!adminDb) {
+      const errorMessage = "Firebase Admin is not initialized. Please check server environment variables.";
+      console.error(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+
     try {
         const chatsQuery = adminDb.collection('chats').where('members', 'array-contains', userId);
 

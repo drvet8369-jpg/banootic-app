@@ -7,30 +7,26 @@ let adminDb: admin.firestore.Firestore;
 
 try {
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccountKey) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for server-side Firebase access.');
-  }
 
-  // Parse the service account key from the environment variable.
-  const serviceAccount = JSON.parse(serviceAccountKey);
-
-  // Initialize the app only if it hasn't been initialized yet.
-  if (!admin.apps.length) {
+  // Initialize the app only if it hasn't been initialized yet and a service key is provided.
+  if (serviceAccountKey && !admin.apps.length) {
+    const serviceAccount = JSON.parse(serviceAccountKey);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+    adminDb = getFirestore();
+  } else if (admin.apps.length > 0) {
+    // If the app is already initialized, just get the firestore instance
+    adminDb = getFirestore(admin.app());
   }
-  
-  // Get the Firestore instance. This should only be called after a successful initialization.
-  adminDb = getFirestore();
+  // If serviceAccountKey is missing, adminDb will remain uninitialized.
+  // Functions calling it will need to handle this case gracefully.
 
 } catch (error) {
   console.error('CRITICAL: Firebase admin initialization failed.', error);
-  // Re-throwing the error is important to prevent the application from running
-  // in a broken state where `adminDb` is not a valid Firestore instance.
-  // The process should exit or the error should be handled by the caller.
-  throw new Error(`Firebase Admin SDK initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  // We don't throw here to prevent the entire app from crashing on start,
+  // but dependent features will not work. Errors will be caught in the flows.
 }
 
-// Export the initialized database instance.
+// Export the initialized database instance (or undefined).
 export { adminDb };

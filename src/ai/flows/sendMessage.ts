@@ -36,6 +36,12 @@ const sendMessageFlow = ai.defineFlow(
     }),
   },
   async (input) => {
+    if (!adminDb) {
+      const errorMessage = "Firebase Admin is not initialized. Please check server environment variables.";
+      console.error(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+    
     try {
         const { chatId, text, senderId, receiverId } = input;
         
