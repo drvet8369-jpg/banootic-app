@@ -104,7 +104,7 @@ export default function ChatPage({ params }: PageProps) {
     <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
       <Card className="flex-grow flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 border-b">
-           <Link href={`/services/${provider.categorySlug}/${provider.serviceSlug}`}>
+           <Link href={`/provider/${provider.id}`}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
