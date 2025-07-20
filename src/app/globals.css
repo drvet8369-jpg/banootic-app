@@ -4,14 +4,14 @@
 
 @layer base {
   :root {
-    --background: 140 56% 95%; /* #E8F8EF */
-    --foreground: 145 25% 15%; /* Dark desaturated green */
+    --background: 140 60% 97%; /* Lighter Green */
+    --foreground: 145 35% 10%; /* Darker Green */
     --card: 0 0% 100%;
     --card-foreground: 145 25% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 145 25% 15%;
-    --primary: 140 44% 80%; /* #B5E2BF */
-    --primary-foreground: 145 25% 15%;
+    --primary: 140 40% 75%; /* Softer Green */
+    --primary-foreground: 145 35% 10%; /* Darker Green for contrast */
     --secondary: 140 30% 88%;
     --secondary-foreground: 145 25% 15%;
     --muted: 140 30% 88%;
