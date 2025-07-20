@@ -21,7 +21,7 @@ const MessageSchema = z.object({
   content: z.string(),
 });
 
-export const ChatInputSchema = z.object({
+const ChatInputSchema = z.object({
   providerId: z.number().describe("The ID of the service provider."),
   history: z.array(MessageSchema).describe("The history of the conversation so far."),
   message: z.string().describe("The latest message from the user."),
@@ -29,7 +29,7 @@ export const ChatInputSchema = z.object({
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
 
-export const ChatOutputSchema = z.object({
+const ChatOutputSchema = z.object({
   reply: z.string().describe("The AI-generated reply to the user's message."),
 });
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
