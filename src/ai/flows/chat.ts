@@ -47,7 +47,29 @@ const chatFlow = ai.defineFlow(
     outputSchema: ChatOutputSchema,
   },
   async (input) => {
-    const provider = providers.find(p => p.id === input.providerId);
+    let provider: Provider | undefined | null;
+
+    if (input.providerId === 99) {
+        // This is a mock provider for testing from the profile page.
+        // In a real app, you would fetch this from a database.
+        // For now, we create a temporary object. The AI won't know the name/phone unless passed in the prompt.
+        provider = {
+            id: 99,
+            name: "هنرمند تستی", // Name is not available here, so we use a placeholder.
+            service: "خدمات تستی",
+            bio: "این یک پروفایل تستی برای بررسی دستیار هوشمند است.",
+            location: "نامشخص",
+            phone: "نامشخص",
+            categorySlug: 'beauty',
+            serviceSlug: 'makeup',
+            rating: 5,
+            reviewsCount: 0,
+            portfolio: []
+        };
+    } else {
+        provider = providers.find(p => p.id === input.providerId);
+    }
+
 
     if (!provider) {
       // In a real app, you might throw a more specific error.

@@ -13,6 +13,8 @@ import { FormEvent, useState, useRef, useEffect } from 'react';
 import { chat } from '@/ai/flows/chat';
 import type { ChatInput } from '@/ai/flows/chat';
 import type { Message as GenkitMessage } from 'genkit';
+import { useAuth } from '@/context/AuthContext';
+import type { Provider } from '@/lib/types';
 
 
 interface Message {
@@ -25,9 +27,29 @@ interface Message {
 export default function ChatPage() {
   const params = useParams<{ providerId: string }>();
   const providerId = params.providerId;
-
-  const provider = providers.find(p => p.id.toString() === providerId);
+  const { user, isLoggedIn } = useAuth();
   
+  let provider: Provider | undefined | null;
+
+  if (providerId === '99' && isLoggedIn && user?.accountType === 'provider') {
+    // This is the mock provider from the profile page
+    provider = {
+        id: 99,
+        name: user.name,
+        service: 'خدمات شما (تستی)',
+        location: 'مکان شما',
+        phone: user.phone,
+        bio: 'این یک تست برای دستیار هوشمند شماست.',
+        categorySlug: 'beauty',
+        serviceSlug: 'makeup',
+        rating: 5,
+        reviewsCount: 0,
+        portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'portfolio preview' }],
+    };
+  } else {
+    provider = providers.find(p => p.id.toString() === providerId);
+  }
+
   const [messages, setMessages] = useState<Message[]>(() => [
     { id: 1, text: `سلام! من دستیار هوشمند ${provider?.name} هستم. چطور میتونم در مورد خدمات '${provider?.service}' کمکتون کنم؟`, sender: 'provider' }
   ]);
@@ -43,6 +65,9 @@ export default function ChatPage() {
   if (!provider) {
     notFound();
   }
+
+  // To satisfy TypeScript, create a new variable that is guaranteed to be non-null
+  const currentProvider = provider;
 
   const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -62,7 +87,7 @@ export default function ChatPage() {
       sender: 'user',
     };
     setMessages(prev => [...prev, userMessage]);
-    const currentMessage = newMessage;
+    const currentMessageText = newMessage;
     setNewMessage('');
     setIsLoading(true);
 
@@ -73,9 +98,9 @@ export default function ChatPage() {
         }));
 
         const chatInput: ChatInput = {
-            providerId: provider.id,
+            providerId: currentProvider.id,
             history: history,
-            message: currentMessage,
+            message: currentMessageText,
         };
 
         const response = await chat(chatInput);
@@ -104,20 +129,20 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
       <Card className="flex-grow flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 border-b">
-           <Link href={`/provider/${provider.id}`}>
+           <Link href={currentProvider.id === 99 ? '/profile' : `/provider/${currentProvider.id}`}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
            </Link>
            <Avatar>
-            {provider.portfolio && provider.portfolio.length > 0 ? (
-                <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
+            {currentProvider.portfolio && currentProvider.portfolio.length > 0 ? (
+                <AvatarImage src={currentProvider.portfolio[0].src} alt={currentProvider.name} />
             ) : null }
-            <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
+            <AvatarFallback>{getInitials(currentProvider.name)}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="font-headline text-xl">{provider.name}</CardTitle>
-            <CardDescription>{provider.service} (دستیار هوشمند)</CardDescription>
+            <CardTitle className="font-headline text-xl">{currentProvider.name}</CardTitle>
+            <CardDescription>{currentProvider.service} (دستیار هوشمند)</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
@@ -128,10 +153,10 @@ export default function ChatPage() {
               >
                 {message.sender === 'provider' && (
                   <Avatar className="h-8 w-8">
-                      {provider.portfolio && provider.portfolio.length > 0 ? (
-                          <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
+                      {currentProvider.portfolio && currentProvider.portfolio.length > 0 ? (
+                          <AvatarImage src={currentProvider.portfolio[0].src} alt={currentProvider.name} />
                       ) : null }
-                      <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(currentProvider.name)}</AvatarFallback>
                   </Avatar>
                 )}
                 <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
@@ -147,10 +172,10 @@ export default function ChatPage() {
             {isLoading && (
                <div className="flex items-start gap-2">
                  <Avatar className="h-8 w-8">
-                      {provider.portfolio && provider.portfolio.length > 0 ? (
-                          <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
+                      {currentProvider.portfolio && currentProvider.portfolio.length > 0 ? (
+                          <AvatarImage src={currentProvider.portfolio[0].src} alt={currentProvider.name} />
                       ) : null }
-                      <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(currentProvider.name)}</AvatarFallback>
                   </Avatar>
                   <div className="flex items-center gap-2 p-3">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
