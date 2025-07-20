@@ -74,7 +74,7 @@ const chatFlow = ai.defineFlow(
       return { reply: "متاسفانه اطلاعات این هنرمند یافت نشد." };
     }
 
-    const prompt = `شما یک دستیار هوش مصنوعی برای "${provider.name}" هستید که خدمات "${provider.service}" را ارائه می‌دهد. شما باید به نمایندگی از ایشان به سوالات مشتریان پاسخ دهید.
+    const systemPrompt = `شما یک دستیار هوش مصنوعی برای "${provider.name}" هستید که خدمات "${provider.service}" را ارائه می‌دهد. شما باید به نمایندگی از ایشان به سوالات مشتریان پاسخ دهید.
 
     اطلاعات کلیدی در مورد هنرمند:
     - نام: ${provider.name}
@@ -91,12 +91,14 @@ const chatFlow = ai.defineFlow(
     5.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
     `;
     
-    // The history contains the full conversation, with the last entry being the user's newest message.
-    // If history is empty, the system prompt will instruct the model to start the conversation.
+    const messagesForAI: GenkitMessage[] = [
+      { role: 'system', content: systemPrompt },
+      ...input.history,
+    ];
+    
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
-      prompt: prompt, // Use prompt instead of system for more stable behavior
-      history: input.history,
+      history: messagesForAI,
     });
     
     if (!output || !output.text) {
