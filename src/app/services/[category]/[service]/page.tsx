@@ -62,8 +62,11 @@ export default function ServiceProvidersPage({ params }: PageProps) {
     <div className="py-12 md:py-20">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
-        <p className="mt-3 text-lg text-foreground">
-          ارائه‌دهندگان خدمات برای <span className="font-semibold text-foreground">{service.name}</span> در دسته‌ی <Link href={`/services/${category.slug}`} className="font-semibold hover:underline text-foreground">{category.name}</Link>
+        <p className="mt-3 text-lg">
+            <span className="text-foreground">ارائه‌دهندگان خدمات برای </span>
+            <span className="font-semibold text-foreground">{service.name}</span>
+            <span className="text-foreground"> در دسته‌ی </span>
+            <Link href={`/services/${category.slug}`} className="font-semibold hover:underline text-foreground">{category.name}</Link>
         </p>
       </div>
 
