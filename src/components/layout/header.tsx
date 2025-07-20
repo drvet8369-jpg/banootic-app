@@ -3,8 +3,8 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -29,6 +29,72 @@ export default function Header() {
     }
     return name.substring(0, 2);
   }
+
+  const MobileNavMenu = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-6 border-b flex items-center justify-between">
+         <Link href="/" className="flex items-center gap-2">
+           <Logo className="h-8 w-8 text-primary-foreground" />
+           <span className="font-display text-2xl font-bold">هنربانو</span>
+        </Link>
+      </div>
+
+      <nav className="flex-grow p-4 space-y-2">
+        <SheetClose asChild>
+          <Link href="/#categories" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+            <Briefcase className="h-5 w-5" />
+            مشاهده خدمات
+          </Link>
+        </SheetClose>
+        {!isLoggedIn ? (
+          <>
+            <SheetClose asChild>
+              <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <LogIn className="h-5 w-5" />
+                ورود
+              </Link>
+            </SheetClose>
+            <SheetClose asChild>
+              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <UserPlus className="h-5 w-5" />
+                عضویت و ارائه خدمات
+              </Link>
+            </SheetClose>
+          </>
+        ) : (
+           user && (
+            <SheetClose asChild>
+              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                 <UserPlus className="h-5 w-5" />
+                 ارائه خدمات
+              </Link>
+            </SheetClose>
+           )
+        )}
+      </nav>
+
+      {isLoggedIn && user && (
+        <div className="mt-auto p-4 border-t">
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar>
+                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                  <span className="font-medium">{user.name}</span>
+                  <span className="text-xs text-muted-foreground">{user.phone}</span>
+              </div>
+            </div>
+            <SheetClose asChild>
+              <Button onClick={logout} variant="ghost" className="w-full justify-start">
+                  <LogOut className="ml-2 h-5 w-5" />
+                  خروج
+              </Button>
+            </SheetClose>
+        </div>
+      )}
+    </div>
+  );
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -87,50 +153,8 @@ export default function Header() {
                 <span className="sr-only">باز کردن منو</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="p-0">
-              <div className="flex flex-col h-full">
-                 <div className="p-6 border-b">
-                   <Link href="/" className="flex items-center gap-2">
-                     <Logo className="h-8 w-8 text-primary-foreground" />
-                     <span className="font-display text-2xl font-bold">هنربانو</span>
-                  </Link>
-                </div>
-                <nav className="grid gap-4 p-6 flex-grow">
-                   <SheetClose asChild>
-                     <Link href="/#categories" className="py-2 text-lg font-medium">خدمات</Link>
-                   </SheetClose>
-                  {isLoggedIn && user ? (
-                     <SheetClose asChild>
-                       <Link href="/register" className="py-2 text-lg font-medium">ارائه خدمات</Link>
-                    </SheetClose>
-                  ) : (
-                    <>
-                       <SheetClose asChild>
-                         <Link href="/register" className="py-2 text-lg font-medium">عضویت</Link>
-                       </SheetClose>
-                       <SheetClose asChild>
-                        <Link href="/login" className="py-2 text-lg font-medium">ورود</Link>
-                       </SheetClose>
-                    </>
-                  )}
-                </nav>
-                 {isLoggedIn && (
-                  <div className="border-t p-6">
-                     <Button onClick={() => {
-                        const sheetClose = document.querySelector('button[data-radix-dialog-close]');
-                        if (sheetClose) {
-                          (sheetClose as HTMLElement).click();
-                        }
-                        logout();
-                      }} 
-                      variant="ghost" 
-                      className="w-full justify-start p-0 text-lg font-medium">
-                        <LogOut className="ml-2 h-5 w-5" />
-                        خروج
-                      </Button>
-                  </div>
-                )}
-              </div>
+            <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+              <MobileNavMenu />
             </SheetContent>
           </Sheet>
         </div>
