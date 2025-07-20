@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -47,7 +47,23 @@ export default function Header() {
             مشاهده خدمات
           </Link>
         </SheetClose>
-        {!isLoggedIn ? (
+        {isLoggedIn && user?.accountType === 'provider' && (
+           <>
+             <SheetClose asChild>
+              <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                 <UserRound className="h-5 w-5" />
+                 پروفایل من
+              </Link>
+            </SheetClose>
+            <SheetClose asChild>
+              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                 <Inbox className="h-5 w-5" />
+                 صندوق ورودی
+              </Link>
+            </SheetClose>
+           </>
+        )}
+        {!isLoggedIn && (
           <>
             <SheetClose asChild>
               <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
@@ -62,15 +78,6 @@ export default function Header() {
               </Link>
             </SheetClose>
           </>
-        ) : (
-           user?.accountType === 'provider' && (
-            <SheetClose asChild>
-              <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                 <UserRound className="h-5 w-5" />
-                 پروفایل من
-              </Link>
-            </SheetClose>
-           )
         )}
       </nav>
 
@@ -128,12 +135,20 @@ export default function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                  {user.accountType === 'provider' && (
+                  <>
                     <DropdownMenuItem asChild>
                       <Link href="/profile">
                           <UserRound className="ml-2 h-4 w-4" />
                           <span>پروفایل من</span>
                       </Link>
                     </DropdownMenuItem>
+                     <DropdownMenuItem asChild>
+                      <Link href="/inbox">
+                          <Inbox className="ml-2 h-4 w-4" />
+                          <span>صندوق ورودی</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="ml-2 h-4 w-4" />

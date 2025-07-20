@@ -11,10 +11,10 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { sendMessage } from '@/ai/flows/sendMessage';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -23,22 +23,64 @@ interface Message {
   createdAt: Timestamp;
 }
 
+// Simple cache for provider details to avoid repeated lookups
+// In a real app, this might be part of a context or a more robust data fetching layer
+const providerDetailsCache = new Map<string, { name: string; portfolioSrc?: string }>();
+
+providers.forEach(p => {
+    providerDetailsCache.set(p.id.toString(), { name: p.name, portfolioSrc: p.portfolio?.[0]?.src });
+});
+
+
 export default function ChatPage() {
   const params = useParams<{ providerId: string }>();
   const providerId = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
+  const { toast } = useToast();
 
-  const provider = providers.find(p => p.id.toString() === providerId);
+  const [providerDetails, setProviderDetails] = useState<{ name: string; portfolioSrc?: string } | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derive a unique and consistent chat ID
-  const chatId = user && provider ? [user.phone, provider.id.toString()].sort().join('_') : null;
+  // Derive a unique and consistent chat ID.
+  // The chat ID is between the current user and the providerId from the URL.
+  const chatId = user ? [user.phone, providerId].sort().join('_') : null;
+  
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    const names = name.split(' ');
+    if (names.length > 1 && names[1]) {
+      return `${names[0][0]}${names[1][0]}`;
+    }
+    return name.substring(0, 2);
+  }
 
+  useEffect(() => {
+    // Determine whose details we need to show at the top of the chat.
+    // It's always the *other* person in the chat.
+    if (user) {
+        // If the logged-in user is a provider, the chat is with a customer.
+        // We need to fetch the customer's details.
+        if (user.phone === providerId) {
+             // This case should ideally not happen from the UI, but handle it gracefully.
+             // You can't chat with yourself.
+             // For now, let's assume the providerId is always the other person.
+        } else {
+             const details = providerDetailsCache.get(providerId);
+             if (details) {
+                setProviderDetails(details);
+             } else {
+                // In a real app, you might fetch this from a 'users' collection
+                setProviderDetails({ name: `مشتری ${providerId.slice(-4)}` });
+             }
+        }
+    }
+  }, [user, providerId]);
+  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -58,11 +100,12 @@ export default function ChatPage() {
       setIsLoading(false);
     }, (error) => {
         console.error("Error fetching messages:", error);
+        toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
         setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, toast]);
 
 
   if (!isLoggedIn || !user) {
@@ -78,18 +121,14 @@ export default function ChatPage() {
     );
   }
 
-  if (!provider) {
-    notFound();
+  if (!providerId || !providerDetails) {
+     return (
+        <div className="flex justify-center items-center h-full py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+    );
   }
   
-  const getInitials = (name: string) => {
-    const names = name.split(' ');
-    if (names.length > 1) {
-      return `${names[0][0]}${names[1][0]}`;
-    }
-    return name.substring(0, 2);
-  }
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || isSending) return;
@@ -101,18 +140,19 @@ export default function ChatPage() {
             chatId: chatId,
             text: newMessage,
             senderId: user.phone,
-            receiverId: provider.id.toString(),
+            receiverId: providerId,
         });
         
         if(result.success) {
             setNewMessage('');
         } else {
             console.error("Failed to send message:", result.error);
-            // Optionally: show a toast notification for the error
+            toast({ title: "خطا", description: `پیام ارسال نشد: ${result.error}`, variant: "destructive" });
         }
 
     } catch(error) {
         console.error("Error in handleSubmit:", error);
+         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
     } finally {
         setIsSending(false);
     }
@@ -122,20 +162,20 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
       <Card className="flex-grow flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 border-b">
-           <Link href={`/provider/${provider.id}`}>
+           <Link href={user.accountType === 'provider' ? '/inbox' : `/provider/${providerId}`}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
            </Link>
            <Avatar>
-            {provider.portfolio && provider.portfolio.length > 0 ? (
-                <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
+            {providerDetails.portfolioSrc ? (
+                <AvatarImage src={providerDetails.portfolioSrc} alt={providerDetails.name} />
             ) : null }
-            <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
+            <AvatarFallback>{getInitials(providerDetails.name)}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="font-headline text-xl">{provider.name}</CardTitle>
-            <CardDescription>گفتگو با هنرمند</CardDescription>
+            <CardTitle className="font-headline text-xl">{providerDetails.name}</CardTitle>
+            <CardDescription>گفتگوی مستقیم</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
@@ -147,7 +187,7 @@ export default function ChatPage() {
             {!isLoading && messages.length === 0 && (
               <div className="text-center text-muted-foreground p-8">
                 <p>هنوز پیامی رد و بدل نشده است.</p>
-                <p className="text-xs mt-2">گفتگو را با ارسال یک پیام شروع کنید.</p>
+                <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
             {messages.map((message) => {
@@ -159,10 +199,10 @@ export default function ChatPage() {
                   >
                     {!isSender && (
                       <Avatar className="h-8 w-8">
-                          {provider.portfolio && provider.portfolio.length > 0 ? (
-                              <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
+                          {providerDetails.portfolioSrc ? (
+                              <AvatarImage src={providerDetails.portfolioSrc} alt={providerDetails.name} />
                           ) : null }
-                          <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(providerDetails.name)}</AvatarFallback>
                       </Avatar>
                     )}
                     <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${isSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>

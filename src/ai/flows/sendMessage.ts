@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -8,7 +9,7 @@
  */
 
 import { z } from 'genkit';
-import { doc, collection, addDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ai } from '@/ai/genkit';
 
@@ -46,6 +47,12 @@ const sendMessageFlow = ai.defineFlow(
         if (!chatDocSnap.exists()) {
             await setDoc(chatDocRef, {
                 members: [senderId, receiverId],
+                lastMessage: text,
+                updatedAt: serverTimestamp(),
+            });
+        } else {
+            // If chat exists, just update the last message and timestamp
+             await updateDoc(chatDocRef, {
                 lastMessage: text,
                 updatedAt: serverTimestamp(),
             });
