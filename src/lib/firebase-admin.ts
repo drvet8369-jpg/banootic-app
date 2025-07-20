@@ -22,7 +22,7 @@ try {
   } else {
     // If serviceAccountKey is missing, adminDb will remain uninitialized.
     // Functions calling it will need to handle this case gracefully.
-    console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is not set. Firebase Admin SDK will not be initialized. Server-side features requiring Firebase will not work.");
+    console.warn("Firebase Admin SDK not initialized: FIREBASE_SERVICE_ACCOUNT_KEY is not set in environment variables. Server-side Firebase features will be unavailable.");
   }
 
 } catch (error) {
