@@ -50,9 +50,7 @@ export default function ChatPage() {
     provider = providers.find(p => p.id.toString() === providerId);
   }
 
-  const [messages, setMessages] = useState<Message[]>(() => [
-    { id: 1, text: `سلام! من دستیار هوشمند ${provider?.name} هستم. چطور میتونم در مورد خدمات '${provider?.service}' کمکتون کنم؟`, sender: 'provider' }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -68,6 +66,44 @@ export default function ChatPage() {
 
   // To satisfy TypeScript, create a new variable that is guaranteed to be non-null
   const currentProvider = provider;
+
+   // Fetch initial greeting from AI when component mounts
+  useEffect(() => {
+    const getInitialGreeting = async () => {
+        setIsLoading(true);
+        try {
+            const chatInput: ChatInput = {
+                providerId: currentProvider.id,
+                history: [],
+                message: "", // Start the conversation
+            };
+
+            const response = await chat(chatInput);
+
+            const providerMessage: Message = {
+                id: Date.now(),
+                text: response.reply,
+                sender: 'provider',
+            };
+            setMessages([providerMessage]);
+
+        } catch (error) {
+            console.error("AI initial greeting failed:", error);
+            const errorMessage: Message = {
+                id: Date.now(),
+                text: "سلام! متاسفانه در حال حاضر دستیار هوشمند در دسترس نیست.",
+                sender: 'provider',
+            };
+            setMessages([errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    getInitialGreeting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProvider.id]);
+
 
   const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -86,16 +122,22 @@ export default function ChatPage() {
       text: newMessage,
       sender: 'user',
     };
-    setMessages(prev => [...prev, userMessage]);
+    
+    // Add user message to state and clear input
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     const currentMessageText = newMessage;
     setNewMessage('');
     setIsLoading(true);
 
     try {
-        const history: GenkitMessage[] = messages.map(msg => ({
+        const history: GenkitMessage[] = currentMessages.map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'model',
             content: msg.text,
         }));
+
+        // We only want the history, not the current message
+        history.pop(); 
 
         const chatInput: ChatInput = {
             providerId: currentProvider.id,

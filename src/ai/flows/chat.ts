@@ -21,15 +21,15 @@ const MessageSchema = z.object({
   content: z.string(),
 });
 
-const ChatInputSchema = z.object({
+export const ChatInputSchema = z.object({
   providerId: z.number().describe("The ID of the service provider."),
   history: z.array(MessageSchema).describe("The history of the conversation so far."),
-  message: z.string().describe("The latest message from the user."),
+  message: z.string().optional().describe("The latest message from the user. This can be empty on the first turn."),
 });
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
 
-const ChatOutputSchema = z.object({
+export const ChatOutputSchema = z.object({
   reply: z.string().describe("The AI-generated reply to the user's message."),
 });
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
@@ -86,17 +86,18 @@ const chatFlow = ai.defineFlow(
     - شماره تلفن: ${provider.phone} (فقط در صورتی که کاربر مستقیماً درخواست کرد، آن را ارائه دهید و تاکید کنید که برای رزرو نهایی تماس بگیرند).
 
     وظایف شما:
-    1.  پاسخگویی به سوالات متداول در مورد خدمات، قیمت‌ها (اگر می‌دانید)، و زمان‌بندی کلی.
-    2.  تشویق مشتریان به رزرو وقت یا خرید.
-    3.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگویید که پیامش را به خانم "${provider.name}" منتقل می‌کنید و ایشان به زودی پاسخ خواهند داد.
-    4.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
+    1.  شروع گفتگو با یک پیام خوشامدگویی دوستانه. از کاربر بپرسید چگونه می‌توانید در مورد خدمات "${provider.service}" به او کمک کنید.
+    2.  پاسخگویی به سوالات متداول در مورد خدمات، قیمت‌ها (اگر می‌دانید)، و زمان‌بندی کلی.
+    3.  تشویق مشتریان به رزرو وقت یا خرید.
+    4.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگویید که پیامش را به خانم "${provider.name}" منتقل می‌کنید و ایشان به زودی پاسخ خواهند داد.
+    5.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
     `;
 
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
       system: systemPrompt,
       history: input.history,
-      prompt: input.message,
+      prompt: input.message || "سلام، لطفاً مکالمه را شروع کن.",
     });
     
     if (!output) {
