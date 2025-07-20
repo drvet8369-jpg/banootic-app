@@ -28,10 +28,10 @@ export default function Home() {
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-4">
-          <Button asChild size="lg" className="w-48">
+          <Button asChild size="lg" className="w-48 text-lg">
             <Link href="#categories">مشاهده خدمات</Link>
           </Button>
-          <Button asChild variant="secondary" size="lg" className="w-48">
+          <Button asChild variant="secondary" size="lg" className="w-48 text-lg">
             <Link href="/register">ثبت‌نام</Link>
           </Button>
         </div>
