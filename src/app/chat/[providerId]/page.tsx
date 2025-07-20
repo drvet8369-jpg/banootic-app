@@ -10,7 +10,8 @@ import { ArrowLeft, Send, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect } from 'react';
-
+import { chat, ChatInput } from '@/ai/flows/chat';
+import type { Message as GenkitMessage } from 'genkit';
 
 interface PageProps {
   params: {
@@ -28,7 +29,7 @@ interface Message {
 export default function ChatPage({ params }: PageProps) {
   const provider = providers.find(p => p.id.toString() === params.providerId);
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: `سلام! چطور میتونم در مورد خدمات '${provider?.service}' کمکتون کنم؟`, sender: 'provider' }
+    { id: 1, text: `سلام! من دستیار هوشمند ${provider?.name} هستم. چطور میتونم در مورد خدمات '${provider?.service}' کمکتون کنم؟`, sender: 'provider' }
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,17 +62,42 @@ export default function ChatPage({ params }: PageProps) {
       sender: 'user',
     };
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = newMessage;
     setNewMessage('');
     setIsLoading(true);
 
-    // In a real app, this would send the message to a server/database (e.g., Firestore)
-    // and wait for a response from the other user.
-    // For this demo, we'll just simulate a delay.
-    setTimeout(() => {
-        // Here you would listen for incoming messages.
-        // For now, we don't simulate a provider response to avoid confusion with AI.
+    try {
+        const history: GenkitMessage[] = messages.map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'model',
+            content: msg.text,
+        }));
+
+        const chatInput: ChatInput = {
+            providerId: provider.id,
+            history: history,
+            message: currentMessage,
+        };
+
+        const response = await chat(chatInput);
+
+        const providerMessage: Message = {
+            id: Date.now() + 1,
+            text: response.reply,
+            sender: 'provider',
+        };
+        setMessages(prev => [...prev, providerMessage]);
+
+    } catch(error) {
+        console.error("AI chat failed:", error);
+        const errorMessage: Message = {
+            id: Date.now() + 1,
+            text: "متاسفانه مشکلی در ارتباط با دستیار هوشمند پیش آمده است. لطفاً بعدا تلاش کنید.",
+            sender: 'provider',
+        };
+        setMessages(prev => [...prev, errorMessage]);
+    } finally {
         setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -91,7 +117,7 @@ export default function ChatPage({ params }: PageProps) {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{provider.name}</CardTitle>
-            <CardDescription>{provider.service}</CardDescription>
+            <CardDescription>{provider.service} (دستیار هوشمند)</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
@@ -108,7 +134,7 @@ export default function ChatPage({ params }: PageProps) {
                       <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
                   </Avatar>
                 )}
-                <div className={`p-3 rounded-lg max-w-xs ${message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                     <p className="text-sm">{message.text}</p>
                 </div>
                  {message.sender === 'user' && (
@@ -119,16 +145,22 @@ export default function ChatPage({ params }: PageProps) {
             </div>
             ))}
             {isLoading && (
-               <div className="flex justify-end">
+               <div className="flex items-start gap-2">
+                 <Avatar className="h-8 w-8">
+                      {provider.portfolio && provider.portfolio.length > 0 ? (
+                          <AvatarImage src={provider.portfolio[0].src} alt={provider.name} />
+                      ) : null }
+                      <AvatarFallback>{getInitials(provider.name)}</AvatarFallback>
+                  </Avatar>
                   <div className="flex items-center gap-2 p-3">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">درحال ارسال...</span>
+                    <span className="text-sm text-muted-foreground">درحال نوشتن...</span>
                   </div>
               </div>
             )}
             <div ref={messagesEndRef} />
              <div className="text-center text-xs text-muted-foreground pt-4">
-               این یک چت مستقیم است. پیام ها در حال حاضر ذخیره نمی‌شوند.
+               این یک چت با دستیار هوشمند است.
             </div>
         </CardContent>
         <form onSubmit={handleSubmit} className="p-4 border-t">
