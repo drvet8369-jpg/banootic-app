@@ -24,7 +24,7 @@ const MessageSchema = z.object({
 
 const ChatInputSchema = z.object({
   providerId: z.number().describe("The ID of the service provider."),
-  history: z.array(MessageSchema).describe("The history of the conversation so far, where the last message is the user's most recent message."),
+  history: z.array(MessageSchema).describe("The history of the conversation so far. If empty, generate a welcome message."),
 });
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
@@ -70,7 +70,6 @@ const chatFlow = ai.defineFlow(
 
 
     if (!provider) {
-      // In a real app, you might throw a more specific error.
       return { reply: "متاسفانه اطلاعات این هنرمند یافت نشد." };
     }
 
@@ -84,15 +83,14 @@ const chatFlow = ai.defineFlow(
     - شماره تلفن: ${provider.phone} (فقط در صورتی که کاربر مستقیماً درخواست کرد، آن را ارائه دهید و تاکید کنید که برای رزرو نهایی تماس بگیرند).
 
     وظایف شما:
-    1.  اگر تاریخچه گفتگو خالی است، با یک پیام خوشامدگویی دوستانه شروع کن. از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
+    1.  **اگر تاریخچه گفتگو خالی است، با یک پیام خوشامدگویی دوستانه شروع کن.** از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
     2.  پاسخگویی به سوالات متداول در مورد خدمات, قیمت‌ها (اگر می‌دانی), و زمان‌بندی کلی.
     3.  تشویق مشتریان به رزرو وقت یا خرید.
     4.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگو که پیامش را به خانم "${provider.name}" منتقل می‌کنی و ایشان به زودی پاسخ خواهند داد.
     5.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
     `;
     
-    // The history contains the full conversation, with the last entry being the user's newest message.
-    // If history is empty, the system prompt will instruct the model to start the conversation.
+    // The history contains the full conversation. If it's empty, the model will generate a welcome message based on the system prompt.
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
       system: systemPrompt,

@@ -18,7 +18,7 @@ import type { Provider } from '@/lib/types';
 
 
 interface Message {
-  id: number;
+  id: string; // Use string for IDs to accommodate Date.now() and other potential sources
   text: string;
   sender: 'user' | 'provider';
 }
@@ -52,12 +52,46 @@ export default function ChatPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start loading initially for the welcome message
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Fetch the initial greeting message from the AI when the component mounts
+  useEffect(() => {
+    const getInitialGreeting = async () => {
+      if (!provider) return;
+      setIsLoading(true);
+      try {
+        const chatInput: ChatInput = {
+          providerId: provider.id,
+          history: [], // Send empty history to get the initial greeting
+        };
+        const response = await chat(chatInput);
+        const providerMessage: Message = {
+          id: `ai-init-${Date.now()}`,
+          text: response.reply,
+          sender: 'provider',
+        };
+        setMessages([providerMessage]);
+      } catch (error) {
+        console.error("Failed to get initial greeting:", error);
+        const errorMessage: Message = {
+          id: `ai-error-${Date.now()}`,
+          text: "سلام! متاسفانه در حال حاضر برای شروع گفتگو مشکلی پیش آمده است. لطفاً صفحه را مجدداً بارگذاری کنید.",
+          sender: 'provider',
+        };
+        setMessages([errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    getInitialGreeting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider?.id]);
 
 
   if (!provider) {
@@ -81,7 +115,7 @@ export default function ChatPage() {
     if (!newMessage.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now(),
+      id: `user-${Date.now()}`,
       text: newMessage,
       sender: 'user',
     };
@@ -101,13 +135,13 @@ export default function ChatPage() {
 
         const chatInput: ChatInput = {
             providerId: currentProvider.id,
-            history: history, // Send the entire history, including the latest user message
+            history: history,
         };
 
         const response = await chat(chatInput);
 
         const providerMessage: Message = {
-            id: Date.now() + 1,
+            id: `ai-response-${Date.now()}`,
             text: response.reply,
             sender: 'provider',
         };
@@ -116,7 +150,7 @@ export default function ChatPage() {
     } catch(error) {
         console.error("AI chat failed:", error);
         const errorMessage: Message = {
-            id: Date.now() + 1,
+            id: `ai-error-${Date.now()}`,
             text: "متاسفانه مشکلی در ارتباط با دستیار هوشمند پیش آمده است. لطفاً بعدا تلاش کنید.",
             sender: 'provider',
         };
