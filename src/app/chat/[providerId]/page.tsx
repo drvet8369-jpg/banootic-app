@@ -24,11 +24,11 @@ interface Message {
   createdAt: Timestamp;
 }
 
-const providerDetailsCache = new Map<string, Provider>();
-providers.forEach(p => {
-    providerDetailsCache.set(p.id.toString(), p);
-    providerDetailsCache.set(p.phone, p);
-});
+interface OtherPersonDetails {
+    name: string;
+    phone: string;
+    portfolio?: { src: string }[];
+}
 
 
 export default function ChatPage() {
@@ -37,7 +37,7 @@ export default function ChatPage() {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
 
-  const [otherPersonDetails, setOtherPersonDetails] = useState<Provider | { name: string, phone: string, portfolio?: { src: string }[] } | null>(null);
+  const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -45,7 +45,7 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatId = user ? [user.phone, otherPersonIdOrProviderId].sort().join('_') : null;
+  const chatId = user && otherPersonDetails ? [user.phone, otherPersonDetails.phone].sort().join('_') : null;
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -57,12 +57,27 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    const details = providerDetailsCache.get(otherPersonIdOrProviderId);
-    if (details) {
-      setOtherPersonDetails(details);
-    } else {
-      setOtherPersonDetails({ name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, phone: otherPersonIdOrProviderId, portfolio: [] });
-    }
+      // Find by provider ID (number)
+      const providerById = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
+      if (providerById) {
+          setOtherPersonDetails(providerById);
+          return;
+      }
+
+      // Find by provider phone (string)
+      const providerByPhone = providers.find(p => p.phone === otherPersonIdOrProviderId);
+      if (providerByPhone) {
+          setOtherPersonDetails(providerByPhone);
+          return;
+      }
+      
+      // If not found, it must be a customer
+      setOtherPersonDetails({ 
+          name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, 
+          phone: otherPersonIdOrProviderId, 
+          portfolio: [] 
+      });
+
   }, [otherPersonIdOrProviderId]);
   
   useEffect(() => {
@@ -71,7 +86,8 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!chatId) {
-       setIsLoading(false);
+       // We can't load messages until we have both users' info to form the chatId
+       setIsLoading(true); // Keep loading until chatId is available
        return;
     };
 
@@ -108,20 +124,11 @@ export default function ChatPage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || !otherPersonDetails) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
-        </div>
-    );
-  }
-  
-  if (!otherPersonDetails) {
-     return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
-            <User className="w-8 h-8 text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">در حال بارگذاری اطلاعات کاربر...</p>
         </div>
     );
   }
@@ -132,6 +139,7 @@ export default function ChatPage() {
 
     setIsSending(true);
     
+    // CRITICAL FIX: receiverId must always be the phone number from otherPersonDetails
     const receiverId = otherPersonDetails.phone;
 
     try {
@@ -142,16 +150,16 @@ export default function ChatPage() {
         await addDoc(messagesColRef, {
             text: newMessage,
             senderId: user.phone,
-            receiverId: receiverId,
+            receiverId: receiverId, // Use the correct phone number
             createdAt: serverTimestamp(),
         });
         
         // Update the last message and timestamp on the main chat document
         await setDoc(chatDocRef, {
-            members: [user.phone, receiverId],
+            members: [user.phone, receiverId], // Use the correct phone number
             lastMessage: newMessage,
             updatedAt: serverTimestamp(),
-        }, { merge: true }); // Use merge: true to create the doc if it doesn't exist
+        }, { merge: true });
 
         setNewMessage('');
 
