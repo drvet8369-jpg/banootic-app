@@ -89,10 +89,13 @@ const getChatsFlow = ai.defineFlow(
             };
         });
 
-        return { success: true, chats: chats };
+        // Sort chats by most recent
+        const sortedChats = chats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
+        return { success: true, chats: sortedChats };
 
     } catch (error) {
-      console.error("Error fetching chats:", error);
+      console.error("Error fetching chats in getChatsFlow:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       return { success: false, error: `Failed to fetch chats: ${errorMessage}` };
     }

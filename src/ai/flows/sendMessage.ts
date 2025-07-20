@@ -73,7 +73,7 @@ const sendMessageFlow = ai.defineFlow(
       
       return { success: true };
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error sending message in sendMessageFlow:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       return { success: false, error: `Failed to send message: ${errorMessage}` };
     }
