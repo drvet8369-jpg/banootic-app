@@ -28,7 +28,8 @@ interface Message {
 // Helper to build a cache of provider details for quick lookups
 const providerDetailsCache = new Map<string, Provider>();
 providers.forEach(p => {
-    providerDetailsCache.set(p.phone, p);
+    // Providers are identified by their ID in the URL, which is a number. We need to store it as a string for lookup.
+    providerDetailsCache.set(p.id.toString(), p);
 });
 
 
@@ -39,7 +40,7 @@ export default function ChatPage() {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
 
-  const [otherPersonDetails, setOtherPersonDetails] = useState<Provider | { name: string, portfolio?: { src: string }[] } | null>(null);
+  const [otherPersonDetails, setOtherPersonDetails] = useState<Provider | { name: string, phone: string, portfolio?: { src: string }[] } | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -62,14 +63,15 @@ export default function ChatPage() {
   useEffect(() => {
     // Determine whose details we need to show at the top of the chat.
     // It's always the *other* person in the chat.
+    // In our system, the providerId is the ID for providers, but the phone number for customers.
     const details = providerDetailsCache.get(otherPersonId);
     if (details) {
       // The other person is a provider
       setOtherPersonDetails(details);
     } else {
       // The other person is a customer (not in the providers list)
-      // We create a mock object for them.
-      setOtherPersonDetails({ name: `مشتری ${otherPersonId.slice(-4)}`, portfolio: [] });
+      // We create a mock object for them. The `otherPersonId` IS their phone number.
+      setOtherPersonDetails({ name: `مشتری ${otherPersonId.slice(-4)}`, phone: otherPersonId, portfolio: [] });
     }
   }, [otherPersonId]);
   
@@ -127,12 +129,16 @@ export default function ChatPage() {
 
     setIsSending(true);
     
+    // The otherPerson's ID is their ID for a provider, but their phone for a customer.
+    // The sendMessage flow expects a phone number for the receiver.
+    const receiverId = otherPersonDetails.phone;
+
     try {
         const result = await sendMessage({
             chatId: chatId,
             text: newMessage,
             senderId: user.phone,
-            receiverId: otherPersonId,
+            receiverId: receiverId,
         });
         
         if(result.success) {
