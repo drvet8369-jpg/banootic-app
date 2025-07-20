@@ -98,6 +98,10 @@ const chatFlow = ai.defineFlow(
       history: input.history,
       prompt: input.message,
     });
+    
+    if (!output) {
+      return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
+    }
 
     return {
       reply: output.text,
