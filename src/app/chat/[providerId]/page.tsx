@@ -74,7 +74,6 @@ export default function ChatPage() {
         try {
             const chatInput: ChatInput = {
                 providerId: currentProvider.id,
-                message: "سلام", // A simple prompt to start the conversation
                 history: [], // History is empty, so AI knows to start the conversation
             };
 
@@ -126,22 +125,21 @@ export default function ChatPage() {
     };
     
     // Add user message to state and clear input
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setNewMessage('');
     setIsLoading(true);
 
     try {
-        // Convert the previous messages to the format Genkit expects for history
-        const history: GenkitMessage[] = messages.map(msg => ({
+        // Convert the full message history to the format Genkit expects
+        const history: GenkitMessage[] = updatedMessages.map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'model',
             content: msg.text,
         }));
 
         const chatInput: ChatInput = {
             providerId: currentProvider.id,
-            message: newMessage, // Send the new user message separately
-            history: history, // Send the previous messages as history
+            history: history, // Send the entire history, including the latest user message
         };
 
         const response = await chat(chatInput);
@@ -210,7 +208,7 @@ export default function ChatPage() {
                 )}
             </div>
             ))}
-            {isLoading && (
+            {isLoading && messages.length > 0 && (
                <div className="flex items-start gap-2">
                  <Avatar className="h-8 w-8">
                       {currentProvider.portfolio && currentProvider.portfolio.length > 0 ? (

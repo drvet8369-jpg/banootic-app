@@ -23,8 +23,7 @@ const MessageSchema = z.object({
 
 const ChatInputSchema = z.object({
   providerId: z.number().describe("The ID of the service provider."),
-  message: z.string().describe("The user's latest message."),
-  history: z.array(MessageSchema).describe("The history of the conversation so far."),
+  history: z.array(MessageSchema).describe("The history of the conversation so far, where the last message is the user's most recent message."),
 });
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
@@ -90,12 +89,13 @@ const chatFlow = ai.defineFlow(
     4.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگو که پیامش را به خانم "${provider.name}" منتقل می‌کنی و ایشان به زودی پاسخ خواهند داد.
     5.  پاسخ‌ها باید به زبان فارسی، دوستانه، محترمانه و حرفه‌ای باشند.
     `;
-
+    
+    // The history contains the full conversation, with the last entry being the user's newest message.
+    // If history is empty, the system prompt will instruct the model to start the conversation.
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
       system: systemPrompt,
       history: input.history,
-      prompt: input.message,
     });
     
     if (!output || !output.text) {
