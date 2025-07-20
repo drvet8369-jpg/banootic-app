@@ -10,8 +10,8 @@
  */
 
 import { z } from 'genkit';
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Timestamp } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 import { ai } from '@/ai/genkit';
 import { providers } from '@/lib/data';
 
@@ -64,12 +64,9 @@ const getChatsFlow = ai.defineFlow(
   },
   async ({ userId }) => {
     try {
-        const chatsQuery = query(
-            collection(db, 'chats'),
-            where('members', 'array-contains', userId)
-        );
+        const chatsQuery = adminDb.collection('chats').where('members', 'array-contains', userId);
 
-        const querySnapshot = await getDocs(chatsQuery);
+        const querySnapshot = await chatsQuery.get();
 
         if (querySnapshot.empty) {
             return { success: true, chats: [] };

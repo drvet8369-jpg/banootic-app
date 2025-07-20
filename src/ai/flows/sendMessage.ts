@@ -9,8 +9,8 @@
  */
 
 import { z } from 'genkit';
-import { doc, collection, addDoc, serverTimestamp, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { FieldValue } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 import { ai } from '@/ai/genkit';
 
 const SendMessageInputSchema = z.object({
@@ -40,33 +40,33 @@ const sendMessageFlow = ai.defineFlow(
         const { chatId, text, senderId, receiverId } = input;
         
         // Reference to the chat document
-        const chatDocRef = doc(db, 'chats', chatId);
-        const chatDocSnap = await getDoc(chatDocRef);
+        const chatDocRef = adminDb.collection('chats').doc(chatId);
+        const chatDocSnap = await chatDocRef.get();
         
         // If chat doesn't exist, create it with the members
-        if (!chatDocSnap.exists()) {
-            await setDoc(chatDocRef, {
+        if (!chatDocSnap.exists) {
+            await chatDocRef.set({
                 members: [senderId, receiverId],
                 lastMessage: text,
-                updatedAt: serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
             });
         } else {
             // If chat exists, just update the last message and timestamp
-             await updateDoc(chatDocRef, {
+             await chatDocRef.update({
                 lastMessage: text,
-                updatedAt: serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
             });
         }
         
         // Reference to the messages subcollection
-        const messagesColRef = collection(chatDocRef, 'messages');
+        const messagesColRef = chatDocRef.collection('messages');
         
         // Add the new message document
-        await addDoc(messagesColRef, {
+        await messagesColRef.add({
             text,
             senderId,
             receiverId,
-            createdAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
       
       return { success: true };
