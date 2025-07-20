@@ -80,4 +80,7 @@ export const providers: Provider[] = [
   { id: 12, name: 'بافتنی صبا', service: 'بافتنی‌ها', location: 'ارومیه، بازار', phone: '09000000012', bio: 'انواع لباس‌ها و وسایل بافتنی دستباف.', categorySlug: 'handicrafts', serviceSlug: 'termeh-kilim', rating: 4.8, reviewsCount: 48, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'knitting yarn' }, { src: 'https://placehold.co/400x250', aiHint: 'handmade sweater' }] },
   { id: 19, name: 'هنر چرم لیلا', service: 'چرم‌دوزی', location: 'ارومیه، همافر', phone: '09000000019', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', categorySlug: 'handicrafts', serviceSlug: 'leather-crafts', rating: 4.9, reviewsCount: 58, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'leather bag' }] },
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'scented candle' }, { src: 'https://placehold.co/400x250', aiHint: 'handmade soap' }] },
+
+  // Test Provider to fix the inbox issue for newly registered providers
+  { id: 21, name: 'هنرمند تستی جدید', service: 'خدمات تستی', location: 'نامشخص', phone: '09112223344', bio: 'این یک پروفایل تستی برای هنرمندان جدید است.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5, reviewsCount: 0, portfolio: [] }
 ];
