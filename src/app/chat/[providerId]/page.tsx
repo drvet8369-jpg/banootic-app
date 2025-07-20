@@ -74,8 +74,7 @@ export default function ChatPage() {
         try {
             const chatInput: ChatInput = {
                 providerId: currentProvider.id,
-                history: [],
-                message: "", // Start the conversation
+                history: [], // History is empty, so AI knows to start the conversation
             };
 
             const response = await chat(chatInput);
@@ -126,22 +125,21 @@ export default function ChatPage() {
     };
     
     // Add user message to state and clear input
-    const currentMessages = [...messages, userMessage];
-    setMessages(currentMessages);
-    const currentMessageText = newMessage;
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setNewMessage('');
     setIsLoading(true);
 
     try {
-        const history: GenkitMessage[] = messages.map(msg => ({
+        // Convert the entire message history to the format Genkit expects
+        const history: GenkitMessage[] = newMessages.map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'model',
             content: msg.text,
         }));
 
         const chatInput: ChatInput = {
             providerId: currentProvider.id,
-            history: history,
-            message: currentMessageText,
+            history: history, // Send the full history including the new user message
         };
 
         const response = await chat(chatInput);
