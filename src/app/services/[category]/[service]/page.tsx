@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PageProps {
   params: {
@@ -112,19 +111,12 @@ export default function ServiceProvidersPage({ params }: PageProps) {
                     تماس
                   </a>
                 </Button>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button className="w-full" disabled>
-                                <MessageSquare className="w-4 h-4 ml-2" />
-                                ارسال پیام
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>این ویژگی به زودی فعال خواهد شد.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+                <Button asChild className="w-full">
+                    <Link href={`/chat/${provider.id}`}>
+                        <MessageSquare className="w-4 h-4 ml-2" />
+                        ارسال پیام
+                    </Link>
+                </Button>
               </CardFooter>
             </Card>
           ))}

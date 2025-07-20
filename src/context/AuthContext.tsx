@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 
 interface User {
   name: string;
-  phone: string;
+  // The user's phone number is their unique ID
+  phone: string; 
   accountType?: 'customer' | 'provider';
 }
 

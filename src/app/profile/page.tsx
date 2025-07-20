@@ -132,16 +132,16 @@ export default function ProfilePage() {
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
-                 <TooltipProvider>
+                <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
                              <Button className="w-full" disabled>
                                 <MessageSquare className="w-4 h-4 ml-2" />
-                                تست دستیار هوشمند
+                                صندوق ورودی پیام‌ها
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>این ویژگی به طور موقت غیرفعال شده است.</p>
+                            <p>این ویژگی به زودی برای ارائه‌دهندگان فعال خواهد شد.</p>
                         </TooltipContent>
                     </Tooltip>
                  </TooltipProvider>
