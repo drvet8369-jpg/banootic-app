@@ -12,8 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
-import { sendMessage } from '@/ai/flows/sendMessage';
+import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider } from '@/lib/types';
 
@@ -25,19 +24,16 @@ interface Message {
   createdAt: Timestamp;
 }
 
-// Helper to build a cache of provider details for quick lookups
 const providerDetailsCache = new Map<string, Provider>();
 providers.forEach(p => {
-    // Store providers by their ID (as string) for easy lookup from URL params
     providerDetailsCache.set(p.id.toString(), p);
-    // Also store by phone number for easy lookup from chat members array
     providerDetailsCache.set(p.phone, p);
 });
 
 
 export default function ChatPage() {
   const params = useParams();
-  const otherPersonIdOrProviderId = params.providerId as string; // This can be a provider ID or a customer phone number
+  const otherPersonIdOrProviderId = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
 
@@ -49,10 +45,7 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derive the other person's phone number and the chat ID
-  // This logic is now robust enough to work as soon as `user` is available.
-  const otherPersonPhone = otherPersonDetails?.phone ?? otherPersonIdOrProviderId;
-  const chatId = user ? [user.phone, otherPersonPhone].sort().join('_') : null;
+  const chatId = user ? [user.phone, otherPersonIdOrProviderId].sort().join('_') : null;
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -64,14 +57,10 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    // This effect finds the details of the other person in the chat.
-    // It runs whenever the ID from the URL changes.
     const details = providerDetailsCache.get(otherPersonIdOrProviderId);
     if (details) {
-      // The other person is a known provider (looked up by ID or phone).
       setOtherPersonDetails(details);
     } else {
-      // The other person is a customer. The `otherPersonIdOrProviderId` IS their phone number.
       setOtherPersonDetails({ name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, phone: otherPersonIdOrProviderId, portfolio: [] });
     }
   }, [otherPersonIdOrProviderId]);
@@ -81,10 +70,7 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    // This effect subscribes to message updates from Firestore.
-    // It only runs when `chatId` is available.
     if (!chatId) {
-       // If we don't have a chatId yet (e.g., user is not logged in), we stop loading.
        setIsLoading(false);
        return;
     };
@@ -132,7 +118,6 @@ export default function ChatPage() {
   }
   
   if (!otherPersonDetails) {
-     // This state should ideally not be reached if the logic above is correct, but it's a good fallback.
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <User className="w-8 h-8 text-muted-foreground" />
@@ -143,27 +128,32 @@ export default function ChatPage() {
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !chatId || isSending || !otherPersonDetails) return;
+    if (!newMessage.trim() || !chatId || isSending || !otherPersonDetails || !user) return;
 
     setIsSending(true);
     
-    // The receiverId is always the phone number of the other person.
     const receiverId = otherPersonDetails.phone;
 
     try {
-        const result = await sendMessage({
-            chatId: chatId,
+        const chatDocRef = doc(db, 'chats', chatId);
+        const messagesColRef = collection(chatDocRef, 'messages');
+
+        // Add the message to the subcollection
+        await addDoc(messagesColRef, {
             text: newMessage,
             senderId: user.phone,
             receiverId: receiverId,
+            createdAt: serverTimestamp(),
         });
         
-        if(result.success) {
-            setNewMessage('');
-        } else {
-            console.error("Failed to send message:", result.error);
-            toast({ title: "خطا", description: `پیام ارسال نشد: ${result.error}`, variant: "destructive" });
-        }
+        // Update the last message and timestamp on the main chat document
+        await setDoc(chatDocRef, {
+            members: [user.phone, receiverId],
+            lastMessage: newMessage,
+            updatedAt: serverTimestamp(),
+        }, { merge: true }); // Use merge: true to create the doc if it doesn't exist
+
+        setNewMessage('');
 
     } catch(error) {
         console.error("Error in handleSubmit:", error);

@@ -4,12 +4,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { getChats } from '@/ai/flows/getChats';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Inbox, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns-jalali';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { providers } from '@/lib/data';
 
 interface Chat {
   id: string;
@@ -18,6 +20,14 @@ interface Chat {
   lastMessage: string;
   updatedAt: Date;
 }
+
+const getUserDetails = (phone: string): { name: string } => {
+    const provider = providers.find(p => p.phone === phone);
+    if (provider) {
+        return { name: provider.name };
+    }
+    return { name: `مشتری ${phone.slice(-4)}` };
+};
 
 export default function InboxPage() {
   const { user, isLoggedIn } = useAuth();
@@ -31,16 +41,34 @@ export default function InboxPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await getChats({ userId: user.phone });
-        if (result.success && result.chats) {
-          // Sort chats by updatedAt descending
-          const sortedChats = result.chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-          setChats(sortedChats);
-        } else {
-          setError(result.error || 'خطایی در دریافت لیست گفتگوها رخ داد.');
+        const chatsQuery = query(collection(db, 'chats'), where('members', 'array-contains', user.phone));
+        const querySnapshot = await getDocs(chatsQuery);
+
+        if (querySnapshot.empty) {
+          setChats([]);
+          return;
         }
+
+        const fetchedChats = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const otherMemberId = data.members.find((id: string) => id !== user.phone);
+            const otherMemberDetails = getUserDetails(otherMemberId);
+            const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
+            
+            return {
+                id: doc.id,
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberDetails.name,
+                lastMessage: data.lastMessage || '',
+                updatedAt: updatedAt,
+            };
+        });
+
+        const sortedChats = fetchedChats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        setChats(sortedChats);
+
       } catch (err) {
-        setError('یک خطای پیش‌بینی نشده رخ داد.');
+        setError('یک خطای پیش‌بینی نشده در دریافت گفتگوها رخ داد.');
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -49,6 +77,8 @@ export default function InboxPage() {
 
     if (isLoggedIn && user?.accountType === 'provider') {
       fetchChats();
+    } else {
+        setIsLoading(false);
     }
   }, [user, isLoggedIn]);
   

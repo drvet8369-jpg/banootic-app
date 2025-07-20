@@ -1,4 +1,3 @@
 // Flows will be imported for their side effects in this file.
 import './flows/registerUser';
-import './flows/sendMessage';
-import './flows/getChats';
+import './flows/chat';
