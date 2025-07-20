@@ -26,7 +26,7 @@ interface Message {
 
 export default function ChatPage() {
   const params = useParams<{ providerId: string }>();
-  const providerId = params.providerId;
+  const providerId = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
   
   let provider: Provider | undefined | null;
