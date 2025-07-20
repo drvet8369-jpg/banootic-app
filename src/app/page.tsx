@@ -21,7 +21,7 @@ export default function Home() {
         <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
           هنربانو
         </h1>
-        <p className="mt-4 font-headline text-xl md:text-2xl text-accent-foreground/90">
+        <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
           با دستان هنرمندت بدرخش
         </p>
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
