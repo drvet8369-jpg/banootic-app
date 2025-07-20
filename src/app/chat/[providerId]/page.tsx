@@ -15,6 +15,8 @@ import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { sendMessage } from '@/ai/flows/sendMessage';
 import { useToast } from '@/hooks/use-toast';
+import type { Provider } from '@/lib/types';
+
 
 interface Message {
   id: string;
@@ -23,22 +25,21 @@ interface Message {
   createdAt: Timestamp;
 }
 
-// Simple cache for provider details to avoid repeated lookups
-// In a real app, this might be part of a context or a more robust data fetching layer
-const providerDetailsCache = new Map<string, { name: string; portfolioSrc?: string }>();
-
+// Helper to build a cache of provider details for quick lookups
+const providerDetailsCache = new Map<string, Provider>();
 providers.forEach(p => {
-    providerDetailsCache.set(p.id.toString(), { name: p.name, portfolioSrc: p.portfolio?.[0]?.src });
+    providerDetailsCache.set(p.phone, p);
 });
 
 
 export default function ChatPage() {
   const params = useParams<{ providerId: string }>();
-  const providerId = params.providerId as string;
+  // The 'providerId' from the URL is actually the 'other person's ID'
+  const otherPersonId = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
 
-  const [providerDetails, setProviderDetails] = useState<{ name: string; portfolioSrc?: string } | null>(null);
+  const [otherPersonDetails, setOtherPersonDetails] = useState<Provider | { name: string, portfolio?: { src: string }[] } | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -46,9 +47,8 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derive a unique and consistent chat ID.
-  // The chat ID is between the current user and the providerId from the URL.
-  const chatId = user ? [user.phone, providerId].sort().join('_') : null;
+  // Derive a unique and consistent chat ID between the logged-in user and the other person.
+  const chatId = user ? [user.phone, otherPersonId].sort().join('_') : null;
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -62,24 +62,16 @@ export default function ChatPage() {
   useEffect(() => {
     // Determine whose details we need to show at the top of the chat.
     // It's always the *other* person in the chat.
-    if (user) {
-        // If the logged-in user is a provider, the chat is with a customer.
-        // We need to fetch the customer's details.
-        if (user.phone === providerId) {
-             // This case should ideally not happen from the UI, but handle it gracefully.
-             // You can't chat with yourself.
-             // For now, let's assume the providerId is always the other person.
-        } else {
-             const details = providerDetailsCache.get(providerId);
-             if (details) {
-                setProviderDetails(details);
-             } else {
-                // In a real app, you might fetch this from a 'users' collection
-                setProviderDetails({ name: `مشتری ${providerId.slice(-4)}` });
-             }
-        }
+    const details = providerDetailsCache.get(otherPersonId);
+    if (details) {
+      // The other person is a provider
+      setOtherPersonDetails(details);
+    } else {
+      // The other person is a customer (not in the providers list)
+      // We create a mock object for them.
+      setOtherPersonDetails({ name: `مشتری ${otherPersonId.slice(-4)}`, portfolio: [] });
     }
-  }, [user, providerId]);
+  }, [otherPersonId]);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -121,7 +113,7 @@ export default function ChatPage() {
     );
   }
 
-  if (!providerId || !providerDetails) {
+  if (isLoading || !otherPersonDetails) {
      return (
         <div className="flex justify-center items-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -140,7 +132,7 @@ export default function ChatPage() {
             chatId: chatId,
             text: newMessage,
             senderId: user.phone,
-            receiverId: providerId,
+            receiverId: otherPersonId,
         });
         
         if(result.success) {
@@ -162,29 +154,24 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
       <Card className="flex-grow flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 border-b">
-           <Link href={user.accountType === 'provider' ? '/inbox' : `/provider/${providerId}`}>
+           <Link href={user.accountType === 'provider' ? '/inbox' : `/provider/${otherPersonId}`}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
            </Link>
            <Avatar>
-            {providerDetails.portfolioSrc ? (
-                <AvatarImage src={providerDetails.portfolioSrc} alt={providerDetails.name} />
+            {otherPersonDetails.portfolio && otherPersonDetails.portfolio.length > 0 ? (
+                <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
             ) : null }
-            <AvatarFallback>{getInitials(providerDetails.name)}</AvatarFallback>
+            <AvatarFallback>{getInitials(otherPersonDetails.name)}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="font-headline text-xl">{providerDetails.name}</CardTitle>
+            <CardTitle className="font-headline text-xl">{otherPersonDetails.name}</CardTitle>
             <CardDescription>گفتگوی مستقیم</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
-            {isLoading && (
-                 <div className="flex justify-center items-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                </div>
-            )}
-            {!isLoading && messages.length === 0 && (
+            {messages.length === 0 && (
               <div className="text-center text-muted-foreground p-8">
                 <p>هنوز پیامی رد و بدل نشده است.</p>
                 <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
@@ -199,10 +186,10 @@ export default function ChatPage() {
                   >
                     {!isSender && (
                       <Avatar className="h-8 w-8">
-                          {providerDetails.portfolioSrc ? (
-                              <AvatarImage src={providerDetails.portfolioSrc} alt={providerDetails.name} />
+                          {otherPersonDetails.portfolio && otherPersonDetails.portfolio.length > 0 ? (
+                              <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
                           ) : null }
-                          <AvatarFallback>{getInitials(providerDetails.name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(otherPersonDetails.name)}</AvatarFallback>
                       </Avatar>
                     )}
                     <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${isSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>

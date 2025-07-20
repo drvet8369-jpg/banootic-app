@@ -41,32 +41,34 @@ const sendMessageFlow = ai.defineFlow(
         
         // Reference to the chat document
         const chatDocRef = adminDb.collection('chats').doc(chatId);
-        const chatDocSnap = await chatDocRef.get();
         
-        // If chat doesn't exist, create it with the members
-        if (!chatDocSnap.exists) {
-            await chatDocRef.set({
-                members: [senderId, receiverId],
-                lastMessage: text,
-                updatedAt: FieldValue.serverTimestamp(),
+        // Use a transaction to ensure atomicity
+        await adminDb.runTransaction(async (transaction) => {
+            const chatDocSnap = await transaction.get(chatDocRef);
+            
+            // If chat doesn't exist, create it with members and initial message details
+            if (!chatDocSnap.exists) {
+                transaction.set(chatDocRef, {
+                    members: [senderId, receiverId],
+                    lastMessage: text,
+                    updatedAt: FieldValue.serverTimestamp(),
+                });
+            } else {
+                // If chat exists, just update the last message and timestamp
+                 transaction.update(chatDocRef, {
+                    lastMessage: text,
+                    updatedAt: FieldValue.serverTimestamp(),
+                });
+            }
+            
+            // Reference to the messages subcollection and add the new message document
+            const newMessageRef = chatDocRef.collection('messages').doc();
+            transaction.set(newMessageRef, {
+                text,
+                senderId,
+                receiverId,
+                createdAt: FieldValue.serverTimestamp(),
             });
-        } else {
-            // If chat exists, just update the last message and timestamp
-             await chatDocRef.update({
-                lastMessage: text,
-                updatedAt: FieldValue.serverTimestamp(),
-            });
-        }
-        
-        // Reference to the messages subcollection
-        const messagesColRef = chatDocRef.collection('messages');
-        
-        // Add the new message document
-        await messagesColRef.add({
-            text,
-            senderId,
-            receiverId,
-            createdAt: FieldValue.serverTimestamp(),
         });
       
       return { success: true };
