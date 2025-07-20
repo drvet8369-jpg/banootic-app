@@ -13,6 +13,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { providers } from '@/lib/data';
 import type { Provider } from '@/lib/types';
+import type { Message as GenkitMessage } from 'genkit';
 
 
 // Define the structure for a single message in the chat history
@@ -73,7 +74,7 @@ const chatFlow = ai.defineFlow(
       return { reply: "متاسفانه اطلاعات این هنرمند یافت نشد." };
     }
 
-    const systemPrompt = `شما یک دستیار هوش مصنوعی برای "${provider.name}" هستید که خدمات "${provider.service}" را ارائه می‌دهد. شما باید به نمایندگی از ایشان به سوالات مشتریان پاسخ دهید.
+    const prompt = `شما یک دستیار هوش مصنوعی برای "${provider.name}" هستید که خدمات "${provider.service}" را ارائه می‌دهد. شما باید به نمایندگی از ایشان به سوالات مشتریان پاسخ دهید.
 
     اطلاعات کلیدی در مورد هنرمند:
     - نام: ${provider.name}
@@ -83,7 +84,7 @@ const chatFlow = ai.defineFlow(
     - شماره تلفن: ${provider.phone} (فقط در صورتی که کاربر مستقیماً درخواست کرد، آن را ارائه دهید و تاکید کنید که برای رزرو نهایی تماس بگیرند).
 
     وظایف شما:
-    1.  اگر تاریخچه گفتگو خالی است یا این اولین پیام است، با یک پیام خوشامدگویی دوستانه شروع کن. از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
+    1.  اگر تاریخچه گفتگو خالی است، با یک پیام خوشامدگویی دوستانه شروع کن. از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
     2.  پاسخگویی به سوالات متداول در مورد خدمات, قیمت‌ها (اگر می‌دانی), و زمان‌بندی کلی.
     3.  تشویق مشتریان به رزرو وقت یا خرید.
     4.  اگر سوالی خیلی تخصصی بود یا نیاز به هماهنگی دقیق داشت، به کاربر بگو که پیامش را به خانم "${provider.name}" منتقل می‌کنی و ایشان به زودی پاسخ خواهند داد.
@@ -94,7 +95,7 @@ const chatFlow = ai.defineFlow(
     // If history is empty, the system prompt will instruct the model to start the conversation.
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
-      system: systemPrompt,
+      prompt: prompt, // Use prompt instead of system for more stable behavior
       history: input.history,
     });
     
