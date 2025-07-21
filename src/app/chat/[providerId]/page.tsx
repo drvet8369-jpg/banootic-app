@@ -125,7 +125,7 @@ export default function ChatPage() {
     const messagesQuery = query(
         collection(db, 'chats', chatId, 'messages'), 
         orderBy('createdAt', 'desc'),
-        limit(20) // <<< --- *** THE KEY CHANGE: ONLY LOAD THE LAST 20 MESSAGES ***
+        limit(5) // Load only the last 5 messages for performance
     );
     
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
