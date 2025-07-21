@@ -22,11 +22,13 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
+  // Check if there is a second word and it's not a number (like in test data)
+  if (names.length > 1 && names[1] && !/^\d+$/.test(names[1].replace(/[\(\)]/g, ''))) {
     return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
 };
+
 
 export default function InboxPage() {
   const { user, isLoggedIn } = useAuth();
@@ -35,8 +37,7 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // This is the core logic for loading chats.
-    // It runs ONLY when the user's login status (identified by phone number) changes.
+    // This logic runs ONLY when the user's login status (identified by phone number) changes.
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -78,7 +79,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.phone]); // CRITICAL FIX: Depend on the primitive value `user.phone`, not the `user` object.
+  }, [user?.phone]); // CRITICAL: Depend on the primitive value `user.phone`, not the `user` object.
 
 
   if (isLoading) {
