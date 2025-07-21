@@ -109,14 +109,19 @@ const chatFlow = ai.defineFlow(
         };
     }
     
-    const { output } = await ai.generate(generateParams);
-    
-    if (!output || !output.text) {
-      return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
-    }
+    try {
+        const { output } = await ai.generate(generateParams);
+        
+        if (!output || !output.text) {
+          return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
+        }
 
-    return {
-      reply: output.text,
-    };
+        return {
+          reply: output.text,
+        };
+    } catch (e) {
+        console.error("AI Generation Error in chatFlow:", e);
+        return { reply: "خطا در ارتباط با سرویس هوش مصنوعی. لطفاً مجدداً تلاش کنید." };
+    }
   }
 );

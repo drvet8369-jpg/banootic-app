@@ -14,8 +14,8 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { chat, ChatInput } from '@/ai/flows/chat';
-import type { Message as DbMessage } from '@/lib/types';
+import { chat } from '@/ai/flows/chat';
+import type { Message as DbMessage, Provider } from '@/lib/types';
 
 
 interface Message extends DbMessage {
@@ -45,7 +45,7 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatId = user && otherPersonDetails ? [user.phone, otherPersonDetails.phone].sort().join('_') : null;
+  const chatId = user && otherPersonDetails && !isAiAssistantChat ? [user.phone, otherPersonDetails.phone].sort().join('_') : null;
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -71,23 +71,16 @@ export default function ChatPage() {
         portfolio: []
       };
     } else {
-      // Check if it's a provider ID
-      const providerById = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
-      if (providerById) {
-        details = providerById;
+      const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId) as Provider | undefined;
+      if (provider) {
+        details = provider;
       } else {
-        // Assume it's a phone number for a customer or unknown user
-        const userByPhone = providers.find(p => p.phone === otherPersonIdOrProviderId);
-        if (userByPhone) {
-            details = userByPhone
-        } else {
-             details = {
-                id: otherPersonIdOrProviderId,
-                name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`,
-                phone: otherPersonIdOrProviderId,
-                portfolio: []
-            };
-        }
+         details = {
+            id: otherPersonIdOrProviderId,
+            name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`,
+            phone: otherPersonIdOrProviderId,
+            portfolio: []
+        };
       }
     }
     setOtherPersonDetails(details);
@@ -103,7 +96,8 @@ export default function ChatPage() {
     if (!otherPersonDetails || !isAiAssistantChat) return;
     
     setIsLoading(true);
-    setMessages([]); // Clear previous messages
+    setMessages([]);
+    
     try {
         const result = await chat({ providerId: Number(otherPersonDetails.id), history: [] });
         const aiMessage: Message = {
@@ -133,6 +127,7 @@ export default function ChatPage() {
         if (messages.length === 0) {
             fetchInitialAiMessage();
         }
+        setIsLoading(false);
         return; // No firestore listener for AI chat
     }
 
@@ -171,7 +166,7 @@ export default function ChatPage() {
     );
   }
   
-  if (isLoading && messages.length === 0) {
+  if (isLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -192,7 +187,6 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
-    // Optimistically update the UI with the user's message
     const currentMessages = [...messages, userMessage];
     setMessages(currentMessages);
     setNewMessage('');
@@ -201,11 +195,11 @@ export default function ChatPage() {
         const history = currentMessages.map(m => ({
             role: m.senderId === user.phone ? 'user' : 'model',
             content: m.text,
-        } as const));
+        })).filter(h => h.content);
 
         const result = await chat({
             providerId: Number(otherPersonDetails.id),
-            history: history.filter(h => h.content) // Ensure content is not empty
+            history: history
         });
 
         const aiMessage: Message = {
@@ -220,7 +214,6 @@ export default function ChatPage() {
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-        // Optionally, remove the user's message if the AI fails
         setMessages(messages);
     } finally {
         setIsSending(false);
@@ -240,14 +233,16 @@ export default function ChatPage() {
     if (!chatId) return;
 
     setIsSending(true);
-    setNewMessage('');
     
     try {
+        const textToSend = newMessage.trim();
+        setNewMessage('');
+
         const chatDocRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatDocRef, 'messages');
         
         await addDoc(messagesColRef, {
-            text: text,
+            text: textToSend,
             senderId: user.phone,
             receiverId: otherPersonDetails.phone, 
             createdAt: serverTimestamp(),
@@ -255,14 +250,14 @@ export default function ChatPage() {
         
         await setDoc(chatDocRef, {
             members: [user.phone, otherPersonDetails.phone],
-            lastMessage: text,
+            lastMessage: textToSend,
             updatedAt: serverTimestamp(),
         }, { merge: true });
 
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(text); // Put the message back in the input on failure
+        setNewMessage(text);
     } finally {
         setIsSending(false);
     }
@@ -338,7 +333,7 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-             {isSending && !isAiAssistantChat && (
+             {isSending && (
                 <div className="flex items-end gap-2 justify-end">
                     <div className="p-3 rounded-lg bg-muted">
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -369,5 +364,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    
