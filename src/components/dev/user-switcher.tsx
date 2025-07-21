@@ -27,7 +27,7 @@ export default function UserSwitcher() {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 20, y: 20 });
-  const [rel, setRel] = useState({ x: 0, y: 0 }); // relative position of mouse in panel
+  const [rel, setRel] = useState({ x: 0, y: 0 }); // relative position of mouse/touch in panel
 
   // Load position from localStorage on mount
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function UserSwitcher() {
       setPosition(JSON.parse(savedPosition));
     } else {
       // Default position if not saved
-       const defaultX = window.innerWidth - 380; // Default to right corner
+       const defaultX = window.innerWidth - 380;
        const defaultY = window.innerHeight - 200;
        setPosition({ x: defaultX > 20 ? defaultX : 20, y: defaultY > 20 ? defaultY : 20 });
     }
@@ -71,7 +71,7 @@ export default function UserSwitcher() {
     });
     e.preventDefault();
   };
-  
+
   // Touch event handlers for mobile
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!panelRef.current) return;
@@ -97,9 +97,9 @@ export default function UserSwitcher() {
     setIsDragging(false);
   }
 
-
   useEffect(() => {
     if (isDragging) {
+      // Add listeners for both mouse and touch
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
       document.addEventListener('touchmove', onTouchMove);
@@ -107,17 +107,18 @@ export default function UserSwitcher() {
     }
 
     return () => {
+      // Clean up listeners for both mouse and touch
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, onMouseMove, onMouseUp, onTouchMove, onTouchEnd]); // Added dependencies
 
   return (
     <div
       ref={panelRef}
-      className="fixed bg-yellow-300/90 backdrop-blur-sm p-4 border border-yellow-400 z-[100] shadow-lg rounded-lg w-[360px]"
+      className="fixed bg-yellow-300/90 backdrop-blur-sm p-4 border border-yellow-400 z-[100] shadow-lg rounded-lg w-[360px] touch-none"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     >
       <div
