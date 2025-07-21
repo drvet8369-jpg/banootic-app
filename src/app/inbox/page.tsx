@@ -38,9 +38,15 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn || user?.accountType !== 'provider' || !user.phone) {
+    if (!isLoggedIn || !user?.phone) {
       setIsLoading(false);
       return;
+    }
+    // Only fetch chats if the user is a provider
+    if (user.accountType !== 'provider') {
+        setIsLoading(false);
+        setChats([]); // Clear chats if user switches to customer
+        return;
     }
 
     setIsLoading(true);
@@ -117,7 +123,7 @@ export default function InboxPage() {
       <div className="flex flex-col items-center justify-center text-center py-20">
         <Inbox className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">صفحه مخصوص هنرمندان</h1>
-        <p className="text-muted-foreground mt-2">این صفحه فقط برای ارائه‌دهندگان خدمات (هنرمندان) در دسترس است.</p>
+        <p className="text-muted-foreground mt-2">این صفحه فقط برای ارائه‌دهندگان خدمات (هنرمندان) در دسترس است. برای مشاهده، لطفاً نقش خود را به هنرمند تغییر دهید.</p>
         <Button asChild className="mt-6">
           <Link href="/">بازگشت به صفحه اصلی</Link>
         </Button>
@@ -172,3 +178,5 @@ export default function InboxPage() {
     </div>
   );
 }
+
+    

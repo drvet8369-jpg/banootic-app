@@ -1,3 +1,6 @@
+
+import type { Timestamp } from 'firebase/firestore';
+
 export interface Category {
   id: number;
   name: string;
@@ -29,3 +32,12 @@ export interface Provider {
   reviewsCount: number;
   portfolio: PortfolioItem[];
 }
+
+export interface Message {
+  text: string;
+  senderId: string;
+  receiverId?: string;
+  createdAt: Timestamp;
+}
+
+    

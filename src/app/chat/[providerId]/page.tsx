@@ -15,13 +15,11 @@ import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { chat, ChatInput } from '@/ai/flows/chat';
+import type { Message as DbMessage } from '@/lib/types';
 
 
-interface Message {
+interface Message extends DbMessage {
   id: string;
-  text: string;
-  senderId: string;
-  createdAt: Timestamp;
 }
 
 interface OtherPersonDetails {
@@ -60,40 +58,39 @@ export default function ChatPage() {
 
   // Effect to determine the other chat participant's details
   useEffect(() => {
-      const isAiChat = otherPersonIdOrProviderId === '99';
-      setIsAiAssistantChat(isAiChat);
+    const isAiChat = otherPersonIdOrProviderId === '99';
+    setIsAiAssistantChat(isAiChat);
 
-      if (isAiChat) {
-          setOtherPersonDetails({ 
-              id: 99,
-              name: "دستیار هوشمند تستی", 
-              phone: "AI_ASSISTANT_99",
-              portfolio: [] 
-          });
-          setIsLoading(false); // No need to fetch messages for AI initially from firestore
-          return;
-      }
-      
+    let details: OtherPersonDetails | undefined | null = null;
+
+    if (isAiChat) {
+      details = {
+        id: 99,
+        name: "دستیار هوشمند تستی",
+        phone: "AI_ASSISTANT_99",
+        portfolio: []
+      };
+    } else {
+      // Check if it's a provider ID
       const providerById = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
       if (providerById) {
-          setOtherPersonDetails(providerById);
-          return;
+        details = providerById;
+      } else {
+        // Assume it's a phone number for a customer or unknown user
+        const userByPhone = providers.find(p => p.phone === otherPersonIdOrProviderId);
+        if (userByPhone) {
+            details = userByPhone
+        } else {
+             details = {
+                id: otherPersonIdOrProviderId,
+                name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`,
+                phone: otherPersonIdOrProviderId,
+                portfolio: []
+            };
+        }
       }
-
-      const customerDetails = providers.find(p => p.phone === otherPersonIdOrProviderId);
-      if (customerDetails) {
-         setOtherPersonDetails(customerDetails);
-         return;
-      }
-      
-      // Fallback for unknown numbers from inbox
-      setOtherPersonDetails({ 
-          id: otherPersonIdOrProviderId,
-          name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, 
-          phone: otherPersonIdOrProviderId, 
-          portfolio: [] 
-      });
-
+    }
+    setOtherPersonDetails(details);
   }, [otherPersonIdOrProviderId]);
   
   // Effect to scroll to the bottom of the chat
@@ -101,10 +98,10 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  // Effect to fetch initial AI message if it's an AI chat
+
   const fetchInitialAiMessage = useCallback(async () => {
     if (!otherPersonDetails || !isAiAssistantChat) return;
-
+    
     setIsLoading(true);
     setMessages([]); // Clear previous messages
     try {
@@ -127,22 +124,26 @@ export default function ChatPage() {
 
   // Main effect to listen for messages
   useEffect(() => {
+    if (!isLoggedIn || !user || !otherPersonDetails) {
+        setIsLoading(false);
+        return;
+    }
+    
     if (isAiAssistantChat) {
-        // Handle AI chat initialization separately
         if (messages.length === 0) {
             fetchInitialAiMessage();
         }
-        return;
+        return; // No firestore listener for AI chat
     }
 
     if (!chatId) {
-       setIsLoading(isLoggedIn); 
-       return;
-    };
+        setIsLoading(true);
+        return;
+    }
 
     setIsLoading(true);
-
     const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+    
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
         const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
         setMessages(msgs);
@@ -154,7 +155,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [chatId, isAiAssistantChat, fetchInitialAiMessage, isLoggedIn, toast, messages.length]);
+  }, [isLoggedIn, user, otherPersonDetails, chatId, isAiAssistantChat, fetchInitialAiMessage, toast, messages.length]);
 
 
   if (!isLoggedIn || !user) {
@@ -169,7 +170,7 @@ export default function ChatPage() {
         </div>
     );
   }
-
+  
   if (isLoading && messages.length === 0) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
@@ -204,7 +205,7 @@ export default function ChatPage() {
 
         const result = await chat({
             providerId: Number(otherPersonDetails.id),
-            history: history
+            history: history.filter(h => h.content) // Ensure content is not empty
         });
 
         const aiMessage: Message = {
@@ -308,7 +309,7 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((message) => {
-                const isSender = message.senderId === user.phone;
+                const isSender = message.senderId === user?.phone;
                 return (
                   <div 
                     key={message.id} 
@@ -337,16 +338,14 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-            {isSending && (
-                <div className={`flex items-end gap-2 ${isAiAssistantChat ? 'justify-start' : 'justify-end'}`}>
-                    {!isAiAssistantChat ? null :
-                      <Avatar className="h-8 w-8">
-                          <Bot className="w-full h-full p-1" />
-                      </Avatar>
-                    }
+             {isSending && !isAiAssistantChat && (
+                <div className="flex items-end gap-2 justify-end">
                     <div className="p-3 rounded-lg bg-muted">
                         <Loader2 className="w-5 h-5 animate-spin" />
                     </div>
+                    <Avatar className="h-8 w-8">
+                       <AvatarFallback>شما</AvatarFallback>
+                   </Avatar>
                 </div>
             )}
             <div ref={messagesEndRef} />
@@ -370,3 +369,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
