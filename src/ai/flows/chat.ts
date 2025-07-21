@@ -13,7 +13,6 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { providers } from '@/lib/data';
 import type { Provider } from '@/lib/types';
-import type { Message as GenkitMessage } from 'genkit';
 
 
 // Define the structure for a single message in the chat history

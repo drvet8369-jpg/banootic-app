@@ -12,9 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { Provider } from '@/lib/types';
 import { chat, ChatInput } from '@/ai/flows/chat';
 
 
@@ -59,6 +58,7 @@ export default function ChatPage() {
     return name.substring(0, 2);
   }
 
+  // Effect to determine the other chat participant's details
   useEffect(() => {
       const isAiChat = otherPersonIdOrProviderId === '99';
       setIsAiAssistantChat(isAiChat);
@@ -70,6 +70,7 @@ export default function ChatPage() {
               phone: "AI_ASSISTANT_99",
               portfolio: [] 
           });
+          setIsLoading(false); // No need to fetch messages for AI initially from firestore
           return;
       }
       
@@ -79,15 +80,13 @@ export default function ChatPage() {
           return;
       }
 
-      // Fallback for direct chat with a customer from inbox
-      // We need to fetch their details if they aren't a known provider
       const customerDetails = providers.find(p => p.phone === otherPersonIdOrProviderId);
-       if (customerDetails) {
-          setOtherPersonDetails(customerDetails);
-          return;
+      if (customerDetails) {
+         setOtherPersonDetails(customerDetails);
+         return;
       }
       
-      // Default fallback for unknown numbers
+      // Fallback for unknown numbers from inbox
       setOtherPersonDetails({ 
           id: otherPersonIdOrProviderId,
           name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, 
@@ -97,13 +96,17 @@ export default function ChatPage() {
 
   }, [otherPersonIdOrProviderId]);
   
+  // Effect to scroll to the bottom of the chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
+  // Effect to fetch initial AI message if it's an AI chat
   const fetchInitialAiMessage = useCallback(async () => {
-    if (!otherPersonDetails) return;
+    if (!otherPersonDetails || !isAiAssistantChat) return;
+
     setIsLoading(true);
+    setMessages([]); // Clear previous messages
     try {
         const result = await chat({ providerId: Number(otherPersonDetails.id), history: [] });
         const aiMessage: Message = {
@@ -119,10 +122,19 @@ export default function ChatPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [otherPersonDetails, toast]);
+  }, [otherPersonDetails, isAiAssistantChat, toast]);
 
 
+  // Main effect to listen for messages
   useEffect(() => {
+    if (isAiAssistantChat) {
+        // Handle AI chat initialization separately
+        if (messages.length === 0) {
+            fetchInitialAiMessage();
+        }
+        return;
+    }
+
     if (!chatId) {
        setIsLoading(isLoggedIn); 
        return;
@@ -133,14 +145,8 @@ export default function ChatPage() {
     const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
         const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-
-        if (isAiAssistantChat && msgs.length === 0) {
-            // If it's an AI chat and has no history, fetch the initial message.
-            fetchInitialAiMessage();
-        } else {
-            setMessages(msgs);
-            setIsLoading(false);
-        }
+        setMessages(msgs);
+        setIsLoading(false);
     }, (error) => {
         console.error("Error fetching messages:", error);
         toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
@@ -148,7 +154,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [chatId, isAiAssistantChat, fetchInitialAiMessage, isLoggedIn, toast]);
+  }, [chatId, isAiAssistantChat, fetchInitialAiMessage, isLoggedIn, toast, messages.length]);
 
 
   if (!isLoggedIn || !user) {
@@ -174,7 +180,7 @@ export default function ChatPage() {
   }
   
   const handleAiSubmit = async (text: string) => {
-    if (!chatId || !user || !otherPersonDetails) return;
+    if (!user || !otherPersonDetails) return;
 
     setIsSending(true);
 
@@ -185,22 +191,13 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
-    const allMessages = [...messages, userMessage];
-    setMessages(allMessages);
+    // Optimistically update the UI with the user's message
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     setNewMessage('');
     
-    // Save user message to Firestore
-    const chatDocRef = doc(db, 'chats', chatId);
-    const messagesColRef = collection(chatDocRef, 'messages');
-    await addDoc(messagesColRef, userMessage);
-    await setDoc(chatDocRef, {
-        members: [user.phone, otherPersonDetails.phone],
-        lastMessage: text,
-        updatedAt: serverTimestamp(),
-    }, { merge: true });
-
     try {
-        const history = allMessages.map(m => ({
+        const history = currentMessages.map(m => ({
             role: m.senderId === user.phone ? 'user' : 'model',
             content: m.text,
         } as const));
@@ -210,20 +207,20 @@ export default function ChatPage() {
             history: history
         });
 
-        const aiMessage = {
+        const aiMessage: Message = {
             id: 'ai-' + Date.now(),
             text: result.reply,
             senderId: otherPersonDetails.phone,
             createdAt: Timestamp.now(),
         };
 
-        // Add AI response to Firestore
-        await addDoc(messagesColRef, aiMessage);
-        await setDoc(chatDocRef, { lastMessage: result.reply, updatedAt: serverTimestamp() }, { merge: true });
+        setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
+        // Optionally, remove the user's message if the AI fails
+        setMessages(messages);
     } finally {
         setIsSending(false);
     }
@@ -232,39 +229,39 @@ export default function ChatPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
-    if (!text || !chatId || isSending || !otherPersonDetails || !user) return;
+    if (!text || isSending || !otherPersonDetails || !user) return;
     
     if (isAiAssistantChat) {
       await handleAiSubmit(text);
       return;
     }
     
+    if (!chatId) return;
+
     setIsSending(true);
+    setNewMessage('');
     
     try {
         const chatDocRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatDocRef, 'messages');
         
-        const receiverId = otherPersonDetails.phone;
-
         await addDoc(messagesColRef, {
             text: text,
             senderId: user.phone,
-            receiverId: receiverId, 
+            receiverId: otherPersonDetails.phone, 
             createdAt: serverTimestamp(),
         });
         
         await setDoc(chatDocRef, {
-            members: [user.phone, receiverId],
+            members: [user.phone, otherPersonDetails.phone],
             lastMessage: text,
             updatedAt: serverTimestamp(),
         }, { merge: true });
 
-        setNewMessage('');
-
     } catch(error) {
         console.error("Error in handleSubmit:", error);
-         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
+        toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
+        setNewMessage(text); // Put the message back in the input on failure
     } finally {
         setIsSending(false);
     }
@@ -273,7 +270,6 @@ export default function ChatPage() {
   const getHeaderLink = () => {
     if (isAiAssistantChat) return '/profile';
     if (user.accountType === 'provider') return '/inbox';
-    // For customers, link back to the provider's public profile page
     const provider = providers.find(p => p.phone === otherPersonDetails?.phone);
     if(provider) return `/provider/${provider.id}`;
     return '/'; // Fallback
@@ -341,11 +337,13 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-            {isSending && isAiAssistantChat && (
-                <div className="flex items-end gap-2 justify-start">
-                    <Avatar className="h-8 w-8">
-                        <Bot className="w-full h-full p-1" />
-                    </Avatar>
+            {isSending && (
+                <div className={`flex items-end gap-2 ${isAiAssistantChat ? 'justify-start' : 'justify-end'}`}>
+                    {!isAiAssistantChat ? null :
+                      <Avatar className="h-8 w-8">
+                          <Bot className="w-full h-full p-1" />
+                      </Avatar>
+                    }
                     <div className="p-3 rounded-lg bg-muted">
                         <Loader2 className="w-5 h-5 animate-spin" />
                     </div>
@@ -372,5 +370,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    
