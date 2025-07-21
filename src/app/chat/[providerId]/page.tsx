@@ -57,6 +57,16 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
+      // If provider ID is '99', it's the test AI assistant chat
+      if (otherPersonIdOrProviderId === '99') {
+          setOtherPersonDetails({ 
+              name: "دستیار هوشمند تستی", 
+              phone: "AI_ASSISTANT_99", // A unique identifier for the AI
+              portfolio: [] 
+          });
+          return;
+      }
+
       // Find by provider ID (number)
       const providerById = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
       if (providerById) {
@@ -124,7 +134,7 @@ export default function ChatPage() {
     );
   }
 
-  if (isLoading || !otherPersonDetails) {
+  if (isLoading && messages.length === 0) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -139,24 +149,24 @@ export default function ChatPage() {
 
     setIsSending(true);
     
-    // CRITICAL FIX: receiverId must always be the phone number from otherPersonDetails
-    const receiverId = otherPersonDetails.phone;
-
     try {
         const chatDocRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatDocRef, 'messages');
+        
+        // Use the correct receiverId from the details object.
+        const receiverId = otherPersonDetails.phone;
 
         // Add the message to the subcollection
         await addDoc(messagesColRef, {
             text: newMessage,
             senderId: user.phone,
-            receiverId: receiverId, // Use the correct phone number
+            receiverId: receiverId, 
             createdAt: serverTimestamp(),
         });
         
         // Update the last message and timestamp on the main chat document
         await setDoc(chatDocRef, {
-            members: [user.phone, receiverId], // Use the correct phone number
+            members: [user.phone, receiverId],
             lastMessage: newMessage,
             updatedAt: serverTimestamp(),
         }, { merge: true });
@@ -181,13 +191,13 @@ export default function ChatPage() {
              </Button>
            </Link>
            <Avatar>
-            {otherPersonDetails.portfolio && otherPersonDetails.portfolio.length > 0 ? (
+            {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
                 <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
             ) : null }
-            <AvatarFallback>{getInitials(otherPersonDetails.name)}</AvatarFallback>
+            <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="font-headline text-xl">{otherPersonDetails.name}</CardTitle>
+            <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
             <CardDescription>گفتگوی مستقیم</CardDescription>
           </div>
         </CardHeader>
@@ -207,10 +217,10 @@ export default function ChatPage() {
                   >
                     {!isSender && (
                       <Avatar className="h-8 w-8">
-                          {otherPersonDetails.portfolio && otherPersonDetails.portfolio.length > 0 ? (
+                          {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
                               <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
                           ) : null }
-                          <AvatarFallback>{getInitials(otherPersonDetails.name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>
                     )}
                     <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${isSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>

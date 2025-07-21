@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare, User, AlertTriangle, Inbox } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare, User, AlertTriangle, Inbox, Bot } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -70,7 +70,7 @@ export default function ProfilePage() {
 
   // Create a mock provider object from user context
   const mockProvider: Provider = {
-    id: 99, // Using a mock ID
+    id: 99, // Using a mock ID for the test profile
     name: user.name,
     service: 'خدمات شما',
     location: 'مکان شما (پیش‌فرض)',
@@ -139,10 +139,10 @@ export default function ProfilePage() {
                     </Link>
                 </Button>
                 <Button asChild className="w-full" variant="outline">
-                    <a href={`tel:${mockProvider.phone}`}>
-                        <Phone className="w-4 h-4 ml-2" />
-                        تماس (پیش‌نمایش)
-                    </a>
+                    <Link href="/chat/99">
+                        <Bot className="w-4 h-4 ml-2" />
+                        تست دستیار هوشمند
+                    </Link>
                 </Button>
             </CardFooter>
           </div>
