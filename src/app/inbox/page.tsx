@@ -16,9 +16,17 @@ interface Chat {
   otherMemberName: string;
   otherMemberId: string;
   lastMessage: string;
-  updatedAt: string; // Using ISO string from localStorage
+  updatedAt: string;
 }
 
+const getInitials = (name: string) => {
+  if (!name) return '?';
+  const names = name.split(' ');
+  if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
+    return `${names[0][0]}${names[1][0]}`;
+  }
+  return name.substring(0, 2);
+};
 
 export default function InboxPage() {
   const { user, isLoggedIn } = useAuth();
@@ -26,59 +34,45 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getInitials = useCallback((name: string) => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
-      return `${names[0][0]}${names[1][0]}`;
-    }
-    return name.substring(0, 2);
-  }, []);
-
   useEffect(() => {
     if (!isLoggedIn || !user?.phone) {
       setIsLoading(false);
       setChats([]);
       return;
     }
-    
-    try {
-        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-        
-        const userChats = Object.values(allChatsData)
-            .filter((chat: any) => chat.members?.includes(user.phone))
-            .map((chat: any) => {
-                const participantInfo = chat.participants?.[user.phone];
-                if (!participantInfo) {
-                    // Fallback for older data structure or corrupted data
-                    const otherMemberId = chat.members.find((id: string) => id !== user.phone) || 'unknown';
-                    return {
-                        id: chat.id,
-                        otherMemberId: otherMemberId,
-                        otherMemberName: `کاربر ${otherMemberId.slice(-4)}`,
-                        lastMessage: chat.lastMessage,
-                        updatedAt: chat.updatedAt,
-                    };
-                }
-                return {
-                    id: chat.id,
-                    otherMemberId: participantInfo.otherMemberId,
-                    otherMemberName: participantInfo.otherMemberName,
-                    lastMessage: chat.lastMessage,
-                    updatedAt: chat.updatedAt,
-                };
-            })
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-            
-        setChats(userChats as Chat[]);
-    } catch (e) {
-        console.error("Failed to load chats from localStorage", e);
-        setError('خطا در بارگذاری گفتگوهای موقت.');
-    }
 
-    setIsLoading(false);
-    
-  }, [user, isLoggedIn]);
+    try {
+      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      
+      const userChats = Object.values(allChatsData)
+        .filter((chat: any) => chat.members?.includes(user.phone))
+        .map((chat: any): Chat | null => {
+            const otherMemberId = chat.members.find((id: string) => id !== user.phone);
+            if (!otherMemberId) return null;
+
+            // Use the detailed participant info if available
+            const participantInfo = chat.participants?.[user.phone];
+            const otherMemberName = participantInfo?.otherMemberName || `کاربر ${otherMemberId.slice(-4)}`;
+
+            return {
+                id: chat.id,
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberName,
+                lastMessage: chat.lastMessage,
+                updatedAt: chat.updatedAt,
+            };
+        })
+        .filter((chat): chat is Chat => chat !== null) // Filter out any null entries
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        
+      setChats(userChats);
+    } catch (e) {
+      console.error("Failed to load chats from localStorage", e);
+      setError('خطا در بارگذاری گفتگوهای موقت.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, isLoggedIn]); // Removed getInitials from dependencies to prevent infinite loop
 
   if (isLoading) {
     return (
@@ -101,7 +95,7 @@ export default function InboxPage() {
     );
   }
   
-   if (user.accountType !== 'provider') {
+  if (user.accountType !== 'provider') {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20">
         <Inbox className="w-16 h-16 text-muted-foreground mb-4" />

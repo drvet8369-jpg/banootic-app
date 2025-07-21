@@ -153,30 +153,24 @@ export default function ChatPage() {
                 members: [user.phone, otherPersonDetails.phone],
                 lastMessage: text,
                 updatedAt: new Date().toISOString(),
-            };
-
-            // Store metadata for both users in the chat
-            const user1Meta = {
-                otherMemberId: otherPersonDetails.phone,
-                otherMemberName: otherPersonDetails.name,
-            };
-            const user2Meta = {
-                otherMemberId: user.phone,
-                otherMemberName: user.name,
+                // Participant metadata for cross-referencing names
+                participants: {
+                  [user.phone]: {
+                    otherMemberId: otherPersonDetails.phone,
+                    otherMemberName: otherPersonDetails.name
+                  },
+                  [otherPersonDetails.phone]: {
+                    otherMemberId: user.phone,
+                    otherMemberName: user.name
+                  }
+                }
             };
             
-            if (!allChats[chatId]) {
-                 allChats[chatId] = {
-                    ...chatInfo,
-                    participants: {}
-                 };
-            }
+            allChats[chatId] = {
+                ...allChats[chatId], // Preserve any existing data
+                ...chatInfo, // Overwrite with new info
+            };
             
-            allChats[chatId].lastMessage = text;
-            allChats[chatId].updatedAt = new Date().toISOString();
-            allChats[chatId].participants[user.phone] = user1Meta;
-            allChats[chatId].participants[otherPersonDetails.phone] = user2Meta;
-
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
