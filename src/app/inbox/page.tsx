@@ -28,6 +28,10 @@ const getUserDetails = (phone: string): { name: string } => {
         return { name: provider.name };
     }
     // In a real app, you might fetch customer names from a users collection
+    // For our test user
+    if (phone === '09121112233') {
+        return { name: 'آقای رضایی (مشتری تستی)' };
+    }
     return { name: `مشتری ${phone.slice(-4)}` };
 };
 
@@ -53,7 +57,18 @@ export default function InboxPage() {
       return;
     }
     
-    setIsLoading(false); // Set loading to false as we are not fetching data.
+    // MOCK DATA FOR DEMONSTRATION
+    const mockChats: Chat[] = [
+        {
+            id: 'chat_test_1',
+            otherMemberId: '09121112233', // Test customer phone
+            otherMemberName: 'آقای رضایی (مشتری تستی)',
+            lastMessage: 'سلام، وقت بخیر. این یک پیام تستی برای نمایش در صندوق ورودی است.',
+            updatedAt: new Date(),
+        }
+    ];
+    setChats(mockChats);
+    setIsLoading(false);
     
     // Firebase Snapshot listener is disabled temporarily
     /*
@@ -119,7 +134,7 @@ export default function InboxPage() {
       <div className="flex flex-col items-center justify-center text-center py-20">
         <Inbox className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">صفحه مخصوص هنرمندان</h1>
-        <p className="text-muted-foreground mt-2">این صفحه فقط برای ارائه‌دهندگان خدمات (هنرمندان) در دسترس است. برای مشاهده، لطفاً نقش خود را به هنرمند تغییر دهید.</p>
+        <p className="text-muted-foreground mt-2">این صفحه فقط برای ارائه‌دهندگان خدمات (هنرمندان) در دسترس است.</p>
         <Button asChild className="mt-6">
           <Link href="/">بازگشت به صفحه اصلی</Link>
         </Button>
@@ -132,7 +147,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. اتصال به پایگاه داده موقتاً غیرفعال است.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. این یک نمای تستی است.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -140,12 +155,12 @@ export default function InboxPage() {
               <p>{error}</p>
             </div>
           )}
-          {!error && chats.length === 0 && (
+          {!error && chats.length === 0 && !isLoading && (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
               <p className="text-muted-foreground mt-2">وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.</p>
-               <p className="text-muted-foreground text-sm mt-4">(اتصال به پایگاه داده موقتاً برای رفع خطا غیرفعال شده است)</p>
+               <p className="text-muted-foreground text-sm mt-4">(اتصال به پایگاه داده موقتاً برای حالت نمایشی غیرفعال شده است)</p>
             </div>
           )}
           {!error && chats.length > 0 && (
