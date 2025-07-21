@@ -11,8 +11,8 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
+// import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider } from '@/lib/types';
 
@@ -21,7 +21,7 @@ interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: Timestamp;
+  createdAt: Date; // Changed from Timestamp for local state
 }
 
 interface OtherPersonDetails {
@@ -76,10 +76,7 @@ export default function ChatPage() {
     if (provider) {
       details = provider;
     } else {
-      // This handles the case where a provider is viewing a chat from their inbox.
-      // The otherPersonIdOrProviderId will be the customer's phone number.
       const customerPhone = otherPersonIdOrProviderId;
-      // In a real app, you'd fetch customer details from a database
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
     }
     
@@ -89,17 +86,26 @@ export default function ChatPage() {
         return;
     }
     setOtherPersonDetails(details);
+    setIsLoading(false); // Since we are not fetching from firebase, set loading to false.
 
-    let unsubscribe: () => void = () => {};
-    
+    // Firebase Snapshot listener is disabled temporarily
+    /*
     const chatId = [user.phone, details.phone].sort().join('_');
     const messagesQuery = query(
         collection(db, 'chats', chatId, 'messages'), 
         orderBy('createdAt', 'asc'),
     );
     
-    unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
-        const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+    const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
+        const msgs: Message[] = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                text: data.text,
+                senderId: data.senderId,
+                createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
+            }
+        });
         setMessages(msgs);
         setIsLoading(false);
     }, (error) => {
@@ -109,6 +115,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
+    */
   }, [otherPersonIdOrProviderId, isLoggedIn, user, toast]);
 
 
@@ -139,15 +146,27 @@ export default function ChatPage() {
     const text = newMessage.trim();
     if (!text || isSending || !otherPersonDetails || !user) return;
     
+    setIsSending(true);
+    
+    // Create a temporary message to display immediately in the UI
+    const tempUiMessage: Message = {
+      id: Date.now().toString(),
+      text: text,
+      senderId: user.phone,
+      createdAt: new Date(),
+    };
+    
+    setMessages(prevMessages => [...prevMessages, tempUiMessage]);
+    setNewMessage(''); // Clear input immediately
+
+    // The logic to send to Firebase is temporarily disabled
+    /*
     const chatId = getChatId();
     if (!chatId) {
         toast({ title: "خطا", description: "امکان شناسایی چت وجود ندارد.", variant: "destructive" });
+        setIsSending(false);
         return;
     }
-
-    setIsSending(true);
-    const tempMessage = newMessage;
-    setNewMessage(''); // Clear input immediately
     
     try {
         const chatDocRef = doc(db, 'chats', chatId);
@@ -169,10 +188,17 @@ export default function ChatPage() {
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(tempMessage); // Put the unsent message back
+        setMessages(prev => prev.filter(m => m.id !== tempUiMessage.id)); // Remove optimistic message on error
+        setNewMessage(text); // Put the unsent message back
     } finally {
         setIsSending(false);
     }
+    */
+   
+    // Simulate network delay and finish sending state
+    setTimeout(() => {
+        setIsSending(false);
+    }, 500);
   };
 
   const getHeaderLink = () => {
@@ -200,13 +226,13 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
-                <p>هنوز پیامی رد و بدل نشده است.</p>
+                <p>این یک چت نمایشی است. پیام‌ها ذخیره نمی‌شوند.</p>
                 <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
@@ -237,16 +263,6 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-             {isSending && (
-                <div className="flex items-end gap-2 justify-end opacity-50">
-                    <div className="p-3 rounded-lg bg-primary text-primary-foreground">
-                        <p className="text-sm">{newMessage}</p>
-                    </div>
-                    <Avatar className="h-8 w-8">
-                       <AvatarFallback>شما</AvatarFallback>
-                   </Avatar>
-                </div>
-            )}
             <div ref={messagesEndRef} />
         </CardContent>
         <form onSubmit={handleSubmit} className="p-4 border-t">

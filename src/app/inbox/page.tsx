@@ -10,8 +10,8 @@ import { Loader2, Inbox, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
+// import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { providers } from '@/lib/data';
 
 interface Chat {
@@ -53,9 +53,10 @@ export default function InboxPage() {
       return;
     }
     
-    // Set loading to true only at the beginning of the effect
-    setIsLoading(true);
-
+    setIsLoading(false); // Set loading to false as we are not fetching data.
+    
+    // Firebase Snapshot listener is disabled temporarily
+    /*
     const chatsQuery = query(
       collection(db, 'chats'), 
       where('members', 'array-contains', user.phone),
@@ -80,7 +81,6 @@ export default function InboxPage() {
           };
       });
       setChats(allChats);
-      // Set loading to false after the first data fetch
       setIsLoading(false);
 
     }, (err) => {
@@ -90,6 +90,7 @@ export default function InboxPage() {
     });
 
     return () => unsubscribe();
+    */
   }, [user, isLoggedIn]);
 
   if (isLoading) {
@@ -131,7 +132,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. این صفحه به صورت خودکار به‌روز می‌شود.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. اتصال به پایگاه داده موقتاً غیرفعال است.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -144,6 +145,7 @@ export default function InboxPage() {
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
               <p className="text-muted-foreground mt-2">وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.</p>
+               <p className="text-muted-foreground text-sm mt-4">(اتصال به پایگاه داده موقتاً برای رفع خطا غیرفعال شده است)</p>
             </div>
           )}
           {!error && chats.length > 0 && (
@@ -173,5 +175,3 @@ export default function InboxPage() {
     </div>
   );
 }
-
-    
