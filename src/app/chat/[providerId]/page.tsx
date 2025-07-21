@@ -72,9 +72,12 @@ export default function ChatPage() {
 
     let details: OtherPersonDetails | null = null;
     const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
+    
     if (provider) {
       details = provider;
     } else {
+      // This handles the case where a provider is viewing a chat from their inbox.
+      // The otherPersonIdOrProviderId will be the customer's phone number.
       const customerPhone = otherPersonIdOrProviderId;
       // In a real app, you'd fetch customer details from a database
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
