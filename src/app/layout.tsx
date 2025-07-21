@@ -35,10 +35,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Header />
-          <main className={cn(
-              "flex-grow container mx-auto px-4 sm:px-6 lg:px-8",
-              process.env.NODE_ENV === 'development' && 'pb-24'
-            )}>
+          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
             {children}
           </main>
           <Footer />
