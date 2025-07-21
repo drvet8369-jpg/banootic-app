@@ -13,5 +13,4 @@ export const ai = genkit({
   logSinks: ['firebase'],
   flowStateStore: 'firebase',
   traceStore: 'firebase',
-  model: 'googleai/gemini-1.5-flash-latest',
 });
