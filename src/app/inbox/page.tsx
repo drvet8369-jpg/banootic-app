@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,11 +34,19 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const memoizedChats = useMemo(() => {
+  useEffect(() => {
+    // This effect runs when the user's login status changes.
+    // It's responsible for loading all chat data from localStorage.
+    
     if (!isLoggedIn || !user?.phone) {
-      return [];
+      setChats([]); // Clear chats if user logs out
+      setIsLoading(false);
+      return;
     }
 
+    setIsLoading(true);
+    setError(null);
+    
     try {
       const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
       
@@ -51,31 +59,28 @@ export default function InboxPage() {
             if (!otherMemberId) return null;
 
             const otherMemberInfo = chat.participants[otherMemberId];
+            // Provide a fallback name if the name is missing to prevent errors
             const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
                 id: chat.id,
                 otherMemberId: otherMemberId,
                 otherMemberName: otherMemberName,
-                lastMessage: chat.lastMessage,
+                lastMessage: chat.lastMessage || '',
                 updatedAt: chat.updatedAt,
             };
         })
         .filter((chat): chat is Chat => chat !== null)
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         
-      return userChats;
+      setChats(userChats);
     } catch (e) {
       console.error("Failed to load chats from localStorage", e);
       setError('خطا در بارگذاری گفتگوهای موقت.');
-      return [];
+    } finally {
+      setIsLoading(false);
     }
-  }, [user, isLoggedIn]);
-
-  useEffect(() => {
-    setChats(memoizedChats);
-    setIsLoading(false);
-  }, [memoizedChats]);
+  }, [user, isLoggedIn]); // Only re-run when user or isLoggedIn changes.
 
 
   if (isLoading) {
