@@ -1,12 +1,12 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import { firebase } from '@genkit-ai/firebase/plugin';
+import { firebase as firebasePlugin } from '@genkit-ai/firebase/plugin';
 import 'dotenv/config';
 
 export const ai = genkit({
   plugins: [
-    firebase(),
+    firebasePlugin(),
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
     }),

@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@genkit-ai/firebase": "^1.15.2",
+    "@genkit-ai/firebase": "1.15.2",
     "@genkit-ai/googleai": "^1.15.2",
     "@genkit-ai/next": "^1.15.2",
     "@hookform/resolvers": "^4.1.3",
