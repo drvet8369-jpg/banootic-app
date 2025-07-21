@@ -78,8 +78,9 @@ export default function ChatPage() {
       if (provider) {
         details = provider;
       } else {
-        const customer = { phone: otherPersonIdOrProviderId };
-        details = { id: customer.phone, name: `مشتری ${customer.phone.slice(-4)}`, phone: customer.phone, portfolio: [] };
+        // This case might be for a customer's phone number
+        const customerPhone = otherPersonIdOrProviderId;
+        details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
       }
     }
     
@@ -97,6 +98,8 @@ export default function ChatPage() {
     let unsubscribe: () => void = () => {};
     
     if (isAiChat) {
+      // For AI chat, conversation resets on each page load to save data.
+      // We fetch only the initial greeting.
       const fetchInitialAiMessage = async () => {
         setIsLoading(true);
         try {
@@ -121,6 +124,7 @@ export default function ChatPage() {
       };
       fetchInitialAiMessage();
     } else {
+        // For human-to-human chat, we fetch last 5 messages from Firestore.
         const chatId = [user.phone, details.phone].sort().join('_');
         const messagesQuery = query(
             collection(db, 'chats', chatId, 'messages'), 
@@ -177,19 +181,20 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
+    // Optimistically update the UI with the user's message
     const currentMessages = [...messages, userMessage];
     setMessages(currentMessages);
     setNewMessage('');
     
     try {
-        const history = currentMessages.map(m => ({
+        const historyForAi = currentMessages.map(m => ({
             role: m.senderId === user.phone ? 'user' : 'model',
             content: m.text,
-        })).filter(h => h.content);
+        })).filter(h => h.content); // Ensure no empty content is sent
 
         const result = await chat({
             providerId: Number(otherPersonDetails.id),
-            history: history
+            history: historyForAi
         });
         
         if (result.reply) {
@@ -201,6 +206,7 @@ export default function ChatPage() {
             };
             setMessages(prev => [...prev, aiMessage]);
         } else {
+            // Revert optimistic update if AI fails to reply
             toast({ title: "خطا", description: result.reply || "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
             setMessages(messages); 
         }
@@ -208,7 +214,7 @@ export default function ChatPage() {
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-        setMessages(messages); 
+        setMessages(messages); // Revert on error
     } finally {
         setIsSending(false);
     }
@@ -254,7 +260,7 @@ export default function ChatPage() {
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(textToSend); 
+        setNewMessage(textToSend); // Restore message on failure
     } finally {
         setIsSending(false);
     }
@@ -302,12 +308,15 @@ export default function ChatPage() {
             )}
             {messages.map((message) => {
                 const isSender = message.senderId === user?.phone;
+                const isAiMessage = message.senderId === 'AI_ASSISTANT_99';
+                const senderIsUser = isSender || (!isAiAssistantChat && message.senderId === user?.phone);
+
                 return (
                   <div 
                     key={message.id} 
-                    className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}
+                    className={`flex items-end gap-2 ${senderIsUser ? 'justify-end' : 'justify-start'}`}
                   >
-                    {!isSender && (
+                    {!senderIsUser && (
                       <Avatar className="h-8 w-8">
                           {isAiAssistantChat ? <Bot className="w-full h-full p-1" /> : (
                             <>
@@ -319,10 +328,10 @@ export default function ChatPage() {
                           )}
                       </Avatar>
                     )}
-                    <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${isSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                         <p className="text-sm">{message.text}</p>
                     </div>
-                     {isSender && (
+                     {senderIsUser && (
                        <Avatar className="h-8 w-8">
                           <AvatarFallback>شما</AvatarFallback>
                       </Avatar>
