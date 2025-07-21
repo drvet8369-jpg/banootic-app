@@ -29,7 +29,7 @@ interface OtherPersonDetails {
     id: string | number;
     name: string;
     phone: string;
-    portfolio?: { src: string }[];
+    portfolio?: { src: string; aiHint?: string }[];
 }
 
 
@@ -72,19 +72,22 @@ export default function ChatPage() {
           });
           return;
       }
-
+      
       const providerById = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
       if (providerById) {
           setOtherPersonDetails(providerById);
           return;
       }
 
-      const providerByPhone = providers.find(p => p.phone === otherPersonIdOrProviderId);
-      if (providerByPhone) {
-          setOtherPersonDetails(providerByPhone);
+      // Fallback for direct chat with a customer from inbox
+      // We need to fetch their details if they aren't a known provider
+      const customerDetails = providers.find(p => p.phone === otherPersonIdOrProviderId);
+       if (customerDetails) {
+          setOtherPersonDetails(customerDetails);
           return;
       }
       
+      // Default fallback for unknown numbers
       setOtherPersonDetails({ 
           id: otherPersonIdOrProviderId,
           name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, 
@@ -97,16 +100,12 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
+  
   const fetchInitialAiMessage = useCallback(async () => {
-    if (!chatId || !user || !otherPersonDetails) return;
+    if (!otherPersonDetails) return;
     setIsLoading(true);
     try {
-        const input: ChatInput = { 
-            providerId: Number(otherPersonDetails.id),
-            history: [] 
-        };
-        const result = await chat(input);
+        const result = await chat({ providerId: Number(otherPersonDetails.id), history: [] });
         const aiMessage: Message = {
             id: 'ai-initial-' + Date.now(),
             text: result.reply,
@@ -120,53 +119,36 @@ export default function ChatPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [chatId, user, otherPersonDetails, toast]);
+  }, [otherPersonDetails, toast]);
 
 
   useEffect(() => {
-    if (!chatId || !user) {
+    if (!chatId) {
        setIsLoading(isLoggedIn); 
        return;
     };
 
     setIsLoading(true);
 
-    if (isAiAssistantChat) {
-        // For AI chat, check if a conversation history exists.
-        const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'), limit(1));
-        getDocs(q).then(snapshot => {
-            if (snapshot.empty) {
-                // If no history, fetch the initial welcome message from AI.
-                fetchInitialAiMessage();
-            } else {
-                // If history exists, load it normally.
-                const unsubscribe = onSnapshot(query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc')), (querySnapshot) => {
-                  const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-                  setMessages(msgs);
-                  setIsLoading(false);
-                }, (error) => {
-                    console.error("Error fetching AI chat history:", error);
-                    toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
-                    setIsLoading(false);
-                });
-                return () => unsubscribe();
-            }
-        });
-    } else {
-        // For regular user-to-user chat, just load the history.
-        const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-          setMessages(msgs);
-          setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching messages:", error);
-            toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
+    const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+    const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
+        const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+
+        if (isAiAssistantChat && msgs.length === 0) {
+            // If it's an AI chat and has no history, fetch the initial message.
+            fetchInitialAiMessage();
+        } else {
+            setMessages(msgs);
             setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }
-  }, [chatId, user, isLoggedIn, toast, isAiAssistantChat, fetchInitialAiMessage]);
+        }
+    }, (error) => {
+        console.error("Error fetching messages:", error);
+        toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [chatId, isAiAssistantChat, fetchInitialAiMessage, isLoggedIn, toast]);
 
 
   if (!isLoggedIn || !user) {
@@ -194,6 +176,8 @@ export default function ChatPage() {
   const handleAiSubmit = async (text: string) => {
     if (!chatId || !user || !otherPersonDetails) return;
 
+    setIsSending(true);
+
     const userMessage: Message = {
         id: 'user-' + Date.now(),
         text,
@@ -201,7 +185,11 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
-    // Add user message to Firestore and local state
+    const allMessages = [...messages, userMessage];
+    setMessages(allMessages);
+    setNewMessage('');
+    
+    // Save user message to Firestore
     const chatDocRef = doc(db, 'chats', chatId);
     const messagesColRef = collection(chatDocRef, 'messages');
     await addDoc(messagesColRef, userMessage);
@@ -211,13 +199,8 @@ export default function ChatPage() {
         updatedAt: serverTimestamp(),
     }, { merge: true });
 
-    // Update local state immediately for better UX
-    setMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
-    setIsSending(true);
-
     try {
-        const history = [...messages, userMessage].map(m => ({
+        const history = allMessages.map(m => ({
             role: m.senderId === user.phone ? 'user' : 'model',
             content: m.text,
         } as const));
@@ -250,13 +233,13 @@ export default function ChatPage() {
     e.preventDefault();
     const text = newMessage.trim();
     if (!text || !chatId || isSending || !otherPersonDetails || !user) return;
-
-    setIsSending(true);
-
+    
     if (isAiAssistantChat) {
       await handleAiSubmit(text);
       return;
     }
+    
+    setIsSending(true);
     
     try {
         const chatDocRef = doc(db, 'chats', chatId);
@@ -290,8 +273,12 @@ export default function ChatPage() {
   const getHeaderLink = () => {
     if (isAiAssistantChat) return '/profile';
     if (user.accountType === 'provider') return '/inbox';
-    return `/provider/${otherPersonIdOrProviderId}`;
+    // For customers, link back to the provider's public profile page
+    const provider = providers.find(p => p.phone === otherPersonDetails?.phone);
+    if(provider) return `/provider/${provider.id}`;
+    return '/'; // Fallback
   }
+
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
@@ -377,7 +364,7 @@ export default function ChatPage() {
               disabled={isSending}
             />
             <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim()}>
-                {isSending && !isAiAssistantChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
         </form>
@@ -386,3 +373,4 @@ export default function ChatPage() {
   );
 }
 
+    
