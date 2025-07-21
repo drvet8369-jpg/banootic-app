@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare, User, AlertTriangle } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare, User, AlertTriangle, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -132,20 +132,12 @@ export default function ProfilePage() {
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                             <Button className="w-full" disabled>
-                                <MessageSquare className="w-4 h-4 ml-2" />
-                                صندوق ورودی پیام‌ها
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>این ویژگی به زودی برای ارائه‌دهندگان فعال خواهد شد.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                 </TooltipProvider>
-
+                <Button asChild className="w-full">
+                    <Link href="/inbox">
+                        <Inbox className="w-4 h-4 ml-2" />
+                        مشاهده صندوق ورودی
+                    </Link>
+                </Button>
                 <Button asChild className="w-full" variant="outline">
                     <a href={`tel:${mockProvider.phone}`}>
                         <Phone className="w-4 h-4 ml-2" />
