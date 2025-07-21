@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { chat } from '@/ai/flows/chat';
-import type { Message as DbMessage, Provider } from '@/lib/types';
+import type { Provider } from '@/lib/types';
 
 
 interface Message {
@@ -48,7 +48,10 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatId = user && otherPersonDetails && !isAiAssistantChat ? [user.phone, otherPersonDetails.phone].sort().join('_') : null;
+  const getChatId = useCallback(() => {
+    if (!user || !otherPersonDetails || isAiAssistantChat) return null;
+    return [user.phone, otherPersonDetails.phone].sort().join('_');
+  }, [user, otherPersonDetails, isAiAssistantChat]);
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -59,89 +62,64 @@ export default function ChatPage() {
     return name.substring(0, 2);
   }
 
-  // Effect to determine the other chat participant's details
+  // Effect to scroll to the bottom of the chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Main Effect for loading participant details and messages
   useEffect(() => {
     const isAiChat = otherPersonIdOrProviderId === '99';
     setIsAiAssistantChat(isAiChat);
 
     let details: OtherPersonDetails | undefined | null = null;
-
     if (isAiChat) {
-      details = {
-        id: 99,
-        name: "دستیار هوشمند تستی",
-        phone: "AI_ASSISTANT_99",
-        portfolio: []
-      };
+      details = { id: 99, name: "دستیار هوشمند تستی", phone: "AI_ASSISTANT_99", portfolio: [] };
     } else {
-      const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId) as Provider | undefined;
+      const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
       if (provider) {
         details = provider;
       } else {
-         details = {
-            id: otherPersonIdOrProviderId,
-            name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`,
-            phone: otherPersonIdOrProviderId,
-            portfolio: []
-        };
+        details = { id: otherPersonIdOrProviderId, name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, phone: otherPersonIdOrProviderId, portfolio: [] };
       }
     }
     setOtherPersonDetails(details);
-  }, [otherPersonIdOrProviderId]);
-  
-  // Effect to scroll to the bottom of the chat
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-  
-
-  const fetchInitialAiMessage = useCallback(async () => {
-    if (!otherPersonDetails || !isAiAssistantChat) return;
-    
     setIsLoading(true);
-    setMessages([]);
-    
-    try {
-        const result = await chat({ providerId: Number(otherPersonDetails.id), history: [] });
-        const aiMessage: Message = {
-            id: 'ai-initial-' + Date.now(),
-            text: result.reply,
-            senderId: 'AI_ASSISTANT_99',
-            createdAt: Timestamp.now(),
-        };
-        setMessages([aiMessage]);
-    } catch(error) {
-        console.error("Error fetching initial AI message:", error);
-        toast({ title: "خطا", description: "دستیار هوشمند پاسخگو نیست.", variant: "destructive" });
-    } finally {
-        setIsLoading(false);
-    }
-  }, [otherPersonDetails, isAiAssistantChat, toast]);
 
-
-  // Main effect to listen for messages
-  useEffect(() => {
-    if (!isLoggedIn || !user || !otherPersonDetails) {
+    if (!isLoggedIn || !user) {
         setIsLoading(false);
         return;
     }
-    
-    if (isAiAssistantChat) {
-        // Only fetch initial message if there are no messages yet
-        if (messages.length === 0) {
-            fetchInitialAiMessage();
-        } else {
+
+    if (isAiChat) {
+      // Fetch initial AI message
+      const fetchInitialAiMessage = async () => {
+        try {
+          const result = await chat({ providerId: 99, history: [] });
+          if (result.reply) {
+            const aiMessage: Message = {
+                id: 'ai-initial-' + Date.now(),
+                text: result.reply,
+                senderId: 'AI_ASSISTANT_99',
+                createdAt: Timestamp.now(),
+            };
+            setMessages([aiMessage]);
+          } else {
+             toast({ title: "خطا", description: "پاسخ اولیه از دستیار دریافت نشد.", variant: "destructive" });
+          }
+        } catch(error) {
+            console.error("Error fetching initial AI message:", error);
+            toast({ title: "خطا", description: "دستیار هوشمند پاسخگو نیست.", variant: "destructive" });
+        } finally {
             setIsLoading(false);
         }
-        return; // No firestore listener for AI chat
+      };
+      fetchInitialAiMessage();
+      return;
     }
-
-    if (!chatId) {
-        setIsLoading(true);
-        return;
-    }
-
-    setIsLoading(true);
+    
+    // For human-to-human chat
+    const chatId = [user.phone, details.phone].sort().join('_');
     const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
     
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
@@ -155,7 +133,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [isLoggedIn, user, otherPersonDetails, chatId, isAiAssistantChat, fetchInitialAiMessage, messages.length]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast]);
 
 
   if (!isLoggedIn || !user) {
@@ -183,6 +161,8 @@ export default function ChatPage() {
   const handleAiSubmit = async (text: string) => {
     if (!user || !otherPersonDetails) return;
 
+    setIsSending(true);
+
     const userMessage: Message = {
         id: 'user-' + Date.now(),
         text,
@@ -193,7 +173,6 @@ export default function ChatPage() {
     const currentMessages = [...messages, userMessage];
     setMessages(currentMessages);
     setNewMessage('');
-    setIsSending(true);
     
     try {
         const history = currentMessages.map(m => ({
@@ -212,13 +191,11 @@ export default function ChatPage() {
             senderId: 'AI_ASSISTANT_99',
             createdAt: Timestamp.now(),
         };
-
         setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-        // Revert optimistic update on error by removing the user's last message
         setMessages(messages);
     } finally {
         setIsSending(false);
@@ -235,7 +212,11 @@ export default function ChatPage() {
       return;
     }
     
-    if (!chatId) return;
+    const chatId = getChatId();
+    if (!chatId) {
+        toast({ title: "خطا", description: "امکان شناسایی چت وجود ندارد.", variant: "destructive" });
+        return;
+    }
 
     setIsSending(true);
     const textToSend = newMessage;
@@ -261,7 +242,7 @@ export default function ChatPage() {
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(textToSend); // Restore message on error
+        setNewMessage(textToSend); 
     } finally {
         setIsSending(false);
     }
@@ -272,7 +253,7 @@ export default function ChatPage() {
     if (user.accountType === 'provider') return '/inbox';
     const provider = providers.find(p => p.phone === otherPersonDetails?.phone);
     if(provider) return `/provider/${provider.id}`;
-    return '/'; // Fallback
+    return '/'; 
   }
 
 
