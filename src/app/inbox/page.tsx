@@ -47,7 +47,7 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn || !user?.phone || user.accountType !== 'provider') {
+    if (!isLoggedIn || !user?.phone) {
       setIsLoading(false);
       setChats([]);
       return;
@@ -173,3 +173,5 @@ export default function InboxPage() {
     </div>
   );
 }
+
+    

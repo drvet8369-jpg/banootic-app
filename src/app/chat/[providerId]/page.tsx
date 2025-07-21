@@ -127,13 +127,12 @@ export default function ChatPage() {
         const chatId = [user.phone, details.phone].sort().join('_');
         const messagesQuery = query(
             collection(db, 'chats', chatId, 'messages'), 
-            orderBy('createdAt', 'desc'),
-            limit(5)
+            orderBy('createdAt', 'asc'), // Load messages in ascending order to display correctly
         );
         
         unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
             const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-            setMessages(msgs.reverse());
+            setMessages(msgs);
             setIsLoading(false);
         }, (error) => {
             console.error("Error fetching messages:", error);
@@ -180,14 +179,13 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
-    // Update UI with user message and clear input
-    const currentMessages = [...messages, userMessage];
-    setMessages(currentMessages);
-    const textToSend = newMessage;
-    setNewMessage('');
+    // Immediately update UI with user's message
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setNewMessage(''); // Clear input immediately
     
     try {
-        const historyForAi = currentMessages.map(m => ({
+        const historyForAi = updatedMessages.map(m => ({
             role: m.senderId === user.phone ? 'user' : 'model',
             content: m.text,
         })).filter(h => h.content);
@@ -207,9 +205,9 @@ export default function ChatPage() {
             setMessages(prev => [...prev, aiMessage]);
         } else {
             toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-            // Rollback UI
+            // Rollback UI by removing the user's last message
             setMessages(messages); 
-            setNewMessage(textToSend);
+            setNewMessage(text);
         }
 
     } catch (error) {
@@ -217,7 +215,7 @@ export default function ChatPage() {
         toast({ title: "خطا", description: "ارتباط با دستیار هوشمند با خطا مواجه شد.", variant: "destructive" });
         // Rollback UI
         setMessages(messages);
-        setNewMessage(textToSend);
+        setNewMessage(text);
     } finally {
         setIsSending(false);
     }
@@ -240,15 +238,15 @@ export default function ChatPage() {
     }
 
     setIsSending(true);
-    const textToSend = newMessage;
-    setNewMessage('');
+    setNewMessage(''); // Clear input immediately
     
     try {
         const chatDocRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatDocRef, 'messages');
         
+        // No need to manually add to state, onSnapshot will handle it
         await addDoc(messagesColRef, {
-            text: textToSend,
+            text: text,
             senderId: user.phone,
             receiverId: otherPersonDetails.phone, 
             createdAt: serverTimestamp(),
@@ -256,14 +254,14 @@ export default function ChatPage() {
         
         await setDoc(chatDocRef, {
             members: [user.phone, otherPersonDetails.phone],
-            lastMessage: textToSend,
+            lastMessage: text,
             updatedAt: serverTimestamp(),
         }, { merge: true });
 
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(textToSend);
+        setNewMessage(text); // Put the unsent message back
     } finally {
         setIsSending(false);
     }
@@ -345,10 +343,10 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-             {isSending && (
-                <div className="flex items-end gap-2 justify-end">
-                    <div className="p-3 rounded-lg bg-primary/50 text-primary-foreground">
-                        <Loader2 className="w-5 h-5 animate-spin" />
+             {isSending && !isAiAssistantChat && ( // Only show placeholder for human-to-human for now
+                <div className="flex items-end gap-2 justify-end opacity-50">
+                    <div className="p-3 rounded-lg bg-primary text-primary-foreground">
+                        <p className="text-sm">{newMessage}</p>
                     </div>
                     <Avatar className="h-8 w-8">
                        <AvatarFallback>شما</AvatarFallback>
@@ -376,3 +374,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
