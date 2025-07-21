@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { chat } from '@/ai/flows/chat';
 import type { Provider } from '@/lib/types';
@@ -80,7 +80,9 @@ export default function ChatPage() {
       if (provider) {
         details = provider;
       } else {
-        details = { id: otherPersonIdOrProviderId, name: `مشتری ${otherPersonIdOrProviderId.slice(-4)}`, phone: otherPersonIdOrProviderId, portfolio: [] };
+        // Fallback for customer-to-customer chat (using phone as ID)
+        const customer = { phone: otherPersonIdOrProviderId };
+        details = { id: customer.phone, name: `مشتری ${customer.phone.slice(-4)}`, phone: customer.phone, portfolio: [] };
       }
     }
     setOtherPersonDetails(details);
@@ -105,7 +107,7 @@ export default function ChatPage() {
             };
             setMessages([aiMessage]);
           } else {
-             toast({ title: "خطا", description: "پاسخ اولیه از دستیار دریافت نشد.", variant: "destructive" });
+             toast({ title: "خطا", description: result.reply || "پاسخ اولیه از دستیار دریافت نشد.", variant: "destructive" });
           }
         } catch(error) {
             console.error("Error fetching initial AI message:", error);
@@ -120,11 +122,15 @@ export default function ChatPage() {
     
     // For human-to-human chat
     const chatId = [user.phone, details.phone].sort().join('_');
-    const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+    const messagesQuery = query(
+        collection(db, 'chats', chatId, 'messages'), 
+        orderBy('createdAt', 'desc'),
+        limit(20) // <<< --- *** THE KEY CHANGE: ONLY LOAD THE LAST 20 MESSAGES ***
+    );
     
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
         const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-        setMessages(msgs);
+        setMessages(msgs.reverse()); // Reverse to show oldest first
         setIsLoading(false);
     }, (error) => {
         console.error("Error fetching messages:", error);
@@ -184,19 +190,24 @@ export default function ChatPage() {
             providerId: Number(otherPersonDetails.id),
             history: history
         });
-
-        const aiMessage: Message = {
-            id: 'ai-' + Date.now(),
-            text: result.reply,
-            senderId: 'AI_ASSISTANT_99',
-            createdAt: Timestamp.now(),
-        };
-        setMessages(prev => [...prev, aiMessage]);
+        
+        if (result.reply) {
+            const aiMessage: Message = {
+                id: 'ai-' + Date.now(),
+                text: result.reply,
+                senderId: 'AI_ASSISTANT_99',
+                createdAt: Timestamp.now(),
+            };
+            setMessages(prev => [...prev, aiMessage]);
+        } else {
+            toast({ title: "خطا", description: result.reply || "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
+            setMessages(messages); // Revert to previous messages on error
+        }
 
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-        setMessages(messages);
+        setMessages(messages); // Revert to previous messages on error
     } finally {
         setIsSending(false);
     }
