@@ -98,10 +98,11 @@ export default function ChatPage() {
     let unsubscribe: () => void = () => {};
     
     if (isAiChat) {
-      // For AI chat, conversation resets on each page load to save data.
+      // For AI chat, conversation resets on each page load to save data and reduce cost.
       // We fetch only the initial greeting.
       const fetchInitialAiMessage = async () => {
         setIsLoading(true);
+        setMessages([]); // Clear previous messages
         try {
           const result = await chat({ providerId: 99, history: [] });
           if (result.reply) {
