@@ -110,14 +110,15 @@ const chatFlow = ai.defineFlow(
     }
     
     try {
-        const { output } = await ai.generate(generateParams);
+        const result = await ai.generate(generateParams);
+        const replyText = result.output?.text;
         
-        if (!output || !output.text) {
+        if (!replyText) {
           return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
         }
 
         return {
-          reply: output.text,
+          reply: replyText,
         };
     } catch (e) {
         console.error("AI Generation Error in chatFlow:", e);

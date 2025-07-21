@@ -18,8 +18,11 @@ import { chat } from '@/ai/flows/chat';
 import type { Message as DbMessage, Provider } from '@/lib/types';
 
 
-interface Message extends DbMessage {
+interface Message {
   id: string;
+  text: string;
+  senderId: string;
+  createdAt: Timestamp;
 }
 
 interface OtherPersonDetails {
@@ -124,10 +127,12 @@ export default function ChatPage() {
     }
     
     if (isAiAssistantChat) {
+        // Only fetch initial message if there are no messages yet
         if (messages.length === 0) {
             fetchInitialAiMessage();
+        } else {
+            setIsLoading(false);
         }
-        setIsLoading(false);
         return; // No firestore listener for AI chat
     }
 
@@ -150,7 +155,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [isLoggedIn, user, otherPersonDetails, chatId, isAiAssistantChat, fetchInitialAiMessage, toast, messages.length]);
+  }, [isLoggedIn, user, otherPersonDetails, chatId, isAiAssistantChat, fetchInitialAiMessage, messages.length]);
 
 
   if (!isLoggedIn || !user) {
@@ -178,8 +183,6 @@ export default function ChatPage() {
   const handleAiSubmit = async (text: string) => {
     if (!user || !otherPersonDetails) return;
 
-    setIsSending(true);
-
     const userMessage: Message = {
         id: 'user-' + Date.now(),
         text,
@@ -187,9 +190,11 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
+    // Optimistically add user message
     const currentMessages = [...messages, userMessage];
     setMessages(currentMessages);
     setNewMessage('');
+    setIsSending(true);
     
     try {
         const history = currentMessages.map(m => ({
@@ -214,6 +219,7 @@ export default function ChatPage() {
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
+        // Revert optimistic update on error
         setMessages(messages);
     } finally {
         setIsSending(false);
@@ -233,11 +239,10 @@ export default function ChatPage() {
     if (!chatId) return;
 
     setIsSending(true);
+    const textToSend = newMessage;
+    setNewMessage('');
     
     try {
-        const textToSend = newMessage.trim();
-        setNewMessage('');
-
         const chatDocRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatDocRef, 'messages');
         
@@ -257,7 +262,7 @@ export default function ChatPage() {
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(text);
+        setNewMessage(textToSend); // Restore message on error
     } finally {
         setIsSending(false);
     }
@@ -353,9 +358,9 @@ export default function ChatPage() {
               className="pr-12"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              disabled={isSending}
+              disabled={isSending || isLoading}
             />
-            <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim()}>
+            <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim() || isLoading}>
                 {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
