@@ -35,11 +35,10 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // This effect runs when the user's login status changes.
-    // It's responsible for loading all chat data from localStorage.
-    
-    if (!isLoggedIn || !user?.phone) {
-      setChats([]); // Clear chats if user logs out
+    // This is the core logic for loading chats.
+    // It runs ONLY when the user's login status (identified by phone number) changes.
+    if (!user?.phone) {
+      setChats([]);
       setIsLoading(false);
       return;
     }
@@ -59,7 +58,6 @@ export default function InboxPage() {
             if (!otherMemberId) return null;
 
             const otherMemberInfo = chat.participants[otherMemberId];
-            // Provide a fallback name if the name is missing to prevent errors
             const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
@@ -80,7 +78,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isLoggedIn]); // Only re-run when user or isLoggedIn changes.
+  }, [user?.phone]); // CRITICAL FIX: Depend on the primitive value `user.phone`, not the `user` object.
 
 
   if (isLoading) {
@@ -91,7 +89,7 @@ export default function InboxPage() {
     )
   }
 
-  if (!isLoggedIn || !user) {
+  if (!isLoggedIn) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
@@ -104,7 +102,7 @@ export default function InboxPage() {
     );
   }
   
-  if (user.accountType !== 'provider') {
+  if (user?.accountType !== 'provider') {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20">
         <Inbox className="w-16 h-16 text-muted-foreground mb-4" />
