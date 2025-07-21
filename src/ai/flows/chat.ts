@@ -81,7 +81,7 @@ const chatFlow = ai.defineFlow(
     - مکان: ${provider.location}
     - شماره تلفن: ${provider.phone} (فقط در صورتی که کاربر مستقیماً درخواست کرد، آن را ارائه دهید و تاکید کنید که برای رزرو نهایی تماس بگیرند).
 
-    وظایf شما:
+    وظایف شما:
     1.  **اگر مکالمه تازه شروع شده، با یک پیام خوشامدگویی دوستانه شروع کن.** از کاربر بپرس چگونه می‌توانی در مورد خدمات "${provider.service}" به او کمک کنی.
     2.  پاسخگویی به سوالات متداول در مورد خدمات, قیمت‌ها (اگر می‌دانی), و زمان‌بندی کلی.
     3.  تشویق مشتریان به رزرو وقت یا خرید.
@@ -91,7 +91,9 @@ const chatFlow = ai.defineFlow(
     
     // Determine the parameters for the generate call based on history
     let generateParams: any;
-    if (!input.history || input.history.length === 0) {
+    const cleanHistory = (input.history || []).filter(h => h.content);
+
+    if (cleanHistory.length === 0) {
         // This is the initial call to start the conversation.
         generateParams = {
             model: 'googleai/gemini-1.5-flash-latest',
@@ -100,9 +102,6 @@ const chatFlow = ai.defineFlow(
         };
     } else {
         // This is a follow-up message.
-        // **BUG FIX**: Filter out any history items where content might be missing.
-        const cleanHistory = input.history.filter(h => h.content);
-
         generateParams = {
             model: 'googleai/gemini-1.5-flash-latest',
             system: systemPrompt,
@@ -121,5 +120,3 @@ const chatFlow = ai.defineFlow(
     };
   }
 );
-
-    
