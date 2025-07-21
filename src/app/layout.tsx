@@ -6,7 +6,6 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/context/AuthContext';
-import UserSwitcher from '@/components/dev/user-switcher';
 
 // Configure Vazirmatn font with the 'arabic' subset
 const vazirmatn = Vazirmatn({
@@ -31,19 +30,19 @@ export default function RootLayout({
       <body
         className={cn(
           'font-sans antialiased flex flex-col min-h-screen',
-          vazirmatn.variable,
-          // Add padding for the dev user switcher to prevent overlap
-          process.env.NODE_ENV === 'development' && 'pb-24'
+          vazirmatn.variable
         )}
       >
         <AuthProvider>
           <Header />
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
+          <main className={cn(
+              "flex-grow container mx-auto px-4 sm:px-6 lg:px-8",
+              process.env.NODE_ENV === 'development' && 'pb-24'
+            )}>
             {children}
           </main>
           <Footer />
           <Toaster />
-          <UserSwitcher />
         </AuthProvider>
       </body>
     </html>
