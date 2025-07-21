@@ -69,7 +69,7 @@ const chatFlow = ai.defineFlow(
 
 
     if (!provider) {
-      return { reply: "متاسفانه اطلاعات این هنرمند یافت نشد." };
+      throw new Error("Provider not found");
     }
 
     const systemPrompt = `شما یک دستیار هوش مصنوعی برای "${provider.name}" هستید که خدمات "${provider.service}" را ارائه می‌دهد. شما باید به نمایندگی از ایشان به سوالات مشتریان پاسخ دهید.
@@ -96,14 +96,12 @@ const chatFlow = ai.defineFlow(
     if (cleanHistory.length === 0) {
         // This is the initial call to start the conversation.
         generateParams = {
-            model: 'googleai/gemini-1.5-flash-latest',
             system: systemPrompt,
             prompt: "سلام، لطفا به عنوان دستیار هوشمند، مکالمه را با یک خوشامدگویی شروع کن.",
         };
     } else {
         // This is a follow-up message.
         generateParams = {
-            model: 'googleai/gemini-1.5-flash-latest',
             system: systemPrompt,
             history: cleanHistory,
         };
@@ -114,17 +112,17 @@ const chatFlow = ai.defineFlow(
         const replyText = result.output?.text;
         
         if (!replyText) {
-          return { reply: "متاسفانه دستیار هوشمند در حال حاضر قادر به پاسخگویی نیست. لطفاً بعداً تلاش کنید یا مستقیماً با هنرمند تماس بگیرید." };
+          throw new Error("AI response was empty.");
         }
 
         return {
           reply: replyText,
         };
-    } catch (e) {
+    } catch (e: any) {
         console.error("AI Generation Error in chatFlow:", e);
-        return { reply: "خطا در ارتباط با سرویس هوش مصنوعی. لطفاً مجدداً تلاش کنید." };
+        // Provide a more specific error message if possible
+        const errorMessage = e?.message || "An unknown error occurred.";
+        return { reply: `خطا در ارتباط با سرویس هوش مصنوعی: ${errorMessage}` };
     }
   }
 );
-
-    
