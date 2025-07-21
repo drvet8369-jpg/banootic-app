@@ -56,7 +56,7 @@ const chatFlow = ai.defineFlow(
             service: "خدمات تستی",
             bio: "این یک پروفایل تستی برای بررسی دستیار هوشمند است.",
             location: "نامشخص",
-            phone: "نامشخص",
+            phone: "09353847484",
             categorySlug: 'beauty',
             serviceSlug: 'makeup',
             rating: 5,
@@ -100,10 +100,13 @@ const chatFlow = ai.defineFlow(
         };
     } else {
         // This is a follow-up message.
+        // **BUG FIX**: Filter out any history items where content might be missing.
+        const cleanHistory = input.history.filter(h => h.content);
+
         generateParams = {
             model: 'googleai/gemini-1.5-flash-latest',
             system: systemPrompt,
-            history: input.history,
+            history: cleanHistory,
         };
     }
     
