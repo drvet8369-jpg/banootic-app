@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,11 +34,9 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const memoizedChats = useMemo(() => {
     if (!isLoggedIn || !user?.phone) {
-      setIsLoading(false);
-      setChats([]);
-      return;
+      return [];
     }
 
     try {
@@ -47,12 +45,13 @@ export default function InboxPage() {
       const userChats = Object.values(allChatsData)
         .filter((chat: any) => chat.members?.includes(user.phone))
         .map((chat: any): Chat | null => {
+            if (!chat.participants || !chat.members) return null;
+
             const otherMemberId = chat.members.find((id: string) => id !== user.phone);
             if (!otherMemberId) return null;
 
-            // Use the detailed participant info if available
-            const participantInfo = chat.participants?.[user.phone];
-            const otherMemberName = participantInfo?.otherMemberName || `کاربر ${otherMemberId.slice(-4)}`;
+            const otherMemberInfo = chat.participants[otherMemberId];
+            const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
                 id: chat.id,
@@ -62,17 +61,22 @@ export default function InboxPage() {
                 updatedAt: chat.updatedAt,
             };
         })
-        .filter((chat): chat is Chat => chat !== null) // Filter out any null entries
+        .filter((chat): chat is Chat => chat !== null)
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         
-      setChats(userChats);
+      return userChats;
     } catch (e) {
       console.error("Failed to load chats from localStorage", e);
       setError('خطا در بارگذاری گفتگوهای موقت.');
-    } finally {
-      setIsLoading(false);
+      return [];
     }
-  }, [user, isLoggedIn]); // Removed getInitials from dependencies to prevent infinite loop
+  }, [user, isLoggedIn]);
+
+  useEffect(() => {
+    setChats(memoizedChats);
+    setIsLoading(false);
+  }, [memoizedChats]);
+
 
   if (isLoading) {
     return (
@@ -121,7 +125,7 @@ export default function InboxPage() {
               <p>{error}</p>
             </div>
           )}
-          {!error && chats.length === 0 && !isLoading && (
+          {!error && chats.length === 0 && (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>

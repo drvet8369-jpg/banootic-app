@@ -156,12 +156,14 @@ export default function ChatPage() {
                 // Participant metadata for cross-referencing names
                 participants: {
                   [user.phone]: {
+                    id: user.phone,
+                    name: user.name,
                     otherMemberId: otherPersonDetails.phone,
-                    otherMemberName: otherPersonDetails.name
                   },
                   [otherPersonDetails.phone]: {
+                    id: otherPersonDetails.phone,
+                    name: otherPersonDetails.name,
                     otherMemberId: user.phone,
-                    otherMemberName: user.name
                   }
                 }
             };
