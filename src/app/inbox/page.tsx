@@ -10,8 +10,6 @@ import { Loader2, Inbox, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-// import { db } from '@/lib/firebase';
-// import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { providers } from '@/lib/data';
 
 interface Chat {
@@ -19,21 +17,9 @@ interface Chat {
   otherMemberName: string;
   otherMemberId: string;
   lastMessage: string;
-  updatedAt: Date;
+  updatedAt: string; // Using ISO string from localStorage
 }
 
-const getUserDetails = (phone: string): { name: string } => {
-    const provider = providers.find(p => p.phone === phone);
-    if (provider) {
-        return { name: provider.name };
-    }
-    // In a real app, you might fetch customer names from a users collection
-    // For our test user
-    if (phone === '09121112233') {
-        return { name: 'آقای رضایی (مشتری تستی)' };
-    }
-    return { name: `مشتری ${phone.slice(-4)}` };
-};
 
 export default function InboxPage() {
   const { user, isLoggedIn } = useAuth();
@@ -57,55 +43,34 @@ export default function InboxPage() {
       return;
     }
     
-    // MOCK DATA FOR DEMONSTRATION
-    const mockChats: Chat[] = [
-        {
-            id: 'chat_test_1',
-            otherMemberId: '09121112233', // Test customer phone
-            otherMemberName: 'آقای رضایی (مشتری تستی)',
-            lastMessage: 'سلام، وقت بخیر. این یک پیام تستی برای نمایش در صندوق ورودی است.',
-            updatedAt: new Date(),
-        }
-    ];
-    setChats(mockChats);
+    try {
+        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const userChats = Object.values(allChatsData)
+            .filter((chat: any) => chat.members.includes(user.phone))
+            .map((chat: any) => {
+                const otherMemberId = chat.members.find((id: string) => id !== user.phone);
+                // Find name from providers or create a generic one
+                const providerDetails = providers.find(p => p.phone === otherMemberId);
+                const otherMemberName = providerDetails ? providerDetails.name : `مشتری ${otherMemberId.slice(-4)}`;
+
+                return {
+                    id: chat.id,
+                    otherMemberId: otherMemberId,
+                    otherMemberName: chat.otherMemberName || otherMemberName,
+                    lastMessage: chat.lastMessage,
+                    updatedAt: chat.updatedAt,
+                };
+            })
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+            
+        setChats(userChats as Chat[]);
+    } catch (e) {
+        console.error("Failed to load chats from localStorage", e);
+        setError('خطا در بارگذاری گفتگوهای موقت.');
+    }
+
     setIsLoading(false);
     
-    // Firebase Snapshot listener is disabled temporarily
-    /*
-    const chatsQuery = query(
-      collection(db, 'chats'), 
-      where('members', 'array-contains', user.phone),
-      orderBy('updatedAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(chatsQuery, (querySnapshot) => {
-      setError(null);
-      
-      const allChats = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
-          const otherMemberDetails = getUserDetails(otherMemberId);
-          const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
-          
-          return {
-              id: doc.id,
-              otherMemberId: otherMemberId,
-              otherMemberName: otherMemberDetails.name,
-              lastMessage: data.lastMessage || '',
-              updatedAt: updatedAt,
-          };
-      });
-      setChats(allChats);
-      setIsLoading(false);
-
-    }, (err) => {
-      console.error("Error fetching real-time chats:", err);
-      setError('یک خطای پیش‌بینی نشده در دریافت گفتگوها رخ داد.');
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-    */
   }, [user, isLoggedIn]);
 
   if (isLoading) {
@@ -147,7 +112,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. این یک نمای تستی است.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -160,7 +125,6 @@ export default function InboxPage() {
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
               <p className="text-muted-foreground mt-2">وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.</p>
-               <p className="text-muted-foreground text-sm mt-4">(اتصال به پایگاه داده موقتاً برای حالت نمایشی غیرفعال شده است)</p>
             </div>
           )}
           {!error && chats.length > 0 && (
@@ -175,7 +139,7 @@ export default function InboxPage() {
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
                                 <p className="text-xs text-muted-foreground flex-shrink-0">
-                                    {formatDistanceToNow(chat.updatedAt, { addSuffix: true, locale: faIR })}
+                                    {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR })}
                                 </p>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>

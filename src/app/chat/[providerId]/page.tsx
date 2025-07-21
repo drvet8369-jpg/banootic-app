@@ -11,8 +11,6 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-// import { db } from '@/lib/firebase';
-// import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider } from '@/lib/types';
 
@@ -21,7 +19,7 @@ interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: Date; // Changed from Timestamp for local state
+  createdAt: string; // Using ISO string for localStorage
 }
 
 interface OtherPersonDetails {
@@ -86,36 +84,19 @@ export default function ChatPage() {
         return;
     }
     setOtherPersonDetails(details);
-    setIsLoading(false); // Since we are not fetching from firebase, set loading to false.
-
-    // Firebase Snapshot listener is disabled temporarily
-    /*
-    const chatId = [user.phone, details.phone].sort().join('_');
-    const messagesQuery = query(
-        collection(db, 'chats', chatId, 'messages'), 
-        orderBy('createdAt', 'asc'),
-    );
     
-    const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
-        const msgs: Message[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                text: data.text,
-                senderId: data.senderId,
-                createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
-            }
-        });
-        setMessages(msgs);
-        setIsLoading(false);
-    }, (error) => {
-        console.error("Error fetching messages:", error);
-        toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
-        setIsLoading(false);
-    });
+    const chatId = [user.phone, details.phone].sort().join('_');
+    try {
+        const storedMessages = localStorage.getItem(`chat_${chatId}`);
+        if (storedMessages) {
+            setMessages(JSON.parse(storedMessages));
+        }
+    } catch(e) {
+        console.error("Failed to load messages from localStorage", e);
+    }
+    
+    setIsLoading(false);
 
-    return () => unsubscribe();
-    */
   }, [otherPersonIdOrProviderId, isLoggedIn, user, toast]);
 
 
@@ -148,54 +129,43 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    // Create a temporary message to display immediately in the UI
     const tempUiMessage: Message = {
       id: Date.now().toString(),
       text: text,
       senderId: user.phone,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     };
     
-    setMessages(prevMessages => [...prevMessages, tempUiMessage]);
-    setNewMessage(''); // Clear input immediately
+    const updatedMessages = [...messages, tempUiMessage];
+    setMessages(updatedMessages);
+    setNewMessage('');
 
-    // The logic to send to Firebase is temporarily disabled
-    /*
     const chatId = getChatId();
-    if (!chatId) {
-        toast({ title: "خطا", description: "امکان شناسایی چت وجود ندارد.", variant: "destructive" });
-        setIsSending(false);
-        return;
+    if (chatId) {
+        try {
+            // Save messages to localStorage
+            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
+            
+            // Save chat metadata to localStorage for inbox
+            const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+            const otherMemberId = otherPersonDetails.phone;
+            const otherMemberName = otherPersonDetails.name;
+            
+            allChats[chatId] = {
+                id: chatId,
+                members: [user.phone, otherPersonDetails.phone],
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberName,
+                lastMessage: text,
+                updatedAt: new Date().toISOString(),
+            };
+            localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+        } catch(e) {
+            console.error("Failed to save to localStorage", e);
+            toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
+        }
     }
-    
-    try {
-        const chatDocRef = doc(db, 'chats', chatId);
-        const messagesColRef = collection(chatDocRef, 'messages');
-        
-        await addDoc(messagesColRef, {
-            text: text,
-            senderId: user.phone,
-            receiverId: otherPersonDetails.phone, 
-            createdAt: serverTimestamp(),
-        });
-        
-        await setDoc(chatDocRef, {
-            members: [user.phone, otherPersonDetails.phone],
-            lastMessage: text,
-            updatedAt: serverTimestamp(),
-        }, { merge: true });
-
-    } catch(error) {
-        console.error("Error in handleSubmit:", error);
-        toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setMessages(prev => prev.filter(m => m.id !== tempUiMessage.id)); // Remove optimistic message on error
-        setNewMessage(text); // Put the unsent message back
-    } finally {
-        setIsSending(false);
-    }
-    */
    
-    // Simulate network delay and finish sending state
     setTimeout(() => {
         setIsSending(false);
     }, 500);
@@ -232,7 +202,7 @@ export default function ChatPage() {
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
-                <p>این یک چت نمایشی است. پیام‌ها ذخیره نمی‌شوند.</p>
+                <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
                 <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
