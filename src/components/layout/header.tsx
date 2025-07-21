@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ import { Logo } from './logo';
 
 
 export default function Header() {
-  const { isLoggedIn, user, logout } = useAuth();
+  const { isLoggedIn, user, logout, switchAccountType } = useAuth();
 
   const getInitials = (name: string) => {
     if (!name) return 'کاربر';
@@ -29,6 +29,11 @@ export default function Header() {
     }
     return name.substring(0, 2);
   }
+  
+  const switchRoleText = user?.accountType === 'provider' 
+    ? "تغییر به حساب مشتری" 
+    : "تغییر به حساب هنرمند";
+
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
@@ -92,6 +97,12 @@ export default function Header() {
                   <span className="text-xs text-muted-foreground">{user.phone}</span>
               </div>
             </div>
+             <SheetClose asChild>
+              <Button onClick={switchAccountType} variant="outline" className="w-full justify-start mb-2">
+                  <RefreshCw className="ml-2 h-5 w-5" />
+                  {switchRoleText}
+              </Button>
+            </SheetClose>
             <SheetClose asChild>
               <Button onClick={logout} variant="ghost" className="w-full justify-start">
                   <LogOut className="ml-2 h-5 w-5" />
@@ -148,8 +159,13 @@ export default function Header() {
                           <span>صندوق ورودی</span>
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuItem onClick={switchAccountType}>
+                  <RefreshCw className="ml-2 h-4 w-4" />
+                  <span>{switchRoleText}</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="ml-2 h-4 w-4" />
                   <span>خروج</span>
