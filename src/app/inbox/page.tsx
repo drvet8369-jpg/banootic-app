@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Loader2, Inbox, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns-jalali';
+import { formatDistanceToNow } from 'date-fns';
+import { faIR } from 'date-fns/locale';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { providers } from '@/lib/data';
 
 interface Chat {
@@ -26,6 +27,7 @@ const getUserDetails = (phone: string): { name: string } => {
     if (provider) {
         return { name: provider.name };
     }
+    // Simple fallback for customer names
     return { name: `مشتری ${phone.slice(-4)}` };
 };
 
@@ -36,61 +38,66 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchChats() {
-      if (!user) return;
-      setIsLoading(true);
+    if (!isLoggedIn || user?.accountType !== 'provider' || !user.phone) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    const chatsQuery = query(
+      collection(db, 'chats'), 
+      where('members', 'array-contains', user.phone),
+      orderBy('updatedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(chatsQuery, (querySnapshot) => {
       setError(null);
-      try {
-        const chatsQuery = query(collection(db, 'chats'), where('members', 'array-contains', user.phone));
-        const querySnapshot = await getDocs(chatsQuery);
+      const fetchedChats = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
+          const otherMemberDetails = getUserDetails(otherMemberId);
+          const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
+          
+          return {
+              id: doc.id,
+              otherMemberId: otherMemberId,
+              otherMemberName: otherMemberDetails.name,
+              lastMessage: data.lastMessage || '',
+              updatedAt: updatedAt,
+          };
+      });
 
-        if (querySnapshot.empty) {
-          setChats([]);
-          return;
-        }
+      setChats(fetchedChats);
+      setIsLoading(false);
 
-        const fetchedChats = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const otherMemberId = data.members.find((id: string) => id !== user.phone);
-            const otherMemberDetails = getUserDetails(otherMemberId);
-            const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
-            
-            return {
-                id: doc.id,
-                otherMemberId: otherMemberId,
-                otherMemberName: otherMemberDetails.name,
-                lastMessage: data.lastMessage || '',
-                updatedAt: updatedAt,
-            };
-        });
+    }, (err) => {
+      console.error("Error fetching real-time chats:", err);
+      setError('یک خطای پیش‌بینی نشده در دریافت گفتگوها رخ داد.');
+      setIsLoading(false);
+    });
 
-        const sortedChats = fetchedChats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        setChats(sortedChats);
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
 
-      } catch (err) {
-        setError('یک خطای پیش‌بینی نشده در دریافت گفتگوها رخ داد.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    if (isLoggedIn && user?.accountType === 'provider') {
-      fetchChats();
-    } else {
-        setIsLoading(false);
-    }
   }, [user, isLoggedIn]);
   
   const getInitials = (name: string) => {
     if (!name) return '?';
     const names = name.split(' ');
-    if (names.length > 1 && names[1]) {
+    if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) { // Avoid using numbers as initials
       return `${names[0][0]}${names[1][0]}`;
     }
     return name.substring(0, 2);
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!isLoggedIn || !user) {
     return (
@@ -123,27 +130,22 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. این صفحه به صورت خودکار به‌روز می‌شود.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-            </div>
-          )}
-          {!isLoading && error && (
+          {error && (
             <div className="text-center py-20 text-destructive bg-destructive/10 rounded-lg">
               <p>{error}</p>
             </div>
           )}
-          {!isLoading && !error && chats.length === 0 && (
+          {!error && chats.length === 0 && (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
-              <p className="text-muted-foreground mt-2">هنوز هیچ پیامی از مشتریان دریافت نکرده‌اید.</p>
+              <p className="text-muted-foreground mt-2">وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.</p>
             </div>
           )}
-          {!isLoading && !error && chats.length > 0 && (
+          {!error && chats.length > 0 && (
             <div className="space-y-4">
               {chats.map((chat) => (
                 <Link href={`/chat/${chat.otherMemberId}`} key={chat.id}>
@@ -151,11 +153,11 @@ export default function InboxPage() {
                         <Avatar className="h-12 w-12 ml-4">
                             <AvatarFallback>{getInitials(chat.otherMemberName)}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-grow">
+                        <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
-                                <p className="text-xs text-muted-foreground">
-                                    {formatDistanceToNow(chat.updatedAt)} پیش
+                                <p className="text-xs text-muted-foreground flex-shrink-0">
+                                    {formatDistanceToNow(chat.updatedAt, { addSuffix: true, locale: faIR })}
                                 </p>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
