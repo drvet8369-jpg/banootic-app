@@ -6,15 +6,14 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, Loader2, User, Bot } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp, limit } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { chat } from '@/ai/flows/chat';
 import type { Provider } from '@/lib/types';
 
 
@@ -40,7 +39,6 @@ export default function ChatPage() {
   const { toast } = useToast();
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
-  const [isAiAssistantChat, setIsAiAssistantChat] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -49,9 +47,9 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const getChatId = useCallback(() => {
-    if (!user || !otherPersonDetails || isAiAssistantChat) return null;
+    if (!user || !otherPersonDetails) return null;
     return [user.phone, otherPersonDetails.phone].sort().join('_');
-  }, [user, otherPersonDetails, isAiAssistantChat]);
+  }, [user, otherPersonDetails]);
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -72,21 +70,14 @@ export default function ChatPage() {
         return;
     }
 
-    const isAiChat = otherPersonIdOrProviderId === '99';
-    setIsAiAssistantChat(isAiChat);
-
     let details: OtherPersonDetails | null = null;
-    if (isAiChat) {
-      details = { id: 99, name: "دستیار هوشمند تستی", phone: "AI_ASSISTANT_99", portfolio: [] };
+    const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
+    if (provider) {
+      details = provider;
     } else {
-      const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
-      if (provider) {
-        details = provider;
-      } else {
-        const customerPhone = otherPersonIdOrProviderId;
-        // In a real app, you'd fetch customer details from a database
-        details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
-      }
+      const customerPhone = otherPersonIdOrProviderId;
+      // In a real app, you'd fetch customer details from a database
+      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
     }
     
     if (!details) {
@@ -98,48 +89,21 @@ export default function ChatPage() {
 
     let unsubscribe: () => void = () => {};
     
-    if (isAiChat) {
-      setMessages([]); // Clear previous AI chat history
-      const fetchInitialAiMessage = async () => {
-        setIsLoading(true);
-        try {
-          const result = await chat({ providerId: 99, history: [] });
-          if (result.reply) {
-            const aiMessage: Message = {
-                id: 'ai-initial-' + Date.now(),
-                text: result.reply,
-                senderId: 'AI_ASSISTANT_99',
-                createdAt: Timestamp.now(),
-            };
-            setMessages([aiMessage]);
-          } else {
-             toast({ title: "خطا", description: "پاسخ اولیه از دستیار دریافت نشد.", variant: "destructive" });
-          }
-        } catch(error) {
-            console.error("Error fetching initial AI message:", error);
-            toast({ title: "خطا", description: "دستیار هوشمند پاسخگو نیست. لطفاً بعداً تلاش کنید.", variant: "destructive" });
-        } finally {
-            setIsLoading(false);
-        }
-      };
-      fetchInitialAiMessage();
-    } else {
-        const chatId = [user.phone, details.phone].sort().join('_');
-        const messagesQuery = query(
-            collection(db, 'chats', chatId, 'messages'), 
-            orderBy('createdAt', 'asc'), // Load messages in ascending order to display correctly
-        );
-        
-        unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
-            const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-            setMessages(msgs);
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching messages:", error);
-            toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
-            setIsLoading(false);
-        });
-    }
+    const chatId = [user.phone, details.phone].sort().join('_');
+    const messagesQuery = query(
+        collection(db, 'chats', chatId, 'messages'), 
+        orderBy('createdAt', 'asc'),
+    );
+    
+    unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
+        const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+        setMessages(msgs);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching messages:", error);
+        toast({ title: "خطا", description: "دریافت پیام‌ها با مشکل مواجه شد.", variant: "destructive" });
+        setIsLoading(false);
+    });
 
     return () => unsubscribe();
   }, [otherPersonIdOrProviderId, isLoggedIn, user, toast]);
@@ -167,69 +131,10 @@ export default function ChatPage() {
     );
   }
   
-  const handleAiSubmit = async (text: string) => {
-    if (!user || !otherPersonDetails) return;
-
-    setIsSending(true);
-
-    const userMessage: Message = {
-        id: 'user-' + Date.now(),
-        text,
-        senderId: user.phone,
-        createdAt: Timestamp.now()
-    };
-    
-    // Immediately update UI with user's message
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setNewMessage(''); // Clear input immediately
-    
-    try {
-        const historyForAi = updatedMessages.map(m => ({
-            role: m.senderId === user.phone ? 'user' : 'model',
-            content: m.text,
-        })).filter(h => h.content);
-
-        const result = await chat({
-            providerId: Number(otherPersonDetails.id),
-            history: historyForAi
-        });
-        
-        if (result.reply) {
-            const aiMessage: Message = {
-                id: 'ai-' + Date.now(),
-                text: result.reply,
-                senderId: 'AI_ASSISTANT_99',
-                createdAt: Timestamp.now(),
-            };
-            setMessages(prev => [...prev, aiMessage]);
-        } else {
-            toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-            // Rollback UI by removing the user's last message
-            setMessages(messages); 
-            setNewMessage(text);
-        }
-
-    } catch (error) {
-        console.error("Error in AI response:", error);
-        toast({ title: "خطا", description: "ارتباط با دستیار هوشمند با خطا مواجه شد.", variant: "destructive" });
-        // Rollback UI
-        setMessages(messages);
-        setNewMessage(text);
-    } finally {
-        setIsSending(false);
-    }
-  }
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
     if (!text || isSending || !otherPersonDetails || !user) return;
-    
-    if (isAiAssistantChat) {
-      await handleAiSubmit(text);
-      return;
-    }
     
     const chatId = getChatId();
     if (!chatId) {
@@ -238,13 +143,13 @@ export default function ChatPage() {
     }
 
     setIsSending(true);
+    const tempMessage = newMessage;
     setNewMessage(''); // Clear input immediately
     
     try {
         const chatDocRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatDocRef, 'messages');
         
-        // No need to manually add to state, onSnapshot will handle it
         await addDoc(messagesColRef, {
             text: text,
             senderId: user.phone,
@@ -261,14 +166,13 @@ export default function ChatPage() {
     } catch(error) {
         console.error("Error in handleSubmit:", error);
         toast({ title: "خطا", description: "یک خطای پیش‌بینی نشده در ارسال پیام رخ داد.", variant: "destructive" });
-        setNewMessage(text); // Put the unsent message back
+        setNewMessage(tempMessage); // Put the unsent message back
     } finally {
         setIsSending(false);
     }
   };
 
   const getHeaderLink = () => {
-    if (isAiAssistantChat) return '/profile';
     if (user.accountType === 'provider') return '/inbox';
     const provider = providers.find(p => p.phone === otherPersonDetails?.phone);
     if(provider) return `/provider/${provider.id}`;
@@ -286,18 +190,14 @@ export default function ChatPage() {
              </Button>
            </Link>
            <Avatar>
-            {isAiAssistantChat ? <Bot className="w-full h-full p-2" /> : (
-                <>
-                    {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
-                        <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
-                    ) : null }
-                    <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
-                </>
-            )}
+            {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
+                <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
+            ) : null }
+            <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{isAiAssistantChat ? 'دستیار هوشمند' : 'گفتگوی مستقیم'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
@@ -308,13 +208,8 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((message) => {
-                const isMyMessage = message.senderId === user?.phone;
-                const isAiMessage = message.senderId === 'AI_ASSISTANT_99';
+                const senderIsUser = message.senderId === user?.phone;
                 
-                // Simplified logic: If it's an AI chat, only messages from the current user are "mine".
-                // Otherwise (human chat), messages from the current user are "mine".
-                const senderIsUser = isAiAssistantChat ? isMyMessage : isMyMessage;
-
                 return (
                   <div 
                     key={message.id} 
@@ -322,14 +217,10 @@ export default function ChatPage() {
                   >
                     {!senderIsUser && (
                       <Avatar className="h-8 w-8">
-                          {isAiAssistantChat ? <Bot className="w-full h-full p-1" /> : (
-                            <>
-                                {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
-                                    <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
-                                ) : null }
-                                <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
-                            </>
-                          )}
+                        {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
+                            <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
+                        ) : null }
+                        <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>
                     )}
                     <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
@@ -343,7 +234,7 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-             {isSending && !isAiAssistantChat && ( // Only show placeholder for human-to-human for now
+             {isSending && (
                 <div className="flex items-end gap-2 justify-end opacity-50">
                     <div className="p-3 rounded-lg bg-primary text-primary-foreground">
                         <p className="text-sm">{newMessage}</p>
@@ -374,5 +265,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

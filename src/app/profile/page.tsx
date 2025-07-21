@@ -138,12 +138,6 @@ export default function ProfilePage() {
                         مشاهده صندوق ورودی
                     </Link>
                 </Button>
-                <Button asChild className="w-full" variant="outline">
-                    <Link href="/chat/99">
-                        <Bot className="w-4 h-4 ml-2" />
-                        تست دستیار هوشمند
-                    </Link>
-                </Button>
             </CardFooter>
           </div>
         </div>
