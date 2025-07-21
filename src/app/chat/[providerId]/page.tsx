@@ -96,6 +96,7 @@ export default function ChatPage() {
     if (isAiChat) {
       // Fetch initial AI message
       const fetchInitialAiMessage = async () => {
+        setIsLoading(true);
         try {
           const result = await chat({ providerId: 99, history: [] });
           if (result.reply) {
@@ -121,11 +122,11 @@ export default function ChatPage() {
     }
     
     // For human-to-human chat
-    const chatId = [user.phone, details.phone].sort().join('_');
+    const chatId = [user.phone, details!.phone].sort().join('_');
     const messagesQuery = query(
         collection(db, 'chats', chatId, 'messages'), 
         orderBy('createdAt', 'desc'),
-        limit(5) // این خط کد فقط ۵ پیام آخر را بارگذاری می‌کند
+        limit(5)
     );
     
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
