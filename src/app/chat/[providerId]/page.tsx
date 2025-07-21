@@ -69,11 +69,12 @@ export default function ChatPage() {
     }
 
     let details: OtherPersonDetails | null = null;
-    const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId);
+    const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId || p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
       details = provider;
     } else {
+      // This case handles when a provider opens a chat with a new customer
       const customerPhone = otherPersonIdOrProviderId;
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
     }
@@ -143,22 +144,39 @@ export default function ChatPage() {
     const chatId = getChatId();
     if (chatId) {
         try {
-            // Save messages to localStorage
             localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
             
-            // Save chat metadata to localStorage for inbox
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-            const otherMemberId = otherPersonDetails.phone;
-            const otherMemberName = otherPersonDetails.name;
             
-            allChats[chatId] = {
+            const chatInfo = {
                 id: chatId,
                 members: [user.phone, otherPersonDetails.phone],
-                otherMemberId: otherMemberId,
-                otherMemberName: otherMemberName,
                 lastMessage: text,
                 updatedAt: new Date().toISOString(),
             };
+
+            // Store metadata for both users in the chat
+            const user1Meta = {
+                otherMemberId: otherPersonDetails.phone,
+                otherMemberName: otherPersonDetails.name,
+            };
+            const user2Meta = {
+                otherMemberId: user.phone,
+                otherMemberName: user.name,
+            };
+            
+            if (!allChats[chatId]) {
+                 allChats[chatId] = {
+                    ...chatInfo,
+                    participants: {}
+                 };
+            }
+            
+            allChats[chatId].lastMessage = text;
+            allChats[chatId].updatedAt = new Date().toISOString();
+            allChats[chatId].participants[user.phone] = user1Meta;
+            allChats[chatId].participants[otherPersonDetails.phone] = user2Meta;
+
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);

@@ -10,7 +10,6 @@ import { Loader2, Inbox, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { providers } from '@/lib/data';
 
 interface Chat {
   id: string;
@@ -45,18 +44,26 @@ export default function InboxPage() {
     
     try {
         const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        
         const userChats = Object.values(allChatsData)
-            .filter((chat: any) => chat.members.includes(user.phone))
+            .filter((chat: any) => chat.members?.includes(user.phone))
             .map((chat: any) => {
-                const otherMemberId = chat.members.find((id: string) => id !== user.phone);
-                // Find name from providers or create a generic one
-                const providerDetails = providers.find(p => p.phone === otherMemberId);
-                const otherMemberName = providerDetails ? providerDetails.name : `مشتری ${otherMemberId.slice(-4)}`;
-
+                const participantInfo = chat.participants?.[user.phone];
+                if (!participantInfo) {
+                    // Fallback for older data structure or corrupted data
+                    const otherMemberId = chat.members.find((id: string) => id !== user.phone) || 'unknown';
+                    return {
+                        id: chat.id,
+                        otherMemberId: otherMemberId,
+                        otherMemberName: `کاربر ${otherMemberId.slice(-4)}`,
+                        lastMessage: chat.lastMessage,
+                        updatedAt: chat.updatedAt,
+                    };
+                }
                 return {
                     id: chat.id,
-                    otherMemberId: otherMemberId,
-                    otherMemberName: chat.otherMemberName || otherMemberName,
+                    otherMemberId: participantInfo.otherMemberId,
+                    otherMemberName: participantInfo.otherMemberName,
                     lastMessage: chat.lastMessage,
                     updatedAt: chat.updatedAt,
                 };
