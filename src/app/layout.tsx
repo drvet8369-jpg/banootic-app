@@ -31,7 +31,9 @@ export default function RootLayout({
       <body
         className={cn(
           'font-sans antialiased flex flex-col min-h-screen',
-          vazirmatn.variable
+          vazirmatn.variable,
+          // Add padding for the dev user switcher to prevent overlap
+          process.env.NODE_ENV === 'development' && 'pb-24'
         )}
       >
         <AuthProvider>

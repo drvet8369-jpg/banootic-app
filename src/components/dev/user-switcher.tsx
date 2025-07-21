@@ -26,7 +26,7 @@ export default function UserSwitcher() {
   const { login, logout, user } = useAuth();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-yellow-300/80 backdrop-blur-sm p-2 border-t border-yellow-400 z-[100] shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 bg-yellow-300/80 backdrop-blur-sm p-4 border-t border-yellow-400 z-[100] shadow-lg">
       <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="text-center sm:text-right">
           <h4 className="font-bold text-sm text-yellow-900">پنل تست توسعه‌دهنده</h4>
