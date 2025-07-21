@@ -4,7 +4,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { User, Users, GripVertical } from 'lucide-react';
-import React, { useState, useEffect, useRef } from 'react';
+import React, from 'react';
 
 const TEST_CUSTOMER = {
   name: 'آقای رضایی (مشتری تستی)',
@@ -24,96 +24,84 @@ export default function UserSwitcher() {
   }
 
   const { login, logout, user } = useAuth();
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 20, y: 20 });
-  const [rel, setRel] = useState({ x: 0, y: 0 }); // relative position of mouse/touch in panel
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [position, setPosition] = React.useState({ x: 20, y: 20 });
+  const relPosRef = React.useRef({ x: 0, y: 0 });
 
-  // Load position from localStorage on mount
-  useEffect(() => {
+  React.useEffect(() => {
     const savedPosition = localStorage.getItem('user-switcher-position');
     if (savedPosition) {
       setPosition(JSON.parse(savedPosition));
     } else {
-      // Default position if not saved
        const defaultX = window.innerWidth - 380;
        const defaultY = window.innerHeight - 200;
        setPosition({ x: defaultX > 20 ? defaultX : 20, y: defaultY > 20 ? defaultY : 20 });
     }
   }, []);
 
-  // Save position to localStorage when it changes
-  useEffect(() => {
+  React.useEffect(() => {
     localStorage.setItem('user-switcher-position', JSON.stringify(position));
   }, [position]);
 
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || !panelRef.current) return;
-    const { top, left } = panelRef.current.getBoundingClientRect();
-    setIsDragging(true);
-    setRel({
-      x: e.pageX - left,
-      y: e.pageY - top,
-    });
-    e.preventDefault();
-  };
-
-  const onMouseUp = (e: MouseEvent) => {
-    setIsDragging(false);
-    e.preventDefault();
-  };
-
-  const onMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !panelRef.current) return;
-    setPosition({
-      x: e.pageX - rel.x,
-      y: e.pageY - rel.y,
-    });
-    e.preventDefault();
-  };
-
-  // Touch event handlers for mobile
-  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+  const onDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (!panelRef.current) return;
-    const touch = e.touches[0];
-    const { top, left } = panelRef.current.getBoundingClientRect();
     setIsDragging(true);
-    setRel({
-      x: touch.pageX - left,
-      y: touch.pageY - top,
-    });
-  }
-  
-  const onTouchMove = (e: TouchEvent) => {
-    if (!isDragging || !panelRef.current) return;
-    const touch = e.touches[0];
-    setPosition({
-      x: touch.pageX - rel.x,
-      y: touch.pageY - rel.y,
-    });
-  }
 
-  const onTouchEnd = () => {
-    setIsDragging(false);
-  }
-
-  useEffect(() => {
-    if (isDragging) {
-      // Add listeners for both mouse and touch
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-      document.addEventListener('touchmove', onTouchMove);
-      document.addEventListener('touchend', onTouchEnd);
+    let pageX, pageY;
+    if ('touches' in e) {
+        pageX = e.touches[0].pageX;
+        pageY = e.touches[0].pageY;
+    } else {
+        if (e.button !== 0) return;
+        pageX = e.pageX;
+        pageY = e.pageY;
     }
 
-    return () => {
-      // Clean up listeners for both mouse and touch
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
+    const { top, left } = panelRef.current.getBoundingClientRect();
+    relPosRef.current = {
+      x: pageX - left,
+      y: pageY - top,
     };
-  }, [isDragging, onMouseMove, onMouseUp, onTouchMove, onTouchEnd]); // Added dependencies
+  };
+
+  const onDragEnd = () => {
+    setIsDragging(false);
+  };
+  
+  const onDragMove = React.useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
+    
+    let pageX, pageY;
+    if ('touches' in e) {
+        pageX = e.touches[0].pageX;
+        pageY = e.touches[0].pageY;
+    } else {
+        pageX = e.pageX;
+        pageY = e.pageY;
+    }
+
+    setPosition({
+      x: pageX - relPosRef.current.x,
+      y: pageY - relPosRef.current.y,
+    });
+
+  }, [isDragging]);
+
+
+  React.useEffect(() => {
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchmove', onDragMove);
+    document.addEventListener('touchend', onDragEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragEnd);
+      document.removeEventListener('touchmove', onDragMove);
+      document.removeEventListener('touchend', onDragEnd);
+    };
+  }, [onDragMove]);
 
   return (
     <div
@@ -123,8 +111,8 @@ export default function UserSwitcher() {
     >
       <div
         className="flex items-center justify-between cursor-move pb-3 border-b border-yellow-400/50"
-        onMouseDown={onMouseDown}
-        onTouchStart={onTouchStart}
+        onMouseDown={onDragStart}
+        onTouchStart={onDragStart}
       >
         <h4 className="font-bold text-sm text-yellow-900 select-none">پنل تست توسعه‌دهنده</h4>
         <GripVertical className="h-5 w-5 text-yellow-800" />
