@@ -190,7 +190,6 @@ export default function ChatPage() {
         createdAt: Timestamp.now()
     };
     
-    // Optimistically add user message
     const currentMessages = [...messages, userMessage];
     setMessages(currentMessages);
     setNewMessage('');
@@ -210,7 +209,7 @@ export default function ChatPage() {
         const aiMessage: Message = {
             id: 'ai-' + Date.now(),
             text: result.reply,
-            senderId: otherPersonDetails.phone,
+            senderId: 'AI_ASSISTANT_99',
             createdAt: Timestamp.now(),
         };
 
@@ -219,7 +218,7 @@ export default function ChatPage() {
     } catch (error) {
         console.error("Error in AI response:", error);
         toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
-        // Revert optimistic update on error
+        // Revert optimistic update on error by removing the user's last message
         setMessages(messages);
     } finally {
         setIsSending(false);
@@ -338,7 +337,7 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-             {isSending && (
+             {isSending && !isAiAssistantChat && (
                 <div className="flex items-end gap-2 justify-end">
                     <div className="p-3 rounded-lg bg-muted">
                         <Loader2 className="w-5 h-5 animate-spin" />
