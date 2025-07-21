@@ -125,7 +125,7 @@ export default function ChatPage() {
     const messagesQuery = query(
         collection(db, 'chats', chatId, 'messages'), 
         orderBy('createdAt', 'desc'),
-        limit(5) // Load only the last 5 messages for performance
+        limit(5) // این خط کد فقط ۵ پیام آخر را بارگذاری می‌کند
     );
     
     const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
