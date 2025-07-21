@@ -58,7 +58,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
-            <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
+            <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
                 این صفحه فقط برای ارائه‌دهندگان خدمات است. برای ثبت نام به عنوان هنرمند، به صفحه ثبت‌نام بروید.
             </p>
             <Button asChild size="lg" className="mt-8">
