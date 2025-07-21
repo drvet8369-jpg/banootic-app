@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,7 +27,6 @@ const getUserDetails = (phone: string): { name: string } => {
     if (provider) {
         return { name: provider.name };
     }
-    // Simple fallback for customer names
     return { name: `مشتری ${phone.slice(-4)}` };
 };
 
@@ -37,16 +36,20 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isLoggedIn || !user?.phone) {
-      setIsLoading(false);
-      return;
+  const getInitials = useCallback((name: string) => {
+    if (!name) return '?';
+    const names = name.split(' ');
+    if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
+      return `${names[0][0]}${names[1][0]}`;
     }
-    // Only fetch chats if the user is a provider
-    if (user.accountType !== 'provider') {
-        setIsLoading(false);
-        setChats([]); // Clear chats if user switches to customer
-        return;
+    return name.substring(0, 2);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !user?.phone || user.accountType !== 'provider') {
+      setIsLoading(false);
+      setChats([]);
+      return;
     }
 
     setIsLoading(true);
@@ -59,23 +62,71 @@ export default function InboxPage() {
 
     const unsubscribe = onSnapshot(chatsQuery, (querySnapshot) => {
       setError(null);
-      const fetchedChats = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
-          const otherMemberDetails = getUserDetails(otherMemberId);
-          const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
-          
-          return {
-              id: doc.id,
-              otherMemberId: otherMemberId,
-              otherMemberName: otherMemberDetails.name,
-              lastMessage: data.lastMessage || '',
-              updatedAt: updatedAt,
-          };
-      });
+      
+      const changes = querySnapshot.docChanges();
 
-      setChats(fetchedChats);
-      setIsLoading(false);
+      if (isLoading) {
+        // Initial load: process all documents at once for speed
+        const initialChats = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
+            const otherMemberDetails = getUserDetails(otherMemberId);
+            const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
+            
+            return {
+                id: doc.id,
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberDetails.name,
+                lastMessage: data.lastMessage || '',
+                updatedAt: updatedAt,
+            };
+        });
+        setChats(initialChats);
+        setIsLoading(false);
+      } else {
+        // Subsequent updates: process only the changes for efficiency
+        setChats(prevChats => {
+            let newChats = [...prevChats];
+
+            changes.forEach(change => {
+                const data = change.doc.data();
+                const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
+                const otherMemberDetails = getUserDetails(otherMemberId);
+                const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
+
+                const chatItem: Chat = {
+                    id: change.doc.id,
+                    otherMemberId: otherMemberId,
+                    otherMemberName: otherMemberDetails.name,
+                    lastMessage: data.lastMessage || '',
+                    updatedAt: updatedAt,
+                };
+                
+                const existingIndex = newChats.findIndex(c => c.id === change.doc.id);
+
+                if (change.type === 'added') {
+                    if (existingIndex === -1) {
+                        newChats.push(chatItem);
+                    }
+                }
+                if (change.type === 'modified') {
+                    if (existingIndex !== -1) {
+                        newChats[existingIndex] = chatItem;
+                    } else {
+                        // If modified but not present, add it
+                        newChats.push(chatItem);
+                    }
+                }
+                if (change.type === 'removed') {
+                    if (existingIndex !== -1) {
+                       newChats.splice(existingIndex, 1);
+                    }
+                }
+            });
+            // Re-sort the array based on the latest update time
+            return newChats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        });
+      }
 
     }, (err) => {
       console.error("Error fetching real-time chats:", err);
@@ -83,19 +134,8 @@ export default function InboxPage() {
       setIsLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
-
-  }, [user, isLoggedIn]);
-  
-  const getInitials = (name: string) => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) { // Avoid using numbers as initials
-      return `${names[0][0]}${names[1][0]}`;
-    }
-    return name.substring(0, 2);
-  }
+  }, [user, isLoggedIn, isLoading]);
 
   if (isLoading) {
     return (
@@ -178,5 +218,3 @@ export default function InboxPage() {
     </div>
   );
 }
-
-    
