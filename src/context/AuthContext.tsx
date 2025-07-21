@@ -4,11 +4,11 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface User {
+export interface User {
   name: string;
   // The user's phone number is their unique ID
   phone: string; 
-  accountType?: 'customer' | 'provider';
+  accountType: 'customer' | 'provider';
 }
 
 interface AuthContextType {
@@ -41,8 +41,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: User) => {
     try {
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
-      setUser(userData);
+      // Ensure accountType is always set
+      const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
+      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      setUser(userToSave);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
     }
@@ -62,6 +64,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const switchAccountType = () => {
     if (!user) return;
     
+    // This functionality is now primarily for development/testing convenience.
+    // In a real app, a user wouldn't just "switch" roles this easily.
     const newAccountType = user.accountType === 'provider' ? 'customer' : 'provider';
     const updatedUser = { ...user, accountType: newAccountType };
 

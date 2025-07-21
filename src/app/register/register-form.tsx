@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
+import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -84,7 +85,15 @@ export default function RegisterForm() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        login({ name: values.name, phone: values.phone, accountType: values.accountType });
+        const userToLogin: User = {
+          name: values.name,
+          phone: values.phone,
+          accountType: values.accountType,
+        }
+
+        // In a real app, you'd save this new provider to the database.
+        // For now, we just log them in. The profile page is a mock anyway.
+        login(userToLogin);
         
         toast({
           title: 'ثبت‌نام با موفقیت انجام شد!',

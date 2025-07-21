@@ -28,6 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { providers } from '@/lib/data';
+import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -54,12 +56,31 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // This is a mock login. In a real app, you'd verify credentials.
-        login({ name: 'کاربر هنربانو', phone: values.phone });
+        const existingProvider = providers.find(p => p.phone === values.phone);
+
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
         
         router.push('/');
@@ -80,9 +101,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای دسترسی به حساب خود، شماره تلفن خود را وارد کنید.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -108,9 +129,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            حساب کاربری ندارید؟{" "}
+            هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              ثبت‌نام کنید
+              از اینجا ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
