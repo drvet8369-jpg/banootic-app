@@ -1,7 +1,7 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import { firebase as firebasePlugin } from '@genkit-ai/firebase/plugin';
+import { firebase as firebasePlugin } from '@genkit-ai/firebase';
 import 'dotenv/config';
 
 export const ai = genkit({
