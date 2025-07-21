@@ -27,6 +27,7 @@ const getUserDetails = (phone: string): { name: string } => {
     if (provider) {
         return { name: provider.name };
     }
+    // In a real app, you might fetch customer names from a users collection
     return { name: `مشتری ${phone.slice(-4)}` };
 };
 
@@ -51,7 +52,8 @@ export default function InboxPage() {
       setChats([]);
       return;
     }
-
+    
+    // Set loading to true only at the beginning of the effect
     setIsLoading(true);
 
     const chatsQuery = query(
@@ -63,70 +65,23 @@ export default function InboxPage() {
     const unsubscribe = onSnapshot(chatsQuery, (querySnapshot) => {
       setError(null);
       
-      const changes = querySnapshot.docChanges();
-
-      if (isLoading) {
-        // Initial load: process all documents at once for speed
-        const initialChats = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
-            const otherMemberDetails = getUserDetails(otherMemberId);
-            const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
-            
-            return {
-                id: doc.id,
-                otherMemberId: otherMemberId,
-                otherMemberName: otherMemberDetails.name,
-                lastMessage: data.lastMessage || '',
-                updatedAt: updatedAt,
-            };
-        });
-        setChats(initialChats);
-        setIsLoading(false);
-      } else {
-        // Subsequent updates: process only the changes for efficiency
-        setChats(prevChats => {
-            let newChats = [...prevChats];
-
-            changes.forEach(change => {
-                const data = change.doc.data();
-                const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
-                const otherMemberDetails = getUserDetails(otherMemberId);
-                const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
-
-                const chatItem: Chat = {
-                    id: change.doc.id,
-                    otherMemberId: otherMemberId,
-                    otherMemberName: otherMemberDetails.name,
-                    lastMessage: data.lastMessage || '',
-                    updatedAt: updatedAt,
-                };
-                
-                const existingIndex = newChats.findIndex(c => c.id === change.doc.id);
-
-                if (change.type === 'added') {
-                    if (existingIndex === -1) {
-                        newChats.push(chatItem);
-                    }
-                }
-                if (change.type === 'modified') {
-                    if (existingIndex !== -1) {
-                        newChats[existingIndex] = chatItem;
-                    } else {
-                        // If modified but not present, add it
-                        newChats.push(chatItem);
-                    }
-                }
-                if (change.type === 'removed') {
-                    if (existingIndex !== -1) {
-                       newChats.splice(existingIndex, 1);
-                    }
-                }
-            });
-            // Re-sort the array based on the latest update time
-            return newChats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-        });
-      }
+      const allChats = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          const otherMemberId = data.members.find((id: string) => id !== user.phone) || 'unknown';
+          const otherMemberDetails = getUserDetails(otherMemberId);
+          const updatedAt = (data.updatedAt as Timestamp)?.toDate() ?? new Date();
+          
+          return {
+              id: doc.id,
+              otherMemberId: otherMemberId,
+              otherMemberName: otherMemberDetails.name,
+              lastMessage: data.lastMessage || '',
+              updatedAt: updatedAt,
+          };
+      });
+      setChats(allChats);
+      // Set loading to false after the first data fetch
+      setIsLoading(false);
 
     }, (err) => {
       console.error("Error fetching real-time chats:", err);
@@ -135,7 +90,7 @@ export default function InboxPage() {
     });
 
     return () => unsubscribe();
-  }, [user, isLoggedIn, isLoading]);
+  }, [user, isLoggedIn]);
 
   if (isLoading) {
     return (
@@ -218,5 +173,3 @@ export default function InboxPage() {
     </div>
   );
 }
-
-    

@@ -67,6 +67,11 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
+    if (!isLoggedIn || !user) {
+        setIsLoading(false);
+        return;
+    }
+
     const isAiChat = otherPersonIdOrProviderId === '99';
     setIsAiAssistantChat(isAiChat);
 
@@ -79,27 +84,24 @@ export default function ChatPage() {
         details = provider;
       } else {
         const customerPhone = otherPersonIdOrProviderId;
+        // In a real app, you'd fetch customer details from a database
         details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
       }
     }
     
     if (!details) {
+        toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
         setIsLoading(false);
         return;
     }
     setOtherPersonDetails(details);
 
-    if (!isLoggedIn || !user) {
-        setIsLoading(false);
-        return;
-    }
-
     let unsubscribe: () => void = () => {};
     
     if (isAiChat) {
+      setMessages([]); // Clear previous AI chat history
       const fetchInitialAiMessage = async () => {
         setIsLoading(true);
-        setMessages([]); 
         try {
           const result = await chat({ providerId: 99, history: [] });
           if (result.reply) {
@@ -111,11 +113,11 @@ export default function ChatPage() {
             };
             setMessages([aiMessage]);
           } else {
-             toast({ title: "خطا", description: result.reply || "پاسخ اولیه از دستیار دریافت نشد.", variant: "destructive" });
+             toast({ title: "خطا", description: "پاسخ اولیه از دستیار دریافت نشد.", variant: "destructive" });
           }
         } catch(error) {
             console.error("Error fetching initial AI message:", error);
-            toast({ title: "خطا", description: "دستیار هوشمند پاسخگو نیست.", variant: "destructive" });
+            toast({ title: "خطا", description: "دستیار هوشمند پاسخگو نیست. لطفاً بعداً تلاش کنید.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -204,14 +206,16 @@ export default function ChatPage() {
             };
             setMessages(prev => [...prev, aiMessage]);
         } else {
-            toast({ title: "خطا", description: result.reply || "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
+            toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
+            // Rollback UI
             setMessages(messages); 
             setNewMessage(textToSend);
         }
 
     } catch (error) {
         console.error("Error in AI response:", error);
-        toast({ title: "خطا", description: "پاسخ از دستیار هوشمند دریافت نشد.", variant: "destructive" });
+        toast({ title: "خطا", description: "ارتباط با دستیار هوشمند با خطا مواجه شد.", variant: "destructive" });
+        // Rollback UI
         setMessages(messages);
         setNewMessage(textToSend);
     } finally {
@@ -306,9 +310,12 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((message) => {
-                const isSender = message.senderId === user?.phone;
+                const isMyMessage = message.senderId === user?.phone;
                 const isAiMessage = message.senderId === 'AI_ASSISTANT_99';
-                const senderIsUser = isSender || (!isAiAssistantChat && message.senderId === user?.phone);
+                
+                // Simplified logic: If it's an AI chat, only messages from the current user are "mine".
+                // Otherwise (human chat), messages from the current user are "mine".
+                const senderIsUser = isAiAssistantChat ? isMyMessage : isMyMessage;
 
                 return (
                   <div 
@@ -338,9 +345,9 @@ export default function ChatPage() {
                 </div>
                 )
             })}
-             {isSending && !isAiAssistantChat && (
+             {isSending && (
                 <div className="flex items-end gap-2 justify-end">
-                    <div className="p-3 rounded-lg bg-muted">
+                    <div className="p-3 rounded-lg bg-primary/50 text-primary-foreground">
                         <Loader2 className="w-5 h-5 animate-spin" />
                     </div>
                     <Avatar className="h-8 w-8">
