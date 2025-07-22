@@ -69,6 +69,10 @@ export default function ReservationDialog({ isOpen, onOpenChange, provider }: Re
     setTimeout(() => {
       setStep('success');
       setIsProcessing(false);
+      toast({
+        title: "رزرو با موفقیت انجام شد",
+        description: `درخواست شما برای ${provider.name} ثبت شد.`
+      })
     }, 2000);
   }
   
@@ -107,7 +111,7 @@ export default function ReservationDialog({ isOpen, onOpenChange, provider }: Re
                               mode="single"
                               selected={field.value}
                               onSelect={field.onChange}
-                              disabled={(date) => date < new Date() || date < new Date('1900-01-01')}
+                              disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                               initialFocus
                               locale={faIR}
                               className="rounded-md border"
@@ -235,7 +239,15 @@ export default function ReservationDialog({ isOpen, onOpenChange, provider }: Re
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!isProcessing) {
+            onOpenChange(open);
+            // If closing, reset the state
+            if (!open) {
+              handleClose();
+            }
+        }
+    }}>
       <DialogContent 
         className="sm:max-w-3xl" 
         onEscapeKeyDown={(e) => {
@@ -245,7 +257,7 @@ export default function ReservationDialog({ isOpen, onOpenChange, provider }: Re
             if (isProcessing) e.preventDefault();
         }}
         onCloseAutoFocus={(e) => {
-            if (step !== 'form') e.preventDefault();
+            if (isProcessing || step !== 'form') e.preventDefault();
         }}
       >
         {renderContent()}

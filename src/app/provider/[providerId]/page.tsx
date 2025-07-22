@@ -47,8 +47,6 @@ const getProviderData = (providerId: string): Provider | undefined => {
 };
 
 export default function ProviderDetailsPage({ params }: PageProps) {
-  // Since we are using client-side state for the dialog, 
-  // we fetch the data directly inside the component.
   const provider = getProviderData(params.providerId);
   const [isReservationDialogOpen, setReservationDialogOpen] = useState(false);
 
@@ -92,50 +90,54 @@ export default function ProviderDetailsPage({ params }: PageProps) {
                   <span>{provider.location}</span>
                </div>
             </div>
-            <div className="md:col-span-2 p-6 md:border-r border-t md:border-t-0">
-              <CardHeader>
-                  <CardTitle className="font-headline text-2xl">درباره هنرمند</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
-                 <Separator className="my-6" />
-                  <h3 className="font-headline text-xl mb-4">نمونه کارها</h3>
-                   {provider.portfolio && provider.portfolio.length > 0 ? (
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                          {provider.portfolio.map((item, index) => (
-                              <div key={index} className="overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
-                                  <Image 
-                                      src={item.src}
-                                      alt={`نمونه کار ${index + 1}`}
-                                      width={200}
-                                      height={200}
-                                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                                      data-ai-hint={item.aiHint}
-                                  />
-                              </div>
-                          ))}
-                      </div>
-                  ) : (
-                      <p className="text-muted-foreground">هنوز نمونه کاری اضافه نشده است.</p>
-                  )}
-              </CardContent>
-               <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
-                   <Button onClick={() => setReservationDialogOpen(true)} className="w-full">
+            <div className="md:col-span-2 p-6 md:border-r border-t md:border-t-0 flex flex-col">
+              <div className="flex-grow">
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">درباره هنرمند</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
+                   <Separator className="my-6" />
+                    <h3 className="font-headline text-xl mb-4">نمونه کارها</h3>
+                     {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            {provider.portfolio.map((item, index) => (
+                                <div key={index} className="overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
+                                    <Image 
+                                        src={item.src}
+                                        alt={`نمونه کار ${index + 1}`}
+                                        width={200}
+                                        height={200}
+                                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                                        data-ai-hint={item.aiHint}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground">هنوز نمونه کاری اضافه نشده است.</p>
+                    )}
+                </CardContent>
+              </div>
+               <CardFooter className="flex flex-col gap-3 pt-6">
+                    <div className="flex w-full gap-3">
+                        <Button asChild className="w-full" variant="secondary">
+                            <Link href={`/chat/${provider.id}`}>
+                                <MessageSquare className="w-4 h-4 ml-2" />
+                                ارسال پیام
+                            </Link>
+                        </Button>
+                        <Button asChild className="w-full" variant="outline">
+                            <a href={`tel:${provider.phone}`}>
+                                <Phone className="w-4 h-4 ml-2" />
+                                تماس
+                            </a>
+                        </Button>
+                    </div>
+                    <Button onClick={() => setReservationDialogOpen(true)} className="w-full">
                         <CalendarPlus className="w-4 h-4 ml-2" />
                         رزرو
                     </Button>
-                  <Button asChild className="w-full" variant="secondary">
-                      <Link href={`/chat/${provider.id}`}>
-                          <MessageSquare className="w-4 h-4 ml-2" />
-                          ارسال پیام
-                      </Link>
-                  </Button>
-                  <Button asChild className="w-full" variant="outline">
-                      <a href={`tel:${provider.phone}`}>
-                          <Phone className="w-4 h-4 ml-2" />
-                          تماس
-                      </a>
-                  </Button>
               </CardFooter>
             </div>
           </div>
