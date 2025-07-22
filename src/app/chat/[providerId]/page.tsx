@@ -268,7 +268,7 @@ export default function ChatPage() {
                 onChange={(e) => setNewMessage(e.target.value)}
                 disabled={isSending || isLoading}
               />
-              <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-accent hover:bg-accent/90" disabled={isSending || !newMessage.trim() || isLoading}>
+              <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim() || isLoading}>
                   {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 -rotate-45" />}
               </Button>
           </form>
