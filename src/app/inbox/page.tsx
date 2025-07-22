@@ -22,8 +22,7 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  // Check if there is a second word and it's not a number (like in test data)
-  if (names.length > 1 && names[1] && !/^\d+$/.test(names[1].replace(/[\(\)]/g, ''))) {
+  if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
     return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
