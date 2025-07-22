@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -58,7 +58,6 @@ export default function InboxPage() {
             const otherMemberId = chat.members.find((id: string) => id !== user.phone);
             if (!otherMemberId) return null;
             
-            const selfInfo = chat.participants[user.phone];
             const otherMemberInfo = chat.participants[otherMemberId];
             
             // Ensure we have a valid name, otherwise create a placeholder
