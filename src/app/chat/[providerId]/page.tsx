@@ -203,8 +203,8 @@ export default function ChatPage() {
 
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] max-w-2xl mx-auto py-8">
-      <Card className="flex-grow flex flex-col">
+    <div className="flex flex-col h-full max-w-2xl mx-auto py-8">
+      <Card className="flex-1 flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 border-b">
            <Link href={getHeaderLink()}>
              <Button variant="ghost" size="icon">
@@ -222,7 +222,7 @@ export default function ChatPage() {
             <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow p-6 space-y-4 overflow-y-auto">
+        <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
                 <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
@@ -258,7 +258,7 @@ export default function ChatPage() {
             })}
             <div ref={messagesEndRef} />
         </CardContent>
-        <form onSubmit={handleSubmit} className="p-4 border-t">
+        <form onSubmit={handleSubmit} className="p-4 border-t bg-background">
           <div className="relative">
             <Input 
               type="text" 
