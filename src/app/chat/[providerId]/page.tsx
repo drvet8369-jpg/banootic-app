@@ -144,8 +144,6 @@ export default function ChatPage() {
     const chatId = getChatId();
     if (chatId) {
         try {
-            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
-            
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
             
             const chatInfo = {
@@ -153,7 +151,6 @@ export default function ChatPage() {
                 members: [user.phone, otherPersonDetails.phone],
                 lastMessage: text,
                 updatedAt: new Date().toISOString(),
-                // Participant metadata for cross-referencing names
                 participants: {
                   [user.phone]: {
                     id: user.phone,
@@ -168,11 +165,23 @@ export default function ChatPage() {
                 }
             };
             
-            allChats[chatId] = {
-                ...allChats[chatId], // Preserve any existing data
-                ...chatInfo, // Overwrite with new info
+            const currentChatData = allChats[chatId] || {};
+            
+            // Deep merge participants to avoid overwriting existing data
+            const mergedParticipants = {
+              ...(currentChatData.participants || {}),
+              ...chatInfo.participants,
+            };
+
+            const updatedChat = {
+                ...currentChatData,
+                ...chatInfo,
+                participants: mergedParticipants,
             };
             
+            allChats[chatId] = updatedChat;
+            
+            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
@@ -237,7 +246,7 @@ export default function ChatPage() {
                       </Avatar>
                     )}
                     <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                        <p className="text-sm">{message.text}</p>
+                        <p className="text-sm font-semibold">{message.text}</p>
                     </div>
                      {senderIsUser && (
                        <Avatar className="h-8 w-8">

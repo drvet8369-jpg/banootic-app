@@ -22,9 +22,11 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
+  // Check if there is a second word and it's not a number (for 'مشتری 1234' case)
   if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
     return `${names[0][0]}${names[1][0]}`;
   }
+  // Otherwise, return the first two characters of the full name
   return name.substring(0, 2);
 };
 
@@ -36,7 +38,6 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // This logic runs ONLY when the user's login status (identified by phone number) changes.
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -56,8 +57,11 @@ export default function InboxPage() {
 
             const otherMemberId = chat.members.find((id: string) => id !== user.phone);
             if (!otherMemberId) return null;
-
+            
+            const selfInfo = chat.participants[user.phone];
             const otherMemberInfo = chat.participants[otherMemberId];
+            
+            // Ensure we have a valid name, otherwise create a placeholder
             const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
@@ -78,7 +82,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.phone]); // CRITICAL: Depend on the primitive value `user.phone`, not the `user` object.
+  }, [user?.phone]);
 
 
   if (isLoading) {
@@ -150,7 +154,7 @@ export default function InboxPage() {
                                     {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR })}
                                 </p>
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
+                            <p className="text-sm text-muted-foreground truncate font-semibold">{chat.lastMessage}</p>
                         </div>
                     </div>
                 </Link>
