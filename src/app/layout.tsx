@@ -29,13 +29,13 @@ export default function RootLayout({
     <html lang="fa" dir="rtl">
       <body
         className={cn(
-          'font-sans antialiased flex flex-col min-h-screen',
+          'font-sans antialiased flex flex-col h-screen',
           vazirmatn.variable
         )}
       >
         <AuthProvider>
           <Header />
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
+          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
             {children}
           </main>
           <Footer />

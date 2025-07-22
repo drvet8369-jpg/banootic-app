@@ -167,7 +167,6 @@ export default function ChatPage() {
             
             const currentChatData = allChats[chatId] || {};
             
-            // Deep merge participants to avoid overwriting existing data
             const mergedParticipants = {
               ...(currentChatData.participants || {}),
               ...chatInfo.participants,
@@ -203,8 +202,8 @@ export default function ChatPage() {
 
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] py-8">
-      <Card className="flex-1 flex flex-col">
+    <div className="flex flex-col h-full py-4">
+      <Card className="flex-1 flex flex-col w-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
              <Button variant="ghost" size="icon">
@@ -269,7 +268,7 @@ export default function ChatPage() {
                 disabled={isSending || isLoading}
               />
               <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim() || isLoading}>
-                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 -rotate-45" />}
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
           </form>
         </div>
