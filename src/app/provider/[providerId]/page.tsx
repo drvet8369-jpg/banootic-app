@@ -70,8 +70,8 @@ export default function ProviderDetailsPage({ params }: PageProps) {
                   <Image
                     src={provider.portfolio[0].src}
                     alt={provider.name}
-                    layout="fill"
-                    objectFit="cover"
+                    fill
+                    className="object-cover"
                     data-ai-hint={provider.portfolio[0].aiHint}
                   />
                 ) : (
