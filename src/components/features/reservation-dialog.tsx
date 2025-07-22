@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Dialog,
@@ -15,14 +15,13 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider } from '@/lib/types';
-import { CalendarIcon, Loader2, CreditCard, PartyPopper } from 'lucide-react';
+import { Loader2, CreditCard, PartyPopper } from 'lucide-react';
 import { faIR } from 'date-fns/locale';
 
 const reservationSchema = z.object({
@@ -241,10 +240,10 @@ export default function ReservationDialog({ isOpen, onOpenChange, provider }: Re
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!isProcessing) {
-            onOpenChange(open);
-            // If closing, reset the state
             if (!open) {
               handleClose();
+            } else {
+               onOpenChange(true);
             }
         }
     }}>
@@ -255,9 +254,6 @@ export default function ReservationDialog({ isOpen, onOpenChange, provider }: Re
         }}
         onInteractOutside={(e) => {
             if (isProcessing) e.preventDefault();
-        }}
-        onCloseAutoFocus={(e) => {
-            if (isProcessing || step !== 'form') e.preventDefault();
         }}
       >
         {renderContent()}
