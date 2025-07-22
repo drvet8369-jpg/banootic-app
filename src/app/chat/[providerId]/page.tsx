@@ -203,9 +203,9 @@ export default function ChatPage() {
 
 
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto py-8">
+    <div className="flex flex-col h-[calc(100vh-10rem)] py-8">
       <Card className="flex-1 flex flex-col">
-        <CardHeader className="flex flex-row items-center gap-4 border-b">
+        <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
@@ -258,21 +258,21 @@ export default function ChatPage() {
             })}
             <div ref={messagesEndRef} />
         </CardContent>
-        <form onSubmit={handleSubmit} className="p-4 border-t bg-background">
-          <div className="relative">
-            <Input 
-              type="text" 
-              placeholder="پیام خود را بنویسید..." 
-              className="pr-12"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              disabled={isSending || isLoading}
-            />
-            <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim() || isLoading}>
-                {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
-          </div>
-        </form>
+        <div className="p-4 border-t bg-background shrink-0">
+          <form onSubmit={handleSubmit} className="relative">
+              <Input 
+                type="text" 
+                placeholder="پیام خود را بنویسید..." 
+                className="pr-12"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                disabled={isSending || isLoading}
+              />
+              <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-accent hover:bg-accent/90" disabled={isSending || !newMessage.trim() || isLoading}>
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 -rotate-45" />}
+              </Button>
+          </form>
+        </div>
       </Card>
     </div>
   );
