@@ -6,12 +6,10 @@ import type { Provider } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare, CalendarPlus } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import { useState } from 'react';
-import ReservationDialog from '@/components/features/reservation-dialog';
 
 interface PageProps {
   params: {
@@ -48,7 +46,6 @@ const getProviderData = (providerId: string): Provider | undefined => {
 
 export default function ProviderDetailsPage({ params }: PageProps) {
   const provider = getProviderData(params.providerId);
-  const [isReservationDialogOpen, setReservationDialogOpen] = useState(false);
 
   if (!provider) {
     notFound();
@@ -56,11 +53,6 @@ export default function ProviderDetailsPage({ params }: PageProps) {
 
   return (
     <>
-      <ReservationDialog 
-        isOpen={isReservationDialogOpen} 
-        onOpenChange={setReservationDialogOpen} 
-        provider={provider} 
-      />
       <div className="max-w-4xl mx-auto py-12 md:py-20">
         <Card>
           <div className="grid md:grid-cols-3">
@@ -119,24 +111,18 @@ export default function ProviderDetailsPage({ params }: PageProps) {
                     )}
                 </CardContent>
               </div>
-               <CardFooter className="flex flex-col gap-3 pt-6">
-                    <div className="flex w-full gap-3">
-                        <Button asChild className="w-full" variant="secondary">
-                            <Link href={`/chat/${provider.id}`}>
-                                <MessageSquare className="w-4 h-4 ml-2" />
-                                ارسال پیام
-                            </Link>
-                        </Button>
-                        <Button asChild className="w-full" variant="outline">
-                            <a href={`tel:${provider.phone}`}>
-                                <Phone className="w-4 h-4 ml-2" />
-                                تماس
-                            </a>
-                        </Button>
-                    </div>
-                    <Button onClick={() => setReservationDialogOpen(true)} className="w-full">
-                        <CalendarPlus className="w-4 h-4 ml-2" />
-                        رزرو
+               <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
+                    <Button asChild className="w-full" variant="secondary">
+                        <Link href={`/chat/${provider.id}`}>
+                            <MessageSquare className="w-4 h-4 ml-2" />
+                            ارسال پیام
+                        </Link>
+                    </Button>
+                    <Button asChild className="w-full" variant="outline">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
                     </Button>
               </CardFooter>
             </div>
