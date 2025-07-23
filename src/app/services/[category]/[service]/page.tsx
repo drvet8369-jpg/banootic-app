@@ -29,8 +29,8 @@ export default function ServiceProvidersPage() {
       const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
       
       if (!foundCategory || !foundService) {
-        setCategory(undefined);
-        setService(undefined);
+        setCategory(null);
+        setService(null);
         setServiceProviders([]);
       } else {
         setCategory(foundCategory);
