@@ -88,17 +88,31 @@ export default function RegisterForm() {
 
       const allProviders = getProviders();
 
-      // Check for existing user (customer or provider)
-      const existingProvider = allProviders.find(p => p.phone === values.phone);
-      if (values.accountType === 'provider' && existingProvider) {
-        toast({
-          title: 'خطا',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
+      // Check for existing provider by phone or name
+      if (values.accountType === 'provider') {
+        const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+        if (existingProviderByPhone) {
+          toast({
+            title: 'خطا در ثبت‌نام',
+            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        if (existingProviderByName) {
+            toast({
+                title: 'خطا در ثبت‌نام',
+                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
+                variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+        }
       }
+
 
       // This is the user object for the AuthContext
       const userToLogin: User = {
