@@ -29,10 +29,11 @@ export default function SearchPage() {
 
   useEffect(() => {
     // We need to run the search client-side to access localStorage
-    setTimeout(() => {
-      setSearchResults(searchProviders(query));
-      setIsLoading(false);
-    }, 0);
+    // Running this every time the query changes ensures we get fresh data
+    setIsLoading(true);
+    const results = searchProviders(query);
+    setSearchResults(results);
+    setIsLoading(false);
   }, [query]);
 
 

@@ -20,19 +20,18 @@ export default function ServiceProvidersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch data on client-side to ensure localStorage is available
+    // Fetch data on client-side to ensure localStorage is available and fresh
     if (categorySlug && serviceSlug) {
-      setTimeout(() => {
-        const allProviders = getProviders();
-        const foundCategory = categories.find((c) => c.slug === categorySlug) || null;
-        const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug) || null;
-        const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-        
-        setCategory(foundCategory);
-        setService(foundService);
-        setServiceProviders(foundProviders);
-        setIsLoading(false);
-      }, 0);
+      setIsLoading(true);
+      const allProviders = getProviders();
+      const foundCategory = categories.find((c) => c.slug === categorySlug) || null;
+      const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug) || null;
+      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      
+      setCategory(foundCategory);
+      setService(foundService);
+      setServiceProviders(foundProviders);
+      setIsLoading(false);
     }
   }, [categorySlug, serviceSlug]);
 
