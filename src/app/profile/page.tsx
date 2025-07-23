@@ -196,8 +196,8 @@ export default function ProfilePage() {
             <CardContent>
               <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
                <Separator className="my-6" />
-                <div>
-                  <h3 className="font-headline text-xl font-semibold mb-4">نمونه کارهای شما</h3>
+                <div className="mb-4">
+                  <h3 className="font-headline text-xl font-semibold mb-4 text-center">نمونه کارهای شما</h3>
                   
                   <input 
                     type="file" 
@@ -206,7 +206,7 @@ export default function ProfilePage() {
                     className="hidden"
                     accept="image/*"
                   />
-                  <Button onClick={handleAddClick} variant="outline" className="w-full font-bold mb-6">
+                  <Button onClick={handleAddClick} size="lg" className="w-full font-bold mb-6">
                     <PlusCircle className="w-5 h-5 ml-2" />
                     افزودن نمونه کار جدید
                   </Button>
