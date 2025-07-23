@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { providers as defaultProviders, getProviders, saveProviders } from '@/lib/data';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -44,6 +44,7 @@ export default function ProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     if (user && user.accountType === 'provider') {
@@ -72,11 +73,11 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  const addPortfolioItem = () => {
+  const addPortfolioItem = (imageSrc: string) => {
     if (!provider) return;
 
     const newPortfolioItem = {
-      src: `https://placehold.co/400x250?v=${Date.now()}`, // Add timestamp to get a new image
+      src: imageSrc,
       aiHint: 'new work',
     };
 
@@ -102,6 +103,24 @@ export default function ProfilePage() {
             description: 'اطلاعات هنرمند یافت نشد.',
             variant: 'destructive',
         })
+    }
+  };
+
+  const handleAddClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+          addPortfolioItem(result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
   
@@ -179,10 +198,19 @@ export default function ProfilePage() {
                <Separator className="my-6" />
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-headline text-xl">نمونه کارهای شما</h3>
-                  <Button onClick={addPortfolioItem} size="sm" variant="outline">
-                    <PlusCircle className="w-4 h-4 ml-2" />
-                    افزودن نمونه کار (آزمایشی)
-                  </Button>
+                  <div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <Button onClick={handleAddClick} size="sm" variant="outline">
+                      <PlusCircle className="w-4 h-4 ml-2" />
+                      افزودن نمونه کار
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     {provider.portfolio.map((item, index) => (
