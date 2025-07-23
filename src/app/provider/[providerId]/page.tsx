@@ -6,7 +6,7 @@ import type { Provider } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare, User } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare, User, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -34,29 +34,34 @@ const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: nu
   );
 };
 
-
-const getProviderData = (providerId: string): Provider | undefined => {
-  const providers = getProviders();
-  return providers.find(p => p.id.toString() === providerId);
-};
-
 export default function ProviderDetailsPage() {
   const params = useParams();
   const providerId = params.providerId as string;
-  const [provider, setProvider] = useState<Provider | null | undefined>(undefined);
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (providerId) {
-      const providerData = getProviderData(providerId);
-      setProvider(providerData);
+      // Use setTimeout to ensure all client-side operations are stable
+      setTimeout(() => {
+        const providers = getProviders();
+        const providerData = providers.find(p => p.id.toString() === providerId);
+        setProvider(providerData || null);
+        setIsLoading(false);
+      }, 0);
     }
   }, [providerId]);
 
-  if (provider === undefined) {
-    return <div>در حال بارگذاری...</div>; // Loading state
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">در حال بارگذاری اطلاعات هنرمند...</p>
+        </div>
+    );
   }
 
-  if (provider === null) {
+  if (!provider) {
     notFound();
   }
 

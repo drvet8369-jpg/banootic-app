@@ -6,7 +6,7 @@ import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -32,38 +32,41 @@ const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: nu
   );
 };
 
-const getServiceData = (categorySlug: string, serviceSlug: string): { service: Service | undefined, serviceProviders: Provider[], category: Category | undefined } => {
-  const allProviders = getProviders();
-  const category = categories.find((c) => c.slug === categorySlug);
-  const service = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
-  const serviceProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-  return { service, serviceProviders, category };
-};
-
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
 
-  const [serviceData, setServiceData] = useState<{
-    service?: Service;
-    serviceProviders: Provider[];
-    category?: Category;
-  } | null>(null);
+  const [service, setService] = useState<Service | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
+  const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Fetch data on client-side to ensure localStorage is available
     if (categorySlug && serviceSlug) {
-      const data = getServiceData(categorySlug, serviceSlug);
-      setServiceData(data);
+      setTimeout(() => {
+        const allProviders = getProviders();
+        const foundCategory = categories.find((c) => c.slug === categorySlug) || null;
+        const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug) || null;
+        const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+        
+        setCategory(foundCategory);
+        setService(foundService);
+        setServiceProviders(foundProviders);
+        setIsLoading(false);
+      }, 0);
     }
   }, [categorySlug, serviceSlug]);
 
-  if (!serviceData) {
-    return <div>در حال بارگذاری...</div>;
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
+        </div>
+    );
   }
-
-  const { service, serviceProviders, category } = serviceData;
-
+  
   if (!service || !category) {
     notFound();
   }

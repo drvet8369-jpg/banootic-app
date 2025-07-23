@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
-import { SearchX } from 'lucide-react';
+import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const searchProviders = (query: string): Provider[] => {
@@ -25,10 +25,14 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // We need to run the search client-side to access localStorage
-    setSearchResults(searchProviders(query));
+    setTimeout(() => {
+      setSearchResults(searchProviders(query));
+      setIsLoading(false);
+    }, 0);
   }, [query]);
 
 
@@ -47,7 +51,12 @@ export default function SearchPage() {
         )}
       </div>
 
-      {searchResults.length > 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
+        </div>
+      ) : searchResults.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {searchResults.map((provider) => (
             <SearchResultCard key={provider.id} provider={provider} />
