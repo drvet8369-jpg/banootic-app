@@ -51,14 +51,10 @@ export default function ProfilePage() {
       const allProviders = getProviders();
       let currentProvider = allProviders.find(p => p.phone === user.phone);
       
-      // If provider exists in the list, set it.
       if (currentProvider) {
         setProvider(currentProvider);
       } else {
-        // This case should ideally not be hit if registration works correctly,
-        // but it's a fallback. In a real app, this might redirect or show an error.
         console.warn("Provider not found in list after login. This might indicate an issue.");
-        // Optional: you could show a "Profile not found" message.
       }
     }
   }, [user]);
@@ -70,19 +66,30 @@ export default function ProfilePage() {
       src: imageSrc,
       aiHint: 'new work',
     };
-
-    const updatedProvider = {
-      ...provider,
-      portfolio: [...provider.portfolio, newPortfolioItem],
-    };
-
+    
+    // This is the corrected logic.
+    // 1. Get the most current list of all providers.
     const allProviders = getProviders();
+    
+    // 2. Find the index of the provider we are editing.
     const providerIndex = allProviders.findIndex(p => p.id === provider.id);
 
     if (providerIndex > -1) {
+      // 3. Create a deep copy of the provider to avoid direct state mutation.
+      const updatedProvider = { ...allProviders[providerIndex] };
+      
+      // 4. Update the portfolio of the copied provider object.
+      updatedProvider.portfolio = [...updatedProvider.portfolio, newPortfolioItem];
+      
+      // 5. Replace the old provider object with the updated one in the list.
       allProviders[providerIndex] = updatedProvider;
+      
+      // 6. Save the entire updated list back to localStorage.
       saveProviders(allProviders);
-      setProvider(updatedProvider); // Update local state to re-render
+      
+      // 7. Update the local state to re-render the UI with the new item.
+      setProvider(updatedProvider);
+      
       toast({
         title: 'موفقیت‌آمیز',
         description: 'نمونه کار جدید با موفقیت اضافه شد.',
@@ -90,11 +97,12 @@ export default function ProfilePage() {
     } else {
         toast({
             title: 'خطا',
-            description: 'اطلاعات هنرمند یافت نشد.',
+            description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
             variant: 'destructive',
         })
     }
   };
+
 
   const handleAddClick = () => {
     fileInputRef.current?.click();
@@ -103,14 +111,8 @@ export default function ProfilePage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // FIX: Instead of reading the file and storing its large data URI,
-      // we now add a placeholder URL. This prevents exceeding localStorage quota.
-      // In a real app, this is where you'd upload the file to a server/storage
-      // and get back a URL to save.
       const placeholderUrl = `https://placehold.co/600x400.png`;
       addPortfolioItem(placeholderUrl);
-      
-      // Clear the file input value so the user can select the same file again
       event.target.value = '';
     }
   };
