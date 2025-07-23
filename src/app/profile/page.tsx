@@ -54,16 +54,19 @@ export default function ProfilePage() {
       // This logic handles a newly registered provider who might not be in the list yet.
       // The registration form should ideally add them, but this is a fallback.
       if (!currentProvider) {
+        const selectedCategory = categories.find(c => c.slug === user.serviceType);
+        const firstServiceInCat = services.find(s => s.categorySlug === user.serviceType);
+        
         const newProvider: Provider = {
-          id: allProviders.length + 1,
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
           name: user.name,
           phone: user.phone,
           // These are placeholder values for a new provider
-          service: user.service || 'سرویس جدید',
+          service: selectedCategory?.name || 'سرویس جدید',
           location: 'مکان شما',
           bio: user.bio || 'بیوگرافی خود را اینجا بنویسید.',
           categorySlug: user.serviceType || 'beauty',
-          serviceSlug: services.find(s => s.categorySlug === (user.serviceType || 'beauty'))?.slug || 'manicure-pedicure',
+          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
           portfolio: [],
@@ -229,6 +232,11 @@ export default function ProfilePage() {
                         </div>
                     ))}
                 </div>
+                {provider.portfolio.length === 0 && (
+                  <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                    <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                  </div>
+                )}
                 <div className="mt-6 bg-accent/20 p-4 rounded-lg">
                     <h4 className="font-bold text-accent-foreground">توجه:</h4>
                     <p className="text-sm text-accent-foreground/90">این یک صفحه آزمایشی است. در نسخه نهایی، شما قادر به ویرایش کامل پروفایل و آپلود نمونه کارهای واقعی خود خواهید بود.</p>

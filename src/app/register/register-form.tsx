@@ -116,7 +116,7 @@ export default function RegisterForm() {
           
           // Create a new provider object
           const newProvider: Provider = {
-            id: allProviders.length + 1, // Simple ID generation
+            id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
             name: values.name,
             phone: values.phone,
             service: selectedCategory?.name || 'خدمت جدید',
