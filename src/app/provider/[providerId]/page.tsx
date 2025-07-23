@@ -11,6 +11,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { useState, useEffect } from 'react';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
   const fullStars = Math.floor(rating);
@@ -97,24 +98,36 @@ export default function ProviderDetailsPage() {
               <CardContent>
                 <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
                  <Separator className="my-6" />
-                  <h3 className="font-headline text-xl mb-4">نمونه کارها</h3>
+                  <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                    {provider.portfolio && provider.portfolio.length > 0 ? (
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      <Carousel className="w-full max-w-sm mx-auto">
+                        <CarouselContent>
                           {provider.portfolio.map((item, index) => (
-                              <div key={index} className="overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
-                                  <Image 
-                                      src={item.src}
-                                      alt={`نمونه کار ${index + 1}`}
-                                      width={200}
-                                      height={200}
-                                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                                      data-ai-hint={item.aiHint}
-                                  />
-                              </div>
+                            <CarouselItem key={index}>
+                                <div className="p-1">
+                                    <Card className="overflow-hidden">
+                                        <CardContent className="flex aspect-video items-center justify-center p-0">
+                                            <Image 
+                                                src={item.src}
+                                                alt={`نمونه کار ${index + 1}`}
+                                                width={600}
+                                                height={400}
+                                                className="w-full h-full object-cover"
+                                                data-ai-hint={item.aiHint}
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </CarouselItem>
                           ))}
-                      </div>
+                        </CarouselContent>
+                        <CarouselPrevious />
+                        <CarouselNext />
+                      </Carousel>
                   ) : (
-                      <p className="text-muted-foreground">هنوز نمونه کاری اضافه نشده است.</p>
+                      <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                        <p>هنوز نمونه کاری اضافه نشده است.</p>
+                      </div>
                   )}
               </CardContent>
             </div>

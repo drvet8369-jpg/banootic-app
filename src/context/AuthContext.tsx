@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // A one-time check to see if we need to clean up localStorage
 const performCleanup = () => {
     if (typeof window !== 'undefined') {
-        const cleanupFlag = 'honarbanoo-cleanup-v1-done';
+        const cleanupFlag = 'honarbanoo-cleanup-v2-done'; // Use a new flag to re-run if needed
         if (!localStorage.getItem(cleanupFlag)) {
             console.log("Performing one-time cleanup of corrupted provider data...");
             localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
@@ -36,7 +36,10 @@ const performCleanup = () => {
         }
     }
 };
-performCleanup();
+
+if (typeof window !== 'undefined') {
+    performCleanup();
+}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
