@@ -6,10 +6,11 @@ import type { Provider } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
+import { MapPin, Phone, Star, MessageSquare, User } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
 
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
   const fullStars = Math.floor(rating);
@@ -33,7 +34,6 @@ const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: nu
 };
 
 
-// Note: This data is now fetched from localStorage if available, or defaults.
 const getProviderData = (providerId: string): Provider | undefined => {
   const providers = getProviders();
   return providers.find(p => p.id.toString() === providerId);
@@ -42,9 +42,20 @@ const getProviderData = (providerId: string): Provider | undefined => {
 export default function ProviderDetailsPage() {
   const params = useParams();
   const providerId = params.providerId as string;
-  const provider = getProviderData(providerId);
+  const [provider, setProvider] = useState<Provider | null | undefined>(undefined);
 
-  if (!provider) {
+  useEffect(() => {
+    if (providerId) {
+      const providerData = getProviderData(providerId);
+      setProvider(providerData);
+    }
+  }, [providerId]);
+
+  if (provider === undefined) {
+    return <div>در حال بارگذاری...</div>; // Loading state
+  }
+
+  if (provider === null) {
     notFound();
   }
 
@@ -65,7 +76,7 @@ export default function ProviderDetailsPage() {
                   />
                 ) : (
                    <div className="bg-muted w-full h-full flex items-center justify-center">
-                      <span className="text-4xl font-bold text-muted-foreground">{provider.name.charAt(0)}</span>
+                      <User className="w-16 h-16 text-muted-foreground" />
                   </div>
                 )}
               </div>

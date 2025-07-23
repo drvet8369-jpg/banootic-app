@@ -1,7 +1,7 @@
 
 'use client';
 
-import { providers } from '@/lib/data';
+import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,9 @@ export default function ChatPage() {
     }
 
     let details: OtherPersonDetails | null = null;
-    const provider = providers.find(p => p.id.toString() === otherPersonIdOrProviderId || p.phone === otherPersonIdOrProviderId);
+    // Always get the most up-to-date provider list from localStorage
+    const allProviders = getProviders();
+    const provider = allProviders.find(p => p.id.toString() === otherPersonIdOrProviderId || p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
       details = provider;
@@ -195,7 +197,8 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    const provider = providers.find(p => p.phone === otherPersonDetails?.phone);
+    const allProviders = getProviders();
+    const provider = allProviders.find(p => p.phone === otherPersonDetails?.phone);
     if(provider) return `/provider/${provider.id}`;
     return '/'; 
   }
