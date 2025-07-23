@@ -51,7 +51,7 @@ export default function Home() {
         </div>
          <div className="mt-12 text-center">
             <Button asChild variant="secondary" size="lg" className="text-lg">
-              <Link href="/register">هنرمند هستید؟ ثبت‌نام کنید</Link>
+              <Link href="/register">به جامعه ما بپیوندید</Link>
             </Button>
           </div>
       </section>
