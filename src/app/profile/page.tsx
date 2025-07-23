@@ -196,21 +196,20 @@ export default function ProfilePage() {
             <CardContent>
               <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
                <Separator className="my-6" />
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-headline text-lg font-semibold">نمونه کارهای شما</h3>
-                  <div>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleFileChange}
-                      className="hidden"
-                      accept="image/*"
-                    />
-                    <Button onClick={handleAddClick} size="sm" variant="outline">
-                      <PlusCircle className="w-4 h-4 ml-2" />
-                      افزودن نمونه کار
-                    </Button>
-                  </div>
+                <div>
+                  <h3 className="font-headline text-xl font-semibold mb-4">نمونه کارهای شما</h3>
+                  
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                  <Button onClick={handleAddClick} variant="outline" className="w-full font-bold mb-6">
+                    <PlusCircle className="w-5 h-5 ml-2" />
+                    افزودن نمونه کار جدید
+                  </Button>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     {provider.portfolio.map((item, index) => (
