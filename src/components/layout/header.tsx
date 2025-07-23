@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw, Search } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -18,7 +18,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Logo } from './logo';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { SearchComponent } from './search';
 
 export default function Header() {
   const { isLoggedIn, user, logout, switchAccountType } = useAuth();
@@ -138,10 +137,6 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2">
-            <div className="hidden md:block">
-              <SearchComponent />
-            </div>
-
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
             {isLoggedIn && user ? (
                 <DropdownMenu>
@@ -203,7 +198,6 @@ export default function Header() {
             </nav>
 
             <div className="md:hidden flex items-center">
-              <SearchComponent />
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
