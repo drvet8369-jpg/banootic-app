@@ -30,7 +30,7 @@ export default function RootLayout({
     <html lang="fa" dir="rtl">
       <body
         className={cn(
-          'min-h-screen bg-background font-sans antialiased overflow-hidden',
+          'min-h-screen bg-background font-sans antialiased',
           vazirmatn.variable
         )}
       >
