@@ -3,20 +3,13 @@
 
 import { services, categories, getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-
-interface PageProps {
-  params: {
-    category: string;
-    service: string;
-  };
-}
 
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
   const fullStars = Math.floor(rating);
@@ -47,7 +40,10 @@ const getServiceData = (categorySlug: string, serviceSlug: string): { service: S
   return { service, serviceProviders, category };
 };
 
-export default function ServiceProvidersPage({ params }: PageProps) {
+export default function ServiceProvidersPage() {
+  const params = useParams<{ category: string; service: string }>();
+  const { category: categorySlug, service: serviceSlug } = params;
+
   const [serviceData, setServiceData] = useState<{
     service?: Service;
     serviceProviders: Provider[];
@@ -56,9 +52,11 @@ export default function ServiceProvidersPage({ params }: PageProps) {
 
   useEffect(() => {
     // Fetch data on client-side to ensure localStorage is available
-    const data = getServiceData(params.category, params.service);
-    setServiceData(data);
-  }, [params.category, params.service]);
+    if (categorySlug && serviceSlug) {
+      const data = getServiceData(categorySlug, serviceSlug);
+      setServiceData(data);
+    }
+  }, [categorySlug, serviceSlug]);
 
   if (!serviceData) {
     return <div>در حال بارگذاری...</div>;
