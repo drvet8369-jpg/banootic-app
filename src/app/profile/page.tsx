@@ -197,7 +197,7 @@ export default function ProfilePage() {
               <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
                <Separator className="my-6" />
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-headline text-xl">نمونه کارهای شما</h3>
+                  <h3 className="font-headline text-lg font-semibold">نمونه کارهای شما</h3>
                   <div>
                     <input 
                       type="file" 
