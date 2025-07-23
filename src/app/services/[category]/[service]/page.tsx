@@ -14,27 +14,35 @@ export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
 
-  const [service, setService] = useState<Service | undefined>(undefined);
-  const [category, setCategory] = useState<Category | undefined>(undefined);
+  const [service, setService] = useState<Service | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // This effect now correctly re-runs whenever the slugs change,
-    // ensuring the most up-to-date provider list from localStorage is fetched.
+    // ensuring the most up-to-date provider list from localStorage is fetched and correctly filtered.
     if (categorySlug && serviceSlug) {
       setIsLoading(true);
 
       const foundCategory = categories.find((c) => c.slug === categorySlug);
       const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
       
-      // Always get the latest providers from localStorage inside the effect
-      const allProviders = getProviders();
-      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      if (!foundCategory || !foundService) {
+        setCategory(undefined);
+        setService(undefined);
+        setServiceProviders([]);
+      } else {
+        setCategory(foundCategory);
+        setService(foundService);
+        
+        // Always get the latest providers from localStorage inside the effect
+        const allProviders = getProviders();
+        // **CRITICAL FIX**: Correctly filter providers based on the serviceSlug from the URL.
+        const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+        setServiceProviders(foundProviders);
+      }
       
-      setCategory(foundCategory);
-      setService(foundService);
-      setServiceProviders(foundProviders);
       setIsLoading(false);
     }
   }, [categorySlug, serviceSlug]);
