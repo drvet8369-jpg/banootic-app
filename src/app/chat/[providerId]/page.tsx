@@ -71,7 +71,7 @@ export default function ChatPage() {
     let details: OtherPersonDetails | null = null;
     // Always get the most up-to-date provider list from localStorage
     const allProviders = getProviders();
-    const provider = allProviders.find(p => p.id.toString() === otherPersonIdOrProviderId || p.phone === otherPersonIdOrProviderId);
+    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
       details = provider;
@@ -197,10 +197,7 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    const allProviders = getProviders();
-    const provider = allProviders.find(p => p.phone === otherPersonDetails?.phone);
-    if(provider) return `/provider/${provider.id}`;
-    return '/'; 
+    return '/'; // Go back to home page from chat for customers
   }
 
 
