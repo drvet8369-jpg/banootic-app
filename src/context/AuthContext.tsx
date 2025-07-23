@@ -9,6 +9,10 @@ export interface User {
   // The user's phone number is their unique ID
   phone: string; 
   accountType: 'customer' | 'provider';
+  // Optional fields for new provider registration context
+  serviceType?: string;
+  bio?: string;
+  service?: string;
 }
 
 interface AuthContextType {

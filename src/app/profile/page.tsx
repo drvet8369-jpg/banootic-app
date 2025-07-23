@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { providers as defaultProviders, getProviders, saveProviders } from '@/lib/data';
+import { providers as defaultProviders, getProviders, saveProviders, categories, services } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -49,27 +49,31 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user && user.accountType === 'provider') {
       const allProviders = getProviders();
-      const currentProvider = allProviders.find(p => p.phone === user.phone);
+      let currentProvider = allProviders.find(p => p.phone === user.phone);
       
-      if (currentProvider) {
-        setProvider(currentProvider);
-      } else {
-        // If provider not found (e.g., new registration), create a mock profile
-        const mockProvider: Provider = {
-          id: 99, 
+      // This logic handles a newly registered provider who might not be in the list yet.
+      // The registration form should ideally add them, but this is a fallback.
+      if (!currentProvider) {
+        const newProvider: Provider = {
+          id: allProviders.length + 1,
           name: user.name,
-          service: 'خدمات شما',
-          location: 'مکان شما (پیش‌فرض)',
           phone: user.phone,
-          bio: 'این یک پیش‌نمایش از پروفایل شماست. اطلاعات کامل‌تر در آینده نمایش داده خواهد شد.',
-          categorySlug: 'beauty', 
-          serviceSlug: 'manicure-pedicure', 
-          rating: 5,
+          // These are placeholder values for a new provider
+          service: user.service || 'سرویس جدید',
+          location: 'مکان شما',
+          bio: user.bio || 'بیوگرافی خود را اینجا بنویسید.',
+          categorySlug: user.serviceType || 'beauty',
+          serviceSlug: services.find(s => s.categorySlug === (user.serviceType || 'beauty'))?.slug || 'manicure-pedicure',
+          rating: 0,
           reviewsCount: 0,
-          portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'portfolio preview' }],
+          portfolio: [],
         };
-        setProvider(mockProvider);
+        const updatedProviders = [...allProviders, newProvider];
+        saveProviders(updatedProviders); // Save the new provider to the list
+        currentProvider = newProvider;
       }
+      
+      setProvider(currentProvider);
     }
   }, [user]);
 
@@ -175,7 +179,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                    <div className="bg-muted w-full h-full flex items-center justify-center">
-                      <span className="text-4xl font-bold text-muted-foreground">{provider.name.charAt(0)}</span>
+                      <User className="w-16 h-16 text-muted-foreground" />
                   </div>
                 )}
             </div>

@@ -24,10 +24,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories } from '@/lib/data';
+import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
+import type { Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -85,14 +86,53 @@ export default function RegisterForm() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
+        // This is the user object for the AuthContext
         const userToLogin: User = {
           name: values.name,
           phone: values.phone,
           accountType: values.accountType,
-        }
+          // Pass provider-specific info for context
+          serviceType: values.serviceType,
+          bio: values.bio,
+        };
 
-        // In a real app, you'd save this new provider to the database.
-        // For now, we just log them in. The profile page is a mock anyway.
+        if (values.accountType === 'provider') {
+          const allProviders = getProviders();
+          
+          // Check if provider already exists
+          const existingProvider = allProviders.find(p => p.phone === values.phone);
+          if (existingProvider) {
+              toast({
+                  title: 'خطا',
+                  description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.',
+                  variant: 'destructive',
+              });
+              setIsLoading(false);
+              return;
+          }
+
+          const selectedCategory = categories.find(c => c.slug === values.serviceType);
+          const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
+          
+          // Create a new provider object
+          const newProvider: Provider = {
+            id: allProviders.length + 1, // Simple ID generation
+            name: values.name,
+            phone: values.phone,
+            service: selectedCategory?.name || 'خدمت جدید',
+            location: 'ارومیه', // Default location
+            bio: values.bio || '',
+            categorySlug: selectedCategory?.slug || 'beauty',
+            serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
+            rating: 0,
+            reviewsCount: 0,
+            portfolio: [],
+          };
+
+          // Save the updated list of providers
+          saveProviders([...allProviders, newProvider]);
+        }
+        
         login(userToLogin);
         
         toast({
@@ -100,7 +140,9 @@ export default function RegisterForm() {
           description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
         });
         
-        router.push('/');
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
+
     } catch (error) {
          console.error("Registration failed:", error);
          toast({
