@@ -14,18 +14,22 @@ export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
 
-  const [service, setService] = useState<Service | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
+  const [service, setService] = useState<Service | undefined>(undefined);
+  const [category, setCategory] = useState<Category | undefined>(undefined);
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch data on client-side to ensure localStorage is available and fresh
+    // This effect now correctly re-runs whenever the slugs change,
+    // ensuring the most up-to-date provider list from localStorage is fetched.
     if (categorySlug && serviceSlug) {
       setIsLoading(true);
+
+      const foundCategory = categories.find((c) => c.slug === categorySlug);
+      const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
+      
+      // Always get the latest providers from localStorage inside the effect
       const allProviders = getProviders();
-      const foundCategory = categories.find((c) => c.slug === categorySlug) || null;
-      const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug) || null;
       const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
       
       setCategory(foundCategory);
