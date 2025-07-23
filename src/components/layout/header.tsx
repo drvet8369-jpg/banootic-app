@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw, Search, User } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -16,119 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Logo } from './logo';
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { providers, services } from '@/lib/data';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-
-
-interface SearchResult {
-  providers: typeof providers;
-  services: typeof services;
-}
-
-const SearchBar = ({ onResultClick }: { onResultClick?: () => void }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-
-  const searchResults: SearchResult = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return { providers: [], services: [] };
-    }
-    const lowercasedQuery = searchQuery.toLowerCase();
-    const filteredProviders = providers.filter(provider =>
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery)
-    );
-    const filteredServices = services.filter(service =>
-      service.name.toLowerCase().includes(lowercasedQuery)
-    );
-    return { providers: filteredProviders, services: filteredServices };
-  }, [searchQuery]);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
-    onResultClick?.();
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsFocused(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const showResults = isFocused && searchQuery.trim().length > 0;
-
-  return (
-    <div className="relative w-full md:w-64" ref={searchRef}>
-      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      <Input
-        type="text"
-        placeholder="جستجو..."
-        className="w-full h-9 pr-10"
-        value={searchQuery}
-        onChange={handleSearchChange}
-        onFocus={() => setIsFocused(true)}
-      />
-      {showResults && (
-        <div className="absolute top-full mt-2 w-full z-50">
-          <Card>
-            <CardContent className="p-2 max-h-80 overflow-y-auto">
-              {(searchResults.providers.length === 0 && searchResults.services.length === 0) ? (
-                <p className="p-4 text-center text-sm text-muted-foreground">هیچ نتیجه‌ای یافت نشد.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {searchResults.providers.length > 0 && (
-                     <li className="text-xs font-semibold text-muted-foreground px-2 pt-1">هنرمندان</li>
-                  )}
-                  {searchResults.providers.map(provider => (
-                    <li key={`p-${provider.id}`} onClick={clearSearch}>
-                      <Link href={`/provider/${provider.id}`}>
-                         <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                            <User className="h-4 w-4 text-accent" />
-                            <div className="flex-grow">
-                                <p className="text-sm font-semibold">{provider.name}</p>
-                                <p className="text-xs text-muted-foreground">{provider.service}</p>
-                            </div>
-                         </div>
-                      </Link>
-                    </li>
-                  ))}
-                  {searchResults.services.length > 0 && (
-                     <li className="text-xs font-semibold text-muted-foreground px-2 pt-2">خدمات</li>
-                  )}
-                   {searchResults.services.map(service => (
-                    <li key={`s-${service.slug}`} onClick={clearSearch}>
-                       <Link href={`/services/${service.categorySlug}/${service.slug}`}>
-                         <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                            <Briefcase className="h-4 w-4 text-accent" />
-                            <p className="text-sm font-semibold">{service.name}</p>
-                         </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
-  );
-};
-
 
 export default function Header() {
   const { isLoggedIn, user, logout, switchAccountType } = useAuth();
@@ -161,7 +50,6 @@ export default function Header() {
            <Logo className="h-8 w-8 text-primary-foreground" />
            <span className="font-display text-2xl font-bold">هنربانو</span>
         </Link>
-        <SearchBar onResultClick={() => setIsSheetOpen(false)} />
       </div>
 
       <nav className="flex-grow p-4 space-y-2">
@@ -246,9 +134,6 @@ export default function Header() {
             <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
               <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
             </nav>
-            <div className="hidden md:block">
-               <SearchBar />
-            </div>
         </div>
 
         <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
