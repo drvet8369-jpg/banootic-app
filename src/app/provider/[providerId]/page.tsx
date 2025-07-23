@@ -3,19 +3,13 @@
 
 import { providers } from '@/lib/data';
 import type { Provider } from '@/lib/types';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-
-interface PageProps {
-  params: {
-    providerId: string;
-  };
-}
 
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
   const fullStars = Math.floor(rating);
@@ -44,8 +38,10 @@ const getProviderData = (providerId: string): Provider | undefined => {
   return providers.find(p => p.id.toString() === providerId);
 };
 
-export default function ProviderDetailsPage({ params }: PageProps) {
-  const provider = getProviderData(params.providerId);
+export default function ProviderDetailsPage() {
+  const params = useParams();
+  const providerId = params.providerId as string;
+  const provider = getProviderData(providerId);
 
   if (!provider) {
     notFound();
