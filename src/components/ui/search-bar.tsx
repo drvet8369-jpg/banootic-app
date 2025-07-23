@@ -28,7 +28,7 @@ export default function SearchBar() {
           <Input
             type="search"
             placeholder="جستجو در میان هنرمندان و خدمات..."
-            className="w-full pr-10 bg-background"
+            className="w-full pr-10 bg-background placeholder:font-semibold"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
