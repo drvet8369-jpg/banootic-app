@@ -84,64 +84,62 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const allProviders = getProviders();
+
+      // Check for existing user (customer or provider)
+      const existingProvider = allProviders.find(p => p.phone === values.phone);
+      if (values.accountType === 'provider' && existingProvider) {
+        toast({
+          title: 'خطا',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // This is the user object for the AuthContext
+      const userToLogin: User = {
+        name: values.name,
+        phone: values.phone,
+        accountType: values.accountType,
+        serviceType: values.serviceType,
+        bio: values.bio,
+      };
+
+      // Only create a new provider if the account type is 'provider'
+      if (values.accountType === 'provider') {
+        const selectedCategory = categories.find(c => c.slug === values.serviceType);
+        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
-        // This is the user object for the AuthContext
-        const userToLogin: User = {
+        const newProvider: Provider = {
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
           name: values.name,
           phone: values.phone,
-          accountType: values.accountType,
-          // Pass provider-specific info for context
-          serviceType: values.serviceType,
-          bio: values.bio,
+          service: selectedCategory?.name || 'خدمت جدید',
+          location: 'ارومیه', // Default location
+          bio: values.bio || '',
+          categorySlug: selectedCategory?.slug || 'beauty',
+          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
+          rating: 0,
+          reviewsCount: 0,
+          portfolio: [],
         };
-
-        if (values.accountType === 'provider') {
-          const allProviders = getProviders();
-          
-          // Check if provider already exists
-          const existingProvider = allProviders.find(p => p.phone === values.phone);
-          if (existingProvider) {
-              toast({
-                  title: 'خطا',
-                  description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.',
-                  variant: 'destructive',
-              });
-              setIsLoading(false);
-              return;
-          }
-
-          const selectedCategory = categories.find(c => c.slug === values.serviceType);
-          const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
-          
-          // Create a new provider object
-          const newProvider: Provider = {
-            id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
-            name: values.name,
-            phone: values.phone,
-            service: selectedCategory?.name || 'خدمت جدید',
-            location: 'ارومیه', // Default location
-            bio: values.bio || '',
-            categorySlug: selectedCategory?.slug || 'beauty',
-            serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-            rating: 0,
-            reviewsCount: 0,
-            portfolio: [],
-          };
-
-          // Save the updated list of providers
-          saveProviders([...allProviders, newProvider]);
-        }
         
-        login(userToLogin);
-        
-        toast({
-          title: 'ثبت‌نام با موفقیت انجام شد!',
-          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-        });
-        
-        const destination = values.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+        saveProviders([...allProviders, newProvider]);
+      }
+      
+      login(userToLogin);
+      
+      toast({
+        title: 'ثبت‌نام با موفقیت انجام شد!',
+        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+      });
+      
+      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      router.push(destination);
 
     } catch (error) {
          console.error("Registration failed:", error);

@@ -51,32 +51,15 @@ export default function ProfilePage() {
       const allProviders = getProviders();
       let currentProvider = allProviders.find(p => p.phone === user.phone);
       
-      // This logic handles a newly registered provider who might not be in the list yet.
-      // The registration form should ideally add them, but this is a fallback.
-      if (!currentProvider) {
-        const selectedCategory = categories.find(c => c.slug === user.serviceType);
-        const firstServiceInCat = services.find(s => s.categorySlug === user.serviceType);
-        
-        const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
-          name: user.name,
-          phone: user.phone,
-          // These are placeholder values for a new provider
-          service: selectedCategory?.name || 'سرویس جدید',
-          location: 'مکان شما',
-          bio: user.bio || 'بیوگرافی خود را اینجا بنویسید.',
-          categorySlug: user.serviceType || 'beauty',
-          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-          rating: 0,
-          reviewsCount: 0,
-          portfolio: [],
-        };
-        const updatedProviders = [...allProviders, newProvider];
-        saveProviders(updatedProviders); // Save the new provider to the list
-        currentProvider = newProvider;
+      // If provider exists in the list, set it.
+      if (currentProvider) {
+        setProvider(currentProvider);
+      } else {
+        // This case should ideally not be hit if registration works correctly,
+        // but it's a fallback. In a real app, this might redirect or show an error.
+        console.warn("Provider not found in list after login. This might indicate an issue.");
+        // Optional: you could show a "Profile not found" message.
       }
-      
-      setProvider(currentProvider);
     }
   }, [user]);
 
@@ -220,16 +203,16 @@ export default function ProfilePage() {
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     {provider.portfolio.map((item, index) => (
-                        <div key={index} className="overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
-                            <Image 
-                                src={item.src}
-                                alt={`نمونه کار ${index + 1}`}
-                                width={200}
-                                height={200}
-                                className="w-full h-full object-cover"
-                                data-ai-hint={item.aiHint}
-                            />
-                        </div>
+                      <div key={index} className="overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
+                        <Image 
+                            src={item.src}
+                            alt={`نمونه کار ${index + 1}`}
+                            width={200}
+                            height={200}
+                            className="w-full h-full object-cover"
+                            data-ai-hint={item.aiHint}
+                        />
+                      </div>
                     ))}
                 </div>
                 {provider.portfolio.length === 0 && (
