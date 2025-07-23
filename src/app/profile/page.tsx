@@ -67,19 +67,22 @@ export default function ProfilePage() {
       aiHint: 'new work',
     };
     
-    // This is the corrected logic.
     // 1. Get the most current list of all providers.
     const allProviders = getProviders();
     
-    // 2. Find the index of the provider we are editing.
+    // 2. Find the index of the provider we are editing using a stable ID.
     const providerIndex = allProviders.findIndex(p => p.id === provider.id);
 
     if (providerIndex > -1) {
-      // 3. Create a deep copy of the provider to avoid direct state mutation.
-      const updatedProvider = { ...allProviders[providerIndex] };
+      // 3. Create a deep copy of the provider object to avoid direct state mutation.
+      const updatedProvider = JSON.parse(JSON.stringify(allProviders[providerIndex]));
       
       // 4. Update the portfolio of the copied provider object.
-      updatedProvider.portfolio = [...updatedProvider.portfolio, newPortfolioItem];
+      // Ensure portfolio exists
+      if (!updatedProvider.portfolio) {
+        updatedProvider.portfolio = [];
+      }
+      updatedProvider.portfolio.push(newPortfolioItem);
       
       // 5. Replace the old provider object with the updated one in the list.
       allProviders[providerIndex] = updatedProvider;
@@ -111,8 +114,12 @@ export default function ProfilePage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // To avoid localStorage quota issues, we'll use a placeholder URL.
+      // In a real app, this would upload the file and return a URL.
       const placeholderUrl = `https://placehold.co/600x400.png`;
       addPortfolioItem(placeholderUrl);
+
+      // Reset the file input to allow uploading the same file again
       event.target.value = '';
     }
   };
