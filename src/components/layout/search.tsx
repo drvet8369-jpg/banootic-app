@@ -53,12 +53,22 @@ export function SearchComponent() {
     setSearchQuery('');
   }, []);
 
+  // Reset search query when dialog is closed
+  useEffect(() => {
+    if (!isOpen) {
+      const timer = setTimeout(() => {
+        setSearchQuery('');
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="lg" className="w-full max-w-md mx-auto text-lg">
-          <Search className="ml-2 h-5 w-5" />
-          جستجوی هنرمند یا خدمات
+        <Button variant="ghost" size="icon" className="h-10 w-10">
+          <Search className="h-5 w-5" />
+          <span className="sr-only">جستجو</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px] flex flex-col h-full max-h-[80vh]">

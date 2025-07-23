@@ -30,7 +30,7 @@ export default function Home() {
         <p className="mt-4 text-lg md:text-xl text-primary-foreground max-w-2xl mx-auto">
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex justify-center">
             <SearchComponent />
         </div>
       </section>

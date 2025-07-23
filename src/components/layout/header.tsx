@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Logo } from './logo';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { SearchComponent } from './search';
 
 export default function Header() {
   const { isLoggedIn, user, logout, switchAccountType } = useAuth();
@@ -130,84 +131,91 @@ export default function Header() {
           <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
         
-        <div className="flex-1 flex justify-start items-center md:gap-6">
+        <div className="flex-1 flex justify-center items-center md:gap-6">
             <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
               <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
             </nav>
         </div>
 
-        <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-          {isLoggedIn && user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar>
-                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.phone}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                 {user.accountType === 'provider' && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                          <UserRound className="ml-2 h-4 w-4" />
-                          <span>پروفایل من</span>
-                      </Link>
-                    </DropdownMenuItem>
-                     <DropdownMenuItem asChild>
-                      <Link href="/inbox">
-                          <Inbox className="ml-2 h-4 w-4" />
-                          <span>صندوق ورودی</span>
-                      </Link>
-                    </DropdownMenuItem>
+        <div className="flex items-center gap-2">
+            <div className="hidden md:block">
+              <SearchComponent />
+            </div>
+
+            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
+            {isLoggedIn && user ? (
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar>
+                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                        {user.phone}
+                        </p>
+                    </div>
+                    </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem onClick={switchAccountType}>
-                  <RefreshCw className="ml-2 h-4 w-4" />
-                  <span>{switchRoleText}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={logout}>
-                  <LogOut className="ml-2 h-4 w-4" />
-                  <span>خروج</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Button asChild variant="secondary">
-                 <Link href="/register">ثبت‌نام</Link>
-              </Button>
-              <Button asChild>
-                 <Link href="/login">ورود</Link>
-              </Button>
-            </>
-          )}
+                    {user.accountType === 'provider' && (
+                    <>
+                        <DropdownMenuItem asChild>
+                        <Link href="/profile">
+                            <UserRound className="ml-2 h-4 w-4" />
+                            <span>پروفایل من</span>
+                        </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                        <Link href="/inbox">
+                            <Inbox className="ml-2 h-4 w-4" />
+                            <span>صندوق ورودی</span>
+                        </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                    </>
+                    )}
+                    <DropdownMenuItem onClick={switchAccountType}>
+                    <RefreshCw className="ml-2 h-4 w-4" />
+                    <span>{switchRoleText}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={logout}>
+                    <LogOut className="ml-2 h-4 w-4" />
+                    <span>خروج</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+                </DropdownMenu>
+            ) : (
+                <>
+                <Button asChild variant="secondary">
+                    <Link href="/register">ثبت‌نام</Link>
+                </Button>
+                <Button asChild>
+                    <Link href="/login">ورود</Link>
+                </Button>
+                </>
+            )}
 
-        </nav>
+            </nav>
 
-        <div className="md:hidden">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">باز کردن منو</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-              <MobileNavMenu />
-            </SheetContent>
-          </Sheet>
+            <div className="md:hidden flex items-center">
+              <SearchComponent />
+              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                  <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
+                      <span className="sr-only">باز کردن منو</span>
+                  </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+                  <MobileNavMenu />
+                  </SheetContent>
+              </Sheet>
+            </div>
         </div>
       </div>
     </header>
