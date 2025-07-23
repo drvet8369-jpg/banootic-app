@@ -103,14 +103,15 @@ export default function ProfilePage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result;
-        if (typeof result === 'string') {
-          addPortfolioItem(result);
-        }
-      };
-      reader.readAsDataURL(file);
+      // FIX: Instead of reading the file and storing its large data URI,
+      // we now add a placeholder URL. This prevents exceeding localStorage quota.
+      // In a real app, this is where you'd upload the file to a server/storage
+      // and get back a URL to save.
+      const placeholderUrl = `https://placehold.co/600x400.png`;
+      addPortfolioItem(placeholderUrl);
+      
+      // Clear the file input value so the user can select the same file again
+      event.target.value = '';
     }
   };
   
