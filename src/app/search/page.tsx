@@ -2,12 +2,14 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { providers } from '@/lib/data';
+import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const searchProviders = (query: string): Provider[] => {
+  const providers = getProviders();
   if (!query) {
     return [];
   }
@@ -22,7 +24,13 @@ const searchProviders = (query: string): Provider[] => {
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const searchResults = searchProviders(query);
+  const [searchResults, setSearchResults] = useState<Provider[]>([]);
+
+  useEffect(() => {
+    // We need to run the search client-side to access localStorage
+    setSearchResults(searchProviders(query));
+  }, [query]);
+
 
   return (
     <div className="py-12 md:py-20">

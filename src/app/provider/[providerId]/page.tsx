@@ -1,7 +1,7 @@
 
 'use client';
 
-import { providers } from '@/lib/data';
+import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -33,8 +33,9 @@ const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: nu
 };
 
 
-// Note: This data would normally be fetched from a database
+// Note: This data is now fetched from localStorage if available, or defaults.
 const getProviderData = (providerId: string): Provider | undefined => {
+  const providers = getProviders();
   return providers.find(p => p.id.toString() === providerId);
 };
 

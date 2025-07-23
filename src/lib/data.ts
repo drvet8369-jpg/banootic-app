@@ -82,4 +82,36 @@ export const providers: Provider[] = [
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, portfolio: [{ src: 'https://placehold.co/400x250', aiHint: 'scented candle' }, { src: 'https://placehold.co/400x250', aiHint: 'handmade soap' }] },
 ];
 
-    
+const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
+
+// Function to get providers from localStorage or return default
+export const getProviders = (): Provider[] => {
+  if (typeof window === 'undefined') {
+    return providers;
+  }
+  try {
+    const storedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
+    if (storedProviders) {
+      return JSON.parse(storedProviders);
+    } else {
+      // If nothing is in storage, initialize it with the default data
+      localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(providers));
+      return providers;
+    }
+  } catch (error) {
+    console.error("Failed to access localStorage, returning default providers.", error);
+    return providers;
+  }
+};
+
+// Function to save providers to localStorage
+export const saveProviders = (updatedProviders: Provider[]) => {
+   if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(updatedProviders));
+  } catch (error) {
+    console.error("Failed to save providers to localStorage.", error);
+  }
+};

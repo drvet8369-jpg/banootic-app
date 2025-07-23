@@ -1,5 +1,7 @@
 
-import { services, providers, categories } from '@/lib/data';
+'use client';
+
+import { services, categories, getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -7,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Star, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 interface PageProps {
   params: {
@@ -36,23 +39,32 @@ const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: nu
   );
 };
 
-
-export async function generateStaticParams() {
-  return services.map((service) => ({
-    category: service.categorySlug,
-    service: service.slug,
-  }));
-}
-
 const getServiceData = (categorySlug: string, serviceSlug: string): { service: Service | undefined, serviceProviders: Provider[], category: Category | undefined } => {
+  const allProviders = getProviders();
   const category = categories.find((c) => c.slug === categorySlug);
   const service = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
-  const serviceProviders = providers.filter((p) => p.serviceSlug === serviceSlug);
+  const serviceProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
   return { service, serviceProviders, category };
 };
 
 export default function ServiceProvidersPage({ params }: PageProps) {
-  const { service, serviceProviders, category } = getServiceData(params.category, params.service);
+  const [serviceData, setServiceData] = useState<{
+    service?: Service;
+    serviceProviders: Provider[];
+    category?: Category;
+  } | null>(null);
+
+  useEffect(() => {
+    // Fetch data on client-side to ensure localStorage is available
+    const data = getServiceData(params.category, params.service);
+    setServiceData(data);
+  }, [params.category, params.service]);
+
+  if (!serviceData) {
+    return <div>در حال بارگذاری...</div>;
+  }
+
+  const { service, serviceProviders, category } = serviceData;
 
   if (!service || !category) {
     notFound();
