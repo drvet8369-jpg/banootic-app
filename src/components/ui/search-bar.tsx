@@ -13,11 +13,7 @@ export default function SearchBar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      // Note: Search results page is not implemented yet.
-      // This will redirect to a non-existent page for now.
-      // We can implement the search results page in the next step.
-      console.log(`Searching for: ${searchTerm}`);
-      // router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
