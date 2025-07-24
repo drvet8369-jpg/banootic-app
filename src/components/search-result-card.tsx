@@ -73,10 +73,10 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
           {provider.portfolio && provider.portfolio.length > 0 ? (
             <div className="w-full px-8 sm:px-10">
-              <Carousel className="w-full mx-auto"
-                // This opts object helps with carousels that might have items of the same width
+              <Carousel 
+                className="w-full mx-auto"
                 opts={{
-                  loop: provider.portfolio.length > 1,
+                  loop: true, // Enable looping for a seamless experience
                 }}
               >
                 <CarouselContent>
