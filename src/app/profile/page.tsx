@@ -61,19 +61,18 @@ export default function ProfilePage() {
 
     if (providerIndex > -1) {
       // Create a new, independent copy of the providers list for manipulation.
-      const updatedProvidersList = [...allProviders];
+      const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
       
-      // Create a new object for the provider to ensure no direct state mutation.
-      const updatedProvider = { ...updatedProvidersList[providerIndex] };
+      // Get the specific provider from the new list.
+      const updatedProvider = updatedProvidersList[providerIndex];
       
-      // Initialize portfolio if it doesn't exist, or create a copy if it does.
-      updatedProvider.portfolio = updatedProvider.portfolio ? [...updatedProvider.portfolio] : [];
+      // Initialize portfolio if it doesn't exist.
+      if (!updatedProvider.portfolio) {
+          updatedProvider.portfolio = [];
+      }
       
       // Add the new item to the copied portfolio.
       updatedProvider.portfolio.push(newPortfolioItem);
-      
-      // Place the updated provider object back into the new list.
-      updatedProvidersList[providerIndex] = updatedProvider;
       
       // Save the entire, fully updated list back to localStorage.
       saveProviders(updatedProvidersList);
@@ -233,5 +232,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
 
     
