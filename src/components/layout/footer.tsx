@@ -1,4 +1,3 @@
-import UserSwitcher from '@/components/dev/user-switcher';
 
 export default function Footer() {
   return (
@@ -9,7 +8,6 @@ export default function Footer() {
           <p className="mt-1">توانمندسازی بانوان، اتصال جوامع.</p>
         </div>
       </footer>
-      <UserSwitcher />
     </>
   );
 }
