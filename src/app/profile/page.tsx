@@ -49,7 +49,7 @@ export default function ProfilePage() {
   }, [user]);
 
   const addPortfolioItem = (imageSrc: string) => {
-    if (!provider || !user) return;
+    if (!user) return;
 
     const newPortfolioItem = {
       src: imageSrc,
@@ -60,22 +60,26 @@ export default function ProfilePage() {
     const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      // Create a new array with the updated provider for saving
+      // Create a new, independent copy of the providers list for manipulation.
       const updatedProvidersList = [...allProviders];
+      
+      // Create a new object for the provider to ensure no direct state mutation.
       const updatedProvider = { ...updatedProvidersList[providerIndex] };
       
-      if (!updatedProvider.portfolio) {
-        updatedProvider.portfolio = [];
-      }
+      // Initialize portfolio if it doesn't exist, or create a copy if it does.
+      updatedProvider.portfolio = updatedProvider.portfolio ? [...updatedProvider.portfolio] : [];
       
+      // Add the new item to the copied portfolio.
       updatedProvider.portfolio.push(newPortfolioItem);
+      
+      // Place the updated provider object back into the new list.
       updatedProvidersList[providerIndex] = updatedProvider;
       
-      // Update the local state to show the change immediately
-      setProvider(updatedProvider);
-
-      // Save the entire updated list to localStorage
+      // Save the entire, fully updated list back to localStorage.
       saveProviders(updatedProvidersList);
+      
+      // Update the local state to show the change immediately.
+      setProvider(updatedProvider);
       
       toast({
         title: 'موفقیت‌آمیز',
