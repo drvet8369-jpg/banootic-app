@@ -77,23 +77,26 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
                 className="w-full mx-auto"
                 opts={{
                   loop: provider.portfolio.length > 1,
+                  align: "start"
                 }}
               >
-                <CarouselContent>
+                <CarouselContent className="-ml-4">
                   {provider.portfolio.map((item, index) => (
-                    <CarouselItem key={`${provider.id}-portfolio-${index}`} className="p-1">
-                      <Card className="overflow-hidden">
-                        <CardContent className="flex aspect-video items-center justify-center p-0">
-                          <Image
-                            src={item.src}
-                            alt={`نمونه کار ${index + 1}`}
-                            width={600}
-                            height={400}
-                            className="w-full h-full object-cover"
-                            data-ai-hint={item.aiHint}
-                          />
-                        </CardContent>
-                      </Card>
+                    <CarouselItem key={`${provider.id}-portfolio-${index}`} className="pl-4">
+                      <div className="p-1">
+                        <Card className="overflow-hidden">
+                          <CardContent className="flex aspect-video items-center justify-center p-0">
+                            <Image
+                              src={item.src}
+                              alt={`نمونه کار ${index + 1}`}
+                              width={600}
+                              height={400}
+                              className="w-full h-full object-cover"
+                              data-ai-hint={item.aiHint}
+                            />
+                          </CardContent>
+                        </Card>
+                      </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
