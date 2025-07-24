@@ -77,12 +77,11 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
                 className="w-full mx-auto"
                 opts={{
                   loop: provider.portfolio.length > 1,
-                  align: "start"
                 }}
               >
-                <CarouselContent className="-ml-4">
+                <CarouselContent>
                   {provider.portfolio.map((item, index) => (
-                    <CarouselItem key={`${provider.id}-portfolio-${index}`} className="pl-4">
+                    <CarouselItem key={`${provider.id}-portfolio-${index}`}>
                       <div className="p-1">
                         <Card className="overflow-hidden">
                           <CardContent className="flex aspect-video items-center justify-center p-0">
