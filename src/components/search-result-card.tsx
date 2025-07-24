@@ -107,13 +107,13 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
 
       {/* Footer Section: Actions */}
       <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-        <Button asChild className="w-full" variant="secondary">
+        <Button asChild className="w-full">
           <Link href={`/chat/${provider.phone}`}>
             <MessageSquare className="w-4 h-4 ml-2" />
             ارسال پیام
           </Link>
         </Button>
-        <Button asChild className="w-full" variant="outline">
+        <Button asChild className="w-full" variant="secondary">
           <a href={`tel:${provider.phone}`}>
             <Phone className="w-4 h-4 ml-2" />
             تماس
