@@ -35,7 +35,7 @@ interface SearchResultCardProps {
 
 export default function SearchResultCard({ provider }: SearchResultCardProps) {
   // This component is now a single, unified card.
-  // The erroneous internal grid has been removed and replaced with a flexbox layout.
+  // The erroneous internal grid has been removed and replaced with a clean flexbox layout.
   return (
     <Card className="flex flex-col w-full overflow-hidden">
       <div className="flex flex-col md:flex-row">
