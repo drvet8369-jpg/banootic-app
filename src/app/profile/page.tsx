@@ -60,7 +60,7 @@ export default function ProfilePage() {
     const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      // Use a deep copy to avoid mutation issues with nested objects/arrays.
+      // Create a deep copy of the provider to safely mutate
       const updatedProvider = JSON.parse(JSON.stringify(allProviders[providerIndex]));
       
       if (!updatedProvider.portfolio) {
@@ -69,11 +69,15 @@ export default function ProfilePage() {
       
       updatedProvider.portfolio.push(newPortfolioItem);
       
-      allProviders[providerIndex] = updatedProvider;
-      
-      saveProviders(allProviders);
-      
+      // Update the local state to show the change immediately
       setProvider(updatedProvider);
+
+      // Create a new array with the updated provider for saving
+      const updatedProvidersList = [...allProviders];
+      updatedProvidersList[providerIndex] = updatedProvider;
+      
+      // Save the entire updated list to localStorage
+      saveProviders(updatedProvidersList);
       
       toast({
         title: 'موفقیت‌آمیز',
@@ -87,6 +91,7 @@ export default function ProfilePage() {
       });
     }
   };
+
 
   const handleAddClick = () => {
     fileInputRef.current?.click();
