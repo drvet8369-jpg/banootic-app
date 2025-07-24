@@ -28,9 +28,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // A one-time check to see if we need to clean up localStorage
 const performCleanup = () => {
     if (typeof window !== 'undefined') {
-        const cleanupFlag = 'honarbanoo-cleanup-v10-profile-image'; // Use a new flag to re-run if needed
+        const cleanupFlag = 'honarbanoo-cleanup-v13-reset-portfolio'; // Use a new flag to re-run if needed
         if (!localStorage.getItem(cleanupFlag)) {
-            console.log("Performing one-time cleanup of localStorage for profile image update...");
+            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
             localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
             localStorage.setItem(cleanupFlag, 'true');
         }

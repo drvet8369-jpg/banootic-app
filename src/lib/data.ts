@@ -75,10 +75,7 @@ const defaultProviders: Provider[] = [
     rating: 4.8, 
     reviewsCount: 88, 
     profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' },
-    portfolio: [
-      { src: 'https://placehold.co/600x400.png', aiHint: 'cake pastry' },
-      { src: 'https://placehold.co/600x400.png', aiHint: 'sweets cookies' }
-    ]
+    portfolio: []
   },
   { id: 6, name: 'غذای سالم زهرا', service: 'غذای گیاهی', location: 'ارومیه، دانشکده', phone: '09000000006', bio: 'وعده‌های غذایی گیاهی خوشمزه و سالم با ارسال درب منزل.', categorySlug: 'cooking', serviceSlug: 'vegetarian-vegan', rating: 4.7, reviewsCount: 40, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'healthy food' }, portfolio: [] },
   { id: 15, name: 'فینگرفود شیک', service: 'فینگرفود', location: 'ارومیه، عمار', phone: '09000000015', bio: 'سینی‌های مزه و فینگرفودهای متنوع برای مهمانی‌ها.', categorySlug: 'cooking', serviceSlug: 'finger-food', rating: 4.9, reviewsCount: 75, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'party food' }, portfolio: [] },
