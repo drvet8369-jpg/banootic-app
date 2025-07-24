@@ -7,7 +7,7 @@ import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import SearchResultCard from '@/components/search-result-card';
 
 export default function ServiceProvidersPage() {
@@ -19,31 +19,35 @@ export default function ServiceProvidersPage() {
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // This effect correctly re-runs whenever the slugs change.
-    // It fetches the latest data from localStorage every single time.
-    if (categorySlug && serviceSlug) {
-      setIsLoading(true);
+  // This logic is now wrapped in a useCallback to ensure it's stable
+  // and correctly re-fetches data whenever the URL slugs change.
+  const loadData = useCallback(() => {
+    setIsLoading(true);
 
-      const foundCategory = categories.find((c) => c.slug === categorySlug);
-      const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
+    const foundCategory = categories.find((c) => c.slug === categorySlug);
+    const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
+    
+    setCategory(foundCategory || null);
+    setService(foundService || null);
       
-      setCategory(foundCategory || null);
-      setService(foundService || null);
-        
-      if (foundCategory && foundService) {
-        // Always get the latest providers from localStorage inside the effect
-        const allProviders = getProviders();
-        // Correctly filter providers based on the serviceSlug from the URL.
-        const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-        setServiceProviders(foundProviders);
-      } else {
-        setServiceProviders([]);
-      }
-      
-      setIsLoading(false);
+    if (foundCategory && foundService) {
+      // Always get the latest providers from localStorage inside the function
+      const allProviders = getProviders();
+      // Correctly filter providers based on the serviceSlug from the URL.
+      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      setServiceProviders(foundProviders);
+    } else {
+      setServiceProviders([]);
     }
+    
+    setIsLoading(false);
   }, [categorySlug, serviceSlug]);
+
+  // useEffect now has a stable dependency and will re-run correctly
+  // every time the user navigates to a new service page.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   if (isLoading) {
     return (

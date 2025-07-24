@@ -34,97 +34,92 @@ interface SearchResultCardProps {
 }
 
 export default function SearchResultCard({ provider }: SearchResultCardProps) {
-  // This component is now a single, unified card.
-  // The erroneous internal grid has been removed and replaced with a clean flexbox layout.
   return (
-    <Card className="flex flex-col w-full overflow-hidden">
-      <div className="flex flex-col md:flex-row">
-        {/* Right Column (Avatar & Basic Info) */}
-        <div className="w-full md:w-1/3 p-6 flex flex-col items-center text-center bg-muted/50 md:border-l">
-          <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-            {provider.portfolio && provider.portfolio.length > 0 ? (
-              <Image
-                src={provider.portfolio[0].src}
-                alt={provider.name}
-                fill
-                className="object-cover"
-                data-ai-hint={provider.portfolio[0].aiHint}
-              />
-            ) : (
-              <div className="bg-muted w-full h-full flex items-center justify-center">
-                <User className="w-16 h-16 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-          <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
-          <CardDescription className="text-base">{provider.service}</CardDescription>
-          <div className="mt-2">
-            <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
-          </div>
-          <div className="mt-4 flex items-center text-sm text-muted-foreground">
-            <MapPin className="w-4 h-4 ml-2 text-accent" />
-            <span>{provider.location}</span>
-          </div>
+    <Card className="flex flex-col w-full overflow-hidden h-full">
+      {/* Top Section: Avatar & Basic Info */}
+      <div className="p-6 flex flex-col items-center text-center bg-muted/30">
+        <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
+          {provider.portfolio && provider.portfolio.length > 0 ? (
+            <Image
+              src={provider.portfolio[0].src}
+              alt={provider.name}
+              fill
+              className="object-cover"
+              data-ai-hint={provider.portfolio[0].aiHint}
+            />
+          ) : (
+            <div className="bg-muted w-full h-full flex items-center justify-center">
+              <User className="w-12 h-12 text-muted-foreground" />
+            </div>
+          )}
         </div>
-
-        {/* Left Column (Details & Portfolio) */}
-        <div className="w-full md:w-2/3 p-6 flex flex-col">
-          <div className="flex-grow">
-            <CardHeader className="p-0 mb-4">
-              <CardTitle className="font-headline text-2xl">درباره هنرمند</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <p className="text-base text-foreground/80 leading-relaxed mb-6">{provider.bio}</p>
-              <Separator className="my-4" />
-              <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
-              {provider.portfolio && provider.portfolio.length > 0 ? (
-                <Carousel className="w-full max-w-xs sm:max-w-sm mx-auto">
-                  <CarouselContent>
-                    {provider.portfolio.map((item, index) => (
-                      <CarouselItem key={index}>
-                        <div className="p-1">
-                          <Card className="overflow-hidden">
-                            <CardContent className="flex aspect-video items-center justify-center p-0">
-                              <Image
-                                src={item.src}
-                                alt={`نمونه کار ${index + 1}`}
-                                width={600}
-                                height={400}
-                                className="w-full h-full object-cover"
-                                data-ai-hint={item.aiHint}
-                              />
-                            </CardContent>
-                          </Card>
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-              ) : (
-                <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                  <p>هنوز نمونه کاری اضافه نشده است.</p>
-                </div>
-              )}
-            </CardContent>
-          </div>
-          <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6 p-0 mt-auto">
-            <Button asChild className="w-full" variant="secondary">
-              <Link href={`/chat/${provider.phone}`}>
-                <MessageSquare className="w-4 h-4 ml-2" />
-                ارسال پیام
-              </Link>
-            </Button>
-            <Button asChild className="w-full" variant="outline">
-              <a href={`tel:${provider.phone}`}>
-                <Phone className="w-4 h-4 ml-2" />
-                تماس
-              </a>
-            </Button>
-          </CardFooter>
+        <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
+        <CardDescription className="text-base">{provider.service}</CardDescription>
+        <div className="mt-2">
+          <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
+        </div>
+        <div className="mt-4 flex items-center text-sm text-muted-foreground">
+          <MapPin className="w-4 h-4 ml-2 text-accent" />
+          <span>{provider.location}</span>
         </div>
       </div>
+      
+      <Separator />
+
+      {/* Mid Section: Bio & Portfolio */}
+      <CardContent className="p-6 flex-grow flex flex-col">
+          <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+          <Separator className="my-4" />
+          <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
+          {provider.portfolio && provider.portfolio.length > 0 ? (
+            <div className="w-full px-8 sm:px-10">
+              <Carousel className="w-full mx-auto">
+                <CarouselContent>
+                  {provider.portfolio.map((item, index) => (
+                    <CarouselItem key={index}>
+                      <div className="p-1">
+                        <Card className="overflow-hidden">
+                          <CardContent className="flex aspect-video items-center justify-center p-0">
+                            <Image
+                              src={item.src}
+                              alt={`نمونه کار ${index + 1}`}
+                              width={600}
+                              height={400}
+                              className="w-full h-full object-cover"
+                              data-ai-hint={item.aiHint}
+                            />
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+              <p>هنوز نمونه کاری اضافه نشده است.</p>
+            </div>
+          )}
+      </CardContent>
+
+      {/* Footer Section: Actions */}
+      <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
+        <Button asChild className="w-full" variant="secondary">
+          <Link href={`/chat/${provider.phone}`}>
+            <MessageSquare className="w-4 h-4 ml-2" />
+            ارسال پیام
+          </Link>
+        </Button>
+        <Button asChild className="w-full" variant="outline">
+          <a href={`tel:${provider.phone}`}>
+            <Phone className="w-4 h-4 ml-2" />
+            تماس
+          </a>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

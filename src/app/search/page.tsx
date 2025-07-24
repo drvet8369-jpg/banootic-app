@@ -6,24 +6,7 @@ import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
-
-// This function is now defined inside the component to ensure it's re-evaluated,
-// but the key change is that it's called inside useEffect which depends on `query`.
-const searchProviders = (query: string): Provider[] => {
-  // Always gets the latest from localStorage at the moment of searching.
-  const providers = getProviders(); 
-  if (!query) {
-    return [];
-  }
-  const lowercasedQuery = query.toLowerCase();
-  return providers.filter(provider => 
-    provider.name.toLowerCase().includes(lowercasedQuery) ||
-    provider.service.toLowerCase().includes(lowercasedQuery) ||
-    provider.bio.toLowerCase().includes(lowercasedQuery)
-  );
-};
-
+import { useEffect, useState, useMemo, useCallback } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -31,19 +14,31 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // useMemo will now re-compute the search results ONLY when the query changes.
-  // The search function inside it will always fetch the latest data from localStorage.
-  const memoizedSearchResults = useMemo(() => {
-    return searchProviders(query);
+  // This function now correctly re-fetches and filters data whenever the query changes.
+  const performSearch = useCallback(() => {
+    setIsLoading(true);
+    // Always get the latest providers from localStorage at the moment of searching.
+    const allProviders = getProviders();
+    if (!query) {
+      setSearchResults([]);
+      setIsLoading(false);
+      return;
+    }
+    const lowercasedQuery = query.toLowerCase();
+    const results = allProviders.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      provider.bio.toLowerCase().includes(lowercasedQuery)
+    );
+    setSearchResults(results);
+    setIsLoading(false);
   }, [query]);
 
+  // useEffect now correctly depends on performSearch, which itself depends on query.
+  // This ensures a fresh search is performed every time the query parameter changes.
   useEffect(() => {
-    // This effect correctly re-runs whenever the query changes.
-    // It uses the memoized results which are calculated with fresh data.
-    setIsLoading(true);
-    setSearchResults(memoizedSearchResults);
-    setIsLoading(false);
-  }, [query, memoizedSearchResults]);
+    performSearch();
+  }, [performSearch]);
 
 
   return (
