@@ -55,16 +55,18 @@ export default function ProfilePage() {
       src: imageSrc,
       aiHint: 'new work',
     };
-    
+
     const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.phone === user.phone);
+    const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      const updatedProvider = { ...allProviders[providerIndex] };
+      // Use a deep copy to avoid mutation issues with nested objects/arrays.
+      const updatedProvider = JSON.parse(JSON.stringify(allProviders[providerIndex]));
       
       if (!updatedProvider.portfolio) {
         updatedProvider.portfolio = [];
       }
+      
       updatedProvider.portfolio.push(newPortfolioItem);
       
       allProviders[providerIndex] = updatedProvider;
@@ -78,11 +80,11 @@ export default function ProfilePage() {
         description: 'نمونه کار جدید با موفقیت اضافه شد.',
       });
     } else {
-        toast({
-            title: 'خطا',
-            description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
-            variant: 'destructive',
-        })
+      toast({
+        title: 'خطا',
+        description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
+        variant: 'destructive',
+      });
     }
   };
 
