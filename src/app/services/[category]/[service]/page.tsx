@@ -28,19 +28,17 @@ export default function ServiceProvidersPage() {
       const foundCategory = categories.find((c) => c.slug === categorySlug);
       const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
       
-      if (!foundCategory || !foundService) {
-        setCategory(null);
-        setService(null);
-        setServiceProviders([]);
-      } else {
-        setCategory(foundCategory);
-        setService(foundService);
+      setCategory(foundCategory || null);
+      setService(foundService || null);
         
+      if (foundCategory && foundService) {
         // Always get the latest providers from localStorage inside the effect
         const allProviders = getProviders();
-        // **CRITICAL FIX**: Correctly filter providers based on the serviceSlug from the URL.
+        // Correctly filter providers based on the serviceSlug from the URL.
         const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
         setServiceProviders(foundProviders);
+      } else {
+        setServiceProviders([]);
       }
       
       setIsLoading(false);

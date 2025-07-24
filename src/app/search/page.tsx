@@ -8,8 +8,9 @@ import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+// This function must be defined outside the component or memoized to be a stable dependency
 const searchProviders = (query: string): Provider[] => {
-  const providers = getProviders();
+  const providers = getProviders(); // Always gets the latest from localStorage
   if (!query) {
     return [];
   }
@@ -28,8 +29,8 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // We need to run the search client-side to access localStorage
-    // Running this every time the query changes ensures we get fresh data
+    // This effect correctly re-runs whenever the query changes.
+    // It fetches fresh data from localStorage via searchProviders every time.
     setIsLoading(true);
     const results = searchProviders(query);
     setSearchResults(results);
