@@ -13,6 +13,7 @@ import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider } from '@/lib/types';
+import Image from 'next/image';
 
 
 interface Message {
@@ -26,7 +27,7 @@ interface OtherPersonDetails {
     id: string | number;
     name: string;
     phone: string;
-    portfolio?: { src: string; aiHint?: string }[];
+    profileImage?: { src: string; aiHint?: string };
 }
 
 
@@ -78,7 +79,7 @@ export default function ChatPage() {
     } else {
       // This case handles when a provider opens a chat with a new customer
       const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone, portfolio: [] };
+      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
     }
     
     if (!details) {
@@ -211,8 +212,8 @@ export default function ChatPage() {
              </Button>
            </Link>
            <Avatar>
-            {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
-                <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
+            {otherPersonDetails?.profileImage?.src ? (
+                <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
             ) : null }
             <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
@@ -238,8 +239,8 @@ export default function ChatPage() {
                   >
                     {!senderIsUser && (
                       <Avatar className="h-8 w-8">
-                        {otherPersonDetails?.portfolio && otherPersonDetails.portfolio.length > 0 ? (
-                            <AvatarImage src={otherPersonDetails.portfolio[0].src} alt={otherPersonDetails.name} />
+                        {otherPersonDetails?.profileImage?.src ? (
+                            <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
                         ) : null }
                         <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>

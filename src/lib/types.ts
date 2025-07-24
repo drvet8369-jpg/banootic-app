@@ -30,6 +30,7 @@ export interface Provider {
   serviceSlug: Service['slug']; // Link to the service
   rating: number;
   reviewsCount: number;
+  profileImage: PortfolioItem; // Dedicated profile image
   portfolio: PortfolioItem[];
 }
 

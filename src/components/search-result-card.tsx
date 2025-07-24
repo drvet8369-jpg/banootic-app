@@ -39,13 +39,13 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
       {/* Top Section: Avatar & Basic Info */}
       <div className="p-6 flex flex-col items-center text-center bg-muted/30">
         <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-          {provider.portfolio && provider.portfolio.length > 0 ? (
+          {provider.profileImage && provider.profileImage.src ? (
             <Image
-              src={provider.portfolio[0].src}
+              src={provider.profileImage.src}
               alt={provider.name}
               fill
               className="object-cover"
-              data-ai-hint={provider.portfolio[0].aiHint}
+              data-ai-hint={provider.profileImage.aiHint}
             />
           ) : (
             <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -73,10 +73,15 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
           {provider.portfolio && provider.portfolio.length > 0 ? (
             <div className="w-full px-8 sm:px-10">
-              <Carousel className="w-full mx-auto">
+              <Carousel className="w-full mx-auto"
+                // This opts object helps with carousels that might have items of the same width
+                opts={{
+                  loop: provider.portfolio.length > 1,
+                }}
+              >
                 <CarouselContent>
                   {provider.portfolio.map((item, index) => (
-                    <CarouselItem key={index}>
+                    <CarouselItem key={`${provider.id}-portfolio-${index}`}>
                       <div className="p-1">
                         <Card className="overflow-hidden">
                           <CardContent className="flex aspect-video items-center justify-center p-0">
@@ -94,8 +99,12 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
+                {provider.portfolio.length > 1 && (
+                  <>
+                    <CarouselPrevious />
+                    <CarouselNext />
+                  </>
+                )}
               </Carousel>
             </div>
           ) : (

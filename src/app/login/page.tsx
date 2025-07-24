@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { providers } from '@/lib/data';
+import { getProviders } from '@/lib/data';
 import type { User } from '@/context/AuthContext';
 
 
@@ -56,7 +56,8 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const existingProvider = providers.find(p => p.phone === values.phone);
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
 
         let userToLogin: User;
 

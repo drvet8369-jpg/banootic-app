@@ -139,6 +139,7 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
+          profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' },
           portfolio: [],
         };
         
