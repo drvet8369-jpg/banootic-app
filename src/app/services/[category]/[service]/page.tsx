@@ -20,8 +20,8 @@ export default function ServiceProvidersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This effect now correctly re-runs whenever the slugs change,
-    // ensuring the most up-to-date provider list from localStorage is fetched and correctly filtered.
+    // This effect correctly re-runs whenever the slugs change.
+    // It fetches the latest data from localStorage every single time.
     if (categorySlug && serviceSlug) {
       setIsLoading(true);
 
