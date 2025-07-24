@@ -63,10 +63,20 @@ export const providers: Provider[] = [
   
   // Cooking
   { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه، خیابان فردوسی', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, portfolio: [] },
-  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه، خیابان کشاورز', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, 
+  { 
+    id: 5, 
+    name: 'شیرینی‌پزی بهار', 
+    service: 'کیک و شیرینی', 
+    location: 'ارومیه، خیابان کشاورز', 
+    phone: '09000000005', 
+    bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', 
+    categorySlug: 'cooking', 
+    serviceSlug: 'cakes-sweets', 
+    rating: 4.8, 
+    reviewsCount: 88, 
     portfolio: [
       { src: 'https://placehold.co/600x400.png', aiHint: 'cake pastry' },
-      { src: 'https://placehold.co/600x400.png', aiHint: 'sweets cookies' },
+      { src: 'https://placehold.co/600x400.png', aiHint: 'sweets cookies' }
     ]
   },
   { id: 6, name: 'غذای سالم زهرا', service: 'غذای گیاهی', location: 'ارومیه، دانشکده', phone: '09000000006', bio: 'وعده‌های غذایی گیاهی خوشمزه و سالم با ارسال درب منزل.', categorySlug: 'cooking', serviceSlug: 'vegetarian-vegan', rating: 4.7, reviewsCount: 40, portfolio: [] },
