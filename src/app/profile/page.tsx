@@ -49,7 +49,7 @@ export default function ProfilePage() {
   }, [user]);
 
   const addPortfolioItem = (imageSrc: string) => {
-    if (!provider) return;
+    if (!provider || !user) return;
 
     const newPortfolioItem = {
       src: imageSrc,
@@ -57,7 +57,7 @@ export default function ProfilePage() {
     };
     
     const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
+    const providerIndex = allProviders.findIndex(p => p.phone === user.phone);
 
     if (providerIndex > -1) {
       const updatedProvider = { ...allProviders[providerIndex] };
@@ -189,7 +189,7 @@ export default function ProfilePage() {
                     افزودن نمونه کار جدید
                   </Button>
                 </div>
-                 {provider.portfolio.length > 0 ? (
+                 {provider.portfolio && provider.portfolio.length > 0 ? (
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                         {provider.portfolio.map((item, index) => (
                           <div key={index} className="group relative overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
@@ -224,3 +224,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

@@ -6,7 +6,7 @@ import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -81,3 +81,5 @@ export default function SearchPage() {
     </div>
   );
 }
+
+    
