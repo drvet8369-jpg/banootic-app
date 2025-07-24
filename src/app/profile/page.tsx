@@ -2,42 +2,31 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare, User, AlertTriangle, Inbox, Bot, PlusCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, Inbox, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { providers as defaultProviders, getProviders, saveProviders, categories, services } from '@/lib/data';
+import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-
 // A mock StarRating component for the profile preview
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
-  const fullStars = Math.floor(rating);
-  const halfStar = rating % 1 !== 0;
-  const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center text-yellow-400">
-        {[...Array(fullStars)].map((_, i) => (
-          <Star key={`full-${i}`} className="w-5 h-5 fill-current" />
-        ))}
-        {halfStar && <Star key="half" className="w-5 h-5" />}
-        {[...Array(emptyStars)].map((_, i) => (
-          <Star key={`empty-${i}`} className="w-5 h-5 text-gray-300 fill-current" />
+        {[...Array(5)].map((_, i) => (
+          <svg key={i} className={`w-5 h-5 ${i < Math.round(rating) ? 'fill-current' : 'text-gray-300'}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
         ))}
       </div>
       <span className="text-muted-foreground text-sm">({reviewsCount} نظر)</span>
     </div>
   );
 };
-
 
 export default function ProfilePage() {
   const { user, isLoggedIn } = useAuth();
@@ -67,30 +56,21 @@ export default function ProfilePage() {
       aiHint: 'new work',
     };
     
-    // 1. Get the most current list of all providers.
     const allProviders = getProviders();
-    
-    // 2. Find the index of the provider we are editing using a stable ID.
     const providerIndex = allProviders.findIndex(p => p.id === provider.id);
 
     if (providerIndex > -1) {
-      // 3. Create a deep copy of the provider object to avoid direct state mutation.
-      const updatedProvider = JSON.parse(JSON.stringify(allProviders[providerIndex]));
+      const updatedProvider = { ...allProviders[providerIndex] };
       
-      // 4. Update the portfolio of the copied provider object.
-      // Ensure portfolio exists
       if (!updatedProvider.portfolio) {
         updatedProvider.portfolio = [];
       }
       updatedProvider.portfolio.push(newPortfolioItem);
       
-      // 5. Replace the old provider object with the updated one in the list.
       allProviders[providerIndex] = updatedProvider;
       
-      // 6. Save the entire updated list back to localStorage.
       saveProviders(allProviders);
       
-      // 7. Update the local state to re-render the UI with the new item.
       setProvider(updatedProvider);
       
       toast({
@@ -106,7 +86,6 @@ export default function ProfilePage() {
     }
   };
 
-
   const handleAddClick = () => {
     fileInputRef.current?.click();
   };
@@ -114,12 +93,12 @@ export default function ProfilePage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // To avoid localStorage quota issues, we'll use a placeholder URL.
-      // In a real app, this would upload the file and return a URL.
-      const placeholderUrl = `https://placehold.co/600x400.png`;
-      addPortfolioItem(placeholderUrl);
-
-      // Reset the file input to allow uploading the same file again
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageSrc = e.target?.result as string;
+        addPortfolioItem(imageSrc);
+      };
+      reader.readAsDataURL(file);
       event.target.value = '';
     }
   };
@@ -157,7 +136,6 @@ export default function ProfilePage() {
   if (!provider) {
     return <div>در حال بارگذاری پروفایل...</div>;
   }
-
 
   return (
     <div className="max-w-4xl mx-auto py-12 md:py-20">
@@ -211,29 +189,26 @@ export default function ProfilePage() {
                     افزودن نمونه کار جدید
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    {provider.portfolio.map((item, index) => (
-                      <div key={index} className="overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
-                        <Image 
-                            src={item.src}
-                            alt={`نمونه کار ${index + 1}`}
-                            width={200}
-                            height={200}
-                            className="w-full h-full object-cover"
-                            data-ai-hint={item.aiHint}
-                        />
-                      </div>
-                    ))}
-                </div>
-                {provider.portfolio.length === 0 && (
-                  <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                    <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
-                  </div>
-                )}
-                <div className="mt-6 bg-accent/20 p-4 rounded-lg">
-                    <h4 className="font-bold text-accent-foreground">توجه:</h4>
-                    <p className="text-sm text-accent-foreground/90">این یک صفحه آزمایشی است. در نسخه نهایی، شما قادر به ویرایش کامل پروفایل و آپلود نمونه کارهای واقعی خود خواهید بود.</p>
-                </div>
+                 {provider.portfolio.length > 0 ? (
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                        {provider.portfolio.map((item, index) => (
+                          <div key={index} className="group relative overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
+                            <Image 
+                                src={item.src}
+                                alt={`نمونه کار ${index + 1}`}
+                                width={200}
+                                height={200}
+                                className="w-full h-full object-cover"
+                                data-ai-hint={item.aiHint}
+                            />
+                          </div>
+                        ))}
+                    </div>
+                 ) : (
+                    <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                      <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                    </div>
+                 )}
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
                 <Button asChild className="w-full">
