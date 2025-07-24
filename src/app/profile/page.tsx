@@ -60,22 +60,20 @@ export default function ProfilePage() {
     const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      // Create a deep copy of the provider to safely mutate
-      const updatedProvider = JSON.parse(JSON.stringify(allProviders[providerIndex]));
+      // Create a new array with the updated provider for saving
+      const updatedProvidersList = [...allProviders];
+      const updatedProvider = { ...updatedProvidersList[providerIndex] };
       
       if (!updatedProvider.portfolio) {
         updatedProvider.portfolio = [];
       }
       
       updatedProvider.portfolio.push(newPortfolioItem);
+      updatedProvidersList[providerIndex] = updatedProvider;
       
       // Update the local state to show the change immediately
       setProvider(updatedProvider);
 
-      // Create a new array with the updated provider for saving
-      const updatedProvidersList = [...allProviders];
-      updatedProvidersList[providerIndex] = updatedProvider;
-      
       // Save the entire updated list to localStorage
       saveProviders(updatedProvidersList);
       
@@ -231,3 +229,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
