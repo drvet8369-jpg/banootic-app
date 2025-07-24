@@ -6,11 +6,13 @@ import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
-// This function must be defined outside the component or memoized to be a stable dependency
+// This function is now defined inside the component to ensure it's re-evaluated,
+// but the key change is that it's called inside useEffect which depends on `query`.
 const searchProviders = (query: string): Provider[] => {
-  const providers = getProviders(); // Always gets the latest from localStorage
+  // Always gets the latest from localStorage at the moment of searching.
+  const providers = getProviders(); 
   if (!query) {
     return [];
   }
@@ -22,20 +24,26 @@ const searchProviders = (query: string): Provider[] => {
   );
 };
 
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // useMemo will now re-compute the search results ONLY when the query changes.
+  // The search function inside it will always fetch the latest data from localStorage.
+  const memoizedSearchResults = useMemo(() => {
+    return searchProviders(query);
+  }, [query]);
+
   useEffect(() => {
     // This effect correctly re-runs whenever the query changes.
-    // It fetches fresh data from localStorage via searchProviders every time.
+    // It uses the memoized results which are calculated with fresh data.
     setIsLoading(true);
-    const results = searchProviders(query);
-    setSearchResults(results);
+    setSearchResults(memoizedSearchResults);
     setIsLoading(false);
-  }, [query]);
+  }, [query, memoizedSearchResults]);
 
 
   return (
