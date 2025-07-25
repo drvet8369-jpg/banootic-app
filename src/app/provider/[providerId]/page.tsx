@@ -105,6 +105,8 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         onSubmit(); // Callback to trigger data refresh in parent
     }, 1000);
   };
+  
+  const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
 
   return (
     <Card className="mt-8 bg-muted/30">
@@ -128,10 +130,19 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
               disabled={isSubmitting}
             />
           </div>
-          <Button type="submit" disabled={isSubmitting || rating === 0 || !comment.trim()} className="w-full">
-            {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="w-4 h-4 ml-2" />}
-            ارسال نظر
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button type="submit" disabled={isButtonDisabled} className="w-full">
+                {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="w-4 h-4 ml-2" />}
+                ارسال نظر
+            </Button>
+            {isButtonDisabled && !isSubmitting && (
+                <p className="text-xs text-center text-muted-foreground">
+                    {rating === 0 && !comment.trim() ? "لطفاً برای ثبت نظر، امتیاز و متن نظر را وارد کنید." :
+                     rating === 0 ? "لطفاً امتیاز خود را با انتخاب ستاره‌ها مشخص کنید." :
+                     "لطفاً متن نظر خود را بنویسید."}
+                </p>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>
