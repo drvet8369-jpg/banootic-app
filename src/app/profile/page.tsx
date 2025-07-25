@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, AlertTriangle, Inbox, PlusCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -79,6 +79,34 @@ export default function ProfilePage() {
       });
     } else {
       toast({
+        title: 'خطا',
+        description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deletePortfolioItem = (itemIndex: number) => {
+    if (!user) return;
+
+    const allProviders = getProviders();
+    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
+
+    if (providerIndex > -1) {
+      const updatedProvider = updatedProvidersList[providerIndex];
+      // Filter out the item to be deleted
+      updatedProvider.portfolio = updatedProvider.portfolio.filter((_: any, index: number) => index !== itemIndex);
+      
+      saveProviders(updatedProvidersList);
+      setProvider(updatedProvider);
+      
+      toast({
+        title: 'موفقیت‌آمیز',
+        description: 'نمونه کار با موفقیت حذف شد.',
+      });
+    } else {
+       toast({
         title: 'خطا',
         description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
         variant: 'destructive',
@@ -237,6 +265,15 @@ export default function ProfilePage() {
                                 className="w-full h-full object-cover"
                                 data-ai-hint={item.aiHint}
                             />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deletePortfolioItem(index)}
+                              aria-label={`حذف نمونه کار ${index + 1}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         ))}
                     </div>
