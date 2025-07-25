@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Star, MessageSquare, User } from 'lucide-react';
 import type { Provider } from '@/lib/types';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Separator } from '@/components/ui/separator';
 
 const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
@@ -72,39 +71,19 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <Separator className="my-4" />
           <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
           {provider.portfolio && provider.portfolio.length > 0 ? (
-            <div className="w-full px-8 sm:px-10">
-              <Carousel 
-                className="w-full mx-auto"
-                opts={{
-                  loop: provider.portfolio.length > 1,
-                  align: "start",
-                }}
-              >
-                <CarouselContent>
-                  {provider.portfolio.map((item, index) => (
-                    <CarouselItem key={`${provider.id}-portfolio-${index}`}>
-                      <Card className="overflow-hidden">
-                          <CardContent className="flex h-80 items-center justify-center p-0 bg-muted/20">
-                            <Image
-                              src={item.src}
-                              alt={`نمونه کار ${index + 1}`}
-                              width={600}
-                              height={400}
-                              className="w-full h-full object-contain"
-                              data-ai-hint={item.aiHint}
-                            />
-                          </CardContent>
-                        </Card>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                {provider.portfolio.length > 1 && (
-                  <>
-                    <CarouselPrevious />
-                    <CarouselNext />
-                  </>
-                )}
-              </Carousel>
+            <div className="grid grid-cols-2 gap-4">
+              {provider.portfolio.map((item, index) => (
+                <div key={`${provider.id}-portfolio-${index}`} className="group relative overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
+                   <Image
+                      src={item.src}
+                      alt={`نمونه کار ${index + 1}`}
+                      width={300}
+                      height={300}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      data-ai-hint={item.aiHint}
+                    />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
