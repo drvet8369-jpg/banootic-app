@@ -55,7 +55,8 @@ export default function ProfilePage() {
       src: imageSrc,
       aiHint: 'new work',
     };
-
+    
+    // Get the most current list of all providers
     const allProviders = getProviders();
     const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
@@ -232,5 +233,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
