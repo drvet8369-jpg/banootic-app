@@ -263,7 +263,7 @@ export default function ChatPage() {
               <Input 
                 type="text" 
                 placeholder="پیام خود را بنویسید..." 
-                className="pr-12"
+                className="pr-12 border-2"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 disabled={isSending || isLoading}
