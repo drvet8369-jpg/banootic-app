@@ -56,20 +56,29 @@ export default function ProfilePage() {
       aiHint: 'new work',
     };
     
+    // 1. Get the full, current list of all providers.
     const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
+    // 2. Create a deep copy of the list to modify.
+    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+    
+    // 3. Find the index of the current provider in the copied list.
+    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+      // 4. Get a reference to the provider object from the copied list.
       const updatedProvider = updatedProvidersList[providerIndex];
       
+      // 5. Initialize portfolio if it doesn't exist.
       if (!updatedProvider.portfolio) {
           updatedProvider.portfolio = [];
       }
+      // 6. Add the new item to the provider's portfolio in the copied list.
       updatedProvider.portfolio.push(newPortfolioItem);
       
+      // 7. Save the ENTIRE MODIFIED LIST back to localStorage.
       saveProviders(updatedProvidersList);
       
+      // 8. Update the local state to reflect the change immediately in the UI.
       setProvider(updatedProvider);
       
       toast({
