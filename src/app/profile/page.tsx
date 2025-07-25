@@ -51,37 +51,33 @@ export default function ProfilePage() {
   const addPortfolioItem = (imageSrc: string) => {
     if (!user) return;
 
-    // Create a new portfolio item object
     const newPortfolioItem = {
       src: imageSrc,
-      aiHint: 'new work', // A generic hint for newly uploaded images
+      aiHint: 'new work',
     };
 
-    // 1. Get the most current list of all providers from localStorage
     const allProviders = getProviders();
-    
-    // 2. Find the index of the current provider in the list
     const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      // 3. Create a deep copy of the provider object to modify
-      const updatedProvider = JSON.parse(JSON.stringify(allProviders[providerIndex]));
+      // Create a new array for the providers list to avoid direct mutation
+      const updatedProvidersList = [...allProviders];
       
-      // 4. Initialize portfolio if it doesn't exist and add the new item
+      // Create a deep copy of the specific provider to modify
+      const updatedProvider = JSON.parse(JSON.stringify(updatedProvidersList[providerIndex]));
+      
       if (!updatedProvider.portfolio) {
           updatedProvider.portfolio = [];
       }
       updatedProvider.portfolio.push(newPortfolioItem);
       
-      // 5. Create a new array for the entire providers list
-      const updatedProvidersList = [...allProviders];
       // Replace the old provider object with our updated one in the new list
       updatedProvidersList[providerIndex] = updatedProvider;
       
-      // 6. Save the ENTIRE updated list back to localStorage
+      // Save the ENTIRE updated list back to localStorage
       saveProviders(updatedProvidersList);
       
-      // 7. Update the local state to reflect the change immediately on the UI
+      // Update the local state to reflect the change immediately on the UI
       setProvider(updatedProvider);
       
       toast({
@@ -236,3 +232,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
