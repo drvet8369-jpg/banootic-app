@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2 } from 'lucide-react';
+import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2, Camera } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -20,7 +20,8 @@ export default function ProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const portfolioFileInputRef = useRef<HTMLInputElement>(null);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     if (user && user.accountType === 'provider') {
@@ -35,84 +36,10 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  const addPortfolioItem = (imageSrc: string) => {
-    if (!user) return;
-
-    const newPortfolioItem = {
-      src: imageSrc,
-      aiHint: 'new work',
-    };
-    
-    const allProviders = getProviders();
-    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
-    
-    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
-
-    if (providerIndex > -1) {
-      const updatedProvider = updatedProvidersList[providerIndex];
-      
-      if (!updatedProvider.portfolio) {
-          updatedProvider.portfolio = [];
-      }
-      updatedProvider.portfolio.push(newPortfolioItem);
-      
-      saveProviders(updatedProvidersList);
-      
-      setProvider(updatedProvider);
-      
-      toast({
-        title: 'موفقیت‌آمیز',
-        description: 'نمونه کار جدید با موفقیت اضافه شد.',
-      });
-    } else {
-      toast({
-        title: 'خطا',
-        description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const deletePortfolioItem = (itemIndex: number) => {
-    if (!user) return;
-
-    const allProviders = getProviders();
-    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
-    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
-
-    if (providerIndex > -1) {
-      const updatedProvider = updatedProvidersList[providerIndex];
-      // Filter out the item to be deleted
-      updatedProvider.portfolio = updatedProvider.portfolio.filter((_: any, index: number) => index !== itemIndex);
-      
-      saveProviders(updatedProvidersList);
-      setProvider(updatedProvider);
-      
-      toast({
-        title: 'موفقیت‌آمیز',
-        description: 'نمونه کار با موفقیت حذف شد.',
-      });
-    } else {
-       toast({
-        title: 'خطا',
-        description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-
-  const handleAddClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
+  const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageSrc = e.target?.result as string;
-        
         const img = document.createElement('img');
         img.onload = () => {
           const canvas = document.createElement('canvas');
@@ -138,19 +65,79 @@ export default function ProfilePage() {
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            // Use JPEG format for better compression for photos
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8); 
-            addPortfolioItem(compressedDataUrl);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            callback(compressedDataUrl);
           } else {
-             // Fallback to original if canvas fails
-             addPortfolioItem(imageSrc);
+            callback(imageSrc); // Fallback to original if canvas fails
           }
         };
         img.src = imageSrc;
       };
       reader.readAsDataURL(file);
-      // Reset file input to allow selecting the same file again
-      event.target.value = '';
+  }
+
+  const updateProviderData = (updateFn: (provider: Provider) => void) => {
+    if (!user) return;
+    const allProviders = getProviders();
+    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
+
+    if (providerIndex > -1) {
+      updateFn(updatedProvidersList[providerIndex]);
+      saveProviders(updatedProvidersList);
+      setProvider(updatedProvidersList[providerIndex]);
+      return true;
+    }
+    return false;
+  }
+
+  const addPortfolioItem = (imageSrc: string) => {
+    const success = updateProviderData((p) => {
+      if (!p.portfolio) p.portfolio = [];
+      p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
+    });
+    if (success) {
+      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+    }
+  };
+
+  const deletePortfolioItem = (itemIndex: number) => {
+    const success = updateProviderData((p) => {
+      p.portfolio = p.portfolio.filter((_: any, index: number) => index !== itemIndex);
+    });
+    if (success) {
+      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار با موفقیت حذف شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+    }
+  };
+  
+  const handleProfilePictureChange = (newImageSrc: string) => {
+      const success = updateProviderData((p) => {
+        p.profileImage.src = newImageSrc;
+      });
+      if (success) {
+        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
+      } else {
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+      }
+  }
+
+  const handleAddPortfolioClick = () => {
+    portfolioFileInputRef.current?.click();
+  };
+  
+  const handleEditProfilePicClick = () => {
+    profilePicInputRef.current?.click();
+  }
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (dataUrl: string) => void) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImageResizeAndSave(file, callback);
+      event.target.value = ''; // Reset file input
     }
   };
   
@@ -193,7 +180,7 @@ export default function ProfilePage() {
       <Card>
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center">
-            <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
+             <div className="relative group w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
                {provider.profileImage && provider.profileImage.src ? (
                   <Image
                     src={provider.profileImage.src}
@@ -207,6 +194,22 @@ export default function ProfilePage() {
                       <User className="w-16 h-16 text-muted-foreground" />
                   </div>
                 )}
+                <input
+                    type="file"
+                    ref={profilePicInputRef}
+                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                    className="hidden"
+                    accept="image/*"
+                />
+                <Button 
+                  onClick={handleEditProfilePicClick} 
+                  variant="outline"
+                  size="icon" 
+                  className="absolute bottom-2 right-2 rounded-full h-10 w-10 bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                  aria-label="تغییر عکس پروفایل"
+                >
+                    <Camera className="w-5 h-5" />
+                </Button>
             </div>
             <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
             <CardDescription className="text-lg">{provider.service}</CardDescription>
@@ -230,12 +233,12 @@ export default function ProfilePage() {
                   
                   <input 
                     type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange}
+                    ref={portfolioFileInputRef} 
+                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
                     className="hidden"
                     accept="image/*"
                   />
-                  <Button onClick={handleAddClick} size="lg" className="w-full font-bold mb-6">
+                  <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
                     <PlusCircle className="w-5 h-5 ml-2" />
                     افزودن نمونه کار جدید
                   </Button>
@@ -290,3 +293,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
