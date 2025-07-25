@@ -34,10 +34,15 @@ export default function SearchPage() {
     setIsLoading(false);
   }, [query]);
 
-  // useEffect now correctly depends on performSearch, which itself depends on query.
-  // This ensures a fresh search is performed every time the query parameter changes.
+  // useEffect now correctly depends on performSearch.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
+
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
   }, [performSearch]);
 
 

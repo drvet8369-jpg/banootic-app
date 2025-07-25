@@ -14,6 +14,8 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // This logic is now wrapped in a useCallback to ensure it's stable
+  // and correctly re-fetches data whenever the component is focused or revisited.
   const loadProviderData = useCallback(() => {
     setIsLoading(true);
     // Always get the freshest data from localStorage
@@ -30,8 +32,15 @@ export default function ProviderProfilePage() {
     setIsLoading(false);
   }, [providerId]);
 
+  // useEffect now correctly depends on loadProviderData and runs on mount.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     loadProviderData();
+
+    window.addEventListener('focus', loadProviderData);
+    return () => {
+      window.removeEventListener('focus', loadProviderData);
+    };
   }, [loadProviderData]);
 
   if (isLoading) {
