@@ -71,15 +71,14 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <Separator className="my-4" />
           <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
           {provider.portfolio && provider.portfolio.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex overflow-x-auto gap-4 pb-4">
               {provider.portfolio.map((item, index) => (
-                <div key={`${provider.id}-portfolio-${index}`} className="group relative overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
+                <div key={`${provider.id}-portfolio-${index}`} className="group relative flex-shrink-0 w-40 h-40 overflow-hidden rounded-lg shadow-md">
                    <Image
                       src={item.src}
                       alt={`نمونه کار ${index + 1}`}
-                      width={300}
-                      height={300}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
                       data-ai-hint={item.aiHint}
                     />
                 </div>
