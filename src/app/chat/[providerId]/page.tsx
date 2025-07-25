@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
@@ -263,13 +263,13 @@ export default function ChatPage() {
               <Input 
                 type="text" 
                 placeholder="پیام خود را بنویسید..." 
-                className="pr-12 border-2"
+                className="pr-12"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 disabled={isSending || isLoading}
               />
               <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim() || isLoading}>
-                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
               </Button>
           </form>
         </div>
