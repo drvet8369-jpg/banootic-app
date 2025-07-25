@@ -56,29 +56,20 @@ export default function ProfilePage() {
       aiHint: 'new work',
     };
     
-    // Get the most current list of all providers
     const allProviders = getProviders();
     const providerIndex = allProviders.findIndex((p) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      // Create a new array for the providers list to avoid direct mutation
-      const updatedProvidersList = [...allProviders];
-      
-      // Create a deep copy of the specific provider to modify
-      const updatedProvider = JSON.parse(JSON.stringify(updatedProvidersList[providerIndex]));
+      const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+      const updatedProvider = updatedProvidersList[providerIndex];
       
       if (!updatedProvider.portfolio) {
           updatedProvider.portfolio = [];
       }
       updatedProvider.portfolio.push(newPortfolioItem);
       
-      // Replace the old provider object with our updated one in the new list
-      updatedProvidersList[providerIndex] = updatedProvider;
-      
-      // Save the ENTIRE updated list back to localStorage
       saveProviders(updatedProvidersList);
       
-      // Update the local state to reflect the change immediately on the UI
       setProvider(updatedProvider);
       
       toast({
@@ -233,3 +224,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
