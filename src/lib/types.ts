@@ -34,11 +34,18 @@ export interface Provider {
   portfolio: PortfolioItem[];
 }
 
+export interface Review {
+  id: string;
+  providerId: number;
+  authorName: string;
+  rating: number;
+  comment: string;
+  createdAt: string; // ISO String format
+}
+
 export interface Message {
   text: string;
   senderId: string;
   receiverId?: string;
   createdAt: Timestamp;
 }
-
-    

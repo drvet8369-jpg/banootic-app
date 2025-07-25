@@ -13,20 +13,7 @@ import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
-
-// A mock StarRating component for the profile preview
-const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center text-yellow-400">
-        {[...Array(5)].map((_, i) => (
-          <svg key={i} className={`w-5 h-5 ${i < Math.round(rating) ? 'fill-current' : 'text-gray-300'}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-        ))}
-      </div>
-      <span className="text-muted-foreground text-sm">({reviewsCount} نظر)</span>
-    </div>
-  );
-};
+import { StarRating } from '@/components/ui/star-rating';
 
 export default function ProfilePage() {
   const { user, isLoggedIn } = useAuth();
@@ -288,6 +275,12 @@ export default function ProfilePage() {
                     <Link href="/inbox">
                         <Inbox className="w-4 h-4 ml-2" />
                         مشاهده صندوق ورودی
+                    </Link>
+                </Button>
+                 <Button asChild className="w-full" variant="secondary">
+                    <Link href={`/provider/${provider.phone}`}>
+                        <User className="w-4 h-4 ml-2" />
+                        مشاهده پروفایل عمومی
                     </Link>
                 </Button>
             </CardFooter>

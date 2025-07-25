@@ -3,30 +3,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Star, MessageSquare, User } from 'lucide-react';
+import { MapPin, Phone, MessageSquare, User } from 'lucide-react';
 import type { Provider } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
-
-const StarRating = ({ rating, reviewsCount }: { rating: number; reviewsCount: number }) => {
-  const fullStars = Math.floor(rating);
-  const halfStar = rating % 1 !== 0;
-  const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center text-yellow-400">
-        {[...Array(fullStars)].map((_, i) => (
-          <Star key={`full-${i}`} className="w-5 h-5 fill-current" />
-        ))}
-        {halfStar && <Star key="half" className="w-5 h-5" />}
-        {[...Array(emptyStars)].map((_, i) => (
-          <Star key={`empty-${i}`} className="w-5 h-5 text-gray-300 fill-current" />
-        ))}
-      </div>
-      <span className="text-muted-foreground text-sm">({reviewsCount} نظر)</span>
-    </div>
-  );
-};
+import { StarRating } from '@/components/ui/star-rating';
 
 interface SearchResultCardProps {
   provider: Provider;
@@ -100,10 +80,10 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           </Link>
         </Button>
         <Button asChild className="w-full" variant="secondary">
-          <a href={`tel:${provider.phone}`}>
-            <Phone className="w-4 h-4 ml-2" />
-            تماس
-          </a>
+          <Link href={`/provider/${provider.phone}`}>
+            <User className="w-4 h-4 ml-2" />
+            مشاهده پروفایل و نظرات
+          </Link>
         </Button>
       </CardFooter>
     </Card>

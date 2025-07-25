@@ -1,5 +1,5 @@
 
-import type { Category, Provider, Service } from './types';
+import type { Category, Provider, Service, Review } from './types';
 
 export const categories: Category[] = [
   {
@@ -96,6 +96,7 @@ const defaultProviders: Provider[] = [
 ];
 
 const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
+const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
 
 // Function to get providers from localStorage or return default
 export const getProviders = (): Provider[] => {
@@ -106,17 +107,7 @@ export const getProviders = (): Provider[] => {
     const storedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
     if (storedProviders) {
       const parsedProviders = JSON.parse(storedProviders);
-      // Simple migration: if a provider is missing profileImage, add it.
-      return parsedProviders.map((p: Provider) => {
-        if (!p.profileImage) {
-          const defaultProvider = defaultProviders.find(dp => dp.id === p.id);
-          return {
-            ...p,
-            profileImage: defaultProvider ? defaultProvider.profileImage : { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }
-          };
-        }
-        return p;
-      });
+      return parsedProviders;
     } else {
       // If nothing is in storage, initialize it with the default data
       localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(defaultProviders));
@@ -140,4 +131,36 @@ export const saveProviders = (updatedProviders: Provider[]) => {
   }
 };
 
-    
+// --- Reviews ---
+const defaultReviews: Review[] = [];
+
+// Function to get reviews from localStorage
+export const getReviews = (): Review[] => {
+  if (typeof window === 'undefined') {
+    return defaultReviews;
+  }
+  try {
+    const storedReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
+    if (storedReviews) {
+      return JSON.parse(storedReviews);
+    } else {
+      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(defaultReviews));
+      return defaultReviews;
+    }
+  } catch (error) {
+    console.error("Failed to access localStorage for reviews.", error);
+    return defaultReviews;
+  }
+};
+
+// Function to save reviews to localStorage
+export const saveReviews = (updatedReviews: Review[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews));
+  } catch (error) {
+    console.error("Failed to save reviews to localStorage.", error);
+  }
+};
