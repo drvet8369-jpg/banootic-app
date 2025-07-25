@@ -20,7 +20,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 export default function Header() {
-  const { isLoggedIn, user, logout, switchAccountType } = useAuth();
+  const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
 
@@ -37,11 +37,6 @@ export default function Header() {
     return name.substring(0, 2);
   }
   
-  const switchRoleText = user?.accountType === 'provider' 
-    ? "تغییر به حساب مشتری" 
-    : "تغییر به حساب هنرمند";
-
-
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
        <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
@@ -104,12 +99,6 @@ export default function Header() {
                   <span className="text-xs text-muted-foreground">{user.phone}</span>
               </div>
             </div>
-             <SheetClose asChild>
-              <Button onClick={switchAccountType} variant="outline" className="w-full justify-start mb-2">
-                  <RefreshCw className="ml-2 h-5 w-5" />
-                  {switchRoleText}
-              </Button>
-            </SheetClose>
             <SheetClose asChild>
               <Button onClick={logout} variant="ghost" className="w-full justify-start">
                   <LogOut className="ml-2 h-5 w-5" />
@@ -174,10 +163,6 @@ export default function Header() {
                         <DropdownMenuSeparator />
                     </>
                     )}
-                    <DropdownMenuItem onClick={switchAccountType}>
-                    <RefreshCw className="ml-2 h-4 w-4" />
-                    <span>{switchRoleText}</span>
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={logout}>
                     <LogOut className="ml-2 h-4 w-4" />
                     <span>خروج</span>

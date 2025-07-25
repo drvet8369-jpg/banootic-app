@@ -20,7 +20,6 @@ interface AuthContextType {
   user: User | null;
   login: (userData: User) => void;
   logout: () => void;
-  switchAccountType: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,28 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        console.error("Failed to remove user from localStorage", error);
     }
   };
-  
-  const switchAccountType = () => {
-    if (!user) return;
-    
-    // This functionality is now primarily for development/testing convenience.
-    // In a real app, a user wouldn't just "switch" roles this easily.
-    const newAccountType = user.accountType === 'provider' ? 'customer' : 'provider';
-    const updatedUser = { ...user, accountType: newAccountType };
-
-    try {
-      localStorage.setItem('honarbanoo-user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      // Navigate to a neutral page to reflect UI changes
-      router.push('/');
-    } catch (error) {
-       console.error("Failed to save updated user to localStorage", error);
-    }
-  };
-
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, switchAccountType }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
