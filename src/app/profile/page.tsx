@@ -56,29 +56,21 @@ export default function ProfilePage() {
       aiHint: 'new work',
     };
     
-    // 1. Get the full, current list of all providers.
     const allProviders = getProviders();
-    // 2. Create a deep copy of the list to modify.
     const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
     
-    // 3. Find the index of the current provider in the copied list.
     const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      // 4. Get a reference to the provider object from the copied list.
       const updatedProvider = updatedProvidersList[providerIndex];
       
-      // 5. Initialize portfolio if it doesn't exist.
       if (!updatedProvider.portfolio) {
           updatedProvider.portfolio = [];
       }
-      // 6. Add the new item to the provider's portfolio in the copied list.
       updatedProvider.portfolio.push(newPortfolioItem);
       
-      // 7. Save the ENTIRE MODIFIED LIST back to localStorage.
       saveProviders(updatedProvidersList);
       
-      // 8. Update the local state to reflect the change immediately in the UI.
       setProvider(updatedProvider);
       
       toast({
@@ -105,9 +97,44 @@ export default function ProfilePage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageSrc = e.target?.result as string;
-        addPortfolioItem(imageSrc);
+        
+        const img = document.createElement('img');
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Use JPEG format for better compression for photos
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8); 
+            addPortfolioItem(compressedDataUrl);
+          } else {
+             // Fallback to original if canvas fails
+             addPortfolioItem(imageSrc);
+          }
+        };
+        img.src = imageSrc;
       };
       reader.readAsDataURL(file);
+      // Reset file input to allow selecting the same file again
       event.target.value = '';
     }
   };
@@ -233,5 +260,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
