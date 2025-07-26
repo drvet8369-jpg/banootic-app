@@ -313,6 +313,12 @@ export default function ChatPage() {
                         </div>
                     ) : (
                          <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
+                             <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                <p className="text-sm font-semibold">
+                                  {message.text}
+                                  {message.isEdited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
+                                </p>
+                            </div>
                             {senderIsUser && (
                                 <Button 
                                     size="icon" 
@@ -323,10 +329,6 @@ export default function ChatPage() {
                                     <Edit className="w-4 h-4"/>
                                 </Button>
                             )}
-                             <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                <p className="text-sm font-semibold">{message.text}</p>
-                                {message.isEdited && <span className="text-xs opacity-70 mt-1 block">(ویرایش شده)</span>}
-                            </div>
                         </div>
                     )}
 
