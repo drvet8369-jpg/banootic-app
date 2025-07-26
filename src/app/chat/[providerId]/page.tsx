@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowUp, Loader2, User } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
@@ -21,6 +21,7 @@ interface Message {
   text: string;
   senderId: string;
   createdAt: string; // Using ISO string for localStorage
+  isEdited?: boolean;
 }
 
 interface OtherPersonDetails {
@@ -44,6 +45,9 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
@@ -133,6 +137,47 @@ export default function ChatPage() {
     );
   }
   
+  const handleStartEdit = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+  
+  const handleSaveEdit = () => {
+    if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
+
+    const chatId = getChatId(user.phone, otherPersonDetails.phone);
+    if (!chatId) return;
+
+    const updatedMessages = messages.map(msg => {
+      if (msg.id === editingMessageId) {
+        return { ...msg, text: editingText.trim(), isEdited: true };
+      }
+      return msg;
+    });
+
+    setMessages(updatedMessages);
+    localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
+
+    // Also update the last message in the inbox if this was the last message
+    const lastMessage = updatedMessages[updatedMessages.length - 1];
+    if (lastMessage.id === editingMessageId) {
+        const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        if (allChats[chatId]) {
+            allChats[chatId].lastMessage = editingText.trim();
+            localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+        }
+    }
+
+    handleCancelEdit();
+    toast({ title: 'پیام ویرایش شد.' });
+  };
+
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
@@ -237,11 +282,12 @@ export default function ChatPage() {
             )}
             {messages.map((message) => {
                 const senderIsUser = message.senderId === user?.phone;
-                
+                const isEditing = editingMessageId === message.id;
+
                 return (
                   <div 
                     key={message.id} 
-                    className={`flex items-end gap-2 ${senderIsUser ? 'justify-end' : 'justify-start'}`}
+                    className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}
                   >
                     {!senderIsUser && (
                       <Avatar className="h-8 w-8">
@@ -251,10 +297,38 @@ export default function ChatPage() {
                         <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>
                     )}
-                    <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                        <p className="text-sm font-semibold">{message.text}</p>
-                    </div>
-                     {senderIsUser && (
+                    
+                    {isEditing ? (
+                        <div className="flex-1 flex items-center gap-1">
+                            <Input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="h-9"
+                                onKeyDown={(e) => { if(e.key === 'Enter') { handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
+                                autoFocus
+                            />
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
+                        </div>
+                    ) : (
+                         <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                            <p className="text-sm font-semibold">{message.text}</p>
+                            {message.isEdited && <span className="text-xs opacity-70 mt-1 block">(ویرایش شده)</span>}
+                            {senderIsUser && (
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="absolute -left-8 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleStartEdit(message)}
+                                >
+                                    <Edit className="w-4 h-4"/>
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                     {senderIsUser && !isEditing && (
                        <Avatar className="h-8 w-8">
                           <AvatarFallback>شما</AvatarFallback>
                       </Avatar>
@@ -272,9 +346,9 @@ export default function ChatPage() {
                 className="flex-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || isLoading}
+                disabled={isSending || isLoading || !!editingMessageId}
               />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading}>
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !!editingMessageId}>
                   {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
               </Button>
           </form>
