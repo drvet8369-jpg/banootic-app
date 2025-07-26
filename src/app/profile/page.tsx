@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
-  const [isEditing, setIsEditing] = useState(false);
+  const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   useEffect(() => {
@@ -39,8 +39,6 @@ export default function ProfilePage() {
             service: currentProvider.service,
             bio: currentProvider.bio,
         });
-      } else {
-        console.warn("Provider not found in list after login. This might indicate an issue.");
       }
     }
   }, [user]);
@@ -60,14 +58,30 @@ export default function ProfilePage() {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
+        // Also update the user in AuthContext if their name changes
+        if(user && user.name !== editedData.name){
+            // This part is tricky without a dedicated updateUser function in AuthContext
+            // For now, we rely on page reload or re-login to see name change in header
+        }
     });
 
     if(success) {
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
-        setIsEditing(false);
+        setMode('viewing');
     } else {
         toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
+  }
+
+  const handleCancelEdit = () => {
+    if (provider) {
+       setEditedData({
+            name: provider.name,
+            service: provider.service,
+            bio: provider.bio,
+        });
+    }
+    setMode('viewing');
   }
 
 
@@ -103,7 +117,7 @@ export default function ProfilePage() {
             const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
             callback(compressedDataUrl);
           } else {
-            callback(imageSrc); // Fallback to original if canvas fails
+            callback(imageSrc);
           }
         };
         img.src = imageSrc;
@@ -163,7 +177,7 @@ export default function ProfilePage() {
 
   const handleDeleteProfilePicture = () => {
     const success = updateProviderData((p) => {
-      if (p.profileImage) p.profileImage.src = ''; // Set src to empty to trigger fallback
+      if (p.profileImage) p.profileImage.src = '';
     });
     if (success) {
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
@@ -184,7 +198,7 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (file) {
       handleImageResizeAndSave(file, callback);
-      event.target.value = ''; // Reset file input
+      event.target.value = '';
     }
   };
   
@@ -226,7 +240,7 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto py-12 md:py-20">
       <Card>
         <div className="grid md:grid-cols-3">
-          <div className="md:col-span-1 p-6 flex flex-col items-center text-center">
+          <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
              <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
                {provider.profileImage && provider.profileImage.src ? (
                   <Image
@@ -242,13 +256,13 @@ export default function ProfilePage() {
                   </div>
                 )}
             </div>
-            {isEditing ? (
+            {mode === 'editing' ? (
                  <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
             ) : (
                 <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
             )}
-             {isEditing ? (
-                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg" />
+             {mode === 'editing' ? (
+                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" />
             ) : (
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
@@ -258,19 +272,20 @@ export default function ProfilePage() {
                 <span>{provider.location}</span>
              </div>
           </div>
-          <div className="md:col-span-2 p-6 md:border-r border-t md:border-t-0">
-            <CardHeader>
-                <CardTitle className="font-headline text-2xl">درباره شما</CardTitle>
+          <div className="md:col-span-2 p-6">
+            <CardHeader className="p-0 pb-4">
+                <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
             </CardHeader>
-            <CardContent>
-              {isEditing ? (
+            <CardContent className="p-0">
+              <h3 className="font-semibold mb-2">درباره شما</h3>
+              {mode === 'editing' ? (
                   <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
               ) : (
-                  <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
+                  <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
                <Separator className="my-6" />
                 <div className="mb-4">
-                  <h3 className="font-headline text-xl font-semibold mb-4 text-center">نمونه کارهای شما</h3>
+                  <h3 className="font-headline text-xl font-semibold mb-4">نمونه کارهای شما</h3>
                   
                   <input 
                     type="file" 
@@ -286,10 +301,10 @@ export default function ProfilePage() {
                     className="hidden"
                     accept="image/*"
                   />
-                  <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
-                    <PlusCircle className="w-5 h-5 ml-2" />
-                    افزودن نمونه کار جدید
-                  </Button>
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                        <PlusCircle className="w-5 h-5 ml-2" />
+                        افزودن نمونه کار جدید
+                   </Button>
                 </div>
                  {provider.portfolio && provider.portfolio.length > 0 ? (
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -322,30 +337,26 @@ export default function ProfilePage() {
                  )}
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-6">
-                {isEditing ? (
+                {mode === 'editing' ? (
                     <>
                          <Button onClick={handleSaveChanges} className="w-full flex-1">
                             <Save className="w-4 h-4 ml-2" />
                             ذخیره تغییرات
                         </Button>
-                        <Button onClick={() => setIsEditing(false)} variant="ghost" className="w-full flex-1">
+                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1">
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو
                         </Button>
                     </>
                 ) : (
                     <>
-                        <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
+                        <Button onClick={() => setMode('editing')} className="w-full">
                             <Edit className="w-4 h-4 ml-2" />
-                            ویرایش اطلاعات
+                            ویرایش اطلاعات پایه
                         </Button>
                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full">
                             <Camera className="w-4 h-4 ml-2" />
                             تغییر عکس پروفایل
-                        </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full">
-                            <Trash2 className="w-4 h-4 ml-2" />
-                            حذف عکس پروفایل
                         </Button>
                          <Button asChild className="w-full">
                             <Link href="/inbox">
@@ -354,9 +365,9 @@ export default function ProfilePage() {
                             </Link>
                         </Button>
                          <Button asChild className="w-full" variant="secondary">
-                            <Link href={`/provider/${provider.phone}`}>
+                            <Link href={`/provider/${provider.phone}#reviews`}>
                                 <Eye className="w-4 h-4 ml-2" />
-                                مشاهده پروفایل عمومی
+                                مشاهده بازخوردها و پروفایل عمومی
                             </Link>
                         </Button>
                     </>

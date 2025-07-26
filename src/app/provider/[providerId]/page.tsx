@@ -158,7 +158,6 @@ export default function ProviderProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(() => {
-    // No need to set loading true on every focus, just initial load
     const allProviders = getProviders();
     const foundProvider = allProviders.find(p => p.phone === providerPhone);
     
@@ -169,7 +168,7 @@ export default function ProviderProfilePage() {
                                         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReviews(providerReviews);
     } else {
-      setProvider(null); // Explicitly set to null if not found
+      setProvider(null);
     }
     
     setIsLoading(false);
@@ -178,7 +177,7 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    window.addEventListener('focus', loadData); // Refreshes data when tab is refocused
+    window.addEventListener('focus', loadData);
     return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
 
@@ -267,7 +266,7 @@ export default function ProviderProfilePage() {
 
             <Separator />
             
-            <div className="p-6">
+            <div id="reviews" className="p-6 scroll-mt-20">
                 <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
                 {reviews.length > 0 ? (
                     <div className="space-y-4">
