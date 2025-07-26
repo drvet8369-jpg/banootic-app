@@ -22,6 +22,7 @@ import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 
@@ -324,6 +325,7 @@ export default function ProviderProfilePage() {
 
         {selectedImage && (
             <DialogContent className="p-0 border-0 max-w-4xl bg-transparent shadow-none">
+                <DialogTitle className="sr-only">نمونه کار تمام صفحه</DialogTitle>
                 <div className="relative w-full aspect-[4/3] max-h-[80vh]">
                     <Image
                         src={selectedImage}
@@ -338,4 +340,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-
