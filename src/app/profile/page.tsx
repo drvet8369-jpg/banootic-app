@@ -125,6 +125,17 @@ export default function ProfilePage() {
       }
   }
 
+  const handleDeleteProfilePicture = () => {
+    const success = updateProviderData((p) => {
+      p.profileImage.src = ''; // Set src to empty to trigger fallback
+    });
+    if (success) {
+      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+    }
+  };
+
   const handleAddPortfolioClick = () => {
     portfolioFileInputRef.current?.click();
   };
@@ -210,6 +221,17 @@ export default function ProfilePage() {
                 >
                     <Camera className="w-5 h-5" />
                 </Button>
+                 {provider.profileImage && provider.profileImage.src && (
+                     <Button 
+                        onClick={handleDeleteProfilePicture} 
+                        variant="destructive"
+                        size="icon" 
+                        className="absolute bottom-2 left-2 rounded-full h-10 w-10"
+                        aria-label="حذف عکس پروفایل"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </Button>
+                )}
             </div>
             <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
             <CardDescription className="text-lg">{provider.service}</CardDescription>
