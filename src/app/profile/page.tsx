@@ -7,18 +7,36 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2, Camera, Eye, Edit, Save, XCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Provider } from '@/lib/types';
-import { getProviders, saveProviders } from '@/lib/data';
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import type { Provider, Review } from '@/lib/types';
+import { getProviders, saveProviders, getReviews } from '@/lib/data';
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { StarRating } from '@/components/ui/star-rating';
+
+const ReviewCard = ({ review }: { review: Review }) => (
+  <div className="flex gap-4 p-4 border-b last:border-b-0">
+    <div className="flex-shrink-0 text-center w-24">
+       <div className="mx-auto h-10 w-10 flex items-center justify-center rounded-full bg-muted font-bold mb-1">
+         {review.authorName.substring(0, 2)}
+       </div>
+      <span className="font-bold text-sm">{review.authorName}</span>
+    </div>
+    <div className="flex-grow">
+      <StarRating rating={review.rating} size="sm" readOnly />
+      <p className="text-sm text-foreground/80 leading-relaxed mt-2">{review.comment}</p>
+    </div>
+  </div>
+);
+
 
 export default function ProfilePage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const { toast } = useToast();
   const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
@@ -27,21 +45,32 @@ export default function ProfilePage() {
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  useEffect(() => {
+  const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
-      const allProviders = getProviders();
-      let currentProvider = allProviders.find(p => p.phone === user.phone);
-      
-      if (currentProvider) {
-        setProvider(currentProvider);
-        setEditedData({
-            name: currentProvider.name,
-            service: currentProvider.service,
-            bio: currentProvider.bio,
-        });
-      }
+        const allProviders = getProviders();
+        let currentProvider = allProviders.find(p => p.phone === user.phone);
+        
+        if (currentProvider) {
+            setProvider(currentProvider);
+            setEditedData({
+                name: currentProvider.name,
+                service: currentProvider.service,
+                bio: currentProvider.bio,
+            });
+
+            // Load reviews for this provider
+            const allReviews = getReviews();
+            const providerReviews = allReviews.filter(r => r.providerId === currentProvider!.id)
+                                             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setReviews(providerReviews);
+        }
     }
   }, [user]);
+
+  useEffect(() => {
+    loadProviderData();
+  }, [loadProviderData]);
+
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -54,18 +83,21 @@ export default function ProfilePage() {
         return;
     }
 
+    let userWasUpdated = false;
     const success = updateProviderData((p) => {
+        if(user && user.name !== editedData.name){
+            userWasUpdated = true;
+        }
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
-        // Also update the user in AuthContext if their name changes
-        if(user && user.name !== editedData.name){
-            // This part is tricky without a dedicated updateUser function in AuthContext
-            // For now, we rely on page reload or re-login to see name change in header
-        }
     });
 
     if(success) {
+        if (userWasUpdated && user) {
+            const updatedUser = { ...user, name: editedData.name };
+            login(updatedUser); 
+        }
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } else {
@@ -134,7 +166,8 @@ export default function ProfilePage() {
     if (providerIndex > -1) {
       updateFn(updatedProvidersList[providerIndex]);
       saveProviders(updatedProvidersList);
-      setProvider(updatedProvidersList[providerIndex]);
+      // After saving, reload data into state
+      loadProviderData();
       return true;
     }
     return false;
@@ -237,7 +270,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20">
+    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
       <Card>
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
@@ -272,11 +305,11 @@ export default function ProfilePage() {
                 <span>{provider.location}</span>
              </div>
           </div>
-          <div className="md:col-span-2 p-6">
+          <div className="md:col-span-2 p-6 flex flex-col">
             <CardHeader className="p-0 pb-4">
                 <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 flex-grow">
               <h3 className="font-semibold mb-2">درباره شما</h3>
               {mode === 'editing' ? (
                   <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
@@ -336,14 +369,22 @@ export default function ProfilePage() {
                     </div>
                  )}
             </CardContent>
-             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-6">
+             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
                     <>
                          <Button onClick={handleSaveChanges} className="w-full flex-1">
                             <Save className="w-4 h-4 ml-2" />
                             ذخیره تغییرات
                         </Button>
-                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1">
+                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
+                            <Camera className="w-4 h-4 ml-2" />
+                            تغییر عکس پروفایل
+                        </Button>
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف عکس پروفایل
+                        </Button>
+                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو
                         </Button>
@@ -352,22 +393,18 @@ export default function ProfilePage() {
                     <>
                         <Button onClick={() => setMode('editing')} className="w-full">
                             <Edit className="w-4 h-4 ml-2" />
-                            ویرایش اطلاعات پایه
-                        </Button>
-                        <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full">
-                            <Camera className="w-4 h-4 ml-2" />
-                            تغییر عکس پروفایل
+                            ویرایش اطلاعات پایه و عکس
                         </Button>
                          <Button asChild className="w-full">
                             <Link href="/inbox">
-                                <Inbox className="w-4 h-4 ml-2" />
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                                 صندوق ورودی
                             </Link>
                         </Button>
-                         <Button asChild className="w-full" variant="secondary">
-                            <Link href={`/provider/${provider.phone}#reviews`}>
-                                <Eye className="w-4 h-4 ml-2" />
-                                مشاهده بازخوردها و پروفایل عمومی
+                        <Button asChild className="w-full" variant="secondary">
+                            <Link href={`/provider/${provider.phone}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                مشاهده پروفایل عمومی
                             </Link>
                         </Button>
                     </>
@@ -375,6 +412,28 @@ export default function ProfilePage() {
             </CardFooter>
           </div>
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle className="font-headline text-2xl">بازخوردها و نظرات مشتریان</CardTitle>
+            <CardDescription>در اینجا می‌توانید نظراتی که مشتریان برای شما ثبت کرده‌اند را ببینید.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {reviews.length > 0 ? (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 font-bold text-lg mb-4 p-4 bg-muted rounded-lg">
+                        <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
+                        <span>میانگین امتیاز: {provider.rating} از {reviews.length} نظر</span>
+                    </div>
+                    {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                    <p>هنوز نظری برای شما ثبت نشده است.</p>
+                </div>
+            )}
+        </CardContent>
       </Card>
     </div>
   );

@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, Inbox, RefreshCw } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -64,7 +64,7 @@ export default function Header() {
             </SheetClose>
             <SheetClose asChild>
               <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                 <Inbox className="h-5 w-5" />
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                  صندوق ورودی
               </Link>
             </SheetClose>
@@ -156,7 +156,7 @@ export default function Header() {
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                         <Link href="/inbox">
-                            <Inbox className="ml-2 h-4 w-4" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                             <span>صندوق ورودی</span>
                         </Link>
                         </DropdownMenuItem>
