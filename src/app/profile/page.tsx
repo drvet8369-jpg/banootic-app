@@ -7,36 +7,18 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Star } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Provider, Review } from '@/lib/types';
-import { getProviders, saveProviders, getReviews } from '@/lib/data';
+import type { Provider } from '@/lib/types';
+import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { StarRating } from '@/components/ui/star-rating';
-
-const ReviewCard = ({ review }: { review: Review }) => (
-  <div className="flex gap-4 p-4 border-b last:border-b-0">
-    <div className="flex-shrink-0 text-center w-24">
-       <div className="mx-auto h-10 w-10 flex items-center justify-center rounded-full bg-muted font-bold mb-1">
-         {review.authorName.substring(0, 2)}
-       </div>
-      <span className="font-bold text-sm">{review.authorName}</span>
-    </div>
-    <div className="flex-grow">
-      <StarRating rating={review.rating} size="sm" readOnly />
-      <p className="text-sm text-foreground/80 leading-relaxed mt-2">{review.comment}</p>
-    </div>
-  </div>
-);
-
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
   const { toast } = useToast();
   const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
@@ -57,12 +39,6 @@ export default function ProfilePage() {
                 service: currentProvider.service,
                 bio: currentProvider.bio,
             });
-
-            // Load reviews for this provider
-            const allReviews = getReviews();
-            const providerReviews = allReviews.filter(r => r.providerId === currentProvider!.id)
-                                             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            setReviews(providerReviews);
         }
     }
   }, [user]);
@@ -180,17 +156,6 @@ export default function ProfilePage() {
     });
     if (success) {
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
-    }
-  };
-
-  const deletePortfolioItem = (itemIndex: number) => {
-    const success = updateProviderData((p) => {
-      p.portfolio = p.portfolio.filter((_: any, index: number) => index !== itemIndex);
-    });
-    if (success) {
-      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار با موفقیت حذف شد.' });
     } else {
       toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
@@ -318,7 +283,7 @@ export default function ProfilePage() {
               )}
                <Separator className="my-6" />
                 <div className="mb-4">
-                  <h3 className="font-headline text-xl font-semibold mb-4">نمونه کارهای شما</h3>
+                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
                   
                   <input 
                     type="file" 
@@ -338,36 +303,8 @@ export default function ProfilePage() {
                         <PlusCircle className="w-5 h-5 ml-2" />
                         افزودن نمونه کار جدید
                    </Button>
+                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
                 </div>
-                 {provider.portfolio && provider.portfolio.length > 0 ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                        {provider.portfolio.map((item, index) => (
-                          <div key={index} className="group relative overflow-hidden rounded-lg shadow-md aspect-w-1 aspect-h-1">
-                            <Image 
-                                src={item.src}
-                                alt={`نمونه کار ${index + 1}`}
-                                width={200}
-                                height={200}
-                                className="w-full h-full object-cover"
-                                data-ai-hint={item.aiHint}
-                            />
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => deletePortfolioItem(index)}
-                              aria-label={`حذف نمونه کار ${index + 1}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                    </div>
-                 ) : (
-                    <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                      <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
-                    </div>
-                 )}
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
@@ -391,17 +328,17 @@ export default function ProfilePage() {
                     </>
                 ) : (
                     <>
-                        <Button onClick={() => setMode('editing')} className="w-full">
+                        <Button onClick={() => setMode('editing')} className="w-full flex-1">
                             <Edit className="w-4 h-4 ml-2" />
-                            ویرایش اطلاعات پایه و عکس
+                            ویرایش اطلاعات
                         </Button>
-                         <Button asChild className="w-full">
+                         <Button asChild className="w-full flex-1">
                             <Link href="/inbox">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                                 صندوق ورودی
                             </Link>
                         </Button>
-                        <Button asChild className="w-full" variant="secondary">
+                        <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.phone}`}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 مشاهده پروفایل عمومی
@@ -412,28 +349,6 @@ export default function ProfilePage() {
             </CardFooter>
           </div>
         </div>
-      </Card>
-
-      <Card>
-        <CardHeader>
-            <CardTitle className="font-headline text-2xl">بازخوردها و نظرات مشتریان</CardTitle>
-            <CardDescription>در اینجا می‌توانید نظراتی که مشتریان برای شما ثبت کرده‌اند را ببینید.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {reviews.length > 0 ? (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 font-bold text-lg mb-4 p-4 bg-muted rounded-lg">
-                        <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
-                        <span>میانگین امتیاز: {provider.rating} از {reviews.length} نظر</span>
-                    </div>
-                    {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                    <p>هنوز نظری برای شما ثبت نشده است.</p>
-                </div>
-            )}
-        </CardContent>
       </Card>
     </div>
   );
