@@ -13,7 +13,6 @@ import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { StarRating } from '@/components/ui/star-rating';
 
 export default function ProfilePage() {
   const { user, isLoggedIn } = useAuth();
@@ -208,9 +207,6 @@ export default function ProfilePage() {
             </div>
             <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
             <CardDescription className="text-lg">{provider.service}</CardDescription>
-            <div className="mt-2">
-                <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
-            </div>
              <div className="mt-4 flex items-center text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 ml-2 text-accent" />
                 <span>{provider.location}</span>
@@ -303,5 +299,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
