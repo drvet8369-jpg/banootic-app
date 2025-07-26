@@ -19,6 +19,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { StarRating } from '@/components/ui/star-rating';
 import Image from 'next/image';
 import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -157,6 +162,7 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -214,101 +220,122 @@ export default function ProviderProfilePage() {
 
   return (
     <div className="py-12 md:py-20 flex justify-center">
-      <div className="max-w-2xl w-full">
-         <Card className="flex flex-col w-full overflow-hidden h-full">
-            <div className="p-6 flex flex-col items-center text-center bg-muted/30">
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-                {provider.profileImage && provider.profileImage.src ? (
+      <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
+        <div className="max-w-2xl w-full">
+            <Card className="flex flex-col w-full overflow-hidden h-full">
+                <div className="p-6 flex flex-col items-center text-center bg-muted/30">
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
+                    {provider.profileImage && provider.profileImage.src ? (
+                        <Image
+                        src={provider.profileImage.src}
+                        alt={provider.name}
+                        fill
+                        className="object-cover"
+                        data-ai-hint={provider.profileImage.aiHint}
+                        />
+                    ) : (
+                        <div className="bg-muted w-full h-full flex items-center justify-center">
+                        <User className="w-12 h-12 text-muted-foreground" />
+                        </div>
+                    )}
+                    </div>
+                    <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
+                    <CardDescription className="text-base">{provider.service}</CardDescription>
+                    <div className="mt-2">
+                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                    </div>
+                </div>
+
+                <CardContent className="p-6 flex-grow flex flex-col">
+                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+                    <Separator className="my-4" />
+                    <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
+                    {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {provider.portfolio.map((item, index) => (
+                                <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                    <div 
+                                        className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                        onClick={() => setSelectedImage(item.src)}
+                                    >
+                                        <Image
+                                            src={item.src}
+                                            alt={`نمونه کار ${index + 1}`}
+                                            fill
+                                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                            data-ai-hint={item.aiHint}
+                                        />
+                                        {isOwnerViewing && (
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
+                                            aria-label={`حذف نمونه کار ${index + 1}`}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                        )}
+                                    </div>
+                                </DialogTrigger>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نمونه کاری اضافه نشده است.</p>
+                        </div>
+                    )}
+                </CardContent>
+
+                {!isOwnerViewing && (
+                <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
+                    <Button asChild className="w-full">
+                        <Link href={`/chat/${provider.phone}`}>
+                            <MessageSquare className="w-4 h-4 ml-2" />
+                            ارسال پیام
+                        </Link>
+                    </Button>
+                    <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
+                </CardFooter>
+                )}
+
+                <Separator />
+                
+                <div id="reviews" className="p-6 scroll-mt-20">
+                    <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
+                    {reviews.length > 0 ? (
+                        <div className="space-y-4">
+                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                        </div>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                        </div>
+                    )}
+                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
+                </div>
+            </Card>
+        </div>
+
+        {selectedImage && (
+            <DialogContent className="p-0 border-0 max-w-4xl bg-transparent shadow-none">
+                <div className="relative w-full aspect-[4/3] max-h-[80vh]">
                     <Image
-                    src={provider.profileImage.src}
-                    alt={provider.name}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={provider.profileImage.aiHint}
+                        src={selectedImage}
+                        alt="نمونه کار تمام صفحه"
+                        fill
+                        className="object-contain"
                     />
-                ) : (
-                    <div className="bg-muted w-full h-full flex items-center justify-center">
-                    <User className="w-12 h-12 text-muted-foreground" />
-                    </div>
-                )}
                 </div>
-                <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
-                <CardDescription className="text-base">{provider.service}</CardDescription>
-                <div className="mt-2">
-                    <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
-                </div>
-            </div>
-
-            <CardContent className="p-6 flex-grow flex flex-col">
-                <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
-                <Separator className="my-4" />
-                <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
-                 {provider.portfolio && provider.portfolio.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {provider.portfolio.map((item, index) => (
-                            <div key={`${provider.id}-portfolio-${index}`} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
-                            <Image
-                                src={item.src}
-                                alt={`نمونه کار ${index + 1}`}
-                                fill
-                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                data-ai-hint={item.aiHint}
-                                />
-                             {isOwnerViewing && (
-                               <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => deletePortfolioItem(index)}
-                                  aria-label={`حذف نمونه کار ${index + 1}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                             )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                        <p>هنوز نمونه کاری اضافه نشده است.</p>
-                    </div>
-                )}
-            </CardContent>
-
-            {!isOwnerViewing && (
-              <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                  <Button asChild className="w-full">
-                      <Link href={`/chat/${provider.phone}`}>
-                          <MessageSquare className="w-4 h-4 ml-2" />
-                          ارسال پیام
-                      </Link>
-                  </Button>
-                  <Button asChild className="w-full" variant="secondary">
-                      <a href={`tel:${provider.phone}`}>
-                          <Phone className="w-4 h-4 ml-2" />
-                          تماس
-                      </a>
-                  </Button>
-              </CardFooter>
-            )}
-
-            <Separator />
-            
-            <div id="reviews" className="p-6 scroll-mt-20">
-                <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                {reviews.length > 0 ? (
-                    <div className="space-y-4">
-                        {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
-                    </div>
-                ) : (
-                    <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                        <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
-                    </div>
-                )}
-                 <ReviewForm providerId={provider.id} onSubmit={loadData} />
-            </div>
-          </Card>
-      </div>
+            </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
+
