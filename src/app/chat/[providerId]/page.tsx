@@ -290,7 +290,7 @@ export default function ChatPage() {
                     className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}
                   >
                     {!senderIsUser && (
-                      <Avatar className="h-8 w-8">
+                      <Avatar className="h-8 w-8 select-none">
                         {otherPersonDetails?.profileImage?.src ? (
                             <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
                         ) : null }
@@ -333,7 +333,7 @@ export default function ChatPage() {
                     )}
 
                      {senderIsUser && !isEditing && (
-                       <Avatar className="h-8 w-8">
+                       <Avatar className="h-8 w-8 select-none">
                           <AvatarFallback>شما</AvatarFallback>
                       </Avatar>
                     )}
