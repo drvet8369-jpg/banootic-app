@@ -22,8 +22,10 @@ import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog"
 
 // Reusable Avatar components for ReviewCard
@@ -221,7 +223,6 @@ export default function ProviderProfilePage() {
 
   return (
     <div className="py-12 md:py-20 flex justify-center">
-      <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
         <div className="max-w-2xl w-full">
             <Card className="flex flex-col w-full overflow-hidden h-full">
                 <div className="p-6 flex flex-col items-center text-center bg-muted/30">
@@ -252,35 +253,53 @@ export default function ProviderProfilePage() {
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {provider.portfolio.map((item, index) => (
-                                <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
-                                    <div 
-                                        className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                        onClick={() => setSelectedImage(item.src)}
-                                    >
-                                        <Image
-                                            src={item.src}
-                                            alt={`نمونه کار ${index + 1}`}
-                                            fill
-                                            className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                            data-ai-hint={item.aiHint}
-                                        />
-                                        {isOwnerViewing && (
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
-                                            aria-label={`حذف نمونه کار ${index + 1}`}
+                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {provider.portfolio.map((item, index) => (
+                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                        <div 
+                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setSelectedImage(item.src)}
                                         >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                        )}
+                                            <Image
+                                                src={item.src}
+                                                alt={`نمونه کار ${index + 1}`}
+                                                fill
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-ai-hint={item.aiHint}
+                                            />
+                                            {isOwnerViewing && (
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
+                                                aria-label={`حذف نمونه کار ${index + 1}`}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                            )}
+                                        </div>
+                                    </DialogTrigger>
+                                ))}
+                            </div>
+                           
+                            <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                    <DialogTitle className="sr-only">نمایش نمونه کار</DialogTitle>
+                                </DialogHeader>
+                                {selectedImage && (
+                                    <div className="relative w-full aspect-video">
+                                        <Image
+                                            src={selectedImage}
+                                            alt="نمونه کار تمام صفحه"
+                                            fill
+                                            className="object-contain"
+                                        />
                                     </div>
-                                </DialogTrigger>
-                            ))}
-                        </div>
+                                )}
+                            </DialogContent>
+                        </Dialog>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
                             <p>هنوز نمونه کاری اضافه نشده است.</p>
@@ -322,21 +341,6 @@ export default function ProviderProfilePage() {
                 </div>
             </Card>
         </div>
-
-        {selectedImage && (
-            <DialogContent className="p-0 border-0 max-w-4xl bg-transparent shadow-none">
-                <DialogTitle className="sr-only">نمونه کار تمام صفحه</DialogTitle>
-                <div className="relative w-full aspect-[4/3] max-h-[80vh]">
-                    <Image
-                        src={selectedImage}
-                        alt="نمونه کار تمام صفحه"
-                        fill
-                        className="object-contain"
-                    />
-                </div>
-            </DialogContent>
-        )}
-      </Dialog>
     </div>
   );
 }
