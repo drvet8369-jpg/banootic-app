@@ -285,6 +285,9 @@ export default function ProviderProfilePage() {
                             </div>
                            
                             <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                                <DialogHeader className="sr-only">
+                                  <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
+                                </DialogHeader>
                                <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-50">
                                   <X className="h-6 w-6" />
                                   <span className="sr-only">بستن</span>
