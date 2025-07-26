@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2, Camera } from 'lucide-react';
+import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2, Camera, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -205,33 +205,6 @@ export default function ProfilePage() {
                       <User className="w-16 h-16 text-muted-foreground" />
                   </div>
                 )}
-                <input
-                    type="file"
-                    ref={profilePicInputRef}
-                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                    className="hidden"
-                    accept="image/*"
-                />
-                <Button 
-                  onClick={handleEditProfilePicClick} 
-                  variant="outline"
-                  size="icon" 
-                  className="absolute bottom-2 right-2 rounded-full h-10 w-10 bg-background/80 transition-opacity backdrop-blur-sm"
-                  aria-label="تغییر عکس پروفایل"
-                >
-                    <Camera className="w-5 h-5" />
-                </Button>
-                 {provider.profileImage && provider.profileImage.src && (
-                     <Button 
-                        onClick={handleDeleteProfilePicture} 
-                        variant="destructive"
-                        size="icon" 
-                        className="absolute bottom-2 left-2 rounded-full h-10 w-10"
-                        aria-label="حذف عکس پروفایل"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </Button>
-                )}
             </div>
             <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
             <CardDescription className="text-lg">{provider.service}</CardDescription>
@@ -257,6 +230,13 @@ export default function ProfilePage() {
                     type="file" 
                     ref={portfolioFileInputRef} 
                     onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <input
+                    type="file"
+                    ref={profilePicInputRef}
+                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
                     className="hidden"
                     accept="image/*"
                   />
@@ -295,16 +275,24 @@ export default function ProfilePage() {
                     </div>
                  )}
             </CardContent>
-             <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
-                <Button asChild className="w-full">
+             <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t mt-6">
+                <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full">
+                    <Camera className="w-4 h-4 ml-2" />
+                    تغییر عکس پروفایل
+                </Button>
+                <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full">
+                    <Trash2 className="w-4 h-4 ml-2" />
+                    حذف عکس پروفایل
+                </Button>
+                 <Button asChild className="w-full">
                     <Link href="/inbox">
                         <Inbox className="w-4 h-4 ml-2" />
-                        مشاهده صندوق ورودی
+                        صندوق ورودی
                     </Link>
                 </Button>
                  <Button asChild className="w-full" variant="secondary">
                     <Link href={`/provider/${provider.phone}`}>
-                        <User className="w-4 h-4 ml-2" />
+                        <Eye className="w-4 h-4 ml-2" />
                         مشاهده پروفایل عمومی
                     </Link>
                 </Button>
@@ -315,3 +303,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
