@@ -135,7 +135,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
                 {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="w-4 h-4 ml-2" />}
                 ارسال نظر
             </Button>
-            {isButtonDisabled && !isSubmitting && (
+             {isButtonDisabled && !isSubmitting && (
                 <p className="text-xs text-center text-muted-foreground">
                     {rating === 0 && !comment.trim() ? "لطفاً برای ثبت نظر، امتیاز و متن نظر را وارد کنید." :
                      rating === 0 ? "لطفاً امتیاز خود را با انتخاب ستاره‌ها مشخص کنید." :
@@ -152,6 +152,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
+  const { user } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -192,6 +193,8 @@ export default function ProviderProfilePage() {
   if (!provider) {
     notFound();
   }
+  
+  const isOwnerViewing = user && user.phone === provider.phone;
 
   return (
     <div className="py-12 md:py-20 flex justify-center">
@@ -245,20 +248,22 @@ export default function ProviderProfilePage() {
                 )}
             </CardContent>
 
-            <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                <Button asChild className="w-full">
-                    <Link href={`/chat/${provider.phone}`}>
-                        <MessageSquare className="w-4 h-4 ml-2" />
-                        ارسال پیام
-                    </Link>
-                </Button>
-                <Button asChild className="w-full" variant="secondary">
-                    <a href={`tel:${provider.phone}`}>
-                        <Phone className="w-4 h-4 ml-2" />
-                        تماس
-                    </a>
-                </Button>
-            </CardFooter>
+            {!isOwnerViewing && (
+              <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
+                  <Button asChild className="w-full">
+                      <Link href={`/chat/${provider.phone}`}>
+                          <MessageSquare className="w-4 h-4 ml-2" />
+                          ارسال پیام
+                      </Link>
+                  </Button>
+                  <Button asChild className="w-full" variant="secondary">
+                      <a href={`tel:${provider.phone}`}>
+                          <Phone className="w-4 h-4 ml-2" />
+                          تماس
+                      </a>
+                  </Button>
+              </CardFooter>
+            )}
 
             <Separator />
             
@@ -280,5 +285,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-
-    
