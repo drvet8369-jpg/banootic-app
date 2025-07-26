@@ -119,11 +119,7 @@ export default function Header() {
           <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
         
-        <div className="flex-1 flex justify-center items-center md:gap-6">
-            <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-              <Link href="/#categories" className="transition-colors hover:text-foreground/80 text-foreground/60">خدمات</Link>
-            </nav>
-        </div>
+        <div className="flex-1 flex justify-center items-center md:gap-6" />
 
         <div className="flex items-center gap-2">
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
