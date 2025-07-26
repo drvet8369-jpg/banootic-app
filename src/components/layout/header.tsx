@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Logo } from './logo';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
@@ -22,11 +23,39 @@ import { usePathname } from 'next/navigation';
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
 
   useEffect(() => {
     setIsSheetOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadMessages(0);
+      return;
+    }
+
+    const checkUnread = () => {
+      try {
+        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const totalUnread = Object.values(allChatsData)
+          .filter((chat: any) => chat.members?.includes(user.phone))
+          .reduce((acc: number, chat: any) => {
+            const selfInfo = chat.participants?.[user.phone];
+            return acc + (selfInfo?.unreadCount || 0);
+          }, 0);
+        setUnreadMessages(totalUnread);
+      } catch (e) {
+        // console.error("Failed to check unread messages", e);
+      }
+    };
+
+    checkUnread();
+    const interval = setInterval(checkUnread, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   const getInitials = (name: string) => {
     if (!name) return 'کاربر';
@@ -48,24 +77,21 @@ export default function Header() {
       </div>
 
       <nav className="flex-grow p-4 space-y-2">
-        <SheetClose asChild>
-          <Link href="/#categories" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-            <Briefcase className="h-5 w-5" />
-            مشاهده خدمات
-          </Link>
-        </SheetClose>
-        {isLoggedIn && user?.accountType === 'provider' && (
+        {isLoggedIn && (
            <>
-             <SheetClose asChild>
-              <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                 <UserRound className="h-5 w-5" />
-                 پروفایل من
-              </Link>
-            </SheetClose>
+             {user?.accountType === 'provider' && (
+                <SheetClose asChild>
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <UserRound className="h-5 w-5" />
+                    پروفایل من
+                  </Link>
+                </SheetClose>
+             )}
             <SheetClose asChild>
-              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                 صندوق ورودی
+                 <span>صندوق ورودی</span>
+                 {unreadMessages > 0 && <Badge variant="destructive" className="absolute top-1 left-1 scale-75">{unreadMessages}</Badge>}
               </Link>
             </SheetClose>
            </>
@@ -130,6 +156,7 @@ export default function Header() {
                     <Avatar>
                         <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
+                     {unreadMessages > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 scale-75 p-1">{unreadMessages}</Badge>}
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -143,22 +170,21 @@ export default function Header() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {user.accountType === 'provider' && (
-                    <>
                         <DropdownMenuItem asChild>
                         <Link href="/profile">
                             <UserRound className="ml-2 h-4 w-4" />
                             <span>پروفایل من</span>
                         </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                        <Link href="/inbox">
+                    )}
+                     <DropdownMenuItem asChild>
+                        <Link href="/inbox" className="relative">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                             <span>صندوق ورودی</span>
+                             {unreadMessages > 0 && <Badge variant="destructive" className="absolute top-1 left-1 scale-75">{unreadMessages}</Badge>}
                         </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                    </>
-                    )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>
                     <LogOut className="ml-2 h-4 w-4" />
                     <span>خروج</span>

@@ -1,13 +1,14 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Inbox, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 
@@ -17,16 +18,15 @@ interface Chat {
   otherMemberId: string;
   lastMessage: string;
   updatedAt: string;
+  unreadCount: number;
 }
 
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  // Check if there is a second word and it's not a number (for 'مشتری 1234' case)
   if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
     return `${names[0][0]}${names[1][0]}`;
   }
-  // Otherwise, return the first two characters of the full name
   return name.substring(0, 2);
 };
 
@@ -59,8 +59,8 @@ export default function InboxPage() {
             if (!otherMemberId) return null;
             
             const otherMemberInfo = chat.participants[otherMemberId];
-            
-            // Ensure we have a valid name, otherwise create a placeholder
+            const selfInfo = chat.participants[user.phone];
+
             const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
@@ -69,6 +69,7 @@ export default function InboxPage() {
                 otherMemberName: otherMemberName,
                 lastMessage: chat.lastMessage || '',
                 updatedAt: chat.updatedAt,
+                unreadCount: selfInfo?.unreadCount || 0,
             };
         })
         .filter((chat): chat is Chat => chat !== null)
@@ -105,17 +106,37 @@ export default function InboxPage() {
     );
   }
   
-  if (user?.accountType !== 'provider') {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
-        <Inbox className="w-16 h-16 text-muted-foreground mb-4" />
-        <h1 className="font-headline text-2xl">صفحه مخصوص هنرمندان</h1>
-        <p className="text-muted-foreground mt-2">این صفحه فقط برای ارائه‌دهندگان خدمات (هنرمندان) در دسترس است.</p>
-        <Button asChild className="mt-6">
-          <Link href="/">بازگشت به صفحه اصلی</Link>
-        </Button>
-      </div>
-    );
+  if (chats.length === 0 && !isLoading && !error) {
+     return (
+       <div className="max-w-4xl mx-auto py-12">
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
+                 <CardDescription>
+                    {user.accountType === 'provider' 
+                        ? 'آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید.' 
+                        : 'آخرین گفتگوهای خود با هنرمندان را در اینجا مشاهده کنید.'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <div className="text-center py-20 border-2 border-dashed rounded-lg">
+                    <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
+                    <p className="text-muted-foreground mt-2">
+                        {user.accountType === 'provider'
+                            ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
+                            : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
+                    </p>
+                    {user.accountType === 'customer' && (
+                        <Button asChild className="mt-6">
+                            <Link href="/">مشاهده هنرمندان</Link>
+                        </Button>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+       </div>
+     )
   }
 
   return (
@@ -123,19 +144,12 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
             <div className="text-center py-20 text-destructive bg-destructive/10 rounded-lg">
               <p>{error}</p>
-            </div>
-          )}
-          {!error && chats.length === 0 && (
-            <div className="text-center py-20 border-2 border-dashed rounded-lg">
-              <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
-              <p className="text-muted-foreground mt-2">وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.</p>
             </div>
           )}
           {!error && chats.length > 0 && (
@@ -153,7 +167,12 @@ export default function InboxPage() {
                                     {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR })}
                                 </p>
                             </div>
-                            <p className="text-sm text-muted-foreground truncate font-semibold">{chat.lastMessage}</p>
+                            <div className="flex justify-between items-center mt-1">
+                                <p className="text-sm text-muted-foreground truncate font-semibold">{chat.lastMessage}</p>
+                                {chat.unreadCount > 0 && (
+                                    <Badge variant="destructive" className="flex-shrink-0">{chat.unreadCount}</Badge>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </Link>

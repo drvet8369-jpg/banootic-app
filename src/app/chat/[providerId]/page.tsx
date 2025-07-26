@@ -45,10 +45,10 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const getChatId = useCallback(() => {
-    if (!user || !otherPersonDetails) return null;
-    return [user.phone, otherPersonDetails.phone].sort().join('_');
-  }, [user, otherPersonDetails]);
+  const getChatId = useCallback((phone1?: string, phone2?: string) => {
+    if (!phone1 || !phone2) return null;
+    return [phone1, phone2].sort().join('_');
+  }, []);
   
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -70,14 +70,12 @@ export default function ChatPage() {
     }
 
     let details: OtherPersonDetails | null = null;
-    // Always get the most up-to-date provider list from localStorage
     const allProviders = getProviders();
     const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
       details = provider;
     } else {
-      // This case handles when a provider opens a chat with a new customer
       const customerPhone = otherPersonIdOrProviderId;
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
     }
@@ -89,19 +87,28 @@ export default function ChatPage() {
     }
     setOtherPersonDetails(details);
     
-    const chatId = [user.phone, details.phone].sort().join('_');
-    try {
-        const storedMessages = localStorage.getItem(`chat_${chatId}`);
-        if (storedMessages) {
-            setMessages(JSON.parse(storedMessages));
-        }
-    } catch(e) {
-        console.error("Failed to load messages from localStorage", e);
+    const chatId = getChatId(user.phone, details.phone);
+    if (chatId) {
+      try {
+          const storedMessages = localStorage.getItem(`chat_${chatId}`);
+          if (storedMessages) {
+              setMessages(JSON.parse(storedMessages));
+          }
+
+          // Mark messages as read when chat is opened
+          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+              allChats[chatId].participants[user.phone].unreadCount = 0;
+              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+          }
+      } catch(e) {
+          console.error("Failed to load/update chat from localStorage", e);
+      }
     }
     
     setIsLoading(false);
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
 
 
   if (!isLoggedIn || !user) {
@@ -144,44 +151,37 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setNewMessage('');
 
-    const chatId = getChatId();
+    const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (chatId) {
         try {
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-            
-            const chatInfo = {
+            const currentChat = allChats[chatId] || {
                 id: chatId,
                 members: [user.phone, otherPersonDetails.phone],
-                lastMessage: text,
-                updatedAt: new Date().toISOString(),
                 participants: {
-                  [user.phone]: {
-                    id: user.phone,
-                    name: user.name,
-                    otherMemberId: otherPersonDetails.phone,
-                  },
-                  [otherPersonDetails.phone]: {
-                    id: otherPersonDetails.phone,
-                    name: otherPersonDetails.name,
-                    otherMemberId: user.phone,
-                  }
+                    [user.phone]: { name: user.name, unreadCount: 0 },
+                    [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
                 }
             };
             
-            const currentChatData = allChats[chatId] || {};
-            
-            const mergedParticipants = {
-              ...(currentChatData.participants || {}),
-              ...chatInfo.participants,
-            };
+            // Update last message and timestamp
+            currentChat.lastMessage = text;
+            currentChat.updatedAt = new Date().toISOString();
 
-            const updatedChat = {
-                ...currentChatData,
-                ...chatInfo,
-                participants: mergedParticipants,
-            };
-            
-            allChats[chatId] = updatedChat;
+            // Increment unread count for the receiver
+            const receiverPhone = otherPersonDetails.phone;
+            if (currentChat.participants[receiverPhone]) {
+                currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
+            } else {
+                 currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
+            }
+
+            // Ensure sender's participant data exists
+            if (!currentChat.participants[user.phone]) {
+                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
+            }
+
+            allChats[chatId] = currentChat;
             
             localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
@@ -198,7 +198,13 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    return '/'; // Go back to home page from chat for customers
+    // For customers, check if they have any chats, if so link to inbox, otherwise home.
+    try {
+      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
+      if (userChats.length > 0) return '/inbox';
+    } catch (e) { /* ignore */ }
+    return '/'; 
   }
 
 
