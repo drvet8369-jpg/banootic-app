@@ -265,17 +265,17 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
         </CardContent>
         <div className="p-4 border-t bg-background shrink-0">
-          <form onSubmit={handleSubmit} className="relative">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
               <Input 
                 type="text" 
                 placeholder="پیام خود را بنویسید..." 
-                className="pr-12"
+                className="flex-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 disabled={isSending || isLoading}
               />
-              <Button size="icon" type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" disabled={isSending || !newMessage.trim() || isLoading}>
-                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading}>
+                  {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
               </Button>
           </form>
         </div>
