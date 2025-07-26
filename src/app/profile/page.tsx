@@ -5,7 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2, Camera, Eye } from 'lucide-react';
+import { Input as UiInput } from '@/components/ui/input';
+import { Textarea as UiTextarea } from '@/components/ui/textarea';
+import { MapPin, User, AlertTriangle, Inbox, PlusCircle, Trash2, Camera, Eye, Edit, Save, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -22,6 +24,9 @@ export default function ProfilePage() {
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+
   useEffect(() => {
     if (user && user.accountType === 'provider') {
       const allProviders = getProviders();
@@ -29,11 +34,42 @@ export default function ProfilePage() {
       
       if (currentProvider) {
         setProvider(currentProvider);
+        setEditedData({
+            name: currentProvider.name,
+            service: currentProvider.service,
+            bio: currentProvider.bio,
+        });
       } else {
         console.warn("Provider not found in list after login. This might indicate an issue.");
       }
     }
   }, [user]);
+
+  const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditedData(prev => ({...prev, [name]: value}));
+  }
+
+  const handleSaveChanges = () => {
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+        toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
+        return;
+    }
+
+    const success = updateProviderData((p) => {
+        p.name = editedData.name;
+        p.service = editedData.service;
+        p.bio = editedData.bio;
+    });
+
+    if(success) {
+        toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
+        setIsEditing(false);
+    } else {
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+    }
+  }
+
 
   const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
       const reader = new FileReader();
@@ -76,7 +112,7 @@ export default function ProfilePage() {
   }
 
   const updateProviderData = (updateFn: (provider: Provider) => void) => {
-    if (!user) return;
+    if (!user) return false;
     const allProviders = getProviders();
     const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
     const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
@@ -115,6 +151,7 @@ export default function ProfilePage() {
   
   const handleProfilePictureChange = (newImageSrc: string) => {
       const success = updateProviderData((p) => {
+        if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
         p.profileImage.src = newImageSrc;
       });
       if (success) {
@@ -126,7 +163,7 @@ export default function ProfilePage() {
 
   const handleDeleteProfilePicture = () => {
     const success = updateProviderData((p) => {
-      p.profileImage.src = ''; // Set src to empty to trigger fallback
+      if (p.profileImage) p.profileImage.src = ''; // Set src to empty to trigger fallback
     });
     if (success) {
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
@@ -205,8 +242,17 @@ export default function ProfilePage() {
                   </div>
                 )}
             </div>
-            <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
-            <CardDescription className="text-lg">{provider.service}</CardDescription>
+            {isEditing ? (
+                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
+            ) : (
+                <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
+            )}
+             {isEditing ? (
+                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg" />
+            ) : (
+                <CardDescription className="text-lg">{provider.service}</CardDescription>
+            )}
+
              <div className="mt-4 flex items-center text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 ml-2 text-accent" />
                 <span>{provider.location}</span>
@@ -217,7 +263,11 @@ export default function ProfilePage() {
                 <CardTitle className="font-headline text-2xl">درباره شما</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
+              {isEditing ? (
+                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
+              ) : (
+                  <p className="text-base text-foreground/80 leading-relaxed">{provider.bio}</p>
+              )}
                <Separator className="my-6" />
                 <div className="mb-4">
                   <h3 className="font-headline text-xl font-semibold mb-4 text-center">نمونه کارهای شما</h3>
@@ -271,27 +321,46 @@ export default function ProfilePage() {
                     </div>
                  )}
             </CardContent>
-             <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t mt-6">
-                <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full">
-                    <Camera className="w-4 h-4 ml-2" />
-                    تغییر عکس پروفایل
-                </Button>
-                <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full">
-                    <Trash2 className="w-4 h-4 ml-2" />
-                    حذف عکس پروفایل
-                </Button>
-                 <Button asChild className="w-full">
-                    <Link href="/inbox">
-                        <Inbox className="w-4 h-4 ml-2" />
-                        صندوق ورودی
-                    </Link>
-                </Button>
-                 <Button asChild className="w-full" variant="secondary">
-                    <Link href={`/provider/${provider.phone}`}>
-                        <Eye className="w-4 h-4 ml-2" />
-                        مشاهده پروفایل عمومی
-                    </Link>
-                </Button>
+             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-6">
+                {isEditing ? (
+                    <>
+                         <Button onClick={handleSaveChanges} className="w-full flex-1">
+                            <Save className="w-4 h-4 ml-2" />
+                            ذخیره تغییرات
+                        </Button>
+                        <Button onClick={() => setIsEditing(false)} variant="ghost" className="w-full flex-1">
+                            <XCircle className="w-4 h-4 ml-2" />
+                            لغو
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
+                            <Edit className="w-4 h-4 ml-2" />
+                            ویرایش اطلاعات
+                        </Button>
+                        <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full">
+                            <Camera className="w-4 h-4 ml-2" />
+                            تغییر عکس پروفایل
+                        </Button>
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف عکس پروفایل
+                        </Button>
+                         <Button asChild className="w-full">
+                            <Link href="/inbox">
+                                <Inbox className="w-4 h-4 ml-2" />
+                                صندوق ورودی
+                            </Link>
+                        </Button>
+                         <Button asChild className="w-full" variant="secondary">
+                            <Link href={`/provider/${provider.phone}`}>
+                                <Eye className="w-4 h-4 ml-2" />
+                                مشاهده پروفایل عمومی
+                            </Link>
+                        </Button>
+                    </>
+                )}
             </CardFooter>
           </div>
         </div>
