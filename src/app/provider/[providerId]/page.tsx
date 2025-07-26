@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2 } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -284,12 +284,13 @@ export default function ProviderProfilePage() {
                                 ))}
                             </div>
                            
-                            <DialogContent className="max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle className="sr-only">نمایش نمونه کار</DialogTitle>
-                                </DialogHeader>
+                            <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                               <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-50">
+                                  <X className="h-6 w-6" />
+                                  <span className="sr-only">بستن</span>
+                                </DialogClose>
                                 {selectedImage && (
-                                    <div className="relative w-full aspect-video">
+                                    <div className="relative w-full h-full">
                                         <Image
                                             src={selectedImage}
                                             alt="نمونه کار تمام صفحه"
