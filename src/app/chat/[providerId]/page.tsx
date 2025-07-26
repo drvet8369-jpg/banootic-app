@@ -312,14 +312,16 @@ export default function ChatPage() {
                             <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
                         </div>
                     ) : (
-                         <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                            <p className="text-sm font-semibold">{message.text}</p>
-                            {message.isEdited && <span className="text-xs opacity-70 mt-1 block">(ویرایش شده)</span>}
-                            {senderIsUser && (
+                         <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
+                             <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                <p className="text-sm font-semibold">{message.text}</p>
+                                {message.isEdited && <span className="text-xs opacity-70 mt-1 block">(ویرایش شده)</span>}
+                            </div>
+                             {senderIsUser && (
                                 <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="absolute -left-8 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={() => handleStartEdit(message)}
                                 >
                                     <Edit className="w-4 h-4"/>
