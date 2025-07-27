@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, RefreshCw } from 'lucide-react';
+import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, RefreshCw, Download } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -19,12 +19,14 @@ import { Badge } from '@/components/ui/badge';
 import { Logo } from './logo';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
+  const { installPrompt, canInstall } = usePWAInstall();
 
   useEffect(() => {
     setIsSheetOpen(false);
@@ -148,6 +150,11 @@ export default function Header() {
         <div className="flex-1 flex justify-center items-center md:gap-6" />
 
         <div className="flex items-center gap-2">
+            {canInstall && (
+              <Button variant="ghost" size="icon" onClick={installPrompt} title="نصب اپلیکیشن">
+                <Download className="h-5 w-5" />
+              </Button>
+            )}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
             {isLoggedIn && user ? (
                 <DropdownMenu>
