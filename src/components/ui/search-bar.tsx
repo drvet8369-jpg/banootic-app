@@ -18,7 +18,7 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="bg-muted w-full p-2">
+    <div className="bg-muted border-b w-full p-2">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <form onSubmit={handleSearch} className="relative">
           <Input

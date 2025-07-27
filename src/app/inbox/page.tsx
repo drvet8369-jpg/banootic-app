@@ -39,6 +39,7 @@ export default function InboxPage() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // This effect runs only on the client, preventing hydration mismatch for date formatting.
     setIsClient(true);
   }, []);
 

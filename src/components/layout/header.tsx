@@ -20,6 +20,7 @@ import { Logo } from './logo';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import SearchBar from '@/components/ui/search-bar';
 
 
 export default function Header() {
@@ -230,6 +231,7 @@ export default function Header() {
   );
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
       <div className="container flex h-16 items-center justify-between gap-4 mx-auto">
         <Link href="/" className="flex items-center gap-2">
@@ -243,5 +245,7 @@ export default function Header() {
         {isClient ? renderClientSideContent() : renderSkeleton()}
       </div>
     </header>
+    <SearchBar />
+    </>
   );
 }
