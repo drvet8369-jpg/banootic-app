@@ -158,20 +158,7 @@ export default function Header() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          {!isClient ? (
-            // Render a static placeholder on the server and during initial client render
-            // to prevent hydration mismatch. This has the same structure but no client-side logic.
-            <div className="flex items-center gap-4">
-                <div className="hidden md:flex items-center gap-2">
-                    <div className="w-20 h-10 bg-muted/50 rounded-md animate-pulse"></div>
-                    <div className="w-16 h-10 bg-muted/50 rounded-md animate-pulse"></div>
-                </div>
-                <div className="md:hidden">
-                    <div className="w-10 h-10 bg-muted/50 rounded-md animate-pulse"></div>
-                </div>
-            </div>
-          ) : (
-            // Render the full interactive component only on the client after mounting
+          {isClient && (
             <>
               {installPrompt && (
                 <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن">
