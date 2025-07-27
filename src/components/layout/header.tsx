@@ -233,7 +233,8 @@ export default function Header() {
               </div>
             </>
           ) : (
-             // Static placeholder to prevent hydration mismatch
+             // Static placeholder to prevent hydration mismatch by rendering a static placeholder
+             // with the same structure but no client-side logic.
             <div className="flex items-center gap-4 h-10">
                 <div className="hidden md:flex items-center gap-2">
                     <div className="w-20 h-10 bg-muted/50 rounded-md animate-pulse"></div>
