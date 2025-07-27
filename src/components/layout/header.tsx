@@ -26,6 +26,8 @@ export default function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
+  // This custom hook manages the logic for the PWA installation prompt.
+  // It provides the `installPrompt` function and a boolean `canInstall` to know if the app can be installed.
   const { installPrompt, canInstall } = usePWAInstall();
 
   useEffect(() => {
@@ -150,8 +152,8 @@ export default function Header() {
         <div className="flex-1 flex justify-center items-center md:gap-6" />
 
         <div className="flex items-center gap-2">
-            {canInstall && (
-              <Button variant="ghost" size="icon" onClick={() => installPrompt && installPrompt()} title="نصب اپلیکیشن">
+            {installPrompt && (
+              <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن">
                 <Download className="h-5 w-5" />
               </Button>
             )}
