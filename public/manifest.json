@@ -1,11 +1,10 @@
-
 {
-  "name": "Artisa",
-  "short_name": "Artisa",
-  "description": "A marketplace for talented women's home services.",
+  "name": "هنربانو",
+  "short_name": "هنربانو",
+  "description": "بازاری برای خدمات خانگی بانوان هنرمند",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#A3BEA6",
+  "background_color": "#ffffff",
   "theme_color": "#A3BEA6",
   "icons": [
     {

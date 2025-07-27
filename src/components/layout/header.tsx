@@ -27,8 +27,8 @@ export default function Header() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   // This custom hook manages the logic for the PWA installation prompt.
-  // It provides the `installPrompt` function and a boolean `canInstall` to know if the app can be installed.
-  const { installPrompt, canInstall } = usePWAInstall();
+  // It provides the `installPrompt` function. The button will be shown if this is not null.
+  const { installPrompt } = usePWAInstall();
 
   useEffect(() => {
     setIsSheetOpen(false);
