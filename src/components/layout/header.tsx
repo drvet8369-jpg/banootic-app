@@ -149,7 +149,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between gap-4">
+      <div className="container flex h-16 items-center justify-between gap-4 px-4">
         <Link href="/" className="flex items-center gap-2">
           <Logo className="h-8 w-8 text-primary-foreground" />
           <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
@@ -223,7 +223,7 @@ export default function Header() {
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
-                      <Menu className="h-6 w-6" />
+                      <Menu className="h-7 w-7" />
                       <span className="sr-only">باز کردن منو</span>
                   </Button>
                   </SheetTrigger>
