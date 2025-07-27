@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, Home, LogIn, UserPlus, UserCircle, Briefcase, UserRound, RefreshCw, Download } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, Download } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -35,12 +35,14 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    // Close sheet on navigation
     if (isClient) {
       setIsSheetOpen(false);
     }
   }, [pathname, isClient]);
 
   useEffect(() => {
+    // Check for unread messages only on the client
     if (!user || !isClient) {
       setUnreadMessages(0);
       return;
@@ -62,13 +64,13 @@ export default function Header() {
     };
 
     checkUnread();
-    const interval = setInterval(checkUnread, 3000); // Check every 3 seconds
+    const interval = setInterval(checkUnread, 3000);
 
     return () => clearInterval(interval);
   }, [user, isClient]);
 
   const getInitials = (name: string) => {
-    if (!name) return 'کاربر';
+    if (!name) return '..';
     const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
@@ -85,9 +87,8 @@ export default function Header() {
            <span className="font-display text-2xl font-bold">هنربانو</span>
         </Link>
       </div>
-
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && (
+        {isLoggedIn ? (
            <>
              {user?.accountType === 'provider' && (
                 <SheetClose asChild>
@@ -105,8 +106,7 @@ export default function Header() {
               </Link>
             </SheetClose>
            </>
-        )}
-        {!isLoggedIn && (
+        ) : (
           <>
             <SheetClose asChild>
               <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
@@ -123,7 +123,6 @@ export default function Header() {
           </>
         )}
       </nav>
-
       {isLoggedIn && user && (
         <div className="mt-auto p-4 border-t">
             <div className="flex items-center gap-3 mb-4">
@@ -146,7 +145,6 @@ export default function Header() {
     </div>
   );
 
-
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
       <div className="container flex h-16 items-center justify-between gap-4 mx-auto">
@@ -158,10 +156,10 @@ export default function Header() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          {isClient && (
+            {isClient ? (
             <>
               {installPrompt && (
-                <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن">
+                <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن" className="mr-2">
                   <Download className="h-5 w-5" />
                 </Button>
               )}
@@ -234,9 +232,20 @@ export default function Header() {
                 </Sheet>
               </div>
             </>
-          )}
+            ) : (
+                // Static placeholder to prevent hydration error
+                <div className="flex items-center gap-4 h-10">
+                    <div className="hidden md:flex items-center gap-2">
+                        <div className="w-20 h-10 bg-muted/50 rounded-md animate-pulse"></div>
+                        <div className="w-16 h-10 bg-muted/50 rounded-md animate-pulse"></div>
+                    </div>
+                    <div className="md:hidden w-10 h-10 bg-muted/50 rounded-md animate-pulse"></div>
+                </div>
+            )}
         </div>
       </div>
     </header>
   );
 }
+
+    
