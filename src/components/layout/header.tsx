@@ -156,10 +156,10 @@ export default function Header() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-            {isClient ? (
+          {isClient ? (
             <>
               {installPrompt && (
-                <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن" className="mr-2">
+                <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن" className="hidden sm:inline-flex">
                   <Download className="h-5 w-5" />
                 </Button>
               )}
@@ -232,20 +232,18 @@ export default function Header() {
                 </Sheet>
               </div>
             </>
-            ) : (
-                // Static placeholder to prevent hydration error
-                <div className="flex items-center gap-4 h-10">
-                    <div className="hidden md:flex items-center gap-2">
-                        <div className="w-20 h-10 bg-muted/50 rounded-md animate-pulse"></div>
-                        <div className="w-16 h-10 bg-muted/50 rounded-md animate-pulse"></div>
-                    </div>
-                    <div className="md:hidden w-10 h-10 bg-muted/50 rounded-md animate-pulse"></div>
+          ) : (
+             // Static placeholder to prevent hydration mismatch
+            <div className="flex items-center gap-4 h-10">
+                <div className="hidden md:flex items-center gap-2">
+                    <div className="w-20 h-10 bg-muted/50 rounded-md animate-pulse"></div>
+                    <div className="w-16 h-10 bg-muted/50 rounded-md animate-pulse"></div>
                 </div>
-            )}
+                <div className="md:hidden w-10 h-10 bg-muted/50 rounded-md animate-pulse"></div>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
 }
-
-    
