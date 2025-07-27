@@ -26,22 +26,22 @@ export default function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
-  // This custom hook manages the logic for the PWA installation prompt.
-  // It provides the `installPrompt` function. The button will be shown if this is not null.
   const { installPrompt } = usePWAInstall();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This ensures the component has mounted on the client, avoiding hydration errors.
+    // This ensures client-specific UI renders only after hydration.
     setIsClient(true);
   }, []);
 
   useEffect(() => {
-    setIsSheetOpen(false);
-  }, [pathname]);
+    if (isClient) {
+      setIsSheetOpen(false);
+    }
+  }, [pathname, isClient]);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !isClient) {
       setUnreadMessages(0);
       return;
     }
@@ -65,7 +65,7 @@ export default function Header() {
     const interval = setInterval(checkUnread, 3000); // Check every 3 seconds
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, isClient]);
 
   const getInitials = (name: string) => {
     if (!name) return 'کاربر';
@@ -149,16 +149,17 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-      <div className="container flex h-16 items-center justify-between gap-4">
+      <div className="container flex h-16 items-center justify-between gap-4 mx-auto">
         <Link href="/" className="flex items-center gap-2">
           <Logo className="h-8 w-8 text-primary-foreground" />
           <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
         
-        <div className="flex-1 flex justify-center items-center md:gap-6" />
+        <div className="flex-1" />
 
         <div className="flex items-center gap-4">
           {!isClient ? (
+            // Skeleton loader to prevent hydration mismatch
             <div className="flex items-center gap-2 h-10">
               <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse"></div>
               <div className="w-16 h-8 bg-muted/50 rounded-md animate-pulse"></div>
@@ -166,7 +167,7 @@ export default function Header() {
           ) : (
             <>
               {installPrompt && (
-                <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن" className="mr-2">
+                <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن">
                   <Download className="h-5 w-5" />
                 </Button>
               )}
