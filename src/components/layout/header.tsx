@@ -159,7 +159,7 @@ export default function Header() {
 
         <div className="flex items-center gap-4">
           {!isClient ? (
-            // Skeleton loader to prevent hydration mismatch
+            // Skeleton loader to prevent hydration mismatch by rendering a static placeholder
             <div className="flex items-center gap-2 h-10">
               <div className="w-24 h-8 bg-muted/50 rounded-md animate-pulse"></div>
               <div className="w-16 h-8 bg-muted/50 rounded-md animate-pulse"></div>
