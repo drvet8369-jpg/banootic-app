@@ -151,7 +151,7 @@ export default function Header() {
 
         <div className="flex items-center gap-2">
             {canInstall && (
-              <Button variant="ghost" size="icon" onClick={installPrompt} title="نصب اپلیکیشن">
+              <Button variant="ghost" size="icon" onClick={() => installPrompt && installPrompt()} title="نصب اپلیکیشن">
                 <Download className="h-5 w-5" />
               </Button>
             )}
