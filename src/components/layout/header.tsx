@@ -19,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { Logo } from './logo';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -28,7 +27,6 @@ export default function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
-  const { installPrompt } = usePWAInstall();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -44,7 +42,7 @@ export default function Header() {
 
   useEffect(() => {
     // Check for unread messages
-    if (!user) {
+    if (!isClient || !user) {
       setUnreadMessages(0);
       return;
     }
@@ -68,7 +66,7 @@ export default function Header() {
     const interval = setInterval(checkUnread, 3000);
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [isClient, user]);
 
   const getInitials = (name: string) => {
     if (!name) return '..';
@@ -149,11 +147,6 @@ export default function Header() {
   const renderClientSideContent = () => {
     return (
         <div className="flex items-center gap-4">
-          {installPrompt && (
-            <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن" className="hidden sm:inline-flex">
-              <Download className="h-5 w-5" />
-            </Button>
-          )}
           <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
             {isLoggedIn && user ? (
               <DropdownMenu>
@@ -227,7 +220,7 @@ export default function Header() {
   const renderSkeleton = () => (
     <div className="flex items-center gap-4 h-10">
       <div className="hidden md:flex items-center gap-2">
-        <Skeleton className="w-20 h-10" />
+        <Skeleton className="w-24 h-10" />
         <Skeleton className="w-16 h-10" />
       </div>
       <div className="md:hidden">
