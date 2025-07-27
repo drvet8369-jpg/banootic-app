@@ -29,6 +29,12 @@ export default function Header() {
   // This custom hook manages the logic for the PWA installation prompt.
   // It provides the `installPrompt` function. The button will be shown if this is not null.
   const { installPrompt } = usePWAInstall();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This ensures the component has mounted on the client, avoiding hydration errors.
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     setIsSheetOpen(false);
@@ -151,9 +157,9 @@ export default function Header() {
         
         <div className="flex-1 flex justify-center items-center md:gap-6" />
 
-        <div className="flex items-center gap-4">
-            {installPrompt && (
-              <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن">
+        <div className="flex items-center gap-2">
+            {isClient && installPrompt && (
+              <Button variant="ghost" size="icon" onClick={() => installPrompt()} title="نصب اپلیکیشن" className="mr-2">
                 <Download className="h-5 w-5" />
               </Button>
             )}
