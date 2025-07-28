@@ -208,12 +208,6 @@ function HeaderClientActions() {
 
 
 export default function Header() {
-  const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -225,7 +219,7 @@ export default function Header() {
           
           <div className="flex-1" />
 
-          {isClient ? <HeaderClientActions /> : <div className="h-10 w-48 hidden md:block" />}
+          <HeaderClientActions />
         </div>
       </header>
       <SearchBar />
