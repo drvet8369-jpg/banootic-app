@@ -238,7 +238,7 @@ export default function Header() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center">
           {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
-          <Link href="/" className="flex items-center gap-2 ml-auto">
+          <Link href="/" className="flex items-center gap-2 ml-auto w-fit">
             <Logo className="h-10 w-10 text-primary-foreground" />
             <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
           </Link>
