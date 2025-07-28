@@ -21,34 +21,6 @@ import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
-export default function Header() {
-  const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-        <div className="container flex h-16 items-center justify-between gap-4 mx-auto">
-          <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-10 w-10 text-primary-foreground" />
-            <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-          </Link>
-          
-          <div className="flex-1" />
-
-          {isClient ? <HeaderClientActions /> : <div className="h-10 w-48 hidden md:block" />}
-          {isClient ? null : <div className="h-10 w-10 md:hidden" />}
-
-        </div>
-      </header>
-      <SearchBar />
-    </>
-  );
-}
-
 function HeaderClientActions() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -231,5 +203,32 @@ function HeaderClientActions() {
         </Sheet>
       </div>
     </div>
+  );
+}
+
+
+export default function Header() {
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return (
+    <>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+        <div className="container flex h-16 items-center justify-between gap-4 mx-auto">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo className="h-10 w-10 text-primary-foreground" />
+            <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+          </Link>
+          
+          <div className="flex-1" />
+
+          {isClient ? <HeaderClientActions /> : <div className="h-10 w-48 hidden md:block" />}
+        </div>
+      </header>
+      <SearchBar />
+    </>
   );
 }
