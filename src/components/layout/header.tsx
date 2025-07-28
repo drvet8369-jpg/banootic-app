@@ -21,34 +21,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { usePathname } from 'next/navigation';
 
-export default function Header() {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center gap-4 mx-auto">
-          <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-10 w-10 text-primary-foreground" />
-            <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-          </Link>
-          
-          <div className="flex-1" />
-
-          {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
-          
-        </div>
-      </header>
-      <SearchBar />
-    </>
-  );
-}
-
-
 function HeaderClientActions() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -167,7 +139,7 @@ function HeaderClientActions() {
   );
 
   return (
-    <div className="flex items-center gap-4">
+    <>
       <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
         {isLoggedIn && user ? (
           <DropdownMenu>
@@ -234,7 +206,7 @@ function HeaderClientActions() {
           </SheetContent>
         </Sheet>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -252,4 +224,31 @@ function HeaderPlaceholder() {
       </div>
     </div>
   )
+}
+
+export default function Header() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return (
+    <>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center gap-4 mx-auto">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo className="h-10 w-10 text-primary-foreground" />
+            <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+          </Link>
+          
+          <div className="flex-1" />
+
+          {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
+          
+        </div>
+      </header>
+      <SearchBar />
+    </>
+  );
 }
