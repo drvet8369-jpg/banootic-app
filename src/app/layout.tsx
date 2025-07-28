@@ -5,13 +5,15 @@ import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
-import { AuthProvider } from '@/context/AuthContext';
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 
-// Configure Vazirmatn font with the 'arabic' subset
+// Dynamically import client-side components to prevent hydration errors
+const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
+const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
+
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
   display: 'swap',
@@ -36,7 +38,6 @@ export default function RootLayout({
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
-        .then(registration => console.log('Service Worker registered with scope:', registration.scope))
         .catch(error => console.log('Service Worker registration failed:', error));
     }
   }, []);
