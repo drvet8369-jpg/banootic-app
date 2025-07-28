@@ -4,8 +4,6 @@
 import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
@@ -13,6 +11,8 @@ import dynamic from 'next/dynamic';
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
 const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
 const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
+const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
+const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
 
 const vazirmatn = Vazirmatn({
