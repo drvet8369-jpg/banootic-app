@@ -8,11 +8,9 @@ import { Toaster } from '@/components/ui/toaster';
 import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
-import dynamic from 'next/dynamic';
+import Header from '@/components/layout/header';
+import { AuthProvider } from '@/context/AuthContext';
 
-// Dynamically import client-side components to prevent hydration errors
-const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
-const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
