@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface PageProps {
   params: {
