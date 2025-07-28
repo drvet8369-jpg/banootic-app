@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import Header from '@/components/layout/header';
 import { AuthProvider } from '@/context/AuthContext';
+import SearchBar from '@/components/ui/search-bar';
 
 
 const vazirmatn = Vazirmatn({
@@ -57,6 +58,7 @@ export default function RootLayout({
         <AuthProvider>
           <div className="relative flex min-h-screen flex-col">
             <Header />
+            <SearchBar />
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
               {children}
             </main>

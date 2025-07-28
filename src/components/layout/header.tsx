@@ -3,10 +3,9 @@
 
 import Link from 'next/link';
 import { Logo } from './logo';
-import SearchBar from '@/components/ui/search-bar';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -73,12 +72,13 @@ function HeaderClientActions() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-       <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
       <div className="p-4 border-b flex flex-col gap-4">
-         <Link href="/" className="flex items-center gap-2">
-           <Logo className="h-8 w-8 text-primary-foreground" />
-           <span className="font-display text-2xl font-bold">هنربانو</span>
-        </Link>
+         <SheetClose asChild>
+            <Link href="/" className="flex items-center gap-2">
+            <Logo className="h-8 w-8 text-primary-foreground" />
+            <span className="font-display text-2xl font-bold">هنربانو</span>
+            </Link>
+         </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn ? (
@@ -234,17 +234,16 @@ export default function Header() {
   }, []);
 
   return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center">
-          {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
-          <Link href="/" className="flex items-center gap-2 ml-auto w-fit">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        <div>
+           {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
+        </div>
+        <Link href="/" className="flex items-center gap-2">
             <Logo className="h-10 w-10 text-primary-foreground" />
             <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-          </Link>
-        </div>
-      </header>
-      <SearchBar />
-    </>
+        </Link>
+      </div>
+    </header>
   );
 }
