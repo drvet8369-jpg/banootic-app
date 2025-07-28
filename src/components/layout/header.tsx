@@ -210,6 +210,12 @@ function HeaderClientActions() {
   )
 }
 
+// A simple placeholder with fixed dimensions to prevent layout shifts.
+function HeaderPlaceholder() {
+    return <div className="h-10 w-10 md:w-44" />;
+}
+
+
 export default function Header() {
   const [isClient, setIsClient] = useState(false);
 
@@ -219,19 +225,21 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        {/* Actions Group (Buttons, Menus) - will be on the left in RTL */}
-        <div>
-           {isClient ? <HeaderClientActions /> : <div className="h-10 w-10 md:w-44" />}
+      <div className="container relative flex h-16 items-center">
+        
+        {/* Actions Group (Buttons, Menus) - ABSOLUTELY positioned to the LEFT */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2">
+           {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
         </div>
         
-        {/* Branding Group (Logo, Name) - will be on the right in RTL */}
-        <div>
+        {/* Branding Group (Logo, Name) - ABSOLUTELY positioned to the RIGHT */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
             <Link href="/" className="flex items-center gap-2">
                 <Logo className="h-10 w-10 text-primary-foreground" />
-                <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+                <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
             </Link>
         </div>
+        
       </div>
     </header>
   );
