@@ -8,9 +8,11 @@ import { Toaster } from '@/components/ui/toaster';
 import Footer from '@/components/layout/footer';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
-import Header from '@/components/layout/header';
-import { AuthProvider } from '@/context/AuthContext';
-import SearchBar from '@/components/ui/search-bar';
+import dynamic from 'next/dynamic';
+
+const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
+const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 
 
 const vazirmatn = Vazirmatn({
