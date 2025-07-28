@@ -210,22 +210,6 @@ function HeaderClientActions() {
   )
 }
 
-function HeaderPlaceholder() {
-  return (
-    <div className="flex items-center gap-4">
-      {/* Placeholder for desktop */}
-      <div className="hidden md:flex items-center gap-2">
-        <div className="h-10 w-24 bg-muted/50 rounded-md animate-pulse"></div>
-        <div className="h-10 w-16 bg-muted/50 rounded-md animate-pulse"></div>
-      </div>
-      {/* Placeholder for mobile */}
-      <div className="md:hidden flex items-center">
-        <div className="h-10 w-10 bg-muted/50 rounded-md animate-pulse"></div>
-      </div>
-    </div>
-  )
-}
-
 export default function Header() {
   const [isClient, setIsClient] = useState(false);
 
@@ -236,15 +220,18 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        {/* Left-aligned items (in LTR), which is user actions */}
+        {/* Actions Group (Buttons, Menus) - will be on the left in RTL */}
         <div>
-           {isClient ? <HeaderClientActions /> : <HeaderPlaceholder />}
+           {isClient ? <HeaderClientActions /> : <div className="h-10 w-10 md:w-44" />}
         </div>
-        {/* Right-aligned items (in LTR), which is the logo */}
-        <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-10 w-10 text-primary-foreground" />
-            <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-        </Link>
+        
+        {/* Branding Group (Logo, Name) - will be on the right in RTL */}
+        <div>
+            <Link href="/" className="flex items-center gap-2">
+                <Logo className="h-10 w-10 text-primary-foreground" />
+                <span className="font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            </Link>
+        </div>
       </div>
     </header>
   );
