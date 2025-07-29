@@ -43,10 +43,14 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      setIsLoading(false);
+      return;
+    }
+    
     if (!user?.phone) {
-      if (isLoggedIn === false) { // Only set loading to false if we know for sure user is logged out
-        setIsLoading(false);
-      }
+      setChats([]);
+      setIsLoading(false);
       return;
     }
 
@@ -88,7 +92,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isLoggedIn]); // Depend on user and isLoggedIn
+  }, [user, isLoggedIn]);
 
 
   if (isLoading) {
