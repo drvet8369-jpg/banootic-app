@@ -3,72 +3,72 @@ import type { Category, Provider, Service, Review } from './types';
 export const categories: Category[] = [
   {
     id: 1,
-    name: 'Women’s Beauty Services',
+    name: 'خدمات زیبایی بانوان',
     slug: 'beauty',
-    description: 'Hair, nail, makeup, and skincare services by talented local professionals.',
+    description: 'خدمات مو، ناخن، آرایش و مراقبت از پوست توسط متخصصان محلی با استعداد.',
   },
   {
     id: 2,
-    name: 'Homemade Cooking & Food',
+    name: 'آشپزی و غذای خانگی',
     slug: 'cooking',
-    description: 'Delicious and authentic homemade meals, pastries, and traditional cuisine.',
+    description: 'غذاهای خانگی خوشمزه و اصیل، شیرینی‌جات و غذاهای سنتی.',
   },
   {
     id: 3,
-    name: 'Tailoring & Fashion Design',
+    name: 'خیاطی و طراحی مد',
     slug: 'tailoring',
-    description: 'Custom clothing, alterations, and unique fashion designs from local boutiques.',
+    description: 'لباس‌های سفارشی، تعمیرات و طراحی‌های مد منحصر به فرد از بوتیک‌های محلی.',
   },
   {
     id: 4,
-    name: 'Handicrafts & Decorative Arts',
+    name: 'صنایع دستی و تزئینی',
     slug: 'handicrafts',
-    description: 'Unique decorative crafts, decorative arts, and one-of-a-kind handmade products.',
+    description: 'کاردستی‌های دکوری، هنرهای تزئینی و محصولات دست‌ساز منحصر به فرد.',
   },
 ];
 
 export const services: Service[] = [
   // Beauty
-  { name: 'Nail Services', slug: 'manicure-pedicure', categorySlug: 'beauty' },
-  { name: 'Hair Services', slug: 'haircut-coloring', categorySlug: 'beauty' },
-  { name: 'Facial Treatments', slug: 'facial-treatment', categorySlug: 'beauty' },
-  { name: 'Makeup Artistry', slug: 'makeup', categorySlug: 'beauty' },
-  { name: 'Waxing Services', slug: 'waxing', categorySlug: 'beauty' },
+  { name: 'خدمات ناخن', slug: 'manicure-pedicure', categorySlug: 'beauty' },
+  { name: 'خدمات مو', slug: 'haircut-coloring', categorySlug: 'beauty' },
+  { name: 'پاکسازی پوست', slug: 'facial-treatment', categorySlug: 'beauty' },
+  { name: 'آرایش صورت', slug: 'makeup', categorySlug: 'beauty' },
+  { name: 'اپیلاسیون', slug: 'waxing', categorySlug: 'beauty' },
   // Cooking
-  { name: 'Traditional Cuisine', slug: 'traditional-food', categorySlug: 'cooking' },
-  { name: 'Cakes & Sweets', slug: 'cakes-sweets', categorySlug: 'cooking' },
-  { name: 'Vegetarian & Vegan', slug: 'vegetarian-vegan', categorySlug: 'cooking' },
-  { name: 'Finger Foods', slug: 'finger-food', categorySlug: 'cooking' },
-  { name: 'Homemade Bread', slug: 'homemade-bread', categorySlug: 'cooking' },
+  { name: 'غذای سنتی', slug: 'traditional-food', categorySlug: 'cooking' },
+  { name: 'کیک و شیرینی', slug: 'cakes-sweets', categorySlug: 'cooking' },
+  { name: 'غذای گیاهی', slug: 'vegetarian-vegan', categorySlug: 'cooking' },
+  { name: 'فینگرفود', slug: 'finger-food', categorySlug: 'cooking' },
+  { name: 'نان خانگی', slug: 'homemade-bread', categorySlug: 'cooking' },
   // Tailoring
-  { name: 'Custom Clothing', slug: 'custom-clothing', categorySlug: 'tailoring' },
-  { name: 'Bridal & Evening Wear', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
-  { name: 'Clothing Repair', slug: 'clothing-repair', categorySlug: 'tailoring' },
+  { name: 'دوخت سفارشی لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
+  { name: 'مزون، لباس عروس و مجلسی', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
+  { name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
   // Handicrafts
-  { name: 'Handmade Jewelry', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
-  { name: 'Decorative Pottery', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
-  { name: 'Knitted Goods', slug: 'knitted-goods', categorySlug: 'handicrafts' },
-  { name: 'Leather Crafts', slug: 'leather-crafts', categorySlug: 'handicrafts' },
-  { name: 'Candle Making', slug: 'candles-soaps', categorySlug: 'handicrafts' },
+  { name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
+  { name: 'سفال تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
+  { name: 'بافتنی‌ها', slug: 'termeh-kilim', categorySlug: 'handicrafts' },
+  { name: 'چرم‌دوزی', slug: 'leather-crafts', categorySlug: 'handicrafts' },
+  { name: 'شمع‌سازی', slug: 'candles-soaps', categorySlug: 'handicrafts' },
 ];
 
 const defaultProviders: Provider[] = [
   // Beauty
-  { id: 1, name: 'Sara\'s Beauty Salon', service: 'Nail Services', location: 'Urmia, Valiasr St', phone: '09353847484', bio: 'Specializing in modern nail art and design.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [] },
-  { id: 2, name: 'Laleh Hair Design', service: 'Hair Services', location: 'Urmia, Sheikh Tappeh', phone: '09000000002', bio: 'Expert in balayage and modern hairstyles.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
-  { id: 3, name: 'Negin Skincare', service: 'Facial Treatments', location: 'Urmia, Ostadan', phone: '09000000003', bio: 'Organic and natural skin treatments for all skin types.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
-  { id: 13, name: 'Roya Makeup Studio', service: 'Makeup Artistry', location: 'Urmia, Kashani St', phone: '09000000013', bio: 'Specialized bridal makeup and professional makeup for events.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5.0, reviewsCount: 25, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'makeup artist' }, portfolio: [] },
-  { id: 14, name: 'Nazi Waxing Center', service: 'Waxing Services', location: 'Urmia, Varzesh St', phone: '09000000014', bio: 'Full body waxing using premium and hygienic products.', categorySlug: 'beauty', serviceSlug: 'waxing', rating: 4.6, reviewsCount: 55, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman beautiful' }, portfolio: [] },
+  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [] },
+  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
+  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه، استادان', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
+  { id: 13, name: 'آرایشگاه رؤیا', service: 'آرایش صورت', location: 'ارومیه، خیابان کاشانی', phone: '09000000013', bio: 'گریم تخصصی عروس و آرایش حرفه‌ای برای مهمانی‌ها.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5.0, reviewsCount: 25, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'makeup artist' }, portfolio: [] },
+  { id: 14, name: 'مرکز اپیلاسیون نازی', service: 'اپیلاسیون', location: 'ارومیه، خیابان ورزش', phone: '09000000014', bio: 'اپیلاسیون کامل بدن با استفاده از مواد درجه یک و بهداشتی.', categorySlug: 'beauty', serviceSlug: 'waxing', rating: 4.6, reviewsCount: 55, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman beautiful' }, portfolio: [] },
   
   // Cooking
-  { id: 4, name: 'Maryam\'s Kitchen', service: 'Traditional Cuisine', location: 'Urmia, Ferdowsi St', phone: '09000000004', bio: 'Serving authentic Ghormeh Sabzi and homemade kebabs.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [] },
+  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه، خیابان فردوسی', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [] },
   { 
     id: 5, 
-    name: 'Bahar Pastry', 
-    service: 'Cakes & Sweets', 
-    location: 'Urmia, Keshavarz St', 
+    name: 'شیرینی‌پزی بهار', 
+    service: 'کیک و شیرینی', 
+    location: 'ارومیه، خیابان کشاورز', 
     phone: '09000000005', 
-    bio: 'Custom cakes for birthdays, weddings, and special events.', 
+    bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', 
     categorySlug: 'cooking', 
     serviceSlug: 'cakes-sweets', 
     rating: 4.8, 
@@ -76,26 +76,26 @@ const defaultProviders: Provider[] = [
     profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' },
     portfolio: []
   },
-  { id: 6, name: 'Zahra\'s Healthy Food', service: 'Vegetarian & Vegan', location: 'Urmia, Daneshkadeh', phone: '09000000006', bio: 'Delicious and healthy plant-based meals with home delivery.', categorySlug: 'cooking', serviceSlug: 'vegetarian-vegan', rating: 4.7, reviewsCount: 40, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'healthy food' }, portfolio: [] },
-  { id: 15, name: 'Chic Finger Foods', service: 'Finger Foods', location: 'Urmia, Ammar', phone: '09000000015', bio: 'Assorted platters and various finger foods for parties.', categorySlug: 'cooking', serviceSlug: 'finger-food', rating: 4.9, reviewsCount: 75, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'party food' }, portfolio: [] },
-  { id: 16, name: 'Gandom Homemade Bread', service: 'Homemade Bread', location: 'Urmia, Molavi', phone: '09000000016', bio: 'Daily baking of various artisan, traditional, and diet breads.', categorySlug: 'cooking', serviceSlug: 'homemade-bread', rating: 5.0, reviewsCount: 95, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'baker woman' }, portfolio: [] },
+  { id: 6, name: 'غذای سالم زهرا', service: 'غذای گیاهی', location: 'ارومیه، دانشکده', phone: '09000000006', bio: 'وعده‌های غذایی گیاهی خوشمزه و سالم با ارسال درب منزل.', categorySlug: 'cooking', serviceSlug: 'vegetarian-vegan', rating: 4.7, reviewsCount: 40, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'healthy food' }, portfolio: [] },
+  { id: 15, name: 'فینگرفود شیک', service: 'فینگرفود', location: 'ارومیه، عمار', phone: '09000000015', bio: 'سینی‌های مزه و فینگرفودهای متنوع برای مهمانی‌ها.', categorySlug: 'cooking', serviceSlug: 'finger-food', rating: 4.9, reviewsCount: 75, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'party food' }, portfolio: [] },
+  { id: 16, name: 'نان خانگی گندم', service: 'نان خانگی', location: 'ارومیه، مولوی', phone: '09000000016', bio: 'پخت روزانه انواع نان‌های حجیم، سنتی و رژیمی.', categorySlug: 'cooking', serviceSlug: 'homemade-bread', rating: 5.0, reviewsCount: 95, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'baker woman' }, portfolio: [] },
   
   // Tailoring
-  { id: 7, name: 'Shirin Tailoring', service: 'Custom Clothing', location: 'Urmia, Modarres St', phone: '09000000007', bio: 'Beautiful and custom-made clothes for any occasion.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [] },
-  { id: 8, name: 'Parvin Design', service: 'Clothing Repair', location: 'Urmia, Imam St', phone: '09000000008', bio: 'Professional and quick alterations for a perfect fit.', categorySlug: 'tailoring', serviceSlug: 'clothing-repair', rating: 4.7, reviewsCount: 35, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'fashion designer' }, portfolio: [] },
-  { id: 9, name: 'Afsaneh Boutique', service: 'Bridal & Evening Wear', location: 'Urmia, Khayyam St', phone: '09000000009', bio: 'Unique and stylish manteaus that blend tradition with modern fashion.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 4.9, reviewsCount: 80, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'fashion boutique' }, portfolio: [] },
-  { id: 18, name: 'Anahita Fashion House', service: 'Bridal & Evening Wear', location: 'Urmia, Hassani St', phone: '09000000018', bio: 'Designing and sewing evening and formal dresses with special fabrics.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 5.0, reviewsCount: 33, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'evening dress' }, portfolio: [] },
+  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه، خیابان مدرس', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [] },
+  { id: 8, name: 'طراحی پروین', service: 'تعمیرات تخصصی لباس', location: 'ارومیه، خیابان امام', phone: '09000000008', bio: 'تعمیرات حرفه‌ای و سریع برای فیت عالی لباس.', categorySlug: 'tailoring', serviceSlug: 'clothing-repair', rating: 4.7, reviewsCount: 35, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'fashion designer' }, portfolio: [] },
+  { id: 9, name: 'بوتیک افسانه', service: 'مزون، لباس عروس و مجلسی', location: 'ارومیه، خیابان خیام', phone: '09000000009', bio: 'مانتوهای منحصر به فرد و شیک که سنت را با مد مدرن ترکیب می‌کند.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 4.9, reviewsCount: 80, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'fashion boutique' }, portfolio: [] },
+  { id: 18, name: 'خانه مد آناهیتا', service: 'مزون، لباس عروس و مجلسی', location: 'ارومیه، خیابان حسنی', phone: '09000000018', bio: 'طراحی و دوخت لباس‌های شب و مجلسی با پارچه‌های خاص.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 5.0, reviewsCount: 33, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'evening dress' }, portfolio: [] },
   
   // Handicrafts
-  { id: 10, name: 'Gita Art Gallery', service: 'Handmade Jewelry', location: 'Urmia, Besat St', phone: '09000000010', bio: 'Unique silver and gemstone jewelry, made with love.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [] },
-  { id: 11, name: 'Mina Pottery', service: 'Decorative Pottery', location: 'Urmia, Bahar St', phone: '09000000011', bio: 'Beautiful, hand-painted pottery for your home and garden.', categorySlug: 'handicrafts', serviceSlug: 'decorative-pottery', rating: 4.7, reviewsCount: 28, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pottery artist' }, portfolio: [] },
-  { id: 12, name: 'Saba Knits', service: 'Knitted Goods', location: 'Urmia, Bazaar', phone: '09000000012', bio: 'A variety of hand-knitted clothes and accessories.', categorySlug: 'handicrafts', serviceSlug: 'knitted-goods', rating: 4.8, reviewsCount: 48, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'knitting craft' }, portfolio: [] },
-  { id: 19, name: 'Leila Leather Art', service: 'Leather Crafts', location: 'Urmia, Homafer', phone: '09000000019', bio: 'Custom-designed leather bags, belts, and accessories.', categorySlug: 'handicrafts', serviceSlug: 'leather-crafts', rating: 4.9, reviewsCount: 58, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'leather goods' }, portfolio: [] },
-  { id: 20, name: 'Roya Candle Workshop', service: 'Candle Making', location: 'Urmia, Madani', phone: '09000000020', bio: 'A variety of scented candles and handmade herbal soaps.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
+  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [] },
+  { id: 11, name: 'سفالگری مینا', service: 'سفال تزئینی', location: 'ارومیه، خیابان بهار', phone: '09000000011', bio: 'سفال‌های زیبا و نقاشی شده برای خانه و باغ شما.', categorySlug: 'handicrafts', serviceSlug: 'decorative-pottery', rating: 4.7, reviewsCount: 28, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pottery artist' }, portfolio: [] },
+  { id: 12, name: 'بافتنی صبا', service: 'بافتنی‌ها', location: 'ارومیه، بازار', phone: '09000000012', bio: 'انواع لباس‌ها و وسایل بافتنی دستباف.', categorySlug: 'handicrafts', serviceSlug: 'termeh-kilim', rating: 4.8, reviewsCount: 48, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'knitting craft' }, portfolio: [] },
+  { id: 19, name: 'هنر چرم لیلا', service: 'چرم‌دوزی', location: 'ارومیه، همافر', phone: '09000000019', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', categorySlug: 'handicrafts', serviceSlug: 'leather-crafts', rating: 4.9, reviewsCount: 58, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'leather goods' }, portfolio: [] },
+  { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-const PROVIDERS_STORAGE_KEY = 'zanmahal-providers';
-const REVIEWS_STORAGE_KEY = 'zanmahal-reviews';
+const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
+const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
 
 // Function to get providers from localStorage or return default
 export const getProviders = (): Provider[] => {
