@@ -5,7 +5,9 @@ import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
-import { Logo } from '@/components/layout/logo';
+import dynamic from 'next/dynamic';
+
+const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
@@ -25,7 +27,7 @@ export default function Home() {
         <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
           با دستان هنرمندت بدرخش
         </p>
-        <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+        <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
           بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
         </p>
       </section>
