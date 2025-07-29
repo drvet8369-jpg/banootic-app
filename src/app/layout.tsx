@@ -1,13 +1,22 @@
 'use client';
 
-import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
 
-const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
+// A simple loading component to show while client-side components are hydrating.
+const Loading = () => (
+  <div className="flex h-screen w-full items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin" />
+  </div>
+);
+
+// Dynamically import all components that rely on client-side logic (like localStorage)
+// with server-side rendering (SSR) turned off. This is the key to fixing the hydration error.
+const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false, loading: () => <Loading /> });
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
 const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
@@ -19,14 +28,6 @@ const vazirmatn = Vazirmatn({
   display: 'swap',
   variable: '--font-sans',
 });
-
-// This can't be a dynamic export in a client component, 
-// so we define it statically here.
-// export const metadata: Metadata = {
-//   title: 'هنربانو',
-//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
-//   manifest: '/manifest.json',
-// };
 
 export default function RootLayout({
   children,

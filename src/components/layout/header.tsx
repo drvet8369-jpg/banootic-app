@@ -17,9 +17,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-
-const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
+import { InboxBadge } from '@/components/layout/inbox-badge';
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
@@ -50,9 +48,9 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' && (
+             {user.accountType === 'provider' && (
                 <SheetClose asChild>
                   <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
