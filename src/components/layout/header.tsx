@@ -17,14 +17,20 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-
-const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
+import { InboxBadge } from '@/components/layout/inbox-badge';
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
+
+  // A simple state to check if the component has mounted on the client.
+  // This prevents hydration mismatches for content that depends on auth state.
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   useEffect(() => {
     setIsSheetOpen(false);
@@ -50,7 +56,7 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isClient && isLoggedIn ? (
            <>
              {user?.accountType === 'provider' && (
                 <SheetClose asChild>
@@ -85,7 +91,7 @@ export default function Header() {
           </>
         )}
       </nav>
-      {isLoggedIn && user && (
+      {isClient && isLoggedIn && user && (
         <div className="mt-auto p-4 border-t">
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
@@ -114,7 +120,7 @@ export default function Header() {
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                {isLoggedIn && user ? (
+                {isClient && isLoggedIn && user ? (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -155,14 +161,14 @@ export default function Header() {
                     </DropdownMenuContent>
                 </DropdownMenu>
                 ) : (
-                <>
+                  isClient && <>
                     <Button asChild variant="secondary">
-                    <Link href="/register">ثبت‌نام</Link>
+                      <Link href="/register">ثبت‌نام</Link>
                     </Button>
                     <Button asChild>
-                    <Link href="/login">ورود</Link>
+                      <Link href="/login">ورود</Link>
                     </Button>
-                </>
+                  </>
                 )}
             </nav>
             {/* Mobile Nav */}
