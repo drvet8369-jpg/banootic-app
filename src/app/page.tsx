@@ -22,18 +22,18 @@ export default function Home() {
       <section className="text-center py-20 lg:py-24 w-full">
         <Logo className="mx-auto mb-6 h-32 w-32 text-primary" />
         <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-          هنربانو
+          ZanMahal
         </h1>
         <p className="mt-4 font-headline text-xl md:text-2xl text-foreground">
-          با دستان هنرمندت بدرخش
+          Empowering Women Through Local Services
         </p>
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-          بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
+          Discover and support talented women offering home-based services in your neighborhood. From delicious home cooking to beautiful handicrafts, find the best local artisans here.
         </p>
       </section>
 
       <section id="categories" className="py-16 w-full">
-        <h2 className="text-3xl font-headline font-bold text-center mb-12">دسته‌بندی خدمات</h2>
+        <h2 className="text-3xl font-headline font-bold text-center mb-12">Our Services</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {categories.map((category) => {
             const Icon = iconMap[category.slug];
@@ -52,7 +52,7 @@ export default function Home() {
         </div>
          <div className="mt-12 text-center">
             <Button asChild variant="secondary" size="lg" className="text-lg">
-              <Link href="/register">به جامعه ما بپیوندید</Link>
+              <Link href="/register">Join Our Community</Link>
             </Button>
           </div>
       </section>

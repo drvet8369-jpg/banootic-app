@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { Vazirmatn } from 'next/font/google';
+import { Alegreya } from 'next/font/google';
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
 
@@ -12,8 +12,8 @@ const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: fal
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
-const vazirmatn = Vazirmatn({
-  subsets: ['arabic'],
+const alegreya = Alegreya({
+  subsets: ['latin'],
   display: 'swap',
   variable: '--font-sans',
 });
@@ -33,17 +33,20 @@ export default function RootLayout({
   }, []);
 
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="en" dir="ltr">
        <head>
-          <title>هنربانو</title>
-          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
+          <title>ZanMahal</title>
+          <meta name="description" content="A marketplace for women's home-based services" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#B5E2BF" />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
       </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased',
-          vazirmatn.variable
+          alegreya.variable
         )}
       >
         <AuthProvider>

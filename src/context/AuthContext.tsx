@@ -26,20 +26,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('honarbanoo-user');
+      const storedUser = localStorage.getItem('zanmahal-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('zanmahal-user');
     }
   }, []);
 
   const login = (userData: User) => {
     try {
       const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      localStorage.setItem('zanmahal-user', JSON.stringify(userToSave));
       setUser(userToSave);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('zanmahal-user');
       setUser(null);
       router.push('/');
     } catch (error) {

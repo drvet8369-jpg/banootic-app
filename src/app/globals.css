@@ -4,64 +4,64 @@
 
 @layer base {
   :root {
-    --background: 220 40% 98%;
-    --foreground: 220 40% 10%;
-    
+    --background: 20 40% 98%;
+    --foreground: 20 40% 10%;
+
     --card: 0 0% 100%;
-    --card-foreground: 220 40% 10%;
-    
+    --card-foreground: 20 40% 10%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 220 40% 10%;
-    
-    --primary: 140 42% 55%;
+    --popover-foreground: 20 40% 10%;
+
+    --primary: 140 42% 55%; /* Soft Mint Green */
     --primary-foreground: 140 25% 98%;
 
-    --secondary: 353 40% 90%;
+    --secondary: 353 40% 90%; /* Light Dusty Rose for secondary elements */
     --secondary-foreground: 353 40% 20%;
-    
-    --muted: 220 40% 94%;
-    --muted-foreground: 220 40% 45%;
 
-    --accent: 353 40% 70%;
+    --muted: 140 60% 97%; /* Very light mint for muted backgrounds */
+    --muted-foreground: 140 25% 45%;
+
+    --accent: 353 40% 70%; /* Dusty Rose */
     --accent-foreground: 353 40% 15%;
-    
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 40% 90%;
-    --input: 220 40% 90%;
+    --border: 140 25% 90%;
+    --input: 140 25% 90%;
     --ring: 140 42% 55%;
-    
+
     --radius: 0.5rem;
   }
  
   .dark {
-    --background: 220 40% 10%;
-    --foreground: 220 40% 98%;
-    
-    --card: 220 40% 12%;
-    --card-foreground: 220 40% 98%;
-    
-    --popover: 220 40% 10%;
-    --popover-foreground: 220 40% 98%;
-    
+    --background: 20 40% 10%;
+    --foreground: 20 40% 98%;
+
+    --card: 20 40% 12%;
+    --card-foreground: 20 40% 98%;
+
+    --popover: 20 40% 10%;
+    --popover-foreground: 20 40% 98%;
+
     --primary: 140 42% 60%;
     --primary-foreground: 140 25% 10%;
 
     --secondary: 353 40% 20%;
     --secondary-foreground: 353 40% 90%;
 
-    --muted: 220 40% 15%;
-    --muted-foreground: 220 40% 65%;
+    --muted: 140 40% 15%;
+    --muted-foreground: 140 25% 65%;
 
-    --accent: 353 40% 30%;
+    --accent: 353 40% 50%;
     --accent-foreground: 353 40% 90%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 40% 20%;
-    --input: 220 40% 20%;
+    --border: 140 25% 20%;
+    --input: 140 25% 20%;
     --ring: 140 42% 55%;
   }
 }
@@ -72,6 +72,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: 'Alegreya', serif;
   }
 }
