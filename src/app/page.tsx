@@ -5,7 +5,9 @@ import { categories } from '@/lib/data';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
-import { Logo } from '@/components/layout/logo';
+import dynamic from 'next/dynamic';
+
+const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
