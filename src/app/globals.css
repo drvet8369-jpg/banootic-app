@@ -4,65 +4,31 @@
 
 @layer base {
   :root {
-    --background: 20 40% 98%;
-    --foreground: 20 40% 10%;
-
+    --background: 140 60% 97%;
+    --foreground: 145 45% 15%; /* Made darker */
     --card: 0 0% 100%;
-    --card-foreground: 20 40% 10%;
-
+    --card-foreground: 145 35% 15%; /* Made darker */
     --popover: 0 0% 100%;
-    --popover-foreground: 20 40% 10%;
-
-    --primary: 140 42% 55%; /* Soft Mint Green */
-    --primary-foreground: 140 25% 98%;
-
-    --secondary: 353 40% 90%; /* Light Dusty Rose for secondary elements */
-    --secondary-foreground: 353 40% 20%;
-
-    --muted: 140 60% 97%; /* Very light mint for muted backgrounds */
-    --muted-foreground: 140 25% 45%;
-
-    --accent: 353 40% 70%; /* Dusty Rose */
-    --accent-foreground: 353 40% 15%;
-
+    --popover-foreground: 145 35% 15%; /* Made darker */
+    --primary: 140 42% 55%; /* Made darker */
+    --primary-foreground: 145 45% 10%; /* Made darker */
+    --secondary: 140 30% 80%; /* Made darker */
+    --secondary-foreground: 145 35% 15%; /* Made darker */
+    --muted: 140 30% 90%;
+    --muted-foreground: 145 25% 45%; /* Made darker */
+    --accent: 353 40% 60%; /* Made darker */
+    --accent-foreground: 353 30% 18%; /* Made darker */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-
-    --border: 140 25% 90%;
-    --input: 140 25% 90%;
-    --ring: 140 42% 55%;
-
+    --border: 140 25% 75%; /* Made darker and less saturated */
+    --input: 140 25% 75%; /* Made darker and less saturated */
+    --ring: 140 44% 55%; /* Made darker */
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 20 40% 10%;
-    --foreground: 20 40% 98%;
-
-    --card: 20 40% 12%;
-    --card-foreground: 20 40% 98%;
-
-    --popover: 20 40% 10%;
-    --popover-foreground: 20 40% 98%;
-
-    --primary: 140 42% 60%;
-    --primary-foreground: 140 25% 10%;
-
-    --secondary: 353 40% 20%;
-    --secondary-foreground: 353 40% 90%;
-
-    --muted: 140 40% 15%;
-    --muted-foreground: 140 25% 65%;
-
-    --accent: 353 40% 50%;
-    --accent-foreground: 353 40% 90%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 140 25% 20%;
-    --input: 140 25% 20%;
-    --ring: 140 42% 55%;
   }
 }
 
@@ -72,6 +38,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Alegreya', serif;
+    font-feature-settings: "calt" 1, "liga" 1;
   }
 }
