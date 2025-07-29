@@ -1,11 +1,10 @@
 'use client';
 
-import type { Metadata } from 'next';
-import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
+import { Vazirmatn } from 'next/font/google';
 import dynamic from 'next/dynamic';
+import { useEffect } from 'react';
 
 const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
@@ -13,20 +12,11 @@ const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: fal
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
-
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
   display: 'swap',
   variable: '--font-sans',
 });
-
-// This can't be a dynamic export in a client component, 
-// so we define it statically here.
-// export const metadata: Metadata = {
-//   title: 'هنربانو',
-//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
-//   manifest: '/manifest.json',
-// };
 
 export default function RootLayout({
   children,
@@ -48,7 +38,7 @@ export default function RootLayout({
           <title>هنربانو</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#A3BEA6" />
+          <meta name="theme-color" content="#B5E2BF" />
       </head>
       <body
         className={cn(
