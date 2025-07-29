@@ -1,10 +1,11 @@
 'use client';
 
+import type { Metadata } from 'next';
+import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { Alegreya } from 'next/font/google';
-import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 
 const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
@@ -12,11 +13,20 @@ const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: fal
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
-const alegreya = Alegreya({
-  subsets: ['latin'],
+
+const vazirmatn = Vazirmatn({
+  subsets: ['arabic'],
   display: 'swap',
   variable: '--font-sans',
 });
+
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'هنربانو',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
 
 export default function RootLayout({
   children,
@@ -33,20 +43,17 @@ export default function RootLayout({
   }, []);
 
   return (
-    <html lang="en" dir="ltr">
+    <html lang="fa" dir="rtl">
        <head>
-          <title>ZanMahal</title>
-          <meta name="description" content="A marketplace for women's home-based services" />
+          <title>هنربانو</title>
+          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#B5E2BF" />
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+          <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased',
-          alegreya.variable
+          vazirmatn.variable
         )}
       >
         <AuthProvider>
