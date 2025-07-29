@@ -44,8 +44,6 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (!user?.phone) {
-      // If user is not available yet, don't try to load chats.
-      // The component will re-render when useAuth provides the user.
       if (isLoggedIn === false) { // Only set loading to false if we know for sure user is logged out
         setIsLoading(false);
       }
