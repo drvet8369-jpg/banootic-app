@@ -1,9 +1,10 @@
+
 'use client';
 
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -24,7 +25,12 @@ const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     setIsSheetOpen(false);
@@ -114,56 +120,60 @@ export default function Header() {
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                {isLoggedIn && user ? (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                        <Avatar>
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                        </Avatar>
-                        <InboxBadge isMenu />
-                    </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
-                        </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
-                        <DropdownMenuItem asChild>
-                        <Link href="/profile">
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
-                        </Link>
-                        </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem asChild>
-                        <Link href="/inbox" className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                            <span>صندوق ورودی</span>
-                            <InboxBadge />
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
-                        <LogOut className="ml-2 h-4 w-4" />
-                        <span>خروج</span>
-                    </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                ) : (
+              {isClient && (
                 <>
-                    <Button asChild variant="secondary">
-                    <Link href="/register">ثبت‌نام</Link>
-                    </Button>
-                    <Button asChild>
-                    <Link href="/login">ورود</Link>
-                    </Button>
+                  {isLoggedIn && user ? (
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                          <Avatar>
+                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                          </Avatar>
+                          <InboxBadge isMenu />
+                      </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-56" align="start" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                          <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">{user.name}</p>
+                          <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
+                          </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {user.accountType === 'provider' && (
+                          <DropdownMenuItem asChild>
+                          <Link href="/profile">
+                              <UserRound className="ml-2 h-4 w-4" />
+                              <span>پروفایل من</span>
+                          </Link>
+                          </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem asChild>
+                          <Link href="/inbox" className="relative">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                              <span>صندوق ورودی</span>
+                              <InboxBadge />
+                          </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={logout}>
+                          <LogOut className="ml-2 h-4 w-4" />
+                          <span>خروج</span>
+                      </DropdownMenuItem>
+                      </DropdownMenuContent>
+                  </DropdownMenu>
+                  ) : (
+                  <>
+                      <Button asChild variant="secondary">
+                      <Link href="/register">ثبت‌نام</Link>
+                      </Button>
+                      <Button asChild>
+                      <Link href="/login">ورود</Link>
+                      </Button>
+                  </>
+                  )}
                 </>
-                )}
+              )}
             </nav>
             {/* Mobile Nav */}
             <div className="md:hidden">
@@ -175,7 +185,8 @@ export default function Header() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-                    <MobileNavMenu />
+                    <SheetTitle className="sr-only">Menu</SheetTitle>
+                    {isClient && <MobileNavMenu />}
                 </SheetContent>
                 </Sheet>
             </div>
