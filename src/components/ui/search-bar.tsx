@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,7 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="bg-muted border-b w-full">
+    <div className="bg-muted border-b w-full sticky top-16 z-40">
       <div className="container p-2">
         <form onSubmit={handleSearch} className="relative">
           <Input

@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -21,16 +20,13 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
+const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     setIsSheetOpen(false);
@@ -114,14 +110,13 @@ export default function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        {/* Left Side: Actions */}
-        <div className="flex items-center gap-2">
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-              {isClient && (
-                <>
+    <>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between">
+          {/* Left Side: Actions */}
+          <div className="flex items-center gap-2">
+              {/* Desktop Nav */}
+              <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
                   {isLoggedIn && user ? (
                   <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -172,32 +167,32 @@ export default function Header() {
                       </Button>
                   </>
                   )}
-                </>
-              )}
-            </nav>
-            {/* Mobile Nav */}
-            <div className="md:hidden">
-                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">باز کردن منو</span>
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-                    <SheetTitle className="sr-only">Menu</SheetTitle>
-                    {isClient && <MobileNavMenu />}
-                </SheetContent>
-                </Sheet>
-            </div>
-        </div>
+              </nav>
+              {/* Mobile Nav */}
+              <div className="md:hidden">
+                  <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                  <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
+                      <span className="sr-only">باز کردن منو</span>
+                      </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+                      <SheetTitle className="sr-only">Menu</SheetTitle>
+                      <MobileNavMenu />
+                  </SheetContent>
+                  </Sheet>
+              </div>
+          </div>
 
-        {/* Right Side: Branding */}
-        <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-            <Logo className="h-10 w-10 text-primary-foreground" />
-        </Link>
-      </div>
-    </header>
+          {/* Right Side: Branding */}
+          <Link href="/" className="flex items-center gap-2">
+              <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+              <Logo className="h-10 w-10 text-primary-foreground" />
+          </Link>
+        </div>
+      </header>
+      <SearchBar />
+    </>
   );
 }
