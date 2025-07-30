@@ -10,7 +10,6 @@ import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
-import ClientOnly from '@/components/client-only';
 
 
 const vazirmatn = Vazirmatn({
@@ -55,19 +54,17 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <ClientOnly>
-          <AuthProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <SearchBar />
-              <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-                {children}
-              </main>
-              <Footer />
-            </div>
-            <Toaster />
-          </AuthProvider>
-        </ClientOnly>
+        <AuthProvider>
+          <div className="relative flex min-h-screen flex-col">
+            <Header />
+            <SearchBar />
+            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+              {children}
+            </main>
+            <Footer />
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
