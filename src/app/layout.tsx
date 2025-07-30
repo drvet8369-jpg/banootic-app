@@ -1,10 +1,10 @@
 'use client';
 
+import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/AuthContext';
 import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
@@ -18,6 +18,14 @@ const vazirmatn = Vazirmatn({
   display: 'swap',
   variable: '--font-sans',
 });
+
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'هنربانو',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
 
 export default function RootLayout({
   children,
@@ -48,17 +56,17 @@ export default function RootLayout({
         )}
       >
         <ClientOnly>
-            <AuthProvider>
-              <div className="relative flex min-h-screen flex-col">
-                <Header />
-                <SearchBar />
-                <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-              <Toaster />
-            </AuthProvider>
+          <AuthProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              <SearchBar />
+              <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+                {children}
+              </main>
+              <Footer />
+            </div>
+            <Toaster />
+          </AuthProvider>
         </ClientOnly>
       </body>
     </html>
