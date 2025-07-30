@@ -1,19 +1,19 @@
 {
-  "name": "HonarBanoo",
-  "short_name": "HonarBanoo",
-  "description": "A marketplace for women's home-based services.",
+  "name": "هنربانو",
+  "short_name": "هنربانو",
+  "description": "بازاری برای خدمات خانگی بانوان هنرمند",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#E8F8EF",
-  "theme_color": "#B5E2BF",
+  "background_color": "#A3BEA6",
+  "theme_color": "#A3BEA6",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

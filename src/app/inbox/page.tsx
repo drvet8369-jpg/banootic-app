@@ -168,7 +168,7 @@ export default function InboxPage() {
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
-                                {isClient && chat.updatedAt && (
+                                {isClient && (
                                   <p className="text-xs text-muted-foreground flex-shrink-0">
                                     {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR })}
                                   </p>
