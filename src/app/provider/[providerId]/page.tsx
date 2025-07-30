@@ -287,6 +287,25 @@ export default function ProviderProfilePage() {
                                             )}
                                         </div>
                                     </DialogTrigger>
+                                    <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                                        <DialogHeader className="sr-only">
+                                        <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
+                                        </DialogHeader>
+                                    <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                        <X className="h-6 w-6" />
+                                        <span className="sr-only">بستن</span>
+                                        </DialogClose>
+                                        {selectedImage && (
+                                            <div className="relative w-full h-full">
+                                                <Image
+                                                    src={selectedImage}
+                                                    alt="نمونه کار تمام صفحه"
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                        )}
+                                    </DialogContent>
                                 </Dialog>
                             ))}
                         </div>
@@ -294,27 +313,6 @@ export default function ProviderProfilePage() {
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
                             <p>هنوز نمونه کاری اضافه نشده است.</p>
                         </div>
-                    )}
-                    {selectedImage && (
-                        <Dialog open={!!selectedImage} onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
-                           <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
-                               <DialogHeader className="sr-only">
-                                 <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
-                               </DialogHeader>
-                              <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
-                                 <X className="h-6 w-6" />
-                                 <span className="sr-only">بستن</span>
-                               </DialogClose>
-                               <div className="relative w-full h-full">
-                                   <Image
-                                       src={selectedImage}
-                                       alt="نمونه کار تمام صفحه"
-                                       fill
-                                       className="object-contain"
-                                   />
-                               </div>
-                           </DialogContent>
-                        </Dialog>
                     )}
                 </CardContent>
 
