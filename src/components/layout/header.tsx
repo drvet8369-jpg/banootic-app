@@ -109,8 +109,8 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <div className="flex items-center gap-2 md:hidden">
+      <div className="container flex h-16 items-center justify-between relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 md:hidden">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -124,15 +124,15 @@ export default function Header() {
             </Sheet>
         </div>
 
-        <div className="flex-1 flex justify-center md:justify-end">
+        <div className="flex-1 flex justify-center md:justify-start">
             <Link href="/" className="flex items-center gap-2">
-                <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
                 <Logo className="h-10 w-10 text-primary-foreground" />
+                <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
             </Link>
         </div>
         
-        <nav className="hidden md:flex items-center gap-2 flex-1">
-            {isLoggedIn ? (
+        <nav className="hidden md:flex items-center gap-2">
+            {isLoggedIn && user ? (
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
