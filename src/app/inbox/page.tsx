@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -35,11 +36,18 @@ export default function InboxPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client, preventing hydration mismatch for date formatting.
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (!user?.phone) {
-      setChats([]);
-      setIsLoading(false);
+      if (isClient) { // Only stop loading if we are on the client
+          setIsLoading(false);
+      }
       return;
     }
 
@@ -81,7 +89,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.phone]);
+  }, [user?.phone, isClient]);
 
 
   if (isLoading) {
@@ -162,8 +170,8 @@ export default function InboxPage() {
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
-                                <p className="text-xs text-muted-foreground flex-shrink-0" suppressHydrationWarning>
-                                  {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR })}
+                                <p className="text-xs text-muted-foreground flex-shrink-0">
+                                  {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mt-1">
@@ -183,3 +191,5 @@ export default function InboxPage() {
     </div>
   );
 }
+
+    
