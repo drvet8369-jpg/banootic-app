@@ -35,12 +35,6 @@ export default function InboxPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    // This effect runs only on the client, preventing hydration mismatch for date formatting.
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     if (!user?.phone) {
@@ -168,8 +162,8 @@ export default function InboxPage() {
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
-                                <p className="text-xs text-muted-foreground flex-shrink-0">
-                                  {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
+                                <p className="text-xs text-muted-foreground flex-shrink-0" suppressHydrationWarning>
+                                  {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR })}
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mt-1">

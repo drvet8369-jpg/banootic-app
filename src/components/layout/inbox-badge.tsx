@@ -11,10 +11,10 @@ interface InboxBadgeProps {
 
 export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
   const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !user?.phone) {
+    if (!user?.phone) {
       setUnreadCount(0);
       return;
     }
@@ -30,21 +30,27 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
           }, 0);
         setUnreadCount(totalUnread);
       } catch (e) {
+        // Silently fail if localStorage is not available or corrupted
         setUnreadCount(0);
       }
     };
 
+    // Initial check
     checkUnread();
 
+    // Listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'inbox_chats') {
-        checkUnread();
-      }
+        if (event.key === 'inbox_chats') {
+            checkUnread();
+        }
     };
 
     window.addEventListener('storage', handleStorageChange);
+    // Also check on focus for changes within the same tab
     window.addEventListener('focus', checkUnread);
-    const intervalId = setInterval(checkUnread, 5000);
+
+    // Set up an interval as a fallback
+    const intervalId = setInterval(checkUnread, 5000); 
 
     return () => {
       clearInterval(intervalId);
@@ -53,11 +59,13 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
     };
   }, [user?.phone]);
 
-  if (unreadCount === null || unreadCount === 0) return null;
+  if (unreadCount === 0) {
+    return null;
+  }
 
-  return (
-    <Badge variant="destructive" className={cn(isMenu && "absolute -top-1 -right-1 scale-75 p-1")}>
-      {unreadCount}
-    </Badge>
-  );
+  if (isMenu) {
+     return <Badge variant="destructive" className="absolute -top-1 -right-1 scale-75 p-1">{unreadCount}</Badge>;
+  }
+
+  return <Badge variant="destructive">{unreadCount}</Badge>;
 }
