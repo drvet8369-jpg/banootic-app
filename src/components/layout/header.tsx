@@ -24,16 +24,11 @@ const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     setIsSheetOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const getInitials = (name: string) => {
     if (!name) return '..';
@@ -42,45 +37,6 @@ export default function Header() {
       return `${names[0][0]}${names[1][0]}`;
     }
     return name.substring(0, 2);
-  }
-
-  const renderAuthDependentNav = () => {
-    if (!isClient) return null; // Don't render anything on the server or initial client render
-
-    return isLoggedIn ? (
-        <>
-            {user?.accountType === 'provider' && (
-            <SheetClose asChild>
-                <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                <UserRound className="h-5 w-5" />
-                پروفایل من
-                </Link>
-            </SheetClose>
-            )}
-            <SheetClose asChild>
-            <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                <span>صندوق ورودی</span>
-                <InboxBadge />
-            </Link>
-            </SheetClose>
-        </>
-    ) : (
-        <>
-            <SheetClose asChild>
-            <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                <LogIn className="h-5 w-5" />
-                ورود
-            </Link>
-            </SheetClose>
-            <SheetClose asChild>
-            <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                <UserPlus className="h-5 w-5" />
-                ثبت‌نام
-            </Link>
-            </SheetClose>
-        </>
-    );
   }
 
   const MobileNavMenu = () => (
@@ -94,9 +50,42 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {renderAuthDependentNav()}
+        {isLoggedIn ? (
+           <>
+             {user?.accountType === 'provider' && (
+                <SheetClose asChild>
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <UserRound className="h-5 w-5" />
+                    پروفایل من
+                  </Link>
+                </SheetClose>
+             )}
+            <SheetClose asChild>
+              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                 <span>صندوق ورودی</span>
+                 <InboxBadge />
+              </Link>
+            </SheetClose>
+           </>
+        ) : (
+          <>
+            <SheetClose asChild>
+              <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <LogIn className="h-5 w-5" />
+                ورود
+              </Link>
+            </SheetClose>
+            <SheetClose asChild>
+              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <UserPlus className="h-5 w-5" />
+                ثبت‌نام
+              </Link>
+            </SheetClose>
+          </>
+        )}
       </nav>
-      {isClient && isLoggedIn && user && (
+      {isLoggedIn && user && (
         <div className="mt-auto p-4 border-t">
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
@@ -120,8 +109,8 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-center relative">
-        <div className="md:hidden absolute left-4 top-1/2 -translate-y-1/2">
+      <div className="container flex h-16 items-center">
+        <div className="flex items-center gap-2 md:hidden">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -135,13 +124,15 @@ export default function Header() {
             </Sheet>
         </div>
 
-        <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-            <Logo className="h-10 w-10 text-primary-foreground" />
-        </Link>
+        <div className="flex-1 flex justify-center md:justify-end">
+            <Link href="/" className="flex items-center gap-2">
+                <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+                <Logo className="h-10 w-10 text-primary-foreground" />
+            </Link>
+        </div>
         
-        <div className="hidden md:flex items-center gap-2 absolute right-4 top-1/2 -translate-y-1/2">
-            {isClient && isLoggedIn && user ? (
+        <nav className="hidden md:flex items-center gap-2 flex-1">
+            {isLoggedIn ? (
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -181,7 +172,7 @@ export default function Header() {
                 </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            ) : isClient ? (
+            ) : (
             <>
                 <Button asChild variant="secondary">
                 <Link href="/register">ثبت‌نام</Link>
@@ -190,8 +181,8 @@ export default function Header() {
                 <Link href="/login">ورود</Link>
                 </Button>
             </>
-            ) : null}
-        </div>
+            )}
+        </nav>
       </div>
     </header>
   );

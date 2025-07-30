@@ -43,11 +43,6 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      setIsLoading(false);
-      return;
-    }
-    
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -92,7 +87,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isLoggedIn]);
+  }, [user?.phone]);
 
 
   if (isLoading) {
@@ -123,7 +118,7 @@ export default function InboxPage() {
             <CardHeader>
                 <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
                  <CardDescription>
-                    {user?.accountType === 'provider' 
+                    {user.accountType === 'provider' 
                         ? 'آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید.' 
                         : 'آخرین گفتگوهای خود با هنرمندان را در اینجا مشاهده کنید.'}
                 </CardDescription>
@@ -133,11 +128,11 @@ export default function InboxPage() {
                     <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                     <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
                     <p className="text-muted-foreground mt-2">
-                        {user?.accountType === 'provider'
+                        {user.accountType === 'provider'
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
-                    {user?.accountType === 'customer' && (
+                    {user.accountType === 'customer' && (
                         <Button asChild className="mt-6">
                             <Link href="/">مشاهده هنرمندان</Link>
                         </Button>

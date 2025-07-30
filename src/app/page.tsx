@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 import { Logo } from '@/components/layout/logo';
 
-
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
   cooking: ChefHat,

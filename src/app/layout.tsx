@@ -1,14 +1,17 @@
 'use client';
 
+import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
-import { AuthProvider } from '@/context/AuthContext';
+import dynamic from 'next/dynamic';
 import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/layout/footer';
-import { Toaster } from '@/components/ui/toaster';
+
+const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
+const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
 
 const vazirmatn = Vazirmatn({
