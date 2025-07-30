@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -45,9 +44,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (!user?.phone) {
-      if (isClient) { // Only stop loading if we are on the client
-          setIsLoading(false);
-      }
+      setIsLoading(false);
       return;
     }
 
@@ -89,7 +86,7 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.phone, isClient]);
+  }, [user?.phone]);
 
 
   if (isLoading) {
@@ -191,5 +188,3 @@ export default function InboxPage() {
     </div>
   );
 }
-
-    
