@@ -5,24 +5,13 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
+import { AuthProvider } from '@/context/AuthContext';
+import Header from '@/components/layout/header';
+import SearchBar from '@/components/ui/search-bar';
+import Footer from '@/components/layout/footer';
+import { Toaster } from '@/components/ui/toaster';
+import ClientOnly from '@/components/client-only';
 
-const AuthProvider = dynamic(
-  () => import('@/context/AuthContext').then(mod => mod.AuthProvider),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">در حال بارگذاری...</p>
-      </div>
-    ),
-  }
-);
-const Header = dynamic(() => import('@/components/layout/header'));
-const SearchBar = dynamic(() => import('@/components/ui/search-bar'));
-const Footer = dynamic(() => import('@/components/layout/footer'));
-const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster));
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -58,17 +47,19 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <SearchBar />
-            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-              {children}
-            </main>
-            <Footer />
-          </div>
-          <Toaster />
-        </AuthProvider>
+        <ClientOnly>
+            <AuthProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <Header />
+                <SearchBar />
+                <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+              <Toaster />
+            </AuthProvider>
+        </ClientOnly>
       </body>
     </html>
   );
