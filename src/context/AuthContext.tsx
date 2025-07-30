@@ -23,28 +23,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// A one-time check to see if we need to clean up localStorage
-const performCleanup = () => {
-    if (typeof window !== 'undefined') {
-        const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix'; // Use a new flag to re-run if needed
-        if (!localStorage.getItem(cleanupFlag)) {
-            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
-            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
-            localStorage.setItem(cleanupFlag, 'true');
-        }
-    }
-};
-
-if (typeof window !== 'undefined') {
-    performCleanup();
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
+    // Perform one-time cleanup on initial client-side load
+    const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix';
+    if (!localStorage.getItem(cleanupFlag)) {
+        console.log("Performing one-time cleanup of localStorage for portfolio reset...");
+        localStorage.removeItem('honarbanoo-providers');
+        localStorage.setItem(cleanupFlag, 'true');
+    }
+
     try {
       const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
