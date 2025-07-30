@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -181,7 +181,7 @@ export default function Header() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-                    <div className="sr-only" aria-live="polite">Menu</div>
+                    <SheetTitle className="sr-only">Menu</SheetTitle>
                     <MobileNavMenu />
                 </SheetContent>
                 </Sheet>
