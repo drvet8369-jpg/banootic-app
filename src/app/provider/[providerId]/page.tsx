@@ -52,9 +52,11 @@ const ReviewCard = ({ review }: { review: Review }) => {
         <div className="flex-grow">
           <div className="flex items-center justify-between mb-2">
             <StarRating rating={review.rating} size="sm" readOnly />
-            <p className="text-xs text-muted-foreground flex-shrink-0">
-              {isClient ? formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR }) : '...'}
-            </p>
+            {isClient && (
+                <p className="text-xs text-muted-foreground flex-shrink-0">
+                    {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
+                </p>
+            )}
           </div>
           <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
         </div>
@@ -169,6 +171,7 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -258,10 +261,11 @@ export default function ProviderProfilePage() {
                     {provider.portfolio && provider.portfolio.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {provider.portfolio.map((item, index) => (
-                                <Dialog key={`${provider.id}-portfolio-${index}`}>
+                                <Dialog key={`${provider.id}-portfolio-${index}`} onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
                                     <DialogTrigger asChild>
                                         <div 
                                             className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setSelectedImage(item.src)}
                                         >
                                             <Image
                                                 src={item.src}
@@ -283,23 +287,6 @@ export default function ProviderProfilePage() {
                                             )}
                                         </div>
                                     </DialogTrigger>
-                                    <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
-                                        <DialogHeader className="sr-only">
-                                          <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
-                                        </DialogHeader>
-                                       <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
-                                          <X className="h-6 w-6" />
-                                          <span className="sr-only">بستن</span>
-                                        </DialogClose>
-                                        <div className="relative w-full h-full">
-                                            <Image
-                                                src={item.src}
-                                                alt="نمونه کار تمام صفحه"
-                                                fill
-                                                className="object-contain"
-                                            />
-                                        </div>
-                                    </DialogContent>
                                 </Dialog>
                             ))}
                         </div>
@@ -307,6 +294,27 @@ export default function ProviderProfilePage() {
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
                             <p>هنوز نمونه کاری اضافه نشده است.</p>
                         </div>
+                    )}
+                    {selectedImage && (
+                        <Dialog open={!!selectedImage} onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
+                           <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                               <DialogHeader className="sr-only">
+                                 <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
+                               </DialogHeader>
+                              <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                 <X className="h-6 w-6" />
+                                 <span className="sr-only">بستن</span>
+                               </DialogClose>
+                               <div className="relative w-full h-full">
+                                   <Image
+                                       src={selectedImage}
+                                       alt="نمونه کار تمام صفحه"
+                                       fill
+                                       className="object-contain"
+                                   />
+                               </div>
+                           </DialogContent>
+                        </Dialog>
                     )}
                 </CardContent>
 
