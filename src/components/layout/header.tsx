@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { PanelLeft, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -176,7 +176,7 @@ export default function Header() {
                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
-                    <PanelLeft className="h-6 w-6" />
+                    <Menu className="h-7 w-7" />
                     <span className="sr-only">باز کردن منو</span>
                     </Button>
                 </SheetTrigger>
