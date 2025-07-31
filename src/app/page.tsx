@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { categories, getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift, LayoutDashboard } from 'lucide-react';
 import dynamic from 'next/dynamic';
