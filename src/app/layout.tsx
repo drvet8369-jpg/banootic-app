@@ -14,7 +14,6 @@ const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: fal
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
-
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
   display: 'swap',
@@ -29,10 +28,11 @@ const vazirmatn = Vazirmatn({
 //   manifest: '/manifest.json',
 // };
 
-function MainContent({ children }: { children: React.ReactNode }) {
+function AppBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox'];
-  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !pathname.startsWith('/chat/');
+  const isChatPage = pathname.startsWith('/chat/');
+  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !isChatPage;
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -45,6 +45,9 @@ function MainContent({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+const DynamicAppBody = dynamic(() => Promise.resolve(AppBody), { ssr: false });
+
 
 export default function RootLayout({
   children,
@@ -75,7 +78,7 @@ export default function RootLayout({
         )}
       >
         <AuthProvider>
-          <MainContent>{children}</MainContent>
+          <DynamicAppBody>{children}</DynamicAppBody>
           <Toaster />
         </AuthProvider>
       </body>
