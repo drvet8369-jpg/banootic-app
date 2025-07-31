@@ -1,11 +1,16 @@
+
 'use client';
 
 import Link from 'next/link';
-import { categories } from '@/lib/data';
+import { categories, getProviders } from '@/lib/data';
+import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, LayoutDashboard } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/context/AuthContext';
+import { useEffect, useState } from 'react';
+import SearchResultCard from '@/components/search-result-card';
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
@@ -16,46 +21,137 @@ const iconMap: { [key: string]: React.ElementType } = {
   handicrafts: Gift,
 };
 
+const LandingPage = () => (
+  <>
+    <section className="text-center py-20 lg:py-24 w-full">
+      <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
+      <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
+        هنربانو
+      </h1>
+      <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
+        با دستان هنرمندت بدرخش
+      </p>
+      <p className="mt-4 text-lg md:text-xl text-primary-foreground max-w-2xl mx-auto">
+        بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
+      </p>
+    </section>
+
+    <section id="categories" className="py-16 w-full">
+      <h2 className="text-3xl font-headline font-bold text-center mb-12">خدمات ما</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {categories.map((category) => {
+          const Icon = iconMap[category.slug];
+          return (
+            <Link href={`/services/${category.slug}`} key={category.id}>
+              <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
+                <CardHeader className="items-center">
+                  {Icon && <Icon className="w-20 h-20 mb-4 text-accent" />}
+                  <CardTitle className="font-headline text-2xl">{category.name}</CardTitle>
+                </CardHeader>
+                <CardDescription>{category.description}</CardDescription>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
+      <div className="mt-12 text-center">
+        <Button asChild variant="secondary" size="lg" className="text-lg">
+          <Link href="/register">به جامعه ما بپیوندید</Link>
+        </Button>
+      </div>
+    </section>
+  </>
+);
+
+const UserDashboard = () => {
+    const { user } = useAuth();
+    const [suggestedProviders, setSuggestedProviders] = useState<Provider[]>([]);
+    const [providerProfile, setProviderProfile] = useState<Provider | null>(null);
+
+    useEffect(() => {
+        const allProviders = getProviders();
+        if (user?.accountType === 'customer') {
+            const shuffled = [...allProviders].sort(() => 0.5 - Math.random());
+            setSuggestedProviders(shuffled.slice(0, 3));
+        } else if (user?.accountType === 'provider') {
+            const profile = allProviders.find(p => p.phone === user.phone);
+            setProviderProfile(profile || null);
+        }
+    }, [user]);
+
+    if (!user) return null;
+
+    if (user.accountType === 'provider') {
+        return (
+            <div className="py-12 md:py-20 w-full">
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-4">
+                           <LayoutDashboard className="w-8 h-8 text-primary" />
+                           <div>
+                            <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
+                            <CardDescription>خوش آمدید {user.name}، پروفایل خود را از اینجا مدیریت کنید.</CardDescription>
+                           </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {providerProfile ? (
+                            <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                                <p><strong>نام کسب‌وکار:</strong> {providerProfile.name}</p>
+                                <p><strong>نوع خدمت:</strong> {providerProfile.service}</p>
+                                <p><strong>امتیاز شما:</strong> {providerProfile.rating} ({providerProfile.reviewsCount} نظر)</p>
+                            </div>
+                        ) : <p className="text-muted-foreground">در حال بارگذاری اطلاعات پروفایل...</p>}
+                    </CardContent>
+                    <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6 border-t">
+                         <Button asChild className="w-full flex-1">
+                            <Link href="/profile">
+                                مدیریت پروفایل و نمونه‌کارها
+                            </Link>
+                        </Button>
+                        <Button asChild variant="secondary" className="w-full flex-1">
+                            <Link href="/inbox">صندوق ورودی پیام‌ها</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        )
+    }
+
+    // Customer Dashboard
+    return (
+        <div className="py-12 md:py-20 w-full">
+            <div className="text-center mb-12">
+                <h1 className="font-headline text-4xl md:text-5xl font-bold">سلام {user.name}!</h1>
+                <p className="mt-3 text-lg text-muted-foreground">در ادامه چند هنرمند پیشنهادی برای شما آمده است.</p>
+            </div>
+            
+            {suggestedProviders.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {suggestedProviders.map(provider => (
+                        <SearchResultCard key={provider.id} provider={provider} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                    <p>در حال حاضر هنرمندی برای پیشنهاد یافت نشد.</p>
+                </div>
+            )}
+             <div className="mt-12 text-center">
+                <Button asChild size="lg">
+                    <Link href="/search?q=">مشاهده تمام هنرمندان</Link>
+                </Button>
+            </div>
+        </div>
+    )
+}
+
 export default function Home() {
+  const { isLoggedIn } = useAuth();
+  
   return (
     <div className="flex flex-col items-center justify-center">
-      <section className="text-center py-20 lg:py-24 w-full">
-        <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
-        <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
-          هنربانو
-        </h1>
-        <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
-          با دستان هنرمندت بدرخش
-        </p>
-        <p className="mt-4 text-lg md:text-xl text-primary-foreground max-w-2xl mx-auto">
-          بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
-        </p>
-      </section>
-
-      <section id="categories" className="py-16 w-full">
-        <h2 className="text-3xl font-headline font-bold text-center mb-12">خدمات ما</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {categories.map((category) => {
-            const Icon = iconMap[category.slug];
-            return (
-              <Link href={`/services/${category.slug}`} key={category.id}>
-                <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
-                  <CardHeader className="items-center">
-                    {Icon && <Icon className="w-20 h-20 mb-4 text-accent" />}
-                    <CardTitle className="font-headline text-2xl">{category.name}</CardTitle>
-                  </CardHeader>
-                  <CardDescription>{category.description}</CardDescription>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-         <div className="mt-12 text-center">
-            <Button asChild variant="secondary" size="lg" className="text-lg">
-              <Link href="/register">به جامعه ما بپیوندید</Link>
-            </Button>
-          </div>
-      </section>
+      {isLoggedIn ? <UserDashboard /> : <LandingPage />}
     </div>
   );
 }
