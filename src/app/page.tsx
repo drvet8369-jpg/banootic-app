@@ -5,7 +5,7 @@ import { categories, getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, LayoutDashboard } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -144,7 +144,10 @@ const UserDashboard = () => {
             )}
              <div className="mt-12 text-center">
                 <Button asChild size="lg">
-                    <Link href="/search?q=">مشاهده تمام هنرمندان</Link>
+                    <Link href="/search?q=">
+                        مشاهده تمام هنرمندان
+                        <ArrowLeft className="w-5 h-5 mr-2" />
+                    </Link>
                 </Button>
             </div>
             <CategoriesSection />
