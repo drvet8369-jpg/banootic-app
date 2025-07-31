@@ -1,10 +1,10 @@
-
 'use client';
 
+import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 
@@ -14,31 +14,27 @@ const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: fal
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
+
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
   display: 'swap',
   variable: '--font-sans',
 });
 
-// This Client-side wrapper prevents hydration errors by ensuring
-// that components depending on `localStorage` or other browser APIs
-// are only rendered on the client.
-function ClientOnlyWrapper({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [isClient, setIsClient] = useState(false);
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'هنربانو',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+function AppContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
 
   // Define paths where the search bar should be hidden
   const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox'];
   const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !pathname.startsWith('/chat/');
-
-  if (!isClient) {
-    // You can return a loader or null here to avoid rendering anything on the server
-    return null;
-  }
 
   return (
     <AuthProvider>
@@ -52,7 +48,7 @@ function ClientOnlyWrapper({ children }: { children: React.ReactNode }) {
       </div>
       <Toaster />
     </AuthProvider>
-  );
+  )
 }
 
 export default function RootLayout({
@@ -61,7 +57,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  // PWA-related service worker registration
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
@@ -84,7 +79,7 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <ClientOnlyWrapper>{children}</ClientOnlyWrapper>
+        <AppContent>{children}</AppContent>
       </body>
     </html>
   );
