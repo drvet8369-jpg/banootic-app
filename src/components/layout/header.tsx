@@ -184,7 +184,7 @@ export default function Header() {
                        <span className="sr-only">باز کردن منو</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+                <SheetContent side="left" className="p-0 w-[300px] sm:w-[340px]">
                     <SheetTitle className="sr-only">Menu</SheetTitle>
                     <MobileNavMenu />
                 </SheetContent>

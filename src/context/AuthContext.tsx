@@ -29,14 +29,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    // Perform one-time cleanup on initial client-side load
-    const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix';
-    if (!localStorage.getItem(cleanupFlag)) {
-        console.log("Performing one-time cleanup of localStorage for portfolio reset...");
-        localStorage.removeItem('honarbanoo-providers');
-        localStorage.setItem(cleanupFlag, 'true');
+    // Perform one-time cleanup on initial client-side load if needed
+    if (typeof window !== 'undefined') {
+        const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix'; 
+        if (!localStorage.getItem(cleanupFlag)) {
+            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
+            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
+            localStorage.setItem(cleanupFlag, 'true');
+        }
     }
-
+    
     try {
       const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
