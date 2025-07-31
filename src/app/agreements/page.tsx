@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { getAgreements, saveAgreements, getProviders, saveProviders } from '@/li
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, User, Handshake, Check, Hourglass } from 'lucide-react';
+import { Loader2, User, Handshake, Check, Hourglass, CheckCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
