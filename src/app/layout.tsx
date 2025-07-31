@@ -21,26 +21,30 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-function AppBody({ children }: { children: React.ReactNode }) {
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'هنربانو',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
+
+function MainContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox'];
   const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !pathname.startsWith('/chat/');
 
   return (
-    <AuthProvider>
-        <div className="relative flex min-h-screen flex-col">
-          <Header />
-          {shouldShowSearchBar && <SearchBar />}
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-            {children}
-          </main>
-          <Footer />
-        </div>
-        <Toaster />
-    </AuthProvider>
+    <div className="relative flex min-h-screen flex-col">
+      <Header />
+      {shouldShowSearchBar && <SearchBar />}
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+        {children}
+      </main>
+      <Footer />
+    </div>
   );
 }
-
 
 export default function RootLayout({
   children,
@@ -70,7 +74,10 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AppBody>{children}</AppBody>
+        <AuthProvider>
+          <MainContent>{children}</MainContent>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

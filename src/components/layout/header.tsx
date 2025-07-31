@@ -110,12 +110,6 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        {/* Right Side: Branding */}
-        <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-            <Logo className="h-10 w-10 text-primary-foreground" />
-        </Link>
-        
         {/* Left Side: Actions */}
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
@@ -184,13 +178,19 @@ export default function Header() {
                        <span className="sr-only">باز کردن منو</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[300px] sm:w-[340px]">
+                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
                     <SheetTitle className="sr-only">Menu</SheetTitle>
                     <MobileNavMenu />
                 </SheetContent>
                 </Sheet>
             </div>
         </div>
+
+        {/* Right Side: Branding */}
+        <Link href="/" className="flex items-center gap-2">
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <Logo className="h-10 w-10 text-primary-foreground" />
+        </Link>
       </div>
     </header>
   );
