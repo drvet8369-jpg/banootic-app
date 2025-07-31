@@ -105,6 +105,7 @@ const UserDashboard = () => {
                                 <p><strong>نام کسب‌وکار:</strong> {providerProfile.name}</p>
                                 <p><strong>نوع خدمت:</strong> {providerProfile.service}</p>
                                 <p><strong>امتیاز شما:</strong> {providerProfile.rating} ({providerProfile.reviewsCount} نظر)</p>
+                                <p><strong>تعداد توافقات ثبت شده:</strong> {providerProfile.agreementsCount || 0}</p>
                             </div>
                         ) : <p className="text-muted-foreground">در حال بارگذاری اطلاعات پروفایل...</p>}
                     </CardContent>

@@ -1,4 +1,3 @@
-
 import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
@@ -30,6 +29,7 @@ export interface Provider {
   serviceSlug: Service['slug']; // Link to the service
   rating: number;
   reviewsCount: number;
+  agreementsCount: number; // To count agreements/orders
   profileImage: PortfolioItem; // Dedicated profile image
   portfolio: PortfolioItem[];
 }

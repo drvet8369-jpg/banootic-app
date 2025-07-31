@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -159,7 +159,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -206,6 +206,20 @@ export default function ProviderProfilePage() {
         toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
     }
   };
+
+  const handleRegisterAgreement = () => {
+    if (!provider) return;
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
+    if (providerIndex > -1) {
+        allProviders[providerIndex].agreementsCount = (allProviders[providerIndex].agreementsCount || 0) + 1;
+        saveProviders(allProviders);
+        loadData(); // Refresh data to show updated count if needed
+        toast({ title: 'توافق ثبت شد', description: 'یک توافق برای این هنرمند ثبت شد.' });
+    } else {
+        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+    }
+  }
 
 
   if (isLoading) {
@@ -310,15 +324,19 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {!isOwnerViewing && (
+                {isLoggedIn && !isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button asChild className="w-full">
+                    <Button onClick={handleRegisterAgreement} className="w-full flex-1">
+                        <CheckCircle className="w-4 h-4 ml-2" />
+                        ثبت توافق
+                    </Button>
+                    <Button asChild className="w-full flex-1">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button asChild className="w-full" variant="secondary">
+                    <Button asChild className="w-full flex-1" variant="secondary">
                         <a href={`tel:${provider.phone}`}>
                             <Phone className="w-4 h-4 ml-2" />
                             تماس
