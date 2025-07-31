@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -21,22 +20,8 @@ const iconMap: { [key: string]: React.ElementType } = {
   handicrafts: Gift,
 };
 
-const LandingPage = () => (
-  <>
-    <section className="text-center py-20 lg:py-24 w-full">
-      <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
-      <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
-        هنربانو
-      </h1>
-      <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
-        با دستان هنرمندت بدرخش
-      </p>
-      <p className="mt-4 text-lg md:text-xl text-primary-foreground max-w-2xl mx-auto">
-        بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
-      </p>
-    </section>
-
-    <section id="categories" className="py-16 w-full">
+const CategoriesSection = () => (
+   <section id="categories" className="py-16 w-full">
       <h2 className="text-3xl font-headline font-bold text-center mb-12">خدمات ما</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {categories.map((category) => {
@@ -54,12 +39,32 @@ const LandingPage = () => (
           );
         })}
       </div>
-      <div className="mt-12 text-center">
-        <Button asChild variant="secondary" size="lg" className="text-lg">
-          <Link href="/register">به جامعه ما بپیوندید</Link>
-        </Button>
-      </div>
     </section>
+);
+
+
+const LandingPage = () => (
+  <>
+    <section className="text-center py-20 lg:py-24 w-full">
+      <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
+      <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
+        هنربانو
+      </h1>
+      <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
+        با دستان هنرمندت بدرخش
+      </p>
+      <p className="mt-4 text-lg md:text-xl text-primary-foreground max-w-2xl mx-auto">
+        بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
+      </p>
+    </section>
+
+    <CategoriesSection />
+    
+    <div className="my-12 text-center">
+      <Button asChild variant="secondary" size="lg" className="text-lg">
+        <Link href="/register">به جامعه ما بپیوندید</Link>
+      </Button>
+    </div>
   </>
 );
 
@@ -127,7 +132,7 @@ const UserDashboard = () => {
             </div>
             
             {suggestedProviders.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {suggestedProviders.map(provider => (
                         <SearchResultCard key={provider.id} provider={provider} />
                     ))}
@@ -142,6 +147,7 @@ const UserDashboard = () => {
                     <Link href="/search?q=">مشاهده تمام هنرمندان</Link>
                 </Button>
             </div>
+            <CategoriesSection />
         </div>
     )
 }
