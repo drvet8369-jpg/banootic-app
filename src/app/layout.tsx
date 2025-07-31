@@ -33,7 +33,7 @@ function ClientOnlyWrapper({ children }: { children: React.ReactNode }) {
 
   // Define paths where the search bar should be hidden
   const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox'];
-  const shouldShowSearchBar = !noSearchBarPaths.some(path => pathname.startsWith(path)) && !pathname.startsWith('/chat/');
+  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !pathname.startsWith('/chat/');
 
   if (!isClient) {
     // You can return a loader or null here to avoid rendering anything on the server
