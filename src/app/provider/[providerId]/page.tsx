@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
-import type { Provider, Review } from '@/lib/types';
+import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/data';
+import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -207,18 +207,28 @@ export default function ProviderProfilePage() {
     }
   };
 
-  const handleRegisterAgreement = () => {
-    if (!provider) return;
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        allProviders[providerIndex].agreementsCount = (allProviders[providerIndex].agreementsCount || 0) + 1;
-        saveProviders(allProviders);
-        loadData(); // Refresh data to show updated count if needed
-        toast({ title: 'توافق ثبت شد', description: 'یک توافق برای این هنرمند ثبت شد.' });
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+  const handleRequestAgreement = () => {
+    if (!provider || !user) return;
+    
+    const allAgreements = getAgreements();
+    const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone && a.status === 'pending');
+
+    if (existingRequest) {
+        toast({ title: 'درخواست شما قبلا ثبت شده', description: 'یک درخواست توافق در انتظار برای این هنرمند دارید.', variant: 'default' });
+        return;
     }
+
+    const newAgreement: Agreement = {
+      id: Date.now().toString(),
+      providerPhone: provider.phone,
+      customerPhone: user.phone,
+      customerName: user.name,
+      status: 'pending',
+      requestedAt: new Date().toISOString()
+    };
+    
+    saveAgreements([...allAgreements, newAgreement]);
+    toast({ title: 'درخواست توافق ارسال شد', description: 'هنرمند باید درخواست شما را تایید کند.' });
   }
 
 
@@ -324,11 +334,11 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {isLoggedIn && !isOwnerViewing && (
+                {isLoggedIn && user?.accountType === 'customer' && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button onClick={handleRegisterAgreement} className="w-full flex-1">
+                    <Button onClick={handleRequestAgreement} className="w-full flex-1">
                         <CheckCircle className="w-4 h-4 ml-2" />
-                        ثبت توافق
+                        درخواست توافق
                     </Button>
                     <Button asChild className="w-full flex-1">
                         <Link href={`/chat/${provider.phone}`}>
@@ -344,6 +354,13 @@ export default function ProviderProfilePage() {
                     </Button>
                 </CardFooter>
                 )}
+                 {isLoggedIn && isOwnerViewing && (
+                     <CardFooter className="p-6 mt-auto border-t">
+                        <Button asChild className="w-full">
+                            <Link href="/profile">مدیریت پروفایل</Link>
+                        </Button>
+                     </CardFooter>
+                 )}
 
                 <Separator />
                 

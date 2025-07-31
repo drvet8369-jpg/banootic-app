@@ -49,3 +49,12 @@ export interface Message {
   receiverId?: string;
   createdAt: Timestamp;
 }
+
+export interface Agreement {
+  id: string;
+  providerPhone: string;
+  customerPhone: string;
+  customerName: string;
+  status: 'pending' | 'confirmed';
+  requestedAt: string; // ISO String format
+}

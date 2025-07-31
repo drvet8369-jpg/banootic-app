@@ -115,6 +115,9 @@ const UserDashboard = () => {
                                 مدیریت پروفایل و نمونه‌کارها
                             </Link>
                         </Button>
+                         <Button asChild className="w-full flex-1" variant="outline">
+                            <Link href="/agreements">مدیریت توافق‌ها</Link>
+                        </Button>
                         <Button asChild variant="secondary" className="w-full flex-1">
                             <Link href="/inbox">صندوق ورودی پیام‌ها</Link>
                         </Button>
