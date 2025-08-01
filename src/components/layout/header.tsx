@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
-import { LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -110,27 +110,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
+        {/* Left Side: Actions */}
         <div className="flex items-center gap-2">
-            {/* Mobile Nav */}
-            <div className="md:hidden">
-                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
-                          <line x1="4" x2="20" y1="12" y2="12"></line>
-                          <line x1="4" x2="20" y1="6" y2="6"></line>
-                          <line x1="4" x2="20" y1="18" y2="18"></line>
-                        </svg>
-                       <span className="sr-only">باز کردن منو</span>
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-                    <SheetTitle className="sr-only">Menu</SheetTitle>
-                    <MobileNavMenu />
-                </SheetContent>
-                </Sheet>
-            </div>
-             {/* Desktop Nav */}
+            {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
                 {isLoggedIn && user ? (
                 <DropdownMenu>
@@ -142,7 +124,7 @@ export default function Header() {
                         <InboxBadge isMenu />
                     </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user.name}</p>
@@ -183,7 +165,23 @@ export default function Header() {
                 </>
                 )}
             </nav>
+            {/* Mobile Nav */}
+            <div className="md:hidden">
+                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">باز کردن منو</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+                    <MobileNavMenu />
+                </SheetContent>
+                </Sheet>
+            </div>
         </div>
+
+        {/* Right Side: Branding */}
         <Link href="/" className="flex items-center gap-2">
             <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
             <Logo className="h-10 w-10 text-primary-foreground" />
