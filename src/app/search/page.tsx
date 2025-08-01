@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useSearchParams } from 'next/navigation';
@@ -7,6 +6,24 @@ import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
+
+// Ranking algorithm function
+const calculateRankingScore = (provider: Provider): number => {
+    const ratingWeight = 0.5;
+    const reviewsWeight = 0.3;
+    const agreementsWeight = 0.2;
+
+    // Use logarithmic scale to avoid massive scores for high counts
+    // and give new providers a chance. Add 1 to avoid log(0).
+    const normalizedReviews = Math.log( (provider.reviewsCount || 0) + 1);
+    const normalizedAgreements = Math.log( (provider.agreementsCount || 0) + 1);
+
+    const score = (provider.rating * ratingWeight) 
+                + (normalizedReviews * reviewsWeight) 
+                + (normalizedAgreements * agreementsWeight);
+
+    return score;
+}
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -20,7 +37,9 @@ export default function SearchPage() {
     // Always get the latest providers from localStorage at the moment of searching.
     const allProviders = getProviders();
     if (!query) {
-      setSearchResults([]);
+      // If no query, show all providers, sorted by rank
+      const sortedProviders = allProviders.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
+      setSearchResults(sortedProviders);
       setIsLoading(false);
       return;
     }
@@ -30,7 +49,11 @@ export default function SearchPage() {
       provider.service.toLowerCase().includes(lowercasedQuery) ||
       provider.bio.toLowerCase().includes(lowercasedQuery)
     );
-    setSearchResults(results);
+
+    // Sort the filtered results by ranking score
+    const sortedResults = results.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
+    
+    setSearchResults(sortedResults);
     setIsLoading(false);
   }, [query]);
 
@@ -56,7 +79,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            لطفا عبارتی را برای جستجو وارد کنید.
+            نمایش همه هنرمندان بر اساس محبوبیت
           </p>
         )}
       </div>

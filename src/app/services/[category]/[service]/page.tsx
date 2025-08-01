@@ -1,4 +1,3 @@
-
 'use client';
 
 import { services, categories, getProviders } from '@/lib/data';
@@ -9,6 +8,24 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import SearchResultCard from '@/components/search-result-card';
+
+// Ranking algorithm function
+const calculateRankingScore = (provider: Provider): number => {
+    const ratingWeight = 0.5;
+    const reviewsWeight = 0.3;
+    const agreementsWeight = 0.2;
+
+    // Use logarithmic scale to avoid massive scores for high counts
+    // and give new providers a chance. Add 1 to avoid log(0).
+    const normalizedReviews = Math.log( (provider.reviewsCount || 0) + 1);
+    const normalizedAgreements = Math.log( (provider.agreementsCount || 0) + 1);
+
+    const score = (provider.rating * ratingWeight) 
+                + (normalizedReviews * reviewsWeight) 
+                + (normalizedAgreements * agreementsWeight);
+
+    return score;
+}
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
@@ -35,7 +52,11 @@ export default function ServiceProvidersPage() {
       const allProviders = getProviders();
       // Correctly filter providers based on the serviceSlug from the URL.
       const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-      setServiceProviders(foundProviders);
+
+      // Sort the found providers by their ranking score
+      const sortedProviders = foundProviders.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
+      
+      setServiceProviders(sortedProviders);
     } else {
       setServiceProviders([]);
     }
