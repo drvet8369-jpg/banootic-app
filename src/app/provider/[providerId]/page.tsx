@@ -214,7 +214,7 @@ export default function ProviderProfilePage() {
     const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone && a.status === 'pending');
 
     if (existingRequest) {
-        toast({ title: 'درخواست شما قبلا ثبت شده', description: 'یک درخواست توافق در انتظار برای این هنرمند دارید.', variant: 'default' });
+        toast({ title: 'درخواست شما قبلا ثبت شده', description: 'شما یک درخواست در انتظار تایید برای این هنرمند دارید. لطفا صبور باشید.', variant: 'default' });
         return;
     }
 
