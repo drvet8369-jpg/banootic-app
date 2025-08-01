@@ -1,4 +1,3 @@
-
 'use client';
 
 import { services, categories, getProviders } from '@/lib/data';
@@ -12,9 +11,9 @@ import SearchResultCard from '@/components/search-result-card';
 
 // Ranking algorithm function
 const calculateRankingScore = (provider: Provider): number => {
-    const ratingWeight = 0.35; // Was 0.5
-    const reviewsWeight = 0.40; // Was 0.3
-    const agreementsWeight = 0.25; // Was 0.2
+    const ratingWeight = 0.20;
+    const reviewsWeight = 0.50;
+    const agreementsWeight = 0.30;
 
     // Use logarithmic scale to avoid massive scores for high counts
     // and give new providers a chance. Add 1 to avoid log(0).
