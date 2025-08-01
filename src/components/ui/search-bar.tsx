@@ -11,9 +11,8 @@ export default function SearchBar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
+    // Redirect even if the search term is empty to show all ranked providers
+    router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
   };
 
   return (
