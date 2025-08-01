@@ -107,7 +107,9 @@ export default function AgreementsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">مدیریت توافق‌ها</CardTitle>
-          <CardDescription>درخواست‌های توافق مشتریان را مشاهده و تایید کنید.</CardDescription>
+          <CardDescription>
+            تایید توافق‌ها به شما کمک می‌کند تا به عنوان یک هنرمند فعال و قابل اعتماد شناخته شوید و رتبه بالاتری در پلتفرم کسب کنید.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {agreements.length === 0 ? (
