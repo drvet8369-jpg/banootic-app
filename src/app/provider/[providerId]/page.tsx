@@ -211,10 +211,20 @@ export default function ProviderProfilePage() {
     if (!provider || !user) return;
     
     const allAgreements = getAgreements();
-    const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone && a.status === 'pending');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    if (existingRequest) {
-        toast({ title: 'درخواست شما قبلا ثبت شده', description: 'شما یک درخواست در انتظار تایید برای این هنرمند دارید. لطفا صبور باشید.', variant: 'default' });
+    const recentRequest = allAgreements.find(a => 
+        a.providerPhone === provider.phone && 
+        a.customerPhone === user.phone &&
+        new Date(a.requestedAt) > twentyFourHoursAgo
+    );
+
+    if (recentRequest) {
+        if (recentRequest.status === 'pending') {
+             toast({ title: 'درخواست شما قبلا ثبت شده', description: 'شما یک درخواست در انتظار تایید برای این هنرمند دارید. لطفا صبور باشید.', variant: 'default' });
+        } else {
+             toast({ title: 'محدودیت درخواست', description: 'شما در ۲۴ ساعت گذشته یک توافق با این هنرمند ثبت کرده‌اید. لطفاً بعدا تلاش کنید.', variant: 'default' });
+        }
         return;
     }
 
