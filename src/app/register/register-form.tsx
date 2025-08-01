@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -87,12 +88,12 @@ export default function RegisterForm() {
 
       const allProviders = getProviders();
 
-      // Universal check for existing phone number among providers
+      // Universal check for existing phone number among providers for ALL account types.
       const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
       if (existingProviderByPhone) {
         toast({
           title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً با شماره دیگری امتحان کنید یا وارد شوید.',
           variant: 'destructive',
         });
         setIsLoading(false);
