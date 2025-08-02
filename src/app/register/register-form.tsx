@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
+import { categories, getProviders, saveProviders, services, getAllUsers, saveAllUsers } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -85,22 +85,23 @@ export default function RegisterForm() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const allProviders = getProviders();
+      const allUsers = getAllUsers();
+      const existingUser = allUsers.find(u => u.phone === values.phone);
 
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
+      if (existingUser) {
         toast({
           title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          description: `این شماره تلفن قبلاً به عنوان ${existingUser.accountType === 'provider' ? 'هنرمند' : 'مشتری'} ثبت شده است. لطفاً وارد شوید.`,
           variant: 'destructive',
         });
         setIsLoading(false);
+        router.push('/login');
         return;
       }
 
       // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
+        const allProviders = getProviders();
         const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
             toast({
@@ -113,18 +114,17 @@ export default function RegisterForm() {
         }
       }
 
-
-      // This is the user object for the AuthContext
       const userToLogin: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
-        serviceType: values.serviceType,
-        bio: values.bio,
       };
+      
+      const allNewUsers = [...allUsers, userToLogin];
+      saveAllUsers(allNewUsers);
 
-      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
+        const allProviders = getProviders();
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
@@ -133,7 +133,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
+          location: 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -143,7 +143,6 @@ export default function RegisterForm() {
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
-        
         saveProviders([...allProviders, newProvider]);
       }
       

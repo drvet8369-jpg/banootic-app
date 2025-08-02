@@ -1,4 +1,6 @@
 import type { Category, Provider, Service, Review, Agreement } from './types';
+import type { User } from '@/context/AuthContext';
+
 
 export const categories: Category[] = [
   {
@@ -98,6 +100,7 @@ const defaultProviders: Provider[] = [
 const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
 const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
 const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
+const ALL_USERS_STORAGE_KEY = 'honarbanoo-users';
 
 
 // Function to get providers from localStorage or return default
@@ -200,5 +203,45 @@ export const saveAgreements = (updatedAgreements: Agreement[]) => {
     localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(updatedAgreements));
   } catch (error) {
     console.error("Failed to save agreements to localStorage.", error);
+  }
+};
+
+// --- All Users ---
+const getDefaultUsers = (): User[] => {
+  // Initially, the users list only contains the providers.
+  return defaultProviders.map(p => ({
+    name: p.name,
+    phone: p.phone,
+    accountType: 'provider'
+  }));
+};
+
+export const getAllUsers = (): User[] => {
+  if (typeof window === 'undefined') {
+    return getDefaultUsers();
+  }
+  try {
+    const storedUsers = localStorage.getItem(ALL_USERS_STORAGE_KEY);
+    if (storedUsers) {
+      return JSON.parse(storedUsers);
+    } else {
+      const defaultUsers = getDefaultUsers();
+      localStorage.setItem(ALL_USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
+      return defaultUsers;
+    }
+  } catch (error) {
+    console.error("Failed to access localStorage for users.", error);
+    return getDefaultUsers();
+  }
+};
+
+export const saveAllUsers = (updatedUsers: User[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.setItem(ALL_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+  } catch (error) {
+    console.error("Failed to save all users to localStorage.", error);
   }
 };
