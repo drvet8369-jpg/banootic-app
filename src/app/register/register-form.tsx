@@ -87,12 +87,12 @@ export default function RegisterForm() {
 
       const allProviders = getProviders();
 
-      // Universal check for existing phone number among providers for ALL account types.
+      // Universal check for existing phone number among providers
       const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
       if (existingProviderByPhone) {
         toast({
           title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً با شماره دیگری امتحان کنید یا وارد شوید.',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
           variant: 'destructive',
         });
         setIsLoading(false);
@@ -139,7 +139,7 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
-          agreementsCount: 0, // Initialize with 0
+          agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
