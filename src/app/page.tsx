@@ -69,6 +69,21 @@ const LandingPage = () => (
   </>
 );
 
+const calculateRankingScore = (provider: Provider): number => {
+    const ratingWeight = 0.20; 
+    const reviewsWeight = 0.50; 
+    const agreementsWeight = 0.30;
+
+    const normalizedReviews = Math.log((provider.reviewsCount || 0) + 1);
+    const normalizedAgreements = Math.log((provider.agreementsCount || 0) + 1);
+
+    const score = (provider.rating * ratingWeight) 
+                + (normalizedReviews * reviewsWeight) 
+                + (normalizedAgreements * agreementsWeight);
+
+    return score;
+}
+
 const UserDashboard = () => {
     const { user } = useAuth();
     const [suggestedProviders, setSuggestedProviders] = useState<Provider[]>([]);
@@ -78,8 +93,8 @@ const UserDashboard = () => {
     useEffect(() => {
         const allProviders = getProviders();
         if (user?.accountType === 'customer') {
-            const shuffled = [...allProviders].sort(() => 0.5 - Math.random());
-            setSuggestedProviders(shuffled.slice(0, 3));
+            const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
+            setSuggestedProviders(sortedProviders.slice(0, 3));
         } else if (user?.accountType === 'provider' && user.phone) {
             const profile = allProviders.find(p => p.phone === user.phone);
             setProviderProfile(profile || null);

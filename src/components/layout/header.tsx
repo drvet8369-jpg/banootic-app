@@ -41,7 +41,7 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-       <SheetHeader>
+      <SheetHeader>
         <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
       </SheetHeader>
       <div className="p-4 border-b">
@@ -113,7 +113,13 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        {/* Left Side: Actions */}
+        {/* Right Side: Branding (changed from Left Side for RTL) */}
+        <Link href="/" className="flex items-center gap-2">
+            <Logo className="h-10 w-10 text-primary-foreground" />
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+        </Link>
+        
+        {/* Left Side: Actions (changed from Right Side for RTL) */}
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
@@ -127,7 +133,7 @@ export default function Header() {
                         <InboxBadge isMenu />
                     </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start" forceMount>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user.name}</p>
@@ -159,11 +165,11 @@ export default function Header() {
                 </DropdownMenu>
                 ) : (
                 <>
-                    <Button asChild variant="secondary">
-                    <Link href="/register">ثبت‌نام</Link>
-                    </Button>
                     <Button asChild>
                     <Link href="/login">ورود</Link>
+                    </Button>
+                    <Button asChild variant="secondary">
+                    <Link href="/register">ثبت‌نام</Link>
                     </Button>
                 </>
                 )}
@@ -183,12 +189,6 @@ export default function Header() {
                 </Sheet>
             </div>
         </div>
-
-        {/* Right Side: Branding */}
-        <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-            <Logo className="h-10 w-10 text-primary-foreground" />
-        </Link>
       </div>
     </header>
   );
