@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -140,7 +139,7 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
-          agreementsCount: 0,
+          agreementsCount: 0, // Initialize with 0
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
