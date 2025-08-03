@@ -10,8 +10,8 @@
     --card-foreground: 145 35% 15%; /* Made darker */
     --popover: 0 0% 100%;
     --popover-foreground: 145 35% 15%; /* Made darker */
-    --primary: 140 42% 55%; /* Made darker */
-    --primary-foreground: 145 45% 10%; /* Made darker */
+    --primary: 140 45% 45%; /* Darker, more saturated green */
+    --primary-foreground: 140 25% 95%; /* Lighter foreground for contrast */
     --secondary: 140 30% 80%; /* Made darker */
     --secondary-foreground: 145 35% 15%; /* Made darker */
     --muted: 140 30% 90%;
@@ -22,7 +22,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 140 25% 65%; /* Made darker for better contrast */
     --input: 140 25% 65%; /* Made darker for better contrast */
-    --ring: 140 44% 55%; /* Made darker */
+    --ring: 140 44% 45%; /* Adjusted to match new primary */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
