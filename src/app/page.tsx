@@ -48,10 +48,10 @@ const LandingPage = () => (
   <>
     <section className="text-center py-20 lg:py-24 w-full">
       <Logo className="mx-auto mb-6 h-32 w-32 text-foreground" />
-      <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-foreground to-accent-foreground/80">
+      <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-foreground to-accent-foreground/80 mb-2">
         بانوتیک
       </h1>
-      <p className="mt-4 font-headline text-xl md:text-2xl text-foreground">
+      <p className="font-headline text-xl md:text-2xl text-foreground mb-6">
         با دستان هنرمندت بدرخش
       </p>
       <p className="mt-4 text-lg md:text-xl text-foreground max-w-2xl mx-auto">
