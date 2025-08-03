@@ -240,8 +240,8 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
       <Card>
         <div className="grid md:grid-cols-3">
-          <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
-             <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
+          <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l space-y-2">
+             <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg">
                {provider.profileImage && provider.profileImage.src ? (
                   <Image
                     src={provider.profileImage.src}
@@ -257,9 +257,9 @@ export default function ProfilePage() {
                 )}
             </div>
             {mode === 'editing' ? (
-                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
+                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl" />
             ) : (
-                <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
+                <CardTitle className="font-headline text-3xl pt-2">{provider.name}</CardTitle>
             )}
              {mode === 'editing' ? (
                  <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" />
@@ -267,12 +267,12 @@ export default function ProfilePage() {
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
              {mode === 'editing' ? (
-                <div className="mt-4 flex items-center w-full">
-                  <MapPin className="w-4 h-4 ml-2 text-accent" />
-                  <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center text-sm text-muted-foreground flex-1" />
-                </div>
+                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4 text-accent" />
+                    <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center" />
+                 </div>
              ) : (
-                <div className="mt-4 flex items-center text-sm text-muted-foreground">
+                <div className="flex items-center text-sm text-muted-foreground">
                     <MapPin className="w-4 h-4 ml-2 text-accent" />
                     <span>{provider.location}</span>
                 </div>
