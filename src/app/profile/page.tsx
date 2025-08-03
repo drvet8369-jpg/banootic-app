@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '', location: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -37,6 +37,7 @@ export default function ProfilePage() {
                 name: currentProvider.name,
                 service: currentProvider.service,
                 bio: currentProvider.bio,
+                location: currentProvider.location,
             });
         }
     }
@@ -53,7 +54,7 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim() || !editedData.location.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
@@ -66,6 +67,7 @@ export default function ProfilePage() {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
+        p.location = editedData.location;
     });
 
     if(success) {
@@ -86,6 +88,7 @@ export default function ProfilePage() {
             name: provider.name,
             service: provider.service,
             bio: provider.bio,
+            location: provider.location,
         });
     }
     setMode('viewing');
@@ -265,7 +268,11 @@ export default function ProfilePage() {
             
              <div className="flex items-center text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 ml-2 text-accent" />
-                <span>{provider.location}</span>
+                {mode === 'editing' ? (
+                   <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center h-8" />
+                ) : (
+                  <span>{provider.location}</span>
+                )}
              </div>
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
@@ -279,32 +286,34 @@ export default function ProfilePage() {
               ) : (
                   <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
-               <Separator className="my-6" />
-                <div className="mb-4">
-                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                  
-                  <input 
-                    type="file" 
-                    ref={portfolioFileInputRef} 
-                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                   <input
-                    type="file"
-                    ref={profilePicInputRef}
-                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                  {mode === 'viewing' && (
-                     <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+              
+              {mode === 'viewing' && (
+                <>
+                  <Separator className="my-6" />
+                  <div className="mb-4">
+                    <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                    <input 
+                      type="file" 
+                      ref={portfolioFileInputRef} 
+                      onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
                           <PlusCircle className="w-5 h-5 ml-2" />
                           افزودن نمونه کار جدید
-                     </Button>
-                  )}
-                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
-                </div>
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+                  </div>
+                </>
+               )}
+               <input
+                type="file"
+                ref={profilePicInputRef}
+                onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                className="hidden"
+                accept="image/*"
+              />
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
