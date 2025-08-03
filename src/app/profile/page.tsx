@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '', location: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -37,6 +37,7 @@ export default function ProfilePage() {
                 name: currentProvider.name,
                 service: currentProvider.service,
                 bio: currentProvider.bio,
+                location: currentProvider.location,
             });
         }
     }
@@ -53,7 +54,7 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim() || !editedData.location.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
@@ -66,6 +67,7 @@ export default function ProfilePage() {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
+        p.location = editedData.location;
     });
 
     if(success) {
@@ -86,6 +88,7 @@ export default function ProfilePage() {
             name: provider.name,
             service: provider.service,
             bio: provider.bio,
+            location: provider.location,
         });
     }
     setMode('viewing');
@@ -263,11 +266,17 @@ export default function ProfilePage() {
             ) : (
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
-
-             <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4 ml-2 text-accent" />
-                <span>{provider.location}</span>
-             </div>
+             {mode === 'editing' ? (
+                <div className="mt-4 flex items-center w-full">
+                  <MapPin className="w-4 h-4 ml-2 text-accent" />
+                  <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center text-sm text-muted-foreground flex-1" />
+                </div>
+             ) : (
+                <div className="mt-4 flex items-center text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4 ml-2 text-accent" />
+                    <span>{provider.location}</span>
+                </div>
+             )}
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
             <CardHeader className="p-0 pb-4">
