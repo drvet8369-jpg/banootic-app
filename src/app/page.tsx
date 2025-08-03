@@ -47,7 +47,7 @@ const CategoriesSection = () => (
 const LandingPage = () => (
   <>
     <section className="text-center py-20 lg:py-24 w-full">
-      <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
+      <Logo className="mx-auto mb-6 h-32 w-32 text-foreground" />
       <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-foreground to-accent-foreground/80">
         هنربانو
       </h1>

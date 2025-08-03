@@ -47,7 +47,7 @@ export default function Header() {
       <div className="p-4 border-b">
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
-              <Logo className="h-8 w-8 text-primary-foreground" />
+              <Logo className="h-8 w-8 text-foreground" />
               <span className="font-display text-2xl font-bold">هنربانو</span>
             </Link>
          </SheetClose>
@@ -122,7 +122,7 @@ export default function Header() {
       <div className="container flex h-16 items-center justify-between">
         {/* Right Side: Branding (changed from Left Side for RTL) */}
         <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-10 w-10 text-primary-foreground" />
+            <Logo className="h-10 w-10 text-foreground" />
             <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
         
