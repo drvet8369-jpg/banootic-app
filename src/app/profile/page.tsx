@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '', location: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -37,6 +37,7 @@ export default function ProfilePage() {
                 name: currentProvider.name,
                 service: currentProvider.service,
                 bio: currentProvider.bio,
+                location: currentProvider.location,
             });
         }
     }
@@ -53,7 +54,7 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim() || !editedData.location.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
@@ -66,7 +67,7 @@ export default function ProfilePage() {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
-        // Location is no longer editable from this form
+        p.location = editedData.location;
     });
 
     if(success) {
@@ -87,6 +88,7 @@ export default function ProfilePage() {
             name: provider.name,
             service: provider.service,
             bio: provider.bio,
+            location: provider.location,
         });
     }
     setMode('viewing');
@@ -267,7 +269,11 @@ export default function ProfilePage() {
             
             <div className="flex items-center text-sm text-muted-foreground">
               <MapPin className="w-4 h-4 ml-2 text-accent shrink-0" />
-              <span>{provider.location}</span>
+               {mode === 'editing' ? (
+                  <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center text-sm" />
+                ) : (
+                  <span>{provider.location}</span>
+                )}
             </div>
 
           </div>
@@ -300,10 +306,12 @@ export default function ProfilePage() {
                     className="hidden"
                     accept="image/*"
                   />
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
-                        <PlusCircle className="w-5 h-5 ml-2" />
-                        افزودن نمونه کار جدید
-                   </Button>
+                  {mode === 'viewing' && (
+                     <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                          <PlusCircle className="w-5 h-5 ml-2" />
+                          افزودن نمونه کار جدید
+                     </Button>
+                  )}
                    <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
                 </div>
             </CardContent>
