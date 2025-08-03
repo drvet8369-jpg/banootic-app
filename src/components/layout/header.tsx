@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
+import { LogOut, LogIn, UserPlus, UserRound, FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -53,13 +53,20 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' && (
+             {user.accountType === 'provider' ? (
                 <SheetClose asChild>
                   <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
                     پروفایل من
+                  </Link>
+                </SheetClose>
+             ) : (
+                 <SheetClose asChild>
+                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <FileText className="h-5 w-5" />
+                    درخواست‌های من
                   </Link>
                 </SheetClose>
              )}
@@ -141,11 +148,18 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
+                    {user.accountType === 'provider' ? (
                         <DropdownMenuItem asChild>
                         <Link href="/profile">
                             <UserRound className="ml-2 h-4 w-4" />
                             <span>پروفایل من</span>
+                        </Link>
+                        </DropdownMenuItem>
+                    ) : (
+                       <DropdownMenuItem asChild>
+                        <Link href="/requests">
+                            <FileText className="ml-2 h-4 w-4" />
+                            <span>درخواست‌های من</span>
                         </Link>
                         </DropdownMenuItem>
                     )}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
@@ -231,6 +232,7 @@ export default function ProviderProfilePage() {
     const newAgreement: Agreement = {
       id: Date.now().toString(),
       providerPhone: provider.phone,
+      providerName: provider.name,
       customerPhone: user.phone,
       customerName: user.name,
       status: 'pending',
@@ -238,7 +240,7 @@ export default function ProviderProfilePage() {
     };
     
     saveAgreements([...allAgreements, newAgreement]);
-    toast({ title: 'درخواست توافق ارسال شد', description: 'هنرمند باید درخواست شما را تایید کند.' });
+    toast({ title: 'درخواست توافق ارسال شد', description: 'هنرمند باید درخواست شما را تایید کند. می‌توانید درخواست خود را از منوی کاربری پیگیری کنید.' });
   }
 
 

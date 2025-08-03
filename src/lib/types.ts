@@ -53,6 +53,7 @@ export interface Message {
 export interface Agreement {
   id: string;
   providerPhone: string;
+  providerName: string; // Name of the provider for easy display
   customerPhone: string;
   customerName: string;
   status: 'pending' | 'confirmed';
