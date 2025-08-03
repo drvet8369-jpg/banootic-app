@@ -99,7 +99,6 @@ const UserDashboard = () => {
             const profile = allProviders.find(p => p.phone === user.phone);
             setProviderProfile(profile || null);
             
-            // Check for unread messages
             try {
                 const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
                 const totalUnread = Object.values(allChatsData)
@@ -149,7 +148,7 @@ const UserDashboard = () => {
                     <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6 border-t">
                          <Button asChild className="w-full flex-1">
                             <Link href="/profile">
-                                مدیریت پروفایل و نمونه‌کارها
+                                مدیریت پروفایل
                             </Link>
                         </Button>
                          <Button asChild className="w-full flex-1" variant="outline">

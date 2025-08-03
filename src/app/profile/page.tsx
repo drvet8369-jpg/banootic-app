@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '', location: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -37,7 +37,6 @@ export default function ProfilePage() {
                 name: currentProvider.name,
                 service: currentProvider.service,
                 bio: currentProvider.bio,
-                location: currentProvider.location,
             });
         }
     }
@@ -54,7 +53,7 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim() || !editedData.location.trim()){
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
@@ -67,7 +66,6 @@ export default function ProfilePage() {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
-        p.location = editedData.location;
     });
 
     if(success) {
@@ -88,7 +86,6 @@ export default function ProfilePage() {
             name: provider.name,
             service: provider.service,
             bio: provider.bio,
-            location: provider.location,
         });
     }
     setMode('viewing');
@@ -144,7 +141,6 @@ export default function ProfilePage() {
     if (providerIndex > -1) {
       updateFn(updatedProvidersList[providerIndex]);
       saveProviders(updatedProvidersList);
-      // After saving, reload data into state
       loadProviderData();
       return true;
     }
@@ -267,15 +263,10 @@ export default function ProfilePage() {
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
             
-            <div className="flex items-center text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4 ml-2 text-accent shrink-0" />
-               {mode === 'editing' ? (
-                  <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center text-sm" />
-                ) : (
-                  <span>{provider.location}</span>
-                )}
-            </div>
-
+             <div className="flex items-center text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4 ml-2 text-accent" />
+                <span>{provider.location}</span>
+             </div>
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
             <CardHeader className="p-0 pb-4">
@@ -341,15 +332,9 @@ export default function ProfilePage() {
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش اطلاعات
                         </Button>
-                         <Button asChild className="w-full flex-1">
-                            <Link href="/inbox">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                                صندوق ورودی
-                            </Link>
-                        </Button>
                         <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.phone}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <Eye className="w-4 h-4 ml-2" />
                                 مشاهده پروفایل عمومی
                             </Link>
                         </Button>

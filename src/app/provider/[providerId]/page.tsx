@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
@@ -78,7 +77,6 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     }
     setIsSubmitting(true);
 
-    // Simulate API call
     setTimeout(() => {
         const allReviews = getReviews();
         const newReview: Review = {
@@ -93,7 +91,6 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         const updatedReviews = [...allReviews, newReview];
         saveReviews(updatedReviews);
 
-        // Recalculate provider's average rating
         const allProviders = getProviders();
         const providerIndex = allProviders.findIndex(p => p.id === providerId);
         if (providerIndex > -1) {
@@ -110,7 +107,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         setRating(0);
         setComment('');
         setIsSubmitting(false);
-        onSubmit(); // Callback to trigger data refresh in parent
+        onSubmit();
     }, 1000);
   };
   
@@ -201,7 +198,7 @@ export default function ProviderProfilePage() {
     if (providerIndex > -1) {
         allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
         saveProviders(allProviders);
-        loadData(); // Refresh data
+        loadData();
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } else {
         toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
@@ -350,7 +347,7 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {isLoggedIn && user?.accountType === 'customer' && (
+                {isLoggedIn && !isOwnerViewing && user?.accountType === 'customer' && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button onClick={handleRequestAgreement} className="w-full flex-1">
                         <CheckCircle className="w-4 h-4 ml-2" />
@@ -370,13 +367,6 @@ export default function ProviderProfilePage() {
                     </Button>
                 </CardFooter>
                 )}
-                 {isLoggedIn && isOwnerViewing && (
-                     <CardFooter className="p-6 mt-auto border-t">
-                        <Button asChild className="w-full">
-                            <Link href="/profile">مدیریت پروفایل</Link>
-                        </Button>
-                     </CardFooter>
-                 )}
 
                 <Separator />
                 
