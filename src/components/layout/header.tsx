@@ -48,7 +48,7 @@ export default function Header() {
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-foreground" />
-              <span className="font-display text-2xl font-bold">هنربانو</span>
+              <span className="font-display text-2xl font-bold">بانوتیک</span>
             </Link>
          </SheetClose>
       </div>
@@ -57,21 +57,21 @@ export default function Header() {
            <>
              {user.accountType === 'provider' ? (
                 <SheetClose asChild>
-                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
                     پروفایل من
                   </Link>
                 </SheetClose>
              ) : (
                  <SheetClose asChild>
-                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                     <FileText className="h-5 w-5" />
                     درخواست‌های من
                   </Link>
                 </SheetClose>
              )}
             <SheetClose asChild>
-              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
+              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted relative">
                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                  <span>صندوق ورودی</span>
                  <InboxBadge />
@@ -81,13 +81,13 @@ export default function Header() {
         ) : (
           <>
             <SheetClose asChild>
-              <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+              <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                 <LogIn className="h-5 w-5" />
                 ورود
               </Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                 <UserPlus className="h-5 w-5" />
                 ثبت‌نام
               </Link>
@@ -123,7 +123,7 @@ export default function Header() {
         {/* Right Side: Branding (changed from Left Side for RTL) */}
         <Link href="/" className="flex items-center gap-2">
             <Logo className="h-10 w-10 text-foreground" />
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
         </Link>
         
         {/* Left Side: Actions (changed from Right Side for RTL) */}

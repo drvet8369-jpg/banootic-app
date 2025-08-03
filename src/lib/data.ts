@@ -97,10 +97,10 @@ const defaultProviders: Provider[] = [
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, agreementsCount: 90, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
-const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
-const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
-const ALL_USERS_STORAGE_KEY = 'honarbanoo-users';
+const PROVIDERS_STORAGE_KEY = 'banootik-providers';
+const REVIEWS_STORAGE_KEY = 'banootik-reviews';
+const AGREEMENTS_STORAGE_KEY = 'banootik-agreements';
+const ALL_USERS_STORAGE_KEY = 'banootik-users';
 
 
 // Function to get providers from localStorage or return default

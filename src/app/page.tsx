@@ -49,7 +49,7 @@ const LandingPage = () => (
     <section className="text-center py-20 lg:py-24 w-full">
       <Logo className="mx-auto mb-6 h-32 w-32 text-foreground" />
       <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-foreground to-accent-foreground/80">
-        هنربانو
+        بانوتیک
       </h1>
       <p className="mt-4 font-headline text-xl md:text-2xl text-foreground">
         با دستان هنرمندت بدرخش
@@ -101,7 +101,7 @@ const UserDashboard = () => {
             
             // Check for unread messages
             try {
-                const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+                const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
                 const totalUnread = Object.values(allChatsData)
                   .filter((chat: any) => chat.members?.includes(user.phone))
                   .reduce((acc: number, chat: any) => {

@@ -21,7 +21,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
 
     const checkUnread = () => {
       try {
-        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
         const totalUnread = Object.values(allChatsData)
           .filter((chat: any) => chat.members?.includes(user.phone))
           .reduce((acc: number, chat: any) => {
@@ -40,7 +40,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
 
     // Listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === 'inbox_chats') {
+        if (event.key === 'banootik_inbox_chats') {
             checkUnread();
         }
     };

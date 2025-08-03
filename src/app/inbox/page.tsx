@@ -53,7 +53,7 @@ export default function InboxPage() {
     setError(null);
     
     try {
-      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
       
       const userChats = Object.values(allChatsData)
         .filter((chat: any) => chat.members?.includes(user.phone))
