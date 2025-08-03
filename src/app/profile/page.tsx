@@ -266,17 +266,16 @@ export default function ProfilePage() {
             ) : (
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
-             {mode === 'editing' ? (
-                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 text-accent" />
-                    <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center" />
-                 </div>
-             ) : (
-                <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 ml-2 text-accent" />
-                    <span>{provider.location}</span>
-                </div>
-             )}
+            
+            <div className="flex items-center text-sm text-muted-foreground w-full">
+              <MapPin className="w-4 h-4 ml-2 text-accent shrink-0" />
+              {mode === 'editing' ? (
+                <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center flex-grow" />
+              ) : (
+                <span className="flex-grow">{provider.location}</span>
+              )}
+            </div>
+
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
             <CardHeader className="p-0 pb-4">
