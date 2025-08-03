@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -134,7 +133,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه',
+          location: 'ارومیه', // Default location set to Urmia
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -285,6 +284,15 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
+                 <FormItem>
+                  <FormLabel>موقعیت مکانی</FormLabel>
+                  <FormControl>
+                    <Input value="ارومیه" disabled />
+                  </FormControl>
+                  <FormDescription>
+                    در حال حاضر، این پلتفرم فقط برای شهر ارومیه فعال است.
+                  </FormDescription>
+                </FormItem>
               </>
             )}
             

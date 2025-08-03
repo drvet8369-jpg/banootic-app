@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '', location: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -37,7 +37,6 @@ export default function ProfilePage() {
                 name: currentProvider.name,
                 service: currentProvider.service,
                 bio: currentProvider.bio,
-                location: currentProvider.location,
             });
         }
     }
@@ -54,7 +53,7 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim() || !editedData.location.trim()){
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
@@ -67,7 +66,7 @@ export default function ProfilePage() {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
-        p.location = editedData.location;
+        // Location is no longer editable from this form
     });
 
     if(success) {
@@ -88,7 +87,6 @@ export default function ProfilePage() {
             name: provider.name,
             service: provider.service,
             bio: provider.bio,
-            location: provider.location,
         });
     }
     setMode('viewing');
@@ -267,13 +265,9 @@ export default function ProfilePage() {
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
             
-            <div className="flex items-center text-sm text-muted-foreground w-full">
+            <div className="flex items-center text-sm text-muted-foreground">
               <MapPin className="w-4 h-4 ml-2 text-accent shrink-0" />
-              {mode === 'editing' ? (
-                <UiInput name="location" value={editedData.location} onChange={handleEditInputChange} className="text-center flex-grow" />
-              ) : (
-                <span className="flex-grow">{provider.location}</span>
-              )}
+              <span>{provider.location}</span>
             </div>
 
           </div>
