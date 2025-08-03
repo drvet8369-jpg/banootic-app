@@ -28,7 +28,7 @@ export default {
         },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          foreground: '#f0fff4', // Explicitly set a light color for text on primary buttons
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',

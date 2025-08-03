@@ -11,7 +11,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 145 35% 15%; /* Made darker */
     --primary: 140 45% 45%; /* Darker, more saturated green */
-    --primary-foreground: 140 25% 95%; /* Lighter foreground for contrast */
+    --primary-foreground: 145 45% 10%; /* Reverted to dark color for hero text readability */
     --secondary: 140 30% 80%; /* Made darker */
     --secondary-foreground: 145 35% 15%; /* Made darker */
     --muted: 140 30% 90%;
