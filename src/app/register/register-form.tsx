@@ -42,6 +42,7 @@ const formSchema = z.object({
   }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
+  location: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -58,6 +59,14 @@ const formSchema = z.object({
 }, {
     message: 'بیوگرافی باید حداقل ۱۰ کاراکتر باشد.',
     path: ['bio'],
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.location && data.location.length >= 2;
+    }
+    return true;
+}, {
+    message: 'لطفاً شهر خود را وارد کنید.',
+    path: ['location'],
 });
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
@@ -75,6 +84,7 @@ export default function RegisterForm() {
       phone: '',
       accountType: 'customer',
       bio: '',
+      location: '',
     },
   });
 
@@ -133,7 +143,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location set to Urmia
+          location: values.location || 'نامشخص',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -263,6 +273,22 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>شهر</FormLabel>
+                      <FormControl>
+                        <Input placeholder="مثال: تهران" {...field} disabled={isLoading} />
+                      </FormControl>
+                       <FormDescription>
+                        شهر محل فعالیت خود را وارد کنید.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="bio"
@@ -284,15 +310,6 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
-                 <FormItem>
-                  <FormLabel>موقعیت مکانی</FormLabel>
-                  <FormControl>
-                    <Input value="ارومیه" disabled />
-                  </FormControl>
-                  <FormDescription>
-                    در حال حاضر، این پلتفرم فقط برای شهر ارومیه فعال است.
-                  </FormDescription>
-                </FormItem>
               </>
             )}
             
