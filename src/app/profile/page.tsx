@@ -14,6 +14,19 @@ import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
@@ -147,6 +160,18 @@ export default function ProfilePage() {
     }
     return false;
   }
+  
+  const deletePortfolioItem = (itemIndex: number) => {
+    if (!provider) return;
+    const success = updateProviderData((p) => {
+        p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
+    });
+    if (success) {
+      toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+    }
+  };
 
   const addPortfolioItem = (imageSrc: string) => {
     const success = updateProviderData((p) => {
@@ -281,33 +306,75 @@ export default function ProfilePage() {
                   <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
               
-              {mode === 'viewing' && (
-                <>
-                  <Separator className="my-6" />
-                  <div className="mb-4">
-                    <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
-                          <PlusCircle className="w-5 h-5 ml-2" />
-                          افزودن نمونه کار جدید
-                    </Button>
-                    <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
-                  </div>
-                </>
-               )}
-               <input
-                type="file"
-                ref={portfolioFileInputRef}
-                onChange={(e) => handleFileChange(e, addPortfolioItem)}
-                className="hidden"
-                accept="image/*"
-              />
-               <input
-                type="file"
-                ref={profilePicInputRef}
-                onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                className="hidden"
-                accept="image/*"
-              />
+               <Separator className="my-6" />
+                <div className="mb-4">
+                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                  
+                  {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {provider.portfolio.map((item, index) => (
+                                <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
+                                    <Image
+                                        src={item.src}
+                                        alt={`نمونه کار ${index + 1}`}
+                                        fill
+                                        className="object-cover"
+                                        data-ai-hint={item.aiHint}
+                                    />
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            aria-label={`حذف نمونه کار ${index + 1}`}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            این عمل قابل بازگشت نیست.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>لغو</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => deletePortfolioItem(index)}>
+                                            بله، حذف کن
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نمونه کاری اضافه نشده است.</p>
+                        </div>
+                    )}
+
+                   <input
+                    type="file"
+                    ref={portfolioFileInputRef}
+                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <input
+                    type="file"
+                    ref={profilePicInputRef}
+                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mt-6">
+                        <PlusCircle className="w-5 h-5 ml-2" />
+                        افزودن نمونه کار جدید
+                   </Button>
+                </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (

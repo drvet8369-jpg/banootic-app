@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -173,8 +173,7 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<{src: string, index: number} | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -201,22 +200,6 @@ export default function ProviderProfilePage() {
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
-
-  const deletePortfolioItem = (itemIndex: number) => {
-    if (!provider) return;
-
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-        saveProviders(allProviders);
-        loadData();
-        setIsDialogOpen(false); // Close the main dialog after deletion
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
-    }
-  };
 
   const handleRequestAgreement = () => {
     if (!provider || !user) return;
@@ -301,13 +284,13 @@ export default function ProviderProfilePage() {
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { setIsDialogOpen(isOpen); if (!isOpen) setSelectedImage(null); }}>
+                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
                                     <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
                                         <div 
                                             className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                            onClick={() => setSelectedImage({src: item.src, index: index})}
+                                            onClick={() => setSelectedImage(item.src)}
                                         >
                                             <Image
                                                 src={item.src}
@@ -325,41 +308,14 @@ export default function ProviderProfilePage() {
                                 <DialogHeader className="sr-only">
                                   <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
                                 </DialogHeader>
-                                <div className="absolute top-4 right-4 z-50 flex gap-2">
-                                  {isOwnerViewing && selectedImage && (
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="icon" className="h-9 w-9">
-                                          <Trash2 className="h-5 w-5" />
-                                          <span className="sr-only">حذف نمونه کار</span>
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            این عمل قابل بازگشت نیست.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>لغو</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => deletePortfolioItem(selectedImage.index)}>
-                                            بله، حذف کن
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  )}
-
-                                  <DialogClose className="rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none">
-                                      <X className="h-6 w-6" />
-                                      <span className="sr-only">بستن</span>
-                                  </DialogClose>
-                                </div>
+                               <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                  <X className="h-6 w-6" />
+                                  <span className="sr-only">بستن</span>
+                                </DialogClose>
                                 {selectedImage && (
                                     <div className="relative w-full h-full">
                                         <Image
-                                            src={selectedImage.src}
+                                            src={selectedImage}
                                             alt="نمونه کار تمام صفحه"
                                             fill
                                             className="object-contain"
