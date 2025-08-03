@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
+import { getAllUsers } from '@/lib/data';
 import type { User } from '@/context/AuthContext';
 
 
@@ -56,25 +56,23 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        const allUsers = getAllUsers();
+        const existingUser = allUsers.find(u => u.phone === values.phone);
 
         let userToLogin: User;
 
-        if (existingProvider) {
-          // User is a known provider
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
+        if (existingUser) {
+          // User exists, log them in with their stored data
+          userToLogin = existingUser;
         } else {
-          // User is a customer
+          // User does not exist, treat as a new customer
           userToLogin = {
             name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
           };
+          // Note: We don't save the new temporary user to the allUsers list here.
+          // They are only "registered" if they go through the registration form.
         }
         
         login(userToLogin);
