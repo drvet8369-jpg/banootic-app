@@ -7,7 +7,7 @@ import { getAgreements } from '@/lib/data';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, User, FileText, Hourglass, CheckCircle } from 'lucide-react';
+import { Loader2, User, FileText, Hourglass, CheckCircle, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
@@ -104,11 +104,15 @@ export default function CustomerRequestsPage() {
             <div className="space-y-4">
               {requests.map(req => (
                 <div key={req.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex-grow">
-                    <Link href={`/provider/${req.providerPhone}`} className="hover:underline">
-                      <p className="font-bold">هنرمند: {req.providerName}</p>
-                    </Link>
-                    <p className="text-xs text-muted-foreground mt-1">
+                  <div className="flex-grow space-y-2">
+                    <p className="font-bold">هنرمند: {req.providerName || 'نامشخص'}</p>
+                     <Button asChild variant="outline" size="sm">
+                        <Link href={`/provider/${req.providerPhone}`}>
+                           <Eye className="w-4 h-4 ml-2" />
+                           مشاهده پروفایل
+                        </Link>
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
                       {isClient && `ارسال شده ${formatDistanceToNow(new Date(req.requestedAt), { addSuffix: true, locale: faIR })}`}
                     </p>
                   </div>
