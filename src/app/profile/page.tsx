@@ -285,12 +285,12 @@ export default function ProfilePage() {
             </div>
             <div className="flex-grow text-center md:text-right space-y-2 min-w-0">
                 {mode === 'editing' ? (
-                     <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center md:text-right font-headline text-3xl" ref={nameInputRef} />
+                     <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center md:text-right font-headline" ref={nameInputRef} />
                 ) : (
                     <CardTitle className="font-headline text-4xl truncate">{provider.name}</CardTitle>
                 )}
                  {mode === 'editing' ? (
-                     <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center md:text-right text-lg text-muted-foreground" />
+                     <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center md:text-right text-muted-foreground" />
                 ) : (
                     <CardDescription className="text-xl truncate">{provider.service}</CardDescription>
                 )}
@@ -319,7 +319,7 @@ export default function ProfilePage() {
                     افزودن نمونه کار جدید
                 </Button>
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {provider.portfolio && provider.portfolio.length > 0 ? (
+                {provider.portfolio?.length > 0 ? (
                   provider.portfolio.map((item, index) => (
                       <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
                           <Image src={item.src} alt={`نمونه کار ${index + 1}`} fill className="object-cover" data-ai-hint={item.aiHint} />
