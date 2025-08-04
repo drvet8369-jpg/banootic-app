@@ -99,8 +99,12 @@ export const getProviders = (): Provider[] => {
     const storedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
     if (storedProviders) {
       const parsedProviders = JSON.parse(storedProviders);
-      // Data migration: ensure all providers have agreementsCount, defaulting to 0 if missing.
-      return parsedProviders.map((p: any) => ({ ...p, agreementsCount: p.agreementsCount || 0 }));
+      // Data migration: ensure all providers have agreementsCount and portfolio, defaulting if missing.
+      return parsedProviders.map((p: any) => ({ 
+          ...p, 
+          agreementsCount: p.agreementsCount || 0,
+          portfolio: p.portfolio || []
+      }));
     } else {
       // If nothing is in storage, initialize it with the default data
       localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(defaultProviders));

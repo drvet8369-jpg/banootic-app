@@ -326,7 +326,7 @@ export default function ProfilePage() {
                     </Button>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {provider.portfolio && provider.portfolio.map((item, index) => (
+                        {provider.portfolio?.map((item, index) => (
                             <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
                                 <Image
                                     src={item.src}
