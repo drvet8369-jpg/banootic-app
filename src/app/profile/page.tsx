@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -37,7 +38,7 @@ export default function ProfilePage() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', location: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -49,7 +50,7 @@ export default function ProfilePage() {
             setEditedData({
                 name: currentProvider.name,
                 service: currentProvider.service,
-                bio: currentProvider.bio,
+                location: currentProvider.location,
             });
         }
     }
@@ -72,8 +73,8 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
-        toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
+    if(!editedData.name.trim() || !editedData.service.trim()){
+        toast({ title: "خطا", description: "نام و نوع خدمت نمی‌توانند خالی باشند.", variant: "destructive"});
         return;
     }
 
@@ -84,7 +85,7 @@ export default function ProfilePage() {
         }
         p.name = editedData.name;
         p.service = editedData.service;
-        p.bio = editedData.bio;
+        // Bio is no longer part of the quick edit
     });
 
     if(success) {
@@ -104,7 +105,7 @@ export default function ProfilePage() {
        setEditedData({
             name: provider.name,
             service: provider.service,
-            bio: provider.bio,
+            location: provider.location,
         });
     }
     setMode('viewing');
@@ -304,16 +305,14 @@ export default function ProfilePage() {
                 <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
             </CardHeader>
             <CardContent className="p-0 flex-grow">
-              <h3 className="font-semibold mb-2">درباره شما</h3>
-              {mode === 'editing' ? (
-                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
-              ) : (
-                  <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
-              )}
+               <div className="space-y-2">
+                 <h3 className="font-semibold mb-2">درباره شما (بیوگرافی)</h3>
+                 <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio || "بیوگرافی شما در اینجا نمایش داده می‌شود. برای ویرایش آن، به صفحه ثبت‌نام/ویرایش کامل مراجعه کنید."}</p>
+              </div>
               
                <Separator className="my-6" />
-                  <div className="mb-4">
-                    <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                  <div className="mb-4 space-y-4">
+                    <h3 className="font-headline text-xl font-semibold">مدیریت نمونه کارها</h3>
                     <input 
                       type="file" 
                       ref={portfolioFileInputRef} 
@@ -321,56 +320,55 @@ export default function ProfilePage() {
                       className="hidden"
                       accept="image/*"
                     />
-                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
                           <PlusCircle className="w-5 h-5 ml-2" />
                           افزودن نمونه کار جدید
                     </Button>
                     
-                    {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {provider.portfolio.map((item, index) => (
-                                <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
-                                    <Image
-                                        src={item.src}
-                                        alt={`نمونه کار ${index + 1}`}
-                                        fill
-                                        className="object-cover"
-                                        data-ai-hint={item.aiHint}
-                                    />
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            aria-label={`حذف نمونه کار ${index + 1}`}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            این عمل قابل بازگشت نیست.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>لغو</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => deletePortfolioItem(index)}>
-                                            بله، حذف کن
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-                            <p>هنوز نمونه کاری اضافه نشده است.</p>
-                        </div>
-                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {provider.portfolio && provider.portfolio.map((item, index) => (
+                            <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
+                                <Image
+                                    src={item.src}
+                                    alt={`نمونه کار ${index + 1}`}
+                                    fill
+                                    className="object-cover"
+                                    data-ai-hint={item.aiHint}
+                                />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                        aria-label={`حذف نمونه کار ${index + 1}`}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        این عمل قابل بازگشت نیست.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>لغو</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => deletePortfolioItem(index)}>
+                                        بله، حذف کن
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        ))}
+                        {(!provider.portfolio || provider.portfolio.length === 0) && (
+                            <div className="col-span-full text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
+                                <p>هنوز نمونه کاری اضافه نشده است.</p>
+                            </div>
+                        )}
+                    </div>
                   </div>
                  <input
                     type="file"
@@ -418,7 +416,7 @@ export default function ProfilePage() {
                     <>
                         <Button onClick={() => setMode('editing')} className="w-full flex-1">
                             <Edit className="w-4 h-4 ml-2" />
-                            ویرایش اطلاعات
+                            ویرایش اطلاعات اصلی
                         </Button>
                          <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.phone}`}>
