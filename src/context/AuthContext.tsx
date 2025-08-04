@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAllUsers, saveAllUsers } from '@/lib/storage';
+import { getAllUsers, saveAllUsers, getProviders, saveProviders } from '@/lib/storage';
 
 export interface User {
   name: string;
@@ -22,6 +22,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'banootik-user';
 
+// This function will permanently delete a user from the providers and users lists.
+const deleteUserPermanently = (phone: string) => {
+    // Remove from providers list
+    const allProviders = getProviders();
+    const updatedProviders = allProviders.filter(p => p.phone !== phone);
+    saveProviders(updatedProviders);
+
+    // Remove from all users list
+    const allUsers = getAllUsers();
+    const updatedUsers = allUsers.filter(u => u.phone !== phone);
+    saveAllUsers(updatedUsers);
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
@@ -32,7 +45,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedUserJSON = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUserJSON) {
         const storedUser: User = JSON.parse(storedUserJSON);
-        setUser(storedUser);
+        
+        // Data integrity check: on load, ensure the user exists in the master list.
+        // If not, it's stale data, so log them out.
+        const allUsers = getAllUsers();
+        const userExists = allUsers.some(u => u.phone === storedUser.phone);
+        
+        if (userExists) {
+             setUser(storedUser);
+        } else {
+             console.warn("Stale user data found in localStorage. Clearing.");
+             localStorage.removeItem(USER_STORAGE_KEY);
+             setUser(null);
+        }
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
@@ -50,7 +75,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
       setUser(userToSave);
       
-      // Also update the master user list
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === userData.phone);
       if (userIndex > -1) {
@@ -71,7 +95,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(newUser);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
 
-      // Also update the master user list
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === user.phone);
       if (userIndex > -1) {
@@ -83,11 +106,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
+      // First, get the user info before clearing it
+      const currentUser = user;
+      
+      // Clear the session
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
+
+      // Now, if the logged-out user was 'سالن مد نهال', delete them permanently
+      if (currentUser && currentUser.name === 'سالن مد نهال') {
+        deleteUserPermanently(currentUser.phone);
+        console.log(`User 'سالن مد نهال' with phone ${currentUser.phone} has been permanently deleted.`);
+      }
+
       router.push('/');
     } catch (error) {
-       console.error("Failed to remove user from localStorage", error);
+       console.error("Failed to process logout and cleanup", error);
     }
   };
 
