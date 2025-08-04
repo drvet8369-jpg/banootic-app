@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAllUsers, saveAllUsers, getProviders, saveProviders } from '@/lib/storage';
 
@@ -36,48 +36,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  const reloadData = () => {
+  // This callback function will reload the user state from localStorage.
+  // It's wrapped in useCallback to ensure it has a stable identity.
+  const reloadUser = useCallback(() => {
     try {
       const storedUserJSON = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUserJSON) {
-        const storedUser: User = JSON.parse(storedUserJSON);
-        const allUsers = getAllUsers();
-        const userExists = allUsers.some(u => u.phone === storedUser.phone);
-        
-        if (userExists) {
-             setUser(storedUser);
-        } else {
-             localStorage.removeItem(USER_STORAGE_KEY);
-             setUser(null);
+        const storedUser = JSON.parse(storedUserJSON);
+        // We compare with current state to avoid unnecessary re-renders
+        if (JSON.stringify(storedUser) !== JSON.stringify(user)) {
+           setUser(storedUser);
         }
       } else {
-        setUser(null);
+        if (user !== null) {
+          setUser(null);
+        }
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage on reload", error);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      console.error("Failed to reload user from localStorage", error);
       setUser(null);
     }
-  }
+  }, [user]);
 
-  // Effect for initial load and for listening to storage changes from other tabs
+
+  // This useEffect hook sets up the synchronization between tabs.
   useEffect(() => {
-    // Initial load
-    reloadData();
+    // Load initial data on mount
+    reloadUser();
 
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
-        // When storage changes in another tab, reload the data in this tab.
-        reloadData();
+        // When localStorage changes in another tab, reload the state in this tab.
+        reloadUser();
       }
     };
-    
+
+    // Add event listener for storage changes
     window.addEventListener('storage', handleStorageChange);
 
+    // Cleanup function to remove the listener when the component unmounts
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [reloadUser]);
+
 
   const login = (userData: User) => {
     try {
@@ -125,9 +127,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
 
-      if (currentUser && currentUser.name === 'سالن مد نهال') {
+      // Special logic for the test user as requested
+      if (currentUser && currentUser.name === 'سالن مد وحید') {
         deleteUserPermanently(currentUser.phone);
-        console.log(`User 'سالن مد نهال' with phone ${currentUser.phone} has been permanently deleted.`);
+        console.log(`User 'سالن مد وحید' with phone ${currentUser.phone} has been permanently deleted.`);
       }
 
       router.push('/');
