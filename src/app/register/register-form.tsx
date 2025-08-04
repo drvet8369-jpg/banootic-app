@@ -42,7 +42,6 @@ const formSchema = z.object({
   }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
-  location: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -59,14 +58,6 @@ const formSchema = z.object({
 }, {
     message: 'بیوگرافی باید حداقل ۱۰ کاراکتر باشد.',
     path: ['bio'],
-}).refine(data => {
-    if (data.accountType === 'provider') {
-        return !!data.location && data.location.length >= 2;
-    }
-    return true;
-}, {
-    message: 'لطفاً شهر خود را وارد کنید.',
-    path: ['location'],
 });
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
@@ -84,7 +75,6 @@ export default function RegisterForm() {
       phone: '',
       accountType: 'customer',
       bio: '',
-      location: '',
     },
   });
 
@@ -143,7 +133,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: values.location || 'نامشخص',
+          location: 'ارومیه', // Hardcoded to Urmia
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -269,22 +259,6 @@ export default function RegisterForm() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>شهر</FormLabel>
-                      <FormControl>
-                        <Input placeholder="مثال: تهران" {...field} disabled={isLoading} />
-                      </FormControl>
-                       <FormDescription>
-                        شهر محل فعالیت خود را وارد کنید.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
