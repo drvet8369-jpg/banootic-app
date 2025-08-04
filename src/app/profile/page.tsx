@@ -297,7 +297,7 @@ export default function ProfilePage() {
           <Separator />
           <div>
             <h3 className="font-headline text-2xl mb-2">درباره شما</h3>
-            <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio || "بیوگرافی شما در اینجا نمایش داده می‌شود. برای ویرایش آن، به صفحه ثبت‌نام/ویرایش کامل مراجعه کنید."}</p>
+            <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio || "بیوگرافی شما در اینجا نمایش داده می‌شود. برای ویرایش آن به صفحه ثبت نام مراجعه کنید."}</p>
           </div>
           <Separator />
           <div className="space-y-4">
