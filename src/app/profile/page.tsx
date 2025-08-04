@@ -310,9 +310,10 @@ export default function ProfilePage() {
               <Separator className="my-6" />
 
                <div className="mb-4 space-y-4">
+                  <h3 className="font-headline text-xl font-semibold">مدیریت نمونه کارها</h3>
+                  
                   {mode === 'viewing' && (
                     <>
-                      <h3 className="font-headline text-xl font-semibold">مدیریت نمونه کارها</h3>
                       <input 
                         type="file" 
                         ref={portfolioFileInputRef} 
@@ -328,44 +329,45 @@ export default function ProfilePage() {
                   )}
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {provider.portfolio?.map((item, index) => (
-                        <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
-                            <Image
-                                src={item.src}
-                                alt={`نمونه کار ${index + 1}`}
-                                fill
-                                className="object-cover"
-                                data-ai-hint={item.aiHint}
-                            />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                    aria-label={`حذف نمونه کار ${index + 1}`}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    این عمل قابل بازگشت نیست.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>لغو</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deletePortfolioItem(index)}>
-                                    بله، حذف کن
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ))}
-                    {(!provider.portfolio || provider.portfolio.length === 0) && (
+                    {provider.portfolio && provider.portfolio.length > 0 ? (
+                      provider.portfolio.map((item, index) => (
+                          <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
+                              <Image
+                                  src={item.src}
+                                  alt={`نمونه کار ${index + 1}`}
+                                  fill
+                                  className="object-cover"
+                                  data-ai-hint={item.aiHint}
+                              />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                      aria-label={`حذف نمونه کار ${index + 1}`}
+                                  >
+                                      <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      این عمل قابل بازگشت نیست.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>لغو</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deletePortfolioItem(index)}>
+                                      بله، حذف کن
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                          </div>
+                      ))
+                    ) : (
                         <div className="col-span-full text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
                             <p>هنوز نمونه کاری اضافه نشده است.</p>
                         </div>
