@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
+import { Textarea as UiTextarea } from '@/components/ui/textarea';
 import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -36,7 +37,7 @@ export default function ProfilePage() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -48,6 +49,7 @@ export default function ProfilePage() {
             setEditedData({
                 name: currentProvider.name,
                 service: currentProvider.service,
+                bio: currentProvider.bio || '',
             });
         }
     }
@@ -85,6 +87,7 @@ export default function ProfilePage() {
         }
         allProviders[providerIndex].name = editedData.name;
         allProviders[providerIndex].service = editedData.service;
+        allProviders[providerIndex].bio = editedData.bio;
         
         saveProviders(allProviders);
         
@@ -106,6 +109,7 @@ export default function ProfilePage() {
        setEditedData({
             name: provider.name,
             service: provider.service,
+            bio: provider.bio,
         });
     }
     setMode('viewing');
@@ -299,17 +303,19 @@ export default function ProfilePage() {
           <Separator />
           <div>
             <h3 className="font-headline text-2xl mb-2">درباره شما</h3>
-            <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio || "بیوگرافی شما در اینجا نمایش داده می‌شود. برای ویرایش آن به صفحه ثبت نام مراجعه کنید."}</p>
+             {mode === 'editing' ? (
+                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
+              ) : (
+                  <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio || "بیوگرافی شما در اینجا نمایش داده می‌شود. برای ویرایش آن، روی دکمه ویرایش کلیک کنید."}</p>
+              )}
           </div>
           <Separator />
           <div className="space-y-4">
              <h3 className="font-headline text-2xl">مدیریت نمونه کارها</h3>
-             {mode === 'viewing' && (
                 <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
                     <PlusCircle className="w-5 h-5 ml-2" />
                     افزودن نمونه کار جدید
                 </Button>
-              )}
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {provider.portfolio?.length > 0 ? (
                   provider.portfolio.map((item, index) => (
