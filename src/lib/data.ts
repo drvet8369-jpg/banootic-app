@@ -58,9 +58,13 @@ export const activeCities: string[] = [
   "ارومیه"
 ];
 
-const defaultProviders: Provider[] = [
+// This file now ONLY contains the INITIAL/DEFAULT data for the app.
+// It is used by storage.ts to populate localStorage on the very first run.
+// It should not be imported by any component directly for reading/writing data.
+
+export const defaultProviders: Provider[] = [
   // Beauty
-  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن با سال‌ها تجربه در ارائه جدیدترین متدهای کاشت و ژلیش. ما به سلامت و زیبایی دستان شما اهمیت می‌دهیم.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, agreementsCount: 60, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [] },
+  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن با سال‌ها تجربه در ارائه جدیدترین متدهای کاشت و ژلیش. ما به سلامت و زیبایی دستان شما اهمیت می‌دهیم.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, agreementsCount: 60, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: 'https://placehold.co/400x400.png', aiHint: 'nail art'}] },
   { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن. با استفاده از بهترین مواد و تکنیک‌های روز دنیا، رنگ و مدل موی دلخواه شما را به ارمغان می‌آوریم.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, agreementsCount: 85, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
   { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست. با ما پوستی شاداب و جوان داشته باشید.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, agreementsCount: 40, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
   { id: 13, name: 'آرایشگاه رؤیا', service: 'آرایش صورت', location: 'ارومیه', phone: '09000000013', bio: 'گریم تخصصی عروس و آرایش حرفه‌ای برای مهمانی‌ها. درخشش شما در مجالس، تخصص ماست.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5.0, reviewsCount: 25, agreementsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'makeup artist' }, portfolio: [] },
@@ -68,7 +72,7 @@ const defaultProviders: Provider[] = [
   
   // Cooking
   { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل با طعم و عطر بی‌نظیر. طعم غذای خانگی واقعی را با ما تجربه کنید.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, agreementsCount: 150, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [] },
-  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص. شیرینی لحظات شما تخصص ماست.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, agreementsCount: 110, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [] },
+  { id: 5, name: 'شیرینی پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص. شیرینی لحظات شما تخصص ماست.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, agreementsCount: 110, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [] },
   { id: 6, name: 'غذای سالم زهرا', service: 'غذای گیاهی', location: 'ارومیه', phone: '09000000006', bio: 'وعده‌های غذایی گیاهی خوشمزه و سالم با ارسال درب منزل. سالم زندگی کنید، سالم غذا بخورید.', categorySlug: 'cooking', serviceSlug: 'vegetarian-vegan', rating: 4.7, reviewsCount: 40, agreementsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'healthy food' }, portfolio: [] },
   { id: 15, name: 'فینگرفود شیک', service: 'فینگرفود', location: 'ارومیه', phone: '09000000015', bio: 'سینی‌های مزه و فینگرفودهای متنوع برای مهمانی‌ها و دورهمی‌های شما. میزبان شایسته‌ای باشید.', categorySlug: 'cooking', serviceSlug: 'finger-food', rating: 4.9, reviewsCount: 75, agreementsCount: 90, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'party food' }, portfolio: [] },
   { id: 16, name: 'نان خانگی گندم', service: 'نان خانگی', location: 'ارومیه', phone: '09000000016', bio: 'پخت روزانه انواع نان‌های حجیم، سنتی و رژیمی با بهترین مواد اولیه و بدون افزودنی‌های مضر.', categorySlug: 'cooking', serviceSlug: 'homemade-bread', rating: 5.0, reviewsCount: 95, agreementsCount: 125, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'baker woman' }, portfolio: [] },
@@ -87,155 +91,15 @@ const defaultProviders: Provider[] = [
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز برای آرامش و زیبایی محیط شما.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, agreementsCount: 90, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-const PROVIDERS_STORAGE_KEY = 'banootik-providers';
-const REVIEWS_STORAGE_KEY = 'banootik-reviews';
-const AGREEMENTS_STORAGE_KEY = 'banootik-agreements';
-const ALL_USERS_STORAGE_KEY = 'banootik-users';
+export const defaultReviews: Review[] = [];
+export const defaultAgreements: Agreement[] = [];
 
-
-// Function to get providers from localStorage or return default
-export const getProviders = (): Provider[] => {
-  if (typeof window === 'undefined') {
-    return defaultProviders;
-  }
-  try {
-    const storedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
-    if (storedProviders) {
-      const parsedProviders = JSON.parse(storedProviders);
-      // Data migration: ensure all providers have agreementsCount and portfolio, defaulting if missing.
-      return parsedProviders.map((p: any) => ({ 
-          ...p, 
-          agreementsCount: p.agreementsCount || 0,
-          portfolio: p.portfolio || []
-      }));
-    } else {
-      // If nothing is in storage, initialize it with the default data
-      localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(defaultProviders));
-      return defaultProviders;
-    }
-  } catch (error) {
-    console.error("Failed to access localStorage, returning default providers.", error);
-    return defaultProviders;
-  }
-};
-
-// Function to save providers to localStorage
-export const saveProviders = (updatedProviders: Provider[]) => {
-   if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(updatedProviders));
-  } catch (error) {
-    console.error("Failed to save providers to localStorage.", error);
-  }
-};
-
-// --- Reviews ---
-const defaultReviews: Review[] = [];
-
-// Function to get reviews from localStorage
-export const getReviews = (): Review[] => {
-  if (typeof window === 'undefined') {
-    return defaultReviews;
-  }
-  try {
-    const storedReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
-    if (storedReviews) {
-      return JSON.parse(storedReviews);
-    } else {
-      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(defaultReviews));
-      return defaultReviews;
-    }
-  } catch (error) {
-    console.error("Failed to access localStorage for reviews.", error);
-    return defaultReviews;
-  }
-};
-
-// Function to save reviews to localStorage
-export const saveReviews = (updatedReviews: Review[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews));
-  } catch (error) {
-    console.error("Failed to save reviews to localStorage.", error);
-  }
-};
-
-
-// --- Agreements ---
-const defaultAgreements: Agreement[] = [];
-
-// Function to get agreements
-export const getAgreements = (): Agreement[] => {
-  if (typeof window === 'undefined') {
-    return defaultAgreements;
-  }
-  try {
-    const storedAgreements = localStorage.getItem(AGREEMENTS_STORAGE_KEY);
-    if (storedAgreements) {
-      return JSON.parse(storedAgreements);
-    } else {
-      localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(defaultAgreements));
-      return defaultAgreements;
-    }
-  } catch (error) {
-    console.error("Failed to access localStorage for agreements.", error);
-    return defaultAgreements;
-  }
-};
-
-// Function to save agreements
-export const saveAgreements = (updatedAgreements: Agreement[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(updatedAgreements));
-  } catch (error) {
-    console.error("Failed to save agreements to localStorage.", error);
-  }
-};
-
-// --- All Users ---
-const getDefaultUsers = (): User[] => {
+export const getDefaultUsers = (): User[] => {
   // Initially, the users list only contains the providers.
+  // Customers are added dynamically upon login/registration.
   return defaultProviders.map(p => ({
     name: p.name,
     phone: p.phone,
     accountType: 'provider'
   }));
-};
-
-export const getAllUsers = (): User[] => {
-  if (typeof window === 'undefined') {
-    return getDefaultUsers();
-  }
-  try {
-    const storedUsers = localStorage.getItem(ALL_USERS_STORAGE_KEY);
-    if (storedUsers) {
-      return JSON.parse(storedUsers);
-    } else {
-      const defaultUsers = getDefaultUsers();
-      localStorage.setItem(ALL_USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
-      return defaultUsers;
-    }
-  } catch (error) {
-    console.error("Failed to access localStorage for users.", error);
-    return getDefaultUsers();
-  }
-};
-
-export const saveAllUsers = (updatedUsers: User[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(ALL_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-  } catch (error) {
-    console.error("Failed to save all users to localStorage.", error);
-  }
 };

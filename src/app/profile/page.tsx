@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviders, saveProviders } from '@/lib/data';
+import { getProviders, saveProviders } from '@/lib/storage';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -28,7 +27,7 @@ import {
 
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, login } = useAuth();
+  const { user, isLoggedIn, updateUser } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -77,22 +76,26 @@ export default function ProfilePage() {
     }
 
     let userWasUpdated = false;
-    const success = updateProviderData((p) => {
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex((p: Provider) => p.phone === user?.phone);
+
+    if (providerIndex > -1) {
         if(user && user.name !== editedData.name){
             userWasUpdated = true;
         }
-        p.name = editedData.name;
-        p.service = editedData.service;
-        // Location and Bio are not editable here.
-    });
-
-    if(success) {
-        if (userWasUpdated && user) {
-            const updatedUser = { ...user, name: editedData.name };
-            login(updatedUser); 
+        allProviders[providerIndex].name = editedData.name;
+        allProviders[providerIndex].service = editedData.service;
+        
+        saveProviders(allProviders);
+        
+        if (userWasUpdated) {
+            updateUser({ name: editedData.name });
         }
+        
+        loadProviderData(); // Reload data into state
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
+
     } else {
         toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
@@ -152,12 +155,11 @@ export default function ProfilePage() {
   const updateProviderData = (updateFn: (provider: Provider) => void) => {
     if (!user) return false;
     const allProviders = getProviders();
-    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
-    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
+    const providerIndex = allProviders.findIndex((p: Provider) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-      updateFn(updatedProvidersList[providerIndex]);
-      saveProviders(updatedProvidersList);
+      updateFn(allProviders[providerIndex]);
+      saveProviders(allProviders);
       loadProviderData();
       return true;
     }
@@ -309,7 +311,7 @@ export default function ProfilePage() {
                 </Button>
               )}
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {provider.portfolio && provider.portfolio.length > 0 ? (
+                {provider.portfolio?.length > 0 ? (
                   provider.portfolio.map((item, index) => (
                       <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
                           <Image src={item.src} alt={`نمونه کار ${index + 1}`} fill className="object-cover" data-ai-hint={item.aiHint} />

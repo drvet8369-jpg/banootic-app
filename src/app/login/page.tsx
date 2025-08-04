@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getAllUsers } from '@/lib/data';
+import { getAllUsers } from '@/lib/storage';
 import type { User } from '@/context/AuthContext';
 
 
@@ -71,8 +70,7 @@ export default function LoginPage() {
             phone: values.phone,
             accountType: 'customer',
           };
-          // Note: We don't save the new temporary user to the allUsers list here.
-          // They are only "registered" if they go through the registration form.
+          // login function will handle saving this new temporary user.
         }
         
         login(userToLogin);

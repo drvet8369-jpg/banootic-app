@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { categories, getProviders } from '@/lib/data';
+import { categories } from '@/lib/data';
+import { getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import SearchResultCard from '@/components/search-result-card';
 import { Badge } from '@/components/ui/badge';
+import { getInboxData } from '@/lib/storage';
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
@@ -91,16 +93,18 @@ const UserDashboard = () => {
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
+        if (!user) return;
+        
         const allProviders = getProviders();
-        if (user?.accountType === 'customer') {
+        if (user.accountType === 'customer') {
             const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
             setSuggestedProviders(sortedProviders.slice(0, 3));
-        } else if (user?.accountType === 'provider' && user.phone) {
+        } else if (user.accountType === 'provider' && user.phone) {
             const profile = allProviders.find(p => p.phone === user.phone);
             setProviderProfile(profile || null);
             
             try {
-                const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
+                const allChatsData = getInboxData();
                 const totalUnread = Object.values(allChatsData)
                   .filter((chat: any) => chat.members?.includes(user.phone))
                   .reduce((acc: number, chat: any) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/data';
+import { getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -31,13 +31,11 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This function now correctly re-fetches and filters data whenever the query changes.
   const performSearch = useCallback(() => {
     setIsLoading(true);
-    // Always get the latest providers from localStorage at the moment of searching.
+    
     const allProviders = getProviders();
     if (!query) {
-      // If no query, show all providers, sorted by rank
       const sortedProviders = allProviders.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
       setSearchResults(sortedProviders);
       setIsLoading(false);
@@ -50,15 +48,12 @@ export default function SearchPage() {
       provider.bio.toLowerCase().includes(lowercasedQuery)
     );
 
-    // Sort the filtered results by ranking score
     const sortedResults = results.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
     
     setSearchResults(sortedResults);
     setIsLoading(false);
   }, [query]);
 
-  // useEffect now correctly depends on performSearch.
-  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
 

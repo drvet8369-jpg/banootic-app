@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
+import { getInboxData } from '@/lib/storage';
 
 interface Chat {
   id: string;
@@ -38,7 +39,6 @@ export default function InboxPage() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client, preventing hydration mismatch for date formatting.
     setIsClient(true);
   }, []);
 
@@ -53,7 +53,7 @@ export default function InboxPage() {
     setError(null);
     
     try {
-      const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
+      const allChatsData = getInboxData();
       
       const userChats = Object.values(allChatsData)
         .filter((chat: any) => chat.members?.includes(user.phone))

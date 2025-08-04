@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getAgreements, saveAgreements, getProviders, saveProviders } from '@/lib/data';
+import { getAgreements, saveAgreements, getProviders, saveProviders } from '@/lib/storage';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

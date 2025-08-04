@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getInboxData } from '@/lib/storage';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -21,7 +22,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
 
     const checkUnread = () => {
       try {
-        const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
+        const allChatsData = getInboxData();
         const totalUnread = Object.values(allChatsData)
           .filter((chat: any) => chat.members?.includes(user.phone))
           .reduce((acc: number, chat: any) => {
@@ -30,15 +31,12 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
           }, 0);
         setUnreadCount(totalUnread);
       } catch (e) {
-        // Silently fail if localStorage is not available or corrupted
         setUnreadCount(0);
       }
     };
 
-    // Initial check
     checkUnread();
 
-    // Listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
         if (event.key === 'banootik_inbox_chats') {
             checkUnread();
@@ -46,10 +44,8 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Also check on focus for changes within the same tab
     window.addEventListener('focus', checkUnread);
 
-    // Set up an interval as a fallback
     const intervalId = setInterval(checkUnread, 5000); 
 
     return () => {

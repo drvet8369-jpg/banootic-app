@@ -23,7 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services, getAllUsers, saveAllUsers, activeCities } from '@/lib/data';
+import { categories, services, activeCities } from '@/lib/data';
+import { getProviders, saveProviders, getAllUsers, saveAllUsers } from '@/lib/storage';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -130,8 +131,8 @@ export default function RegisterForm() {
         accountType: values.accountType,
       };
       
-      const allNewUsers = [...allUsers, userToLogin];
-      saveAllUsers(allNewUsers);
+      // Save the new user to the master list of all users.
+      saveAllUsers([...allUsers, userToLogin]);
 
       if (values.accountType === 'provider') {
         const allProviders = getProviders();

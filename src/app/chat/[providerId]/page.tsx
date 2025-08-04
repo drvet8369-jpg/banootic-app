@@ -1,6 +1,6 @@
 'use client';
 
-import { getProviders } from '@/lib/data';
+import { getProviders, getChatMessages, saveChatMessages, getInboxData, saveInboxData } from '@/lib/storage';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,20 +92,14 @@ export default function ChatPage() {
     
     const chatId = getChatId(user.phone, details.phone);
     if (chatId) {
-      try {
-          const storedMessages = localStorage.getItem(`banootik_chat_${chatId}`);
-          if (storedMessages) {
-              setMessages(JSON.parse(storedMessages));
-          }
+      const storedMessages = getChatMessages(chatId);
+      setMessages(storedMessages);
 
-          // Mark messages as read when chat is opened
-          const allChats = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
-          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-              allChats[chatId].participants[user.phone].unreadCount = 0;
-              localStorage.setItem('banootik_inbox_chats', JSON.stringify(allChats));
-          }
-      } catch(e) {
-          console.error("Failed to load/update chat from localStorage", e);
+      // Mark messages as read when chat is opened
+      const allChats = getInboxData();
+      if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+          allChats[chatId].participants[user.phone].unreadCount = 0;
+          saveInboxData(allChats);
       }
     }
     
@@ -160,15 +154,14 @@ export default function ChatPage() {
     });
 
     setMessages(updatedMessages);
-    localStorage.setItem(`banootik_chat_${chatId}`, JSON.stringify(updatedMessages));
+    saveChatMessages(chatId, updatedMessages);
 
-    // Also update the last message in the inbox if this was the last message
     const lastMessage = updatedMessages[updatedMessages.length - 1];
     if (lastMessage.id === editingMessageId) {
-        const allChats = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
+        const allChats = getInboxData();
         if (allChats[chatId]) {
             allChats[chatId].lastMessage = editingText.trim();
-            localStorage.setItem('banootik_inbox_chats', JSON.stringify(allChats));
+            saveInboxData(allChats);
         }
     }
 
@@ -198,7 +191,7 @@ export default function ChatPage() {
     const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (chatId) {
         try {
-            const allChats = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
+            const allChats = getInboxData();
             const currentChat = allChats[chatId] || {
                 id: chatId,
                 members: [user.phone, otherPersonDetails.phone],
@@ -208,11 +201,9 @@ export default function ChatPage() {
                 }
             };
             
-            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
-            // Increment unread count for the receiver
             const receiverPhone = otherPersonDetails.phone;
             if (currentChat.participants[receiverPhone]) {
                 currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
@@ -220,15 +211,14 @@ export default function ChatPage() {
                  currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
 
-            // Ensure sender's participant data exists
             if (!currentChat.participants[user.phone]) {
                 currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
             }
 
             allChats[chatId] = currentChat;
             
-            localStorage.setItem(`banootik_chat_${chatId}`, JSON.stringify(updatedMessages));
-            localStorage.setItem('banootik_inbox_chats', JSON.stringify(allChats));
+            saveChatMessages(chatId, updatedMessages);
+            saveInboxData(allChats);
         } catch(e) {
             console.error("Failed to save to localStorage", e);
             toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
@@ -242,9 +232,8 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    // For customers, check if they have any chats, if so link to inbox, otherwise home.
     try {
-      const allChatsData = JSON.parse(localStorage.getItem('banootik_inbox_chats') || '{}');
+      const allChatsData = getInboxData();
       const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
       if (userChats.length > 0) return '/inbox';
     } catch (e) { /* ignore */ }
