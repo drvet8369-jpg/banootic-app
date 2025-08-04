@@ -285,12 +285,12 @@ export default function ProfilePage() {
             </div>
             <div className="flex-grow text-center md:text-right space-y-2 min-w-0">
                 {mode === 'editing' ? (
-                     <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center md:text-right font-headline" ref={nameInputRef} />
+                     <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} ref={nameInputRef} />
                 ) : (
-                    <CardTitle className="font-headline text-4xl truncate">{provider.name}</CardTitle>
+                    <CardTitle className="font-headline text-3xl truncate">{provider.name}</CardTitle>
                 )}
                  {mode === 'editing' ? (
-                     <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center md:text-right text-muted-foreground" />
+                     <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-muted-foreground" />
                 ) : (
                     <CardDescription className="text-xl truncate">{provider.service}</CardDescription>
                 )}
@@ -304,7 +304,7 @@ export default function ProfilePage() {
         <CardContent className="space-y-6">
           <Separator />
           <div>
-            <h3 className="font-headline text-2xl mb-2">درباره شما</h3>
+            <h3 className="font-headline text-xl mb-2">درباره شما</h3>
              {mode === 'editing' ? (
                   <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
               ) : (
@@ -313,7 +313,7 @@ export default function ProfilePage() {
           </div>
           <Separator />
           <div className="space-y-4">
-             <h3 className="font-headline text-2xl">مدیریت نمونه کارها</h3>
+             <h3 className="font-headline text-xl">مدیریت نمونه کارها</h3>
                 <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
                     <PlusCircle className="w-5 h-5 ml-2" />
                     افزودن نمونه کار جدید
