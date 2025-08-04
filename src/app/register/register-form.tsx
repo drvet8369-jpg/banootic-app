@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services, getAllUsers, saveAllUsers } from '@/lib/data';
+import { categories, getProviders, saveProviders, services, getAllUsers, saveAllUsers, activeCities } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -40,8 +40,17 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
+  location: z.string().optional(),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.location;
+    }
+    return true;
+}, {
+    message: 'لطفاً شهر محل فعالیت خود را انتخاب کنید.',
+    path: ['location'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -74,6 +83,7 @@ export default function RegisterForm() {
       name: '',
       phone: '',
       accountType: 'customer',
+      location: 'ارومیه',
       bio: '',
     },
   });
@@ -133,7 +143,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Hardcoded to Urmia
+          location: values.location || 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -230,7 +240,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="" {...field} disabled={isLoading} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -239,6 +249,33 @@ export default function RegisterForm() {
 
             {accountType === 'provider' && (
               <>
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>شهر محل فعالیت</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="یک شهر را انتخاب کنید" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeCities.map((city) => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        در حال حاضر، فعالیت فقط در شهرهای موجود در لیست امکان‌پذیر است.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="serviceType"

@@ -311,9 +311,7 @@ export default function ProfilePage() {
                   <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
               
-               {mode === 'viewing' && (
-                <>
-                  <Separator className="my-6" />
+               <Separator className="my-6" />
                   <div className="mb-4">
                     <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
                     <input 
@@ -374,9 +372,6 @@ export default function ProfilePage() {
                         </div>
                     )}
                   </div>
-                </>
-               )}
-
                  <input
                     type="file"
                     ref={profilePicInputRef}
