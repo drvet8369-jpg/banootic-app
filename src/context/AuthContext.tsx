@@ -22,14 +22,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'banootik-user';
 
-// This function will permanently delete a user from the providers and users lists.
 const deleteUserPermanently = (phone: string) => {
-    // Remove from providers list
     const allProviders = getProviders();
     const updatedProviders = allProviders.filter(p => p.phone !== phone);
     saveProviders(updatedProviders);
 
-    // Remove from all users list
     const allUsers = getAllUsers();
     const updatedUsers = allUsers.filter(u => u.phone !== phone);
     saveAllUsers(updatedUsers);
@@ -39,30 +36,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  // On initial load, try to hydrate the user from localStorage.
-  useEffect(() => {
+  const reloadData = () => {
     try {
       const storedUserJSON = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUserJSON) {
         const storedUser: User = JSON.parse(storedUserJSON);
-        
-        // Data integrity check: on load, ensure the user exists in the master list.
-        // If not, it's stale data, so log them out.
         const allUsers = getAllUsers();
         const userExists = allUsers.some(u => u.phone === storedUser.phone);
         
         if (userExists) {
              setUser(storedUser);
         } else {
-             console.warn("Stale user data found in localStorage. Clearing.");
              localStorage.removeItem(USER_STORAGE_KEY);
              setUser(null);
         }
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage on initial load", error);
+      console.error("Failed to parse user from localStorage on reload", error);
       localStorage.removeItem(USER_STORAGE_KEY);
+      setUser(null);
     }
+  }
+
+  // Effect for initial load and for listening to storage changes from other tabs
+  useEffect(() => {
+    // Initial load
+    reloadData();
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === USER_STORAGE_KEY) {
+        // When storage changes in another tab, reload the data in this tab.
+        reloadData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const login = (userData: User) => {
@@ -106,14 +120,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      // First, get the user info before clearing it
       const currentUser = user;
       
-      // Clear the session
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
 
-      // Now, if the logged-out user was 'سالن مد نهال', delete them permanently
       if (currentUser && currentUser.name === 'سالن مد نهال') {
         deleteUserPermanently(currentUser.phone);
         console.log(`User 'سالن مد نهال' with phone ${currentUser.phone} has been permanently deleted.`);
