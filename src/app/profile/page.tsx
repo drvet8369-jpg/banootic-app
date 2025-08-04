@@ -40,7 +40,7 @@ export default function ProfilePage() {
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   const loadProviderData = useCallback(() => {
-    if (user && user.accountType === 'provider') {
+    if (user && user.accountType === 'provider' && user.phone) {
         const allProviders = getProviders();
         let currentProvider = allProviders.find(p => p.phone === user.phone);
         
@@ -57,6 +57,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProviderData();
+    window.addEventListener('focus', loadProviderData);
+    return () => window.removeEventListener('focus', loadProviderData);
   }, [loadProviderData]);
 
   useEffect(() => {
@@ -268,8 +270,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
-      <Card>
+    <div className="max-w-4xl mx-auto py-12 md:py-20 w-full">
+      <Card className="w-full">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg shrink-0">
@@ -281,16 +283,16 @@ export default function ProfilePage() {
                   </div>
                 )}
             </div>
-            <div className="flex-grow text-center md:text-right space-y-2">
+            <div className="flex-grow text-center md:text-right space-y-2 min-w-0">
                 {mode === 'editing' ? (
                      <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center md:text-right font-headline text-3xl" ref={nameInputRef} />
                 ) : (
-                    <CardTitle className="font-headline text-4xl">{provider.name}</CardTitle>
+                    <CardTitle className="font-headline text-4xl truncate">{provider.name}</CardTitle>
                 )}
                  {mode === 'editing' ? (
                      <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center md:text-right text-lg text-muted-foreground" />
                 ) : (
-                    <CardDescription className="text-xl">{provider.service}</CardDescription>
+                    <CardDescription className="text-xl truncate">{provider.service}</CardDescription>
                 )}
                 <div className="flex items-center justify-center md:justify-start text-muted-foreground">
                   <MapPin className="w-5 h-5 ml-2 text-accent" />
@@ -317,7 +319,7 @@ export default function ProfilePage() {
                     افزودن نمونه کار جدید
                 </Button>
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {provider.portfolio?.length > 0 ? (
+                {provider.portfolio && provider.portfolio.length > 0 ? (
                   provider.portfolio.map((item, index) => (
                       <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
                           <Image src={item.src} alt={`نمونه کار ${index + 1}`} fill className="object-cover" data-ai-hint={item.aiHint} />
