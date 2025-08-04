@@ -58,30 +58,22 @@ export default function LoginPage() {
         const allUsers = getAllUsers();
         const existingUser = allUsers.find(u => u.phone === values.phone);
 
-        let userToLogin: User;
-
         if (existingUser) {
           // User exists, log them in with their stored data
-          userToLogin = existingUser;
+          login(existingUser);
+          toast({
+            title: 'ورود با موفقیت انجام شد!',
+            description: `خوش آمدید ${existingUser.name}! به صفحه اصلی هدایت می‌شوید.`,
+          });
+          router.push('/');
         } else {
-          // User does not exist, treat as a new customer
-          userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
-          // login function will handle saving this new temporary user.
+          // User does not exist, show an error and guide to registration
+          toast({
+              title: 'کاربر یافت نشد',
+              description: 'این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+              variant: 'destructive'
+          });
         }
-        
-        login(userToLogin);
-
-        toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
-        });
-        
-        router.push('/');
-
     } catch (error) {
         console.error("Login failed:", error);
         toast({
@@ -98,9 +90,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود به حساب کاربری خود، شماره تلفن‌تان را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,7 +105,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="" {...field} disabled={isLoading} />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -126,9 +118,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
+            حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
+              ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
