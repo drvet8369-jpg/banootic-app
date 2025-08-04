@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getProviders } from '@/lib/data'; // Import the function to get provider data
 
 export interface User {
   name: string;
@@ -50,9 +51,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('banootik-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      const storedUserJSON = localStorage.getItem('banootik-user');
+      if (storedUserJSON) {
+        const storedUser: User = JSON.parse(storedUserJSON);
+        
+        // **RECOVERY LOGIC**
+        // If the user is a provider, ensure their data is complete by cross-referencing with the master provider list.
+        // This solves the inconsistency between tabs and the preview window.
+        if (storedUser.accountType === 'provider') {
+          const allProviders = getProviders();
+          const fullProviderProfile = allProviders.find(p => p.phone === storedUser.phone);
+          
+          if (fullProviderProfile) {
+            // Found the full profile, create a complete user object
+            const completeUser: User = {
+                name: fullProviderProfile.name,
+                phone: fullProviderProfile.phone,
+                accountType: 'provider',
+                service: fullProviderProfile.service,
+                bio: fullProviderProfile.bio,
+            };
+            // Re-sync localStorage with the complete, correct data and set state
+            localStorage.setItem('banootik-user', JSON.stringify(completeUser));
+            setUser(completeUser);
+          } else {
+             // The provider is not in the master list, maybe a registration error. Log them out.
+             console.warn(`Provider with phone ${storedUser.phone} not found in master list. Logging out.`);
+             logout();
+          }
+        } else {
+          // User is a customer, just set the state
+          setUser(storedUser);
+        }
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
