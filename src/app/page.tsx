@@ -118,7 +118,7 @@ const UserDashboard = () => {
 
     if (user.accountType === 'provider') {
         return (
-            <div className="py-12 md:py-20 w-full">
+            <div className="max-w-2xl mx-auto py-12 md:py-20 w-full">
                 <Card>
                     <CardHeader>
                         <div className="flex items-center gap-4">
