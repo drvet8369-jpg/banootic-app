@@ -23,17 +23,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const USER_STORAGE_KEY = 'banootik-user';
 
 
-const deleteUserPermanently = (phone: string) => {
-    // This is a utility function specifically for the 'سالن مد وحید' test case
-    const allProviders = getProviders();
-    const updatedProviders = allProviders.filter(p => p.phone !== phone);
-    saveProviders(updatedProviders);
-
-    const allUsers = getAllUsers();
-    const updatedUsers = allUsers.filter(u => u.phone !== phone);
-    saveAllUsers(updatedUsers);
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
@@ -53,27 +42,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // This effect handles synchronization between tabs
   useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
+    const syncState = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
+        console.log("AuthContext: Detected storage change from another tab.");
         if (event.newValue) {
           // A user was logged in or updated in another tab
           try {
-            setUser(JSON.parse(event.newValue));
+            const newUser = JSON.parse(event.newValue);
+            setUser(newUser);
           } catch {
              setUser(null);
           }
         } else {
           // The user was logged out in another tab
           setUser(null);
-          router.push('/'); // Redirect to home on logout from other tab
+          router.push('/'); 
         }
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('storage', syncState);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', syncState);
     };
   }, [router]);
 
@@ -105,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === user.phone);
       if (userIndex > -1) {
-          allUsers[userIndex] = newUser;
+          allUsers[userIndex] = { ...allUsers[userIndex], ...updatedData };
           saveAllUsers(allUsers);
       }
   }
@@ -113,21 +104,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      const currentUser = user;
-      
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
-
-      // Special logic to completely wipe the test user as requested
-      // This will allow re-registering with the same phone number for testing
-      if (currentUser && currentUser.name === 'سالن مد وحید') {
-        deleteUserPermanently(currentUser.phone);
-        console.log(`User 'سالن مد وحید' with phone ${currentUser.phone} has been permanently deleted from all records.`);
-      }
-
       router.push('/');
     } catch (error) {
-       console.error("Failed to process logout and cleanup", error);
+       console.error("Failed to process logout", error);
     }
   };
 

@@ -69,16 +69,15 @@ export const getAllUsers = (): User[] => {
     }
     try {
         const storedUsers = localStorage.getItem(USERS_KEY);
-        const incorrectUserPhone = '09353456789';
-
+        
         if (storedUsers) {
             let users: User[] = JSON.parse(storedUsers);
-            const userExists = users.some(user => user.phone === incorrectUserPhone);
-            
-            if (userExists) {
-                const cleanedUsers = users.filter(user => user.phone !== incorrectUserPhone);
-                localStorage.setItem(USERS_KEY, JSON.stringify(cleanedUsers));
-                return cleanedUsers;
+            // One-time cleanup for the bad user entry
+            const incorrectUserPhone = '09353456789';
+            if (users.some(user => user.phone === incorrectUserPhone && user.accountType === 'customer' && user.name === 'سالن وحید')) {
+                console.log("Performing one-time cleanup of incorrect user entry.");
+                users = users.filter(user => !(user.phone === incorrectUserPhone && user.accountType === 'customer'));
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
             }
             return users;
         } else {
