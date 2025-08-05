@@ -42,6 +42,7 @@ const AGREEMENTS_KEY = 'banootik-agreements';
 const USERS_KEY = 'banootik-users';
 const CHATS_KEY_PREFIX = 'banootik_chat_';
 const INBOX_KEY = 'banootik_inbox_chats';
+const CLEANUP_FLAG_KEY = 'banootik-cleanup-v1';
 
 // --- Providers ---
 export const getProviders = (): Provider[] => getStoredData<Provider[]>(PROVIDERS_KEY, defaultProviders);
@@ -61,28 +62,24 @@ export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreem
 // This prevents overwriting the user list on subsequent page loads.
 export const getAllUsers = (): User[] => {
     if (typeof window === 'undefined') {
+        // Fallback for SSR
         return defaultProviders.map(p => ({
             name: p.name,
             phone: p.phone,
             accountType: 'provider'
         }));
     }
+    
     try {
         const storedUsers = localStorage.getItem(USERS_KEY);
-        
         if (storedUsers) {
-            let users: User[] = JSON.parse(storedUsers);
-            // One-time cleanup for the bad user entry
-            const incorrectUserPhone = '09353456789';
-            if (users.some(user => user.phone === incorrectUserPhone && user.accountType === 'customer' && user.name === 'سالن وحید')) {
-                console.log("Performing one-time cleanup of incorrect user entry.");
-                users = users.filter(user => !(user.phone === incorrectUserPhone && user.accountType === 'customer'));
-                localStorage.setItem(USERS_KEY, JSON.stringify(users));
-            }
-            return users;
+            // A list of users already exists, return it.
+            return JSON.parse(storedUsers);
         } else {
-            // First time run: create the user list from default providers
-            const initialUsers = defaultProviders.map(p => ({
+            // This is the very first run on a new browser.
+            // Create the initial user list from the default providers.
+            console.log("Initializing user list for the first time.");
+            const initialUsers: User[] = defaultProviders.map(p => ({
                 name: p.name,
                 phone: p.phone,
                 accountType: 'provider' as 'provider'
@@ -92,8 +89,8 @@ export const getAllUsers = (): User[] => {
         }
     } catch (error) {
         console.error(`Failed to get/parse ${USERS_KEY} from localStorage.`, error);
-        // Fallback to in-memory default
-         return defaultProviders.map(p => ({
+        // Fallback in case of parsing error
+        return defaultProviders.map(p => ({
             name: p.name,
             phone: p.phone,
             accountType: 'provider'
@@ -121,3 +118,18 @@ export const saveInboxData = (data: Record<string, any>): void => {
         localStorage.setItem(INBOX_KEY, JSON.stringify(data));
     } catch(e) { console.error("Failed to save inbox data", e); }
 }
+
+// One-time data cleanup for development purposes
+const runCleanup = () => {
+    if (typeof window !== 'undefined') {
+        if (!localStorage.getItem(CLEANUP_FLAG_KEY)) {
+            console.log("Performing one-time cleanup of incorrect user entry.");
+            const allUsers = getAllUsers();
+            const incorrectUserPhone = '09353456789';
+            const updatedUsers = allUsers.filter(user => !(user.phone === incorrectUserPhone && user.accountType === 'customer'));
+            saveAllUsers(updatedUsers);
+            localStorage.setItem(CLEANUP_FLAG_KEY, 'true');
+        }
+    }
+}
+runCleanup();

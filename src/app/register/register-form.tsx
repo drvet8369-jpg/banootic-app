@@ -110,14 +110,12 @@ export default function RegisterForm() {
         return;
       }
 
-      // This is the user object for the AuthContext and for the master users list
       const newUser: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
 
-      // If registering as a provider, check for unique business name and create the provider profile
       if (values.accountType === 'provider') {
         const allProviders = getProviders();
         const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
@@ -152,10 +150,10 @@ export default function RegisterForm() {
         saveProviders([...allProviders, newProvider]);
       }
       
-      // CRITICAL FIX: Add the new user to the master list of all users.
+      // *** CRITICAL FIX ***
+      // Add the new user to the master list of all users, ensuring persistence.
       saveAllUsers([...allUsers, newUser]);
 
-      // Login the new user
       login(newUser);
       
       toast({
