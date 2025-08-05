@@ -115,9 +115,10 @@ export default function RegisterForm() {
         phone: values.phone,
         accountType: values.accountType,
       };
+      
+      const allProviders = getProviders();
 
       if (values.accountType === 'provider') {
-        const allProviders = getProviders();
         const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
             toast({
@@ -156,12 +157,17 @@ export default function RegisterForm() {
 
       login(newUser);
       
+      const isProvider = values.accountType === 'provider';
+      const destination = isProvider ? '/profile' : '/';
+      const successDescription = isProvider
+          ? 'خوش آمدید! به صفحه مدیریت پروفایل خود هدایت می‌شوید.'
+          : 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.';
+
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        description: successDescription,
       });
       
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
       router.push(destination);
 
     } catch (error) {

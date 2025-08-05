@@ -1,6 +1,4 @@
 import type { Category, Provider, Service, Review, Agreement } from './types';
-import type { User } from '@/context/AuthContext';
-
 
 export const categories: Category[] = [
   {
