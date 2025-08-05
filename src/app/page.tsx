@@ -6,7 +6,7 @@ import { getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -197,8 +197,16 @@ const UserDashboard = () => {
 }
 
 export default function Home() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isAuthLoading } = useAuth();
   
+  if (isAuthLoading) {
+      return (
+        <div className="flex flex-1 items-center justify-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center">
       {isLoggedIn ? <UserDashboard /> : <LandingPage />}

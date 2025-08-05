@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAllUsers, saveAllUsers, getProviders, saveProviders } from '@/lib/storage';
+import { getAllUsers, saveAllUsers } from '@/lib/storage';
 
 export interface User {
   name: string;
@@ -12,9 +12,10 @@ export interface User {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  isAuthLoading: boolean; // New state to track initial loading
   user: User | null;
   login: (userData: User) => void;
-  logout: () => void;
+  logout: (options?: { isCleanup?: boolean }) => void;
   updateUser: (updatedData: Partial<User>) => void;
 }
 
@@ -22,9 +23,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'banootik-user';
 
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // Start with loading true
   const router = useRouter();
 
   // On initial component mount, try to hydrate the user from localStorage.
@@ -37,6 +38,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
       localStorage.removeItem(USER_STORAGE_KEY);
+    } finally {
+      setIsAuthLoading(false); // Finished loading
     }
   }, []);
 
@@ -44,9 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const syncState = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
-        console.log("AuthContext: Detected storage change from another tab.");
         if (event.newValue) {
-          // A user was logged in or updated in another tab
           try {
             const newUser = JSON.parse(event.newValue);
             setUser(newUser);
@@ -54,7 +55,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              setUser(null);
           }
         } else {
-          // The user was logged out in another tab
           setUser(null);
           router.push('/'); 
         }
@@ -62,7 +62,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     window.addEventListener('storage', syncState);
-
     return () => {
       window.removeEventListener('storage', syncState);
     };
@@ -101,9 +100,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
   }
 
-
-  const logout = () => {
+  const logout = (options: { isCleanup?: boolean } = {}) => {
+    const { isCleanup = false } = options;
     try {
+      if (isCleanup && user?.name === 'سالن مد وحید') {
+        const allUsers = getAllUsers();
+        const updatedUsers = allUsers.filter(u => u.phone !== user.phone);
+        saveAllUsers(updatedUsers);
+      }
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
       router.push('/');
@@ -113,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, isAuthLoading, user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
