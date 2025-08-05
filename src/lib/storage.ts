@@ -3,10 +3,10 @@
 
 import type { Provider, Review, Agreement } from './types';
 import type { User } from '@/context/AuthContext';
-import { defaultProviders, defaultReviews, defaultAgreements, getDefaultUsers } from './data';
+import { defaultProviders, defaultReviews, defaultAgreements } from './data';
 
 // --- Generic LocalStorage Handler ---
-function getStoredData<T>(key: string, defaultValue: T[]): T[] {
+function getStoredData<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') {
     return defaultValue;
   }
@@ -24,7 +24,7 @@ function getStoredData<T>(key: string, defaultValue: T[]): T[] {
   }
 }
 
-function saveStoredData<T>(key: string, data: T[]): void {
+function saveStoredData<T>(key: string, data: T): void {
   if (typeof window === 'undefined') {
     return;
   }
@@ -44,24 +44,59 @@ const CHATS_KEY_PREFIX = 'banootik_chat_';
 const INBOX_KEY = 'banootik_inbox_chats';
 
 // --- Providers ---
-export const getProviders = (): Provider[] => getStoredData<Provider>(PROVIDERS_KEY, defaultProviders);
-export const saveProviders = (data: Provider[]): void => saveStoredData<Provider>(PROVIDERS_KEY, data);
+export const getProviders = (): Provider[] => getStoredData<Provider[]>(PROVIDERS_KEY, defaultProviders);
+export const saveProviders = (data: Provider[]): void => saveStoredData<Provider[]>(PROVIDERS_KEY, data);
 
 // --- Reviews ---
-export const getReviews = (): Review[] => getStoredData<Review>(REVIEWS_KEY, defaultReviews);
-export const saveReviews = (data: Review[]): void => saveStoredData<Review>(REVIEWS_KEY, data);
+export const getReviews = (): Review[] => getStoredData<Review[]>(REVIEWS_KEY, defaultReviews);
+export const saveReviews = (data: Review[]): void => saveStoredData<Review[]>(REVIEWS_KEY, data);
 
 // --- Agreements ---
-export const getAgreements = (): Agreement[] => getStoredData<Agreement>(AGREEMENTS_KEY, defaultAgreements);
-export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreement>(AGREEMENTS_KEY, data);
+export const getAgreements = (): Agreement[] => getStoredData<Agreement[]>(AGREEMENTS_KEY, defaultAgreements);
+export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreement[]>(AGREEMENTS_KEY, data);
 
 // --- Users ---
-export const getAllUsers = (): User[] => getStoredData<User>(USERS_KEY, getDefaultUsers());
-export const saveAllUsers = (data: User[]): void => saveStoredData<User>(USERS_KEY, data);
+// This function is now smarter. It checks for an existing user list.
+// If none exists, it creates one from the default providers.
+// This prevents overwriting the user list on subsequent page loads.
+export const getAllUsers = (): User[] => {
+    if (typeof window === 'undefined') {
+        return defaultProviders.map(p => ({
+            name: p.name,
+            phone: p.phone,
+            accountType: 'provider'
+        }));
+    }
+    try {
+        const storedUsers = localStorage.getItem(USERS_KEY);
+        if (storedUsers) {
+            return JSON.parse(storedUsers);
+        } else {
+            // First time run: create the user list from default providers
+            const initialUsers = defaultProviders.map(p => ({
+                name: p.name,
+                phone: p.phone,
+                accountType: 'provider' as 'provider'
+            }));
+            localStorage.setItem(USERS_KEY, JSON.stringify(initialUsers));
+            return initialUsers;
+        }
+    } catch (error) {
+        console.error(`Failed to get/parse ${USERS_KEY} from localStorage.`, error);
+        // Fallback to in-memory default
+         return defaultProviders.map(p => ({
+            name: p.name,
+            phone: p.phone,
+            accountType: 'provider'
+        }));
+    }
+};
+
+export const saveAllUsers = (data: User[]): void => saveStoredData<User[]>(USERS_KEY, data);
 
 // --- Chat & Inbox ---
-export const getChatMessages = (chatId: string): any[] => getStoredData<any>(`${CHATS_KEY_PREFIX}${chatId}`, []);
-export const saveChatMessages = (chatId: string, messages: any[]): void => saveStoredData<any>(`${CHATS_KEY_PREFIX}${chatId}`, messages);
+export const getChatMessages = (chatId: string): any[] => getStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, []);
+export const saveChatMessages = (chatId: string, messages: any[]): void => saveStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, messages);
 
 export const getInboxData = (): Record<string, any> => {
     if (typeof window === 'undefined') return {};

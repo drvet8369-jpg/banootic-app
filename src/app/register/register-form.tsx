@@ -111,7 +111,7 @@ export default function RegisterForm() {
       }
 
       // This is the user object for the AuthContext and for the master users list
-      const userToLogin: User = {
+      const newUser: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
@@ -153,10 +153,10 @@ export default function RegisterForm() {
       }
       
       // CRITICAL FIX: Add the new user to the master list of all users.
-      saveAllUsers([...allUsers, userToLogin]);
+      saveAllUsers([...allUsers, newUser]);
 
       // Login the new user
-      login(userToLogin);
+      login(newUser);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',

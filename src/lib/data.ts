@@ -93,13 +93,3 @@ export const defaultProviders: Provider[] = [
 
 export const defaultReviews: Review[] = [];
 export const defaultAgreements: Agreement[] = [];
-
-export const getDefaultUsers = (): User[] => {
-  // Initially, the users list only contains the providers.
-  // Customers are added dynamically upon login/registration.
-  return defaultProviders.map(p => ({
-    name: p.name,
-    phone: p.phone,
-    accountType: 'provider'
-  }));
-};
