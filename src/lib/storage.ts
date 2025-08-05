@@ -69,8 +69,18 @@ export const getAllUsers = (): User[] => {
     }
     try {
         const storedUsers = localStorage.getItem(USERS_KEY);
+        const incorrectUserPhone = '09353456789';
+
         if (storedUsers) {
-            return JSON.parse(storedUsers);
+            let users: User[] = JSON.parse(storedUsers);
+            const userExists = users.some(user => user.phone === incorrectUserPhone);
+            
+            if (userExists) {
+                const cleanedUsers = users.filter(user => user.phone !== incorrectUserPhone);
+                localStorage.setItem(USERS_KEY, JSON.stringify(cleanedUsers));
+                return cleanedUsers;
+            }
+            return users;
         } else {
             // First time run: create the user list from default providers
             const initialUsers = defaultProviders.map(p => ({
