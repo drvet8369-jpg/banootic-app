@@ -42,7 +42,7 @@ const AGREEMENTS_KEY = 'banootik-agreements';
 const USERS_KEY = 'banootik-users';
 const CHATS_KEY_PREFIX = 'banootik_chat_';
 const INBOX_KEY = 'banootik_inbox_chats';
-const CLEANUP_FLAG_KEY = 'banootik-cleanup-v1';
+const CLEANUP_FLAG_KEY = 'banootik-cleanup-v1-final';
 
 // --- Providers ---
 export const getProviders = (): Provider[] => getStoredData<Provider[]>(PROVIDERS_KEY, defaultProviders);
@@ -55,6 +55,7 @@ export const saveReviews = (data: Review[]): void => saveStoredData<Review[]>(RE
 // --- Agreements ---
 export const getAgreements = (): Agreement[] => getStoredData<Agreement[]>(AGREEMENTS_KEY, defaultAgreements);
 export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreement[]>(AGREEMENTS_KEY, data);
+
 
 // --- Users ---
 // This function is now smarter. It checks for an existing user list.
@@ -100,6 +101,7 @@ export const getAllUsers = (): User[] => {
 
 export const saveAllUsers = (data: User[]): void => saveStoredData<User[]>(USERS_KEY, data);
 
+
 // --- Chat & Inbox ---
 export const getChatMessages = (chatId: string): any[] => getStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, []);
 export const saveChatMessages = (chatId: string, messages: any[]): void => saveStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, messages);
@@ -119,16 +121,22 @@ export const saveInboxData = (data: Record<string, any>): void => {
     } catch(e) { console.error("Failed to save inbox data", e); }
 }
 
+
 // One-time data cleanup for development purposes
 const runCleanup = () => {
     if (typeof window !== 'undefined') {
         if (!localStorage.getItem(CLEANUP_FLAG_KEY)) {
             console.log("Performing one-time cleanup of incorrect user entry.");
-            const allUsers = getAllUsers();
-            const incorrectUserPhone = '09353456789';
-            const updatedUsers = allUsers.filter(user => !(user.phone === incorrectUserPhone && user.accountType === 'customer'));
-            saveAllUsers(updatedUsers);
-            localStorage.setItem(CLEANUP_FLAG_KEY, 'true');
+            try {
+                const allUsers = getAllUsers();
+                const incorrectUserPhone = '09353456789';
+                const updatedUsers = allUsers.filter(user => !(user.phone === incorrectUserPhone && user.accountType === 'customer'));
+                saveAllUsers(updatedUsers);
+                localStorage.setItem(CLEANUP_FLAG_KEY, 'true');
+                console.log("Cleanup successful.");
+            } catch (e) {
+                console.error("Cleanup failed:", e);
+            }
         }
     }
 }
