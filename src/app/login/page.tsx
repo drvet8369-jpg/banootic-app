@@ -28,7 +28,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { getAllUsers } from '@/lib/storage';
-import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -63,9 +62,11 @@ export default function LoginPage() {
           login(existingUser);
           toast({
             title: 'ورود با موفقیت انجام شد!',
-            description: `خوش آمدید ${existingUser.name}! به صفحه اصلی هدایت می‌شوید.`,
+            description: `خوش آمدید ${existingUser.name}!`,
           });
-          router.push('/');
+          // Redirect to profile for providers, home for customers
+          const destination = existingUser.accountType === 'provider' ? '/profile' : '/';
+          router.push(destination);
         } else {
           // User does not exist, show an error and guide to registration
           toast({

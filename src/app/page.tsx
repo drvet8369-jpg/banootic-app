@@ -197,16 +197,8 @@ const UserDashboard = () => {
 }
 
 export default function Home() {
-  const { isLoggedIn, isAuthLoading } = useAuth();
+  const { isLoggedIn } = useAuth();
   
-  if (isAuthLoading) {
-      return (
-        <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        </div>
-      )
-  }
-
   return (
     <div className="flex flex-col items-center justify-center">
       {isLoggedIn ? <UserDashboard /> : <LandingPage />}

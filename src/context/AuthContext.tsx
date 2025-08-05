@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAllUsers, saveAllUsers } from '@/lib/storage';
+import { getAllUsers, saveAllUsers, getProviders, saveProviders } from '@/lib/storage';
 
 export interface User {
   name: string;
@@ -12,7 +12,6 @@ export interface User {
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  isAuthLoading: boolean;
   user: User | null;
   login: (userData: User) => void;
   logout: (options?: { isCleanup?: boolean }) => void;
@@ -25,34 +24,30 @@ const USER_STORAGE_KEY = 'banootik-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage on initial load", error);
-      localStorage.removeItem(USER_STORAGE_KEY);
-    } finally {
-      setIsAuthLoading(false);
-    }
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === USER_STORAGE_KEY) {
-        try {
-          if (event.newValue) {
-            setUser(JSON.parse(event.newValue));
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-          console.error("Failed to parse user from storage event", error);
+    // 1. Initial Load: Immediately try to load user from localStorage
+    const loadUserFromStorage = () => {
+      try {
+        const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
           setUser(null);
         }
+      } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+        setUser(null);
+      }
+    };
+    
+    loadUserFromStorage();
+
+    // 2. Cross-Tab Sync: Listen for changes in other tabs
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === USER_STORAGE_KEY) {
+        loadUserFromStorage(); // Re-load user state from the updated localStorage
       }
     };
 
@@ -96,11 +91,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = (options: { isCleanup?: boolean } = {}) => {
     const { isCleanup = false } = options;
     try {
+      // Special cleanup logic for the test user "سالن هپکو"
       if (isCleanup && user?.name === 'سالن هپکو') {
         const allUsers = getAllUsers();
         const updatedUsers = allUsers.filter(u => u.phone !== user.phone);
         saveAllUsers(updatedUsers);
+
+        const allProviders = getProviders();
+        const updatedProviders = allProviders.filter(p => p.phone !== user.phone);
+        saveProviders(updatedProviders);
+        
+        console.log(`Cleanup complete for user: ${user.name}`);
       }
+
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
       router.push('/');
@@ -110,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, isAuthLoading, user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
