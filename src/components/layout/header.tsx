@@ -39,6 +39,12 @@ export default function Header() {
     return name.substring(0, 2);
   }
 
+  const handleLogout = () => {
+    const isHepcoUser = user?.name === 'سالن هپکو';
+    logout({ isCleanup: isHepcoUser });
+  };
+
+
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
       <SheetHeader>
@@ -107,7 +113,7 @@ export default function Header() {
               </div>
             </div>
             <SheetClose asChild>
-              <Button onClick={logout} variant="ghost" className="w-full justify-start">
+              <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
                   <LogOut className="ml-2 h-5 w-5" />
                   خروج
               </Button>
@@ -171,7 +177,7 @@ export default function Header() {
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
+                    <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="ml-2 h-4 w-4" />
                         <span>خروج</span>
                     </DropdownMenuItem>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAllUsers, saveAllUsers, getProviders, saveProviders } from '@/lib/storage';
 
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
-  const loadUserFromStorage = () => {
+  const loadUserFromStorage = useCallback(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUser) {
@@ -42,13 +42,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsAuthLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // 1. Initial Load: Load user on component mount
     loadUserFromStorage();
 
-    // 2. Cross-Tab Sync: Listen for changes in other tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
         setIsAuthLoading(true);
@@ -60,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [loadUserFromStorage]);
 
   const login = (userData: User) => {
     try {

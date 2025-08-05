@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { categories } from '@/lib/data';
-import { getProviders } from '@/lib/storage';
+import { categories, getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -197,8 +196,16 @@ const UserDashboard = () => {
 }
 
 export default function Home() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isAuthLoading } = useAuth();
   
+  if (isAuthLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center">
       {isLoggedIn ? <UserDashboard /> : <LandingPage />}
