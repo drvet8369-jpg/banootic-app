@@ -22,7 +22,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'banootik-user';
 
+
 const deleteUserPermanently = (phone: string) => {
+    // This is a utility function specifically for the 'سالن مد وحید' test case
     const allProviders = getProviders();
     const updatedProviders = allProviders.filter(p => p.phone !== phone);
     saveProviders(updatedProviders);
@@ -36,49 +38,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  // This callback function will reload the user state from localStorage.
-  // It's wrapped in useCallback to ensure it has a stable identity.
-  const reloadUser = useCallback(() => {
+  // On initial component mount, try to hydrate the user from localStorage.
+  useEffect(() => {
     try {
-      const storedUserJSON = localStorage.getItem(USER_STORAGE_KEY);
-      if (storedUserJSON) {
-        const storedUser = JSON.parse(storedUserJSON);
-        // We compare with current state to avoid unnecessary re-renders
-        if (JSON.stringify(storedUser) !== JSON.stringify(user)) {
-           setUser(storedUser);
-        }
-      } else {
-        if (user !== null) {
-          setUser(null);
-        }
+      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error("Failed to reload user from localStorage", error);
-      setUser(null);
+      console.error("Failed to parse user from localStorage on initial load", error);
+      localStorage.removeItem(USER_STORAGE_KEY);
     }
-  }, [user]);
+  }, []);
 
-
-  // This useEffect hook sets up the synchronization between tabs.
+  // This effect handles synchronization between tabs
   useEffect(() => {
-    // Load initial data on mount
-    reloadUser();
-
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
-        // When localStorage changes in another tab, reload the state in this tab.
-        reloadUser();
+        if (event.newValue) {
+          // A user was logged in or updated in another tab
+          try {
+            setUser(JSON.parse(event.newValue));
+          } catch {
+             setUser(null);
+          }
+        } else {
+          // The user was logged out in another tab
+          setUser(null);
+          router.push('/'); // Redirect to home on logout from other tab
+        }
       }
     };
 
-    // Add event listener for storage changes
     window.addEventListener('storage', handleStorageChange);
 
-    // Cleanup function to remove the listener when the component unmounts
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [reloadUser]);
+  }, [router]);
 
 
   const login = (userData: User) => {
@@ -88,18 +85,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           phone: userData.phone,
           accountType: userData.accountType || 'customer' 
       };
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
-      setUser(userToSave);
       
-      const allUsers = getAllUsers();
-      const userIndex = allUsers.findIndex(u => u.phone === userData.phone);
-      if (userIndex > -1) {
-          allUsers[userIndex] = userToSave;
-      } else {
-          allUsers.push(userToSave);
-      }
-      saveAllUsers(allUsers);
-
+      setUser(userToSave);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
+      
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
     }
@@ -107,10 +96,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const updateUser = (updatedData: Partial<User>) => {
       if (!user) return;
+
       const newUser = { ...user, ...updatedData };
       setUser(newUser);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
 
+      // Also update the master user list
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === user.phone);
       if (userIndex > -1) {
@@ -127,10 +118,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
 
-      // Special logic for the test user as requested
+      // Special logic to completely wipe the test user as requested
+      // This will allow re-registering with the same phone number for testing
       if (currentUser && currentUser.name === 'سالن مد وحید') {
         deleteUserPermanently(currentUser.phone);
-        console.log(`User 'سالن مد وحید' with phone ${currentUser.phone} has been permanently deleted.`);
+        console.log(`User 'سالن مد وحید' with phone ${currentUser.phone} has been permanently deleted from all records.`);
       }
 
       router.push('/');
