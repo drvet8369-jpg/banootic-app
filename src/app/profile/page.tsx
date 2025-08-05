@@ -287,12 +287,12 @@ export default function ProfilePage() {
                 {mode === 'editing' ? (
                      <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} ref={nameInputRef} />
                 ) : (
-                    <CardTitle className="font-headline text-3xl truncate">{provider.name}</CardTitle>
+                    <CardTitle className="font-headline text-2xl truncate">{provider.name}</CardTitle>
                 )}
                  {mode === 'editing' ? (
                      <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-muted-foreground" />
                 ) : (
-                    <CardDescription className="text-xl truncate">{provider.service}</CardDescription>
+                    <CardDescription className="text-lg truncate">{provider.service}</CardDescription>
                 )}
                 <div className="flex items-center justify-center md:justify-start text-muted-foreground">
                   <MapPin className="w-5 h-5 ml-2 text-accent" />
