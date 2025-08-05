@@ -112,3 +112,31 @@ export const saveInboxData = (data: Record<string, any>): void => {
         localStorage.setItem(INBOX_KEY, JSON.stringify(data));
     } catch(e) { console.error("Failed to save inbox data", e); }
 }
+
+// Perform a one-time cleanup of a potentially problematic user account if it exists
+const performUserCleanup = () => {
+    if (typeof window === 'undefined') return;
+
+    const cleanupFlag = 'banootik-cleanup-v1-hepcofix'; // A unique flag for this specific cleanup
+    if (localStorage.getItem(cleanupFlag)) {
+        return; // Cleanup already done
+    }
+
+    console.log("Performing one-time cleanup of problematic user account...");
+    const allUsers = getAllUsers();
+    const userToDeletePhone = '09353456789';
+    
+    // Find if the problematic user exists and is a customer
+    const userIndex = allUsers.findIndex(u => u.phone === userToDeletePhone && u.accountType === 'customer');
+
+    if (userIndex > -1) {
+        allUsers.splice(userIndex, 1);
+        saveAllUsers(allUsers);
+        console.log(`User with phone ${userToDeletePhone} has been removed.`);
+    }
+
+    localStorage.setItem(cleanupFlag, 'true');
+};
+
+// Run the cleanup function once when this module is loaded
+performUserCleanup();
