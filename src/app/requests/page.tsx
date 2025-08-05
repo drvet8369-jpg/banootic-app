@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
 export default function CustomerRequestsPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isAuthLoading } = useAuth();
   const [requests, setRequests] = useState<Agreement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
@@ -34,6 +34,8 @@ export default function CustomerRequestsPage() {
   
   useEffect(() => {
     setIsClient(true);
+    if(isAuthLoading) return;
+    
     loadRequests();
     
     // Add a listener to refresh data on focus, useful for multi-tab scenarios
@@ -42,7 +44,15 @@ export default function CustomerRequestsPage() {
       window.removeEventListener('focus', loadRequests);
     };
 
-  }, [loadRequests]);
+  }, [loadRequests, isAuthLoading]);
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!isLoggedIn) {
     return (

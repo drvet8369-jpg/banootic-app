@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (userData: User) => void;
   logout: (options?: { isCleanup?: boolean }) => void;
   updateUser: (updatedData: Partial<User>) => void;
+  isAuthLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,30 +25,34 @@ const USER_STORAGE_KEY = 'banootik-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // 1. Initial Load: Immediately try to load user from localStorage
-    const loadUserFromStorage = () => {
-      try {
-        const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Failed to parse user from localStorage", error);
+  const loadUserFromStorage = () => {
+    try {
+      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
         setUser(null);
       }
-    };
-    
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      setUser(null);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Initial Load: Load user on component mount
     loadUserFromStorage();
 
     // 2. Cross-Tab Sync: Listen for changes in other tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
-        loadUserFromStorage(); // Re-load user state from the updated localStorage
+        setIsAuthLoading(true);
+        loadUserFromStorage();
       }
     };
 
@@ -113,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, updateUser, isAuthLoading }}>
       {children}
     </AuthContext.Provider>
   );

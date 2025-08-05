@@ -32,7 +32,7 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isAuthLoading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +43,8 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
+    if (isAuthLoading) return;
+
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -87,10 +89,10 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.phone]);
+  }, [user?.phone, isAuthLoading]);
 
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

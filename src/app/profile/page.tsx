@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -28,7 +28,7 @@ import {
 
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, updateUser } = useAuth();
+  const { user, isLoggedIn, updateUser, isAuthLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -38,6 +38,7 @@ export default function ProfilePage() {
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider' && user.phone) {
@@ -53,13 +54,16 @@ export default function ProfilePage() {
             });
         }
     }
+    setIsLoading(false);
   }, [user]);
 
   useEffect(() => {
+    if (isAuthLoading) return;
+    setIsLoading(true);
     loadProviderData();
     window.addEventListener('focus', loadProviderData);
     return () => window.removeEventListener('focus', loadProviderData);
-  }, [loadProviderData]);
+  }, [loadProviderData, isAuthLoading]);
 
   useEffect(() => {
     if (mode === 'editing' && nameInputRef.current) {
@@ -234,6 +238,14 @@ export default function ProfilePage() {
       event.target.value = '';
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
   
   if (!isLoggedIn) {
      return (
@@ -265,8 +277,13 @@ export default function ProfilePage() {
      )
   }
   
-  if (!provider) {
-    return <div>در حال بارگذاری پروفایل...</div>;
+  if (isLoading || !provider) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <p className="mr-4">در حال بارگذاری پروفایل...</p>
+      </div>
+    );
   }
 
   return (

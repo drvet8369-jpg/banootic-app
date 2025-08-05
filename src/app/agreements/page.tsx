@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AgreementsPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,8 +35,9 @@ export default function AgreementsPage() {
   
   useEffect(() => {
     setIsClient(true);
+    if(isAuthLoading) return;
     loadAgreements();
-  }, [loadAgreements]);
+  }, [loadAgreements, isAuthLoading]);
 
   const handleConfirmAgreement = (agreementId: string) => {
     const allAgreements = getAgreements();
@@ -63,6 +64,14 @@ export default function AgreementsPage() {
     toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
     loadAgreements(); // Refresh the list
   };
+  
+  if (isAuthLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!isLoggedIn) {
     return (

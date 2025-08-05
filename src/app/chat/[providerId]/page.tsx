@@ -34,7 +34,7 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonIdOrProviderId = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isAuthLoading } = useAuth();
   const { toast } = useToast();
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
@@ -67,6 +67,8 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
+    if (isAuthLoading) return; // Wait for auth state to be confirmed
+
     if (!isLoggedIn || !user) {
         setIsLoading(false);
         return;
@@ -105,8 +107,16 @@ export default function ChatPage() {
     
     setIsLoading(false);
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId, isAuthLoading]);
 
+  if (isAuthLoading) {
+     return (
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
+        </div>
+    );
+  }
 
   if (!isLoggedIn || !user) {
     return (
