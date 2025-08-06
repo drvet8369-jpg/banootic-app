@@ -58,7 +58,7 @@ export default function ProfilePage() {
   }, [user]);
 
   useEffect(() => {
-    if (isAuthLoading) return;
+    if (isAuthLoading) return; // Wait until auth state is confirmed
     setIsLoading(true);
     loadProviderData();
   }, [loadProviderData, isAuthLoading]);
@@ -237,7 +237,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (isAuthLoading || (isLoading && !provider)) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

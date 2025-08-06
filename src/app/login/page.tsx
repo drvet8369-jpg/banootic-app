@@ -64,9 +64,8 @@ export default function LoginPage() {
             title: 'ورود با موفقیت انجام شد!',
             description: `خوش آمدید ${existingUser.name}!`,
           });
-          // Redirect to profile for providers, home for customers
-          const destination = existingUser.accountType === 'provider' ? '/profile' : '/';
-          router.push(destination);
+          // Redirect to home page, which will then show the correct dashboard
+          router.push('/');
         } else {
           // User does not exist, show an error and guide to registration
           toast({

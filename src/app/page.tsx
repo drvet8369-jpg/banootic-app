@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { categories, getProviders, getInboxData } from '@/lib/storage';
+import { categories, getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2 } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2, User } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -69,9 +69,16 @@ const calculateRankingScore = (provider: Provider): number => {
     const ratingWeight = 0.20; 
     const reviewsWeight = 0.50; 
     const agreementsWeight = 0.30;
-    const normalizedReviews = Math.log((provider.reviewsCount || 0) + 1);
-    const normalizedAgreements = Math.log((provider.agreementsCount || 0) + 1);
-    const score = (provider.rating * ratingWeight) + (normalizedReviews * reviewsWeight) + (normalizedAgreements * agreementsWeight);
+    
+    // Ensure values are numbers before calculation
+    const rating = typeof provider.rating === 'number' ? provider.rating : 0;
+    const reviewsCount = typeof provider.reviewsCount === 'number' ? provider.reviewsCount : 0;
+    const agreementsCount = typeof provider.agreementsCount === 'number' ? provider.agreementsCount : 0;
+
+    const normalizedReviews = Math.log(reviewsCount + 1);
+    const normalizedAgreements = Math.log(agreementsCount + 1);
+    
+    const score = (rating * ratingWeight) + (normalizedReviews * reviewsWeight) + (normalizedAgreements * agreementsWeight);
     return score;
 }
 
@@ -79,42 +86,69 @@ const UserDashboard = () => {
     const { user } = useAuth();
     const [suggestedProviders, setSuggestedProviders] = useState<Provider[]>([]);
     const [providerProfile, setProviderProfile] = useState<Provider | null>(null);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const [isProfileLoading, setIsProfileLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            setIsProfileLoading(false);
+            return;
+        };
         
         const allProviders = getProviders();
         if (user.accountType === 'customer') {
             const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
             setSuggestedProviders(sortedProviders.slice(0, 3));
+            setIsProfileLoading(false);
         } else if (user.accountType === 'provider' && user.phone) {
             const profile = allProviders.find(p => p.phone === user.phone);
             setProviderProfile(profile || null);
-            try {
-                const allChatsData = getInboxData();
-                const totalUnread = Object.values(allChatsData)
-                  .filter((chat: any) => chat.members?.includes(user.phone))
-                  .reduce((acc: number, chat: any) => {
-                    const selfInfo = chat.participants?.[user.phone];
-                    return acc + (selfInfo?.unreadCount || 0);
-                  }, 0);
-                setUnreadCount(totalUnread);
-            } catch (e) {
-                setUnreadCount(0);
-            }
+            setIsProfileLoading(false);
         }
     }, [user]);
 
     if (!user) return null;
 
     if (user.accountType === 'provider') {
+        if (isProfileLoading) {
+             return (
+              <div className="flex justify-center items-center py-20 flex-grow">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              </div>
+            );
+        }
+        
+        if (!providerProfile) {
+            return (
+                 <div className="max-w-2xl mx-auto py-12 md:py-20 w-full text-center">
+                     <Card>
+                         <CardHeader>
+                             <CardTitle>خطا</CardTitle>
+                             <CardDescription>پروفایل هنرمند شما یافت نشد. لطفاً دوباره وارد شوید یا با پشتیبانی تماس بگیرید.</CardDescription>
+                         </CardHeader>
+                         <CardFooter>
+                              <Button asChild className="w-full">
+                                <Link href="/login">ورود مجدد</Link>
+                              </Button>
+                         </CardFooter>
+                     </Card>
+                 </div>
+            )
+        }
+
         return (
             <div className="max-w-2xl mx-auto py-12 md:py-20 w-full">
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center gap-4">
-                           <LayoutDashboard className="w-8 h-8 text-primary" />
+                        <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-right">
+                           <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg shrink-0">
+                             {providerProfile.profileImage && providerProfile.profileImage.src ? (
+                                <img src={providerProfile.profileImage.src} alt={providerProfile.name} className="object-cover w-full h-full" />
+                              ) : (
+                                 <div className="bg-muted w-full h-full flex items-center justify-center">
+                                    <User className="w-12 h-12 text-muted-foreground" />
+                                </div>
+                              )}
+                          </div>
                            <div>
                             <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
                             <CardDescription>خوش آمدید {user.name}، پروفایل خود را از اینجا مدیریت کنید.</CardDescription>
@@ -122,25 +156,17 @@ const UserDashboard = () => {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        {providerProfile ? (
-                            <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                                <p><strong>نام کسب‌وکار:</strong> {providerProfile.name}</p>
-                                <p><strong>نوع خدمت:</strong> {providerProfile.service}</p>
-                                <p><strong>امتیاز شما:</strong> {providerProfile.rating} ({providerProfile.reviewsCount} نظر)</p>
-                                <p><strong>تعداد توافقات ثبت شده:</strong> {providerProfile.agreementsCount || 0}</p>
-                                {unreadCount > 0 && (
-                                     <div className="flex items-center gap-2 pt-2 text-destructive font-bold">
-                                        <MessageSquare className="w-5 h-5"/>
-                                        <p>شما {unreadCount} پیام جدید در <Link href="/inbox" className="underline">صندوق ورودی</Link> دارید.</p>
-                                     </div>
-                                )}
-                            </div>
-                        ) : <p className="text-muted-foreground">در حال بارگذاری اطلاعات پروفایل...</p>}
+                        <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                            <p><strong>نام کسب‌وکار:</strong> {providerProfile.name}</p>
+                            <p><strong>نوع خدمت:</strong> {providerProfile.service}</p>
+                            <p><strong>امتیاز شما:</strong> {providerProfile.rating} ({providerProfile.reviewsCount} نظر)</p>
+                            <p><strong>تعداد توافقات ثبت شده:</strong> {providerProfile.agreementsCount || 0}</p>
+                        </div>
                     </CardContent>
                     <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6 border-t">
                          <Button asChild className="w-full flex-1">
                             <Link href="/profile">
-                                مدیریت پروفایل
+                                مدیریت کامل پروفایل
                             </Link>
                         </Button>
                          <Button asChild className="w-full flex-1" variant="outline">

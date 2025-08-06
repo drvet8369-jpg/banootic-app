@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
+  // This function is the single source of truth for syncing state from localStorage.
   const syncLoginState = useCallback(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -38,18 +39,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
-      setUser(null);
+      setUser(null); // Clear state if data is corrupted
     } finally {
+      // This is crucial: set loading to false AFTER attempting to read from storage.
       setIsAuthLoading(false);
     }
   }, []);
   
-  // Effect for initial load and for syncing across tabs
+  // Effect for initial load AND for syncing across tabs
   useEffect(() => {
-    // Sync on initial load
+    // Sync on initial load for every tab
     syncLoginState();
     
-    // Add event listener for other tabs
+    // Add event listener to sync changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
         syncLoginState();
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('storage', handleStorageChange);
 
+    // Cleanup listener on component unmount
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -86,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
       setUser(newUser);
 
+      // Also update the master user list
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === user.phone);
       if (userIndex > -1) {
@@ -114,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
+      // On logout, always go to the home page.
       if (window.location.pathname !== '/') {
         router.push('/');
       }
