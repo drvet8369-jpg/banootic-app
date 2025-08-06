@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -109,12 +110,12 @@ const UserDashboard = () => {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <p className="text-center text-muted-foreground">از اینجا می‌توانید به بخش‌های مختلف پنل خود دسترسی داشته باشید.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
                                     <Link href="/profile">
                                         <User className="w-8 h-8" />
                                         <span className="font-bold">مدیریت پروفایل</span>
-                                        <span className="text-xs font-normal">ویرایش اطلاعات و افزودن نمونه‌کار</span>
+                                        <span className="text-xs font-normal">ویرایش اطلاعات و نمونه‌کار</span>
                                     </Link>
                                 </Button>
                                 <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
@@ -124,7 +125,7 @@ const UserDashboard = () => {
                                          <span className="text-xs font-normal">تایید درخواست‌های مشتریان</span>
                                     </Link>
                                 </Button>
-                               <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2 md:col-span-2">
+                               <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
                                     <Link href="/inbox">
                                        <Inbox className="w-8 h-8" />
                                        <span className="font-bold">صندوق ورودی</span>
@@ -133,11 +134,6 @@ const UserDashboard = () => {
                                 </Button>
                             </div>
                         </CardContent>
-                         <CardFooter>
-                            <Button asChild variant="link" className="mx-auto">
-                                <Link href={`/provider/${user.phone}`}>مشاهده پروفایل عمومی شما</Link>
-                            </Button>
-                        </CardFooter>
                     </Card>
                 </div>
             </div>
@@ -176,7 +172,7 @@ const UserDashboard = () => {
 }
 
 export default function Home() {
-  const { isLoggedIn, isAuthLoading } = useAuth();
+  const { isLoggedIn, user, isAuthLoading } = useAuth();
   
   if (isAuthLoading) {
     return (
@@ -184,6 +180,11 @@ export default function Home() {
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
+  }
+  
+  // if user is a provider, show the provider dashboard directly on the main page.
+  if (isLoggedIn && user?.accountType === 'provider') {
+      return <UserDashboard />
   }
 
   return (

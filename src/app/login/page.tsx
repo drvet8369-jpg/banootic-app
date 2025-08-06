@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -59,10 +60,8 @@ export default function LoginPage() {
         let userToLogin: User;
 
         if (existingUser) {
-          // User exists, log them in with their stored data
           userToLogin = existingUser;
         } else {
-          // User does not exist, create a new customer account and log them in
           userToLogin = {
             name: `مشتری ${values.phone.slice(-4)}`,
             phone: values.phone,
@@ -78,8 +77,6 @@ export default function LoginPage() {
           description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        // Always redirect to the homepage after login.
-        // The homepage will decide whether to show the dashboard or customer view.
         router.push('/');
 
     } catch (error) {

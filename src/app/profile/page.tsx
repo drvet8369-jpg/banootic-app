@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Handshake, Eye } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Handshake, Eye, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -50,6 +50,8 @@ export default function ProfilePage() {
     if (isAuthLoading) return;
     setIsLoading(true);
     loadProviderData();
+    window.addEventListener('focus', loadProviderData);
+    return () => window.removeEventListener('focus', loadProviderData);
   }, [loadProviderData, isAuthLoading]);
 
 
@@ -269,98 +271,113 @@ export default function ProfilePage() {
                   </div>
                 )}
             </div>
-            {mode === 'editing' ? (
-                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
-            ) : (
-                <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
-            )}
-             {mode === 'editing' ? (
-                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" />
-            ) : (
-                <CardDescription className="text-lg">{provider.service}</CardDescription>
-            )}
+             <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
+            <CardDescription className="text-lg">{provider.service}</CardDescription>
 
              <div className="mt-4 flex items-center text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 ml-2 text-accent" />
                 <span>{provider.location}</span>
              </div>
-              <div className="mt-2 flex flex-col items-center gap-1">
-                <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Handshake className="w-4 h-4" />
-                    <span>{provider.agreementsCount || 0} توافق موفق</span>
+             <div className="mt-4 w-full space-y-4">
+                <div className="p-3 bg-muted/50 rounded-lg">
+                    <h4 className="text-sm font-bold text-muted-foreground">آمار عملکرد</h4>
+                    <div className="flex justify-around items-center mt-2">
+                         <div className="flex flex-col items-center">
+                            <StarRating rating={provider.rating} readOnly />
+                            <span className="text-xs text-muted-foreground mt-1">{provider.reviewsCount} نظر</span>
+                        </div>
+                         <div className="flex flex-col items-center">
+                            <div className="flex items-center gap-1 font-bold text-lg text-primary">
+                                <Handshake className="w-5 h-5"/>
+                                <span>{provider.agreementsCount || 0}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">توافق موفق</span>
+                        </div>
+                    </div>
                 </div>
+                <Button asChild className="w-full">
+                    <Link href={`/provider/${provider.phone}`}>
+                        <Eye className="w-4 h-4 ml-2" />
+                        مشاهده پروفایل عمومی
+                    </Link>
+                </Button>
             </div>
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
-            <CardHeader className="p-0 pb-4 flex flex-row justify-between items-center">
-                <CardTitle className="font-headline text-2xl">
-                    {mode === 'editing' ? 'ویرایش اطلاعات' : 'اطلاعات پروفایل'}
-                </CardTitle>
-                <Button onClick={() => mode === 'viewing' ? setMode('editing') : handleCancelEdit()} variant="ghost" size="icon">
-                  {mode === 'viewing' ? <Edit className="w-5 h-5"/> : <XCircle className="w-5 h-5"/>}
-                </Button>
+            <CardHeader className="p-0 pb-4">
+                <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-grow">
-              <div className="space-y-4">
-                  <div>
-                      <h3 className="font-semibold mb-2">درباره شما</h3>
-                      {mode === 'editing' ? (
-                          <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
-                      ) : (
-                          <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
-                      )}
-                  </div>
-                  {mode === 'viewing' && (
-                    <Button asChild className="w-full">
-                      <Link href={`/provider/${provider.phone}`}>
-                        <Eye className="w-4 h-4 ml-2" />
-                        مشاهده پروفایل عمومی
-                      </Link>
-                    </Button>
-                  )}
-              </div>
-               <Separator className="my-6" />
-                <div className="mb-4">
-                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                  
-                  <input 
+            <CardContent className="p-0 flex-grow space-y-6">
+                
+                {/* Edit Info Section */}
+                <div className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold">اطلاعات پایه</h3>
+                        {mode === 'viewing' ? (
+                            <Button onClick={() => setMode('editing')} variant="outline" size="sm">
+                                <Edit className="w-4 h-4 ml-2"/> ویرایش
+                            </Button>
+                        ) : (
+                            <div className="flex gap-2">
+                                <Button onClick={handleSaveChanges} size="sm">
+                                    <Save className="w-4 h-4 ml-2"/> ذخیره
+                                </Button>
+                                <Button onClick={handleCancelEdit} variant="ghost" size="sm">
+                                    <XCircle className="w-4 h-4 ml-2"/> لغو
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                     {mode === 'editing' ? (
+                        <div className="space-y-4">
+                             <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} placeholder="نام شما یا کسب و کارتان"/>
+                             <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} placeholder="خدمت اصلی (مثلا: خدمات ناخن)"/>
+                             <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} placeholder="بیوگرافی کوتاه" className="text-base text-foreground/80 leading-relaxed" rows={4} />
+                        </div>
+                    ) : (
+                        <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
+                    )}
+                </div>
+
+                {/* Profile Picture Management */}
+                <div className="p-4 border rounded-lg">
+                    <h3 className="font-semibold mb-4">عکس پروفایل</h3>
+                    <div className="flex flex-wrap gap-2">
+                        <Button onClick={handleEditProfilePicClick} variant="outline" className="flex-1">
+                            <Camera className="w-4 h-4 ml-2" />
+                            تغییر عکس 
+                        </Button>
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="flex-1">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف عکس
+                        </Button>
+                        <input
+                            type="file"
+                            ref={profilePicInputRef}
+                            onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                            className="hidden"
+                            accept="image/*"
+                        />
+                    </div>
+                </div>
+
+                {/* Portfolio Management */}
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-4">نمونه کارها</h3>
+                   <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
                     onChange={(e) => handleFileChange(e, addPortfolioItem)}
                     className="hidden"
                     accept="image/*"
                   />
-                   <input
-                    type="file"
-                    ref={profilePicInputRef}
-                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
                         <PlusCircle className="w-5 h-5 ml-2" />
                         افزودن نمونه کار جدید
                    </Button>
-                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+                   <p className="text-xs text-center text-muted-foreground mt-2">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کنید.</p>
                 </div>
             </CardContent>
-             {mode === 'editing' && (
-                 <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
-                     <Button onClick={handleSaveChanges} className="w-full flex-1">
-                        <Save className="w-4 h-4 ml-2" />
-                        ذخیره تغییرات
-                    </Button>
-                     <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
-                        <Camera className="w-4 h-4 ml-2" />
-                        تغییر عکس پروفایل
-                    </Button>
-                    <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
-                        <Trash2 className="w-4 h-4 ml-2" />
-                        حذف عکس پروفایل
-                    </Button>
-                 </CardFooter>
-             )}
           </div>
         </div>
       </Card>
