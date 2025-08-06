@@ -111,13 +111,7 @@ const UserDashboard = () => {
                                 <Button asChild size="lg">
                                     <Link href="/profile">
                                         <LayoutDashboard className="w-5 h-5 ml-2" />
-                                        مدیریت پروفایل و نمونه کارها
-                                    </Link>
-                                </Button>
-                                <Button asChild variant="outline" size="lg">
-                                    <Link href="/inbox">
-                                        <MessageSquare className="w-5 h-5 ml-2" />
-                                        صندوق ورودی پیام‌ها
+                                        مشاهده و مدیریت پروفایل
                                     </Link>
                                 </Button>
                             </div>

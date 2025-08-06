@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2 } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Handshake, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -26,6 +26,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: number | string }) => (
+    <div className="flex flex-col items-center justify-center p-4 bg-muted/50 rounded-lg text-center">
+        <Icon className="w-8 h-8 text-primary mb-2" />
+        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
+    </div>
+);
 
 export default function ProfilePage() {
   const { user, isLoggedIn, updateUser, isAuthLoading } = useAuth();
@@ -305,10 +312,41 @@ export default function ProfilePage() {
                   <MapPin className="w-5 h-5 ml-2 text-accent" />
                   <span>{provider.location}</span>
                 </div>
+                 <div className="flex justify-center md:justify-start pt-2">
+                     <Button asChild variant="secondary">
+                        <Link href={`/provider/${provider.phone}`}>
+                            <User className="w-4 h-4 ml-2" />
+                            مشاهده پروفایل عمومی
+                        </Link>
+                    </Button>
+                </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          <Separator />
+           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard icon={Handshake} label="توافق‌های موفق" value={provider.agreementsCount || 0} />
+                <StatCard icon={Star} label="تعداد نظرات" value={provider.reviewsCount || 0} />
+                <StatCard icon={Star} label="میانگین امتیاز" value={provider.rating || 0} />
+           </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <Button asChild size="lg" className="w-full font-bold">
+                    <Link href="/agreements">
+                        <Handshake className="w-5 h-5 ml-2" />
+                        مدیریت توافق‌ها
+                    </Link>
+                </Button>
+                 <Button asChild size="lg" variant="outline" className="w-full font-bold">
+                    <Link href="/inbox">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                        صندوق ورودی
+                    </Link>
+                </Button>
+            </div>
+
+
           <Separator />
           <div>
             <h3 className="font-headline text-xl mb-2">درباره شما</h3>
@@ -395,15 +433,9 @@ export default function ProfilePage() {
                 </>
             ) : (
                 <>
-                    <Button onClick={() => setMode('editing')} className="w-full flex-1">
+                    <Button onClick={() => setMode('editing')} className="w-full">
                         <Edit className="w-4 h-4 ml-2" />
                         ویرایش اطلاعات اصلی
-                    </Button>
-                     <Button asChild className="w-full flex-1" variant="secondary">
-                        <Link href={`/provider/${provider.phone}`}>
-                            <User className="w-4 h-4 ml-2" />
-                            مشاهده پروفایل عمومی
-                        </Link>
                     </Button>
                 </>
             )}

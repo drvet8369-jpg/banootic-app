@@ -104,7 +104,7 @@ export default function InboxPage() {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
-        <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
+        <h1 className="font-headline text-2xl">لطفاً وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>
         <Button asChild className="mt-6">
           <Link href="/login">ورود به حساب کاربری</Link>
