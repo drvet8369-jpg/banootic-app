@@ -23,8 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services, activeCities } from '@/lib/data';
-import { getProviders, saveProviders, getAllUsers, saveAllUsers } from '@/lib/storage';
+import { categories, services, activeCities, getProviders, saveProviders, getAllUsers, saveAllUsers } from '@/lib/storage';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -134,7 +133,6 @@ export default function RegisterForm() {
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
         const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
@@ -151,8 +149,6 @@ export default function RegisterForm() {
         saveProviders([...allProviders, newProvider]);
       }
       
-      // *** CRITICAL FIX ***
-      // Add the new user to the master list of all users, ensuring persistence.
       saveAllUsers([...allUsers, newUser]);
 
       login(newUser);

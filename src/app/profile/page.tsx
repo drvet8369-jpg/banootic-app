@@ -61,8 +61,6 @@ export default function ProfilePage() {
     if (isAuthLoading) return;
     setIsLoading(true);
     loadProviderData();
-    window.addEventListener('focus', loadProviderData);
-    return () => window.removeEventListener('focus', loadProviderData);
   }, [loadProviderData, isAuthLoading]);
 
   useEffect(() => {

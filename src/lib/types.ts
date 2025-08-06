@@ -19,11 +19,10 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number;
   name: string;
   service: string; // The specific service they provide, e.g., "Manicure"
   location: string;
-  phone: string;
+  phone: string; // The phone number is the unique ID for the provider
   bio: string;
   categorySlug: Category['slug'];
   serviceSlug: Service['slug']; // Link to the service
@@ -36,7 +35,7 @@ export interface Provider {
 
 export interface Review {
   id: string;
-  providerId: number;
+  providerId: string; // Now stores the provider's phone number
   authorName: string;
   rating: number;
   comment: string;
@@ -55,7 +54,7 @@ export interface Agreement {
   providerPhone: string;
   providerName: string; // Name of the provider for easy display
   customerPhone: string;
-  customerName: string;
+  customerName:string;
   status: 'pending' | 'confirmed';
   requestedAt: string; // ISO String format
 }

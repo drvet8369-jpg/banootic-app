@@ -58,7 +58,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 // Review Form Component
-const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
+const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -80,21 +80,21 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     setTimeout(() => {
         const allReviews = getReviews();
         const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
+          id: Date.now().toString(),
+          providerId: providerPhone, // Use phone number as the ID
+          authorName: user.name,
+          rating,
+          comment,
+          createdAt: new Date().toISOString(),
         };
 
         const updatedReviews = [...allReviews, newReview];
         saveReviews(updatedReviews);
 
         const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.id === providerId);
+        const providerIndex = allProviders.findIndex(p => p.phone === providerPhone);
         if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
+            const providerReviews = updatedReviews.filter(r => r.providerId === providerPhone);
             const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
             const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
             
@@ -171,7 +171,7 @@ export default function ProviderProfilePage() {
     if (foundProvider) {
       setProvider(foundProvider);
       const allReviews = getReviews();
-      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
+      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.phone)
                                         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReviews(providerReviews);
     } else {
@@ -184,8 +184,6 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
@@ -280,7 +278,7 @@ export default function ProviderProfilePage() {
                         <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
-                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                    <DialogTrigger asChild key={`${provider.phone}-portfolio-${index}`}>
                                         <div 
                                             className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
                                             onClick={() => setSelectedImage(item.src)}
@@ -358,7 +356,7 @@ export default function ProviderProfilePage() {
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
+                    <ReviewForm providerPhone={provider.phone} onSubmit={loadData} />
                 </div>
             </Card>
         </div>

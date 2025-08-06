@@ -1,6 +1,6 @@
 'use client';
 
-import { services, categories } from '@/lib/data';
+import { services, categories } from '@/lib/storage';
 import { getProviders } from '@/lib/storage';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
@@ -60,10 +60,6 @@ export default function ServiceProvidersPage() {
 
   useEffect(() => {
     loadData();
-    window.addEventListener('focus', loadData);
-    return () => {
-      window.removeEventListener('focus', loadData);
-    };
   }, [loadData]);
 
   if (isLoading) {

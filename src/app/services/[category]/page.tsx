@@ -1,4 +1,6 @@
-import { categories, services } from '@/lib/data';
+'use client'
+
+import { categories, services } from '@/lib/storage';
 import type { Category, Service } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,12 +12,6 @@ interface PageProps {
   params: {
     category: string;
   };
-}
-
-export async function generateStaticParams() {
-  return categories.map((category) => ({
-    category: category.slug,
-  }));
 }
 
 const getCategoryData = (slug: string): { category: Category | undefined, categoryServices: Service[] } => {

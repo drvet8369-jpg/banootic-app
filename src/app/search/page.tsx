@@ -35,19 +35,19 @@ export default function SearchPage() {
     setIsLoading(true);
     
     const allProviders = getProviders();
-    if (!query) {
-      const sortedProviders = allProviders.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
-      setSearchResults(sortedProviders);
-      setIsLoading(false);
-      return;
-    }
-    const lowercasedQuery = query.toLowerCase();
-    const results = allProviders.filter(provider => 
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery) ||
-      provider.bio.toLowerCase().includes(lowercasedQuery)
-    );
+    let results: Provider[];
 
+    if (!query) {
+      results = allProviders;
+    } else {
+      const lowercasedQuery = query.toLowerCase();
+      results = allProviders.filter(provider => 
+        provider.name.toLowerCase().includes(lowercasedQuery) ||
+        provider.service.toLowerCase().includes(lowercasedQuery) ||
+        provider.bio.toLowerCase().includes(lowercasedQuery)
+      );
+    }
+    
     const sortedResults = results.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
     
     setSearchResults(sortedResults);
@@ -56,11 +56,6 @@ export default function SearchPage() {
 
   useEffect(() => {
     performSearch();
-
-    window.addEventListener('focus', performSearch);
-    return () => {
-      window.removeEventListener('focus', performSearch);
-    };
   }, [performSearch]);
 
 
