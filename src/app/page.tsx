@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { categories, getProviders } from '@/lib/storage';
+import { categories, getProviders, getInboxData } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,6 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import SearchResultCard from '@/components/search-result-card';
-import { Badge } from '@/components/ui/badge';
-import { getInboxData } from '@/lib/storage';
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
@@ -44,7 +42,6 @@ const CategoriesSection = () => (
     </section>
 );
 
-
 const LandingPage = () => (
   <>
     <section className="text-center py-20 lg:py-24 w-full">
@@ -59,9 +56,7 @@ const LandingPage = () => (
         بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
       </p>
     </section>
-
     <CategoriesSection />
-    
     <div className="my-12 text-center">
       <Button asChild variant="secondary" size="lg" className="text-lg">
         <Link href="/register">به جامعه ما بپیوندید</Link>
@@ -74,14 +69,9 @@ const calculateRankingScore = (provider: Provider): number => {
     const ratingWeight = 0.20; 
     const reviewsWeight = 0.50; 
     const agreementsWeight = 0.30;
-
     const normalizedReviews = Math.log((provider.reviewsCount || 0) + 1);
     const normalizedAgreements = Math.log((provider.agreementsCount || 0) + 1);
-
-    const score = (provider.rating * ratingWeight) 
-                + (normalizedReviews * reviewsWeight) 
-                + (normalizedAgreements * agreementsWeight);
-
+    const score = (provider.rating * ratingWeight) + (normalizedReviews * reviewsWeight) + (normalizedAgreements * agreementsWeight);
     return score;
 }
 
@@ -101,7 +91,6 @@ const UserDashboard = () => {
         } else if (user.accountType === 'provider' && user.phone) {
             const profile = allProviders.find(p => p.phone === user.phone);
             setProviderProfile(profile || null);
-            
             try {
                 const allChatsData = getInboxData();
                 const totalUnread = Object.values(allChatsData)
@@ -163,7 +152,6 @@ const UserDashboard = () => {
         )
     }
 
-    // Customer Dashboard
     return (
         <div className="py-12 md:py-20 w-full">
             <div className="text-center mb-12">

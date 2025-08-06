@@ -58,7 +58,7 @@ export default function ProfilePage() {
   }, [user]);
 
   useEffect(() => {
-    if (isAuthLoading) return; // Wait for auth check to complete
+    if (isAuthLoading) return;
     setIsLoading(true);
     loadProviderData();
   }, [loadProviderData, isAuthLoading]);
@@ -99,7 +99,7 @@ export default function ProfilePage() {
             updateUser({ name: editedData.name });
         }
         
-        loadProviderData(); // Reload data into state
+        loadProviderData();
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
 
@@ -237,7 +237,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (isAuthLoading || isLoading) {
+  if (isAuthLoading || (isLoading && !provider)) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

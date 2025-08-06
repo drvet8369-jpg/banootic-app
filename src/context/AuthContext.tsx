@@ -25,45 +25,43 @@ const USER_STORAGE_KEY = 'banootik-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // Start as true
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
-  // This effect runs ONCE on component mount to check initial auth state
-  useEffect(() => {
+  const syncLoginState = useCallback(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage on initial load", error);
-      setUser(null); // Ensure state is clean on error
+      console.error("Failed to parse user from localStorage", error);
+      setUser(null);
     } finally {
-      setIsAuthLoading(false); // Signal that initial check is complete
+      setIsAuthLoading(false);
     }
   }, []);
-
-  // This effect handles synchronization between tabs
+  
+  // Effect for initial load and for syncing across tabs
   useEffect(() => {
+    // Sync on initial load
+    syncLoginState();
+    
+    // Add event listener for other tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
-        if (event.newValue) {
-          try {
-            setUser(JSON.parse(event.newValue));
-          } catch {
-            setUser(null);
-          }
-        } else {
-          setUser(null);
-        }
+        syncLoginState();
       }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [syncLoginState]);
 
   const login = (userData: User) => {
     try {
@@ -98,22 +96,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = (options: { isCleanup?: boolean } = {}) => {
     const { isCleanup = false } = options;
+    const currentUserPhone = user?.phone;
     try {
-      if (isCleanup && user?.name === 'سالن هپکو') {
+      if (isCleanup && currentUserPhone) {
+        // Clean up user from the main user list
         const allUsers = getAllUsers();
-        const updatedUsers = allUsers.filter(u => u.phone !== user.phone);
+        const updatedUsers = allUsers.filter(u => u.phone !== currentUserPhone);
         saveAllUsers(updatedUsers);
 
+        // Clean up provider data if the user was a provider
         const allProviders = getProviders();
-        const updatedProviders = allProviders.filter(p => p.phone !== user.phone);
+        const updatedProviders = allProviders.filter(p => p.phone !== currentUserPhone);
         saveProviders(updatedProviders);
         
-        console.log(`Cleanup complete for user: ${user.name}`);
+        console.log(`Cleanup complete for user: ${currentUserPhone}`);
       }
 
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
-      router.push('/');
+      if (window.location.pathname !== '/') {
+        router.push('/');
+      }
     } catch (error) {
        console.error("Failed to process logout", error);
     }
