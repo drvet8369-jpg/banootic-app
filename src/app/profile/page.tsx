@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -6,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Handshake, Star } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -14,25 +15,6 @@ import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/storage';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-
-const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: number | string }) => (
-    <div className="flex flex-col items-center justify-center p-4 bg-muted/50 rounded-lg text-center">
-        <Icon className="w-8 h-8 text-primary mb-2" />
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
-    </div>
-);
 
 export default function ProfilePage() {
   const { user, isLoggedIn, updateUser, isAuthLoading } = useAuth();
@@ -41,7 +23,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
@@ -70,12 +51,6 @@ export default function ProfilePage() {
     loadProviderData();
   }, [loadProviderData, isAuthLoading]);
 
-  useEffect(() => {
-    if (mode === 'editing' && nameInputRef.current) {
-      nameInputRef.current.focus();
-    }
-  }, [mode]);
-
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -83,8 +58,8 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim()){
-        toast({ title: "خطا", description: "نام و نوع خدمت نمی‌توانند خالی باشند.", variant: "destructive"});
+    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+        toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
 
@@ -180,18 +155,6 @@ export default function ProfilePage() {
     }
     return false;
   }
-  
-  const deletePortfolioItem = (itemIndex: number) => {
-    if (!provider) return;
-    const success = updateProviderData((p) => {
-        p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
-    });
-    if (success) {
-      toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
-    }
-  };
 
   const addPortfolioItem = (imageSrc: string) => {
     const success = updateProviderData((p) => {
@@ -284,162 +247,120 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20 w-full">
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg shrink-0">
+    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8 w-full">
+      <Card>
+        <div className="grid md:grid-cols-3">
+          <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
+             <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
                {provider.profileImage && provider.profileImage.src ? (
-                  <Image src={provider.profileImage.src} alt={provider.name} fill className="object-cover" data-ai-hint={provider.profileImage.aiHint} />
+                  <Image
+                    src={provider.profileImage.src}
+                    alt={provider.name}
+                    fill
+                    className="object-cover"
+                    data-ai-hint={provider.profileImage.aiHint}
+                  />
                 ) : (
                    <div className="bg-muted w-full h-full flex items-center justify-center">
-                      <User className="w-24 h-24 text-muted-foreground" />
+                      <User className="w-16 h-16 text-muted-foreground" />
                   </div>
                 )}
             </div>
-            <div className="flex-grow text-center md:text-right space-y-2 min-w-0">
-                {mode === 'editing' ? (
-                     <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} ref={nameInputRef} />
-                ) : (
-                    <CardTitle className="font-headline text-2xl truncate">{provider.name}</CardTitle>
-                )}
-                 {mode === 'editing' ? (
-                     <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-muted-foreground" />
-                ) : (
-                    <CardDescription className="text-lg truncate">{provider.service}</CardDescription>
-                )}
-                <div className="flex items-center justify-center md:justify-start text-muted-foreground">
-                  <MapPin className="w-5 h-5 ml-2 text-accent" />
-                  <span>{provider.location}</span>
-                </div>
-                 <div className="flex justify-center md:justify-start pt-2">
-                     <Button asChild variant="secondary">
-                        <Link href={`/provider/${provider.phone}`}>
-                            <User className="w-4 h-4 ml-2" />
-                            مشاهده پروفایل عمومی
-                        </Link>
-                    </Button>
-                </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Separator />
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard icon={Handshake} label="توافق‌های موفق" value={provider.agreementsCount || 0} />
-                <StatCard icon={Star} label="تعداد نظرات" value={provider.reviewsCount || 0} />
-                <StatCard icon={Star} label="میانگین امتیاز" value={provider.rating || 0} />
-           </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <Button asChild size="lg" className="w-full font-bold">
-                    <Link href="/agreements">
-                        <Handshake className="w-5 h-5 ml-2" />
-                        مدیریت توافق‌ها
-                    </Link>
-                </Button>
-                 <Button asChild size="lg" variant="outline" className="w-full font-bold">
-                    <Link href="/inbox">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                        صندوق ورودی
-                    </Link>
-                </Button>
-            </div>
-
-
-          <Separator />
-          <div>
-            <h3 className="font-headline text-xl mb-2">درباره شما</h3>
+            {mode === 'editing' ? (
+                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
+            ) : (
+                <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
+            )}
              {mode === 'editing' ? (
-                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
-              ) : (
-                  <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio || "بیوگرافی شما در اینجا نمایش داده می‌شود. برای ویرایش آن، روی دکمه ویرایش کلیک کنید."}</p>
-              )}
-          </div>
-          <Separator />
-          <div className="space-y-4">
-             <h3 className="font-headline text-xl">مدیریت نمونه کارها</h3>
-                <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
-                    <PlusCircle className="w-5 h-5 ml-2" />
-                    افزودن نمونه کار جدید
-                </Button>
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {provider.portfolio?.length > 0 ? (
-                  provider.portfolio.map((item, index) => (
-                      <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
-                          <Image src={item.src} alt={`نمونه کار ${index + 1}`} fill className="object-cover" data-ai-hint={item.aiHint} />
-                           <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10" aria-label={`حذف نمونه کار ${index + 1}`}>
-                                  <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>آیا از حذف این نمونه‌کار مطمئن هستید؟</AlertDialogTitle>
-                                <AlertDialogDescription>این عمل قابل بازگشت نیست.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>لغو</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deletePortfolioItem(index)}>بله، حذف کن</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                      </div>
-                  ))
-                ) : (
-                    <div className="col-span-full text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                        <p>هنوز نمونه کاری اضافه نشده است.</p>
-                    </div>
-                )}
+                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" />
+            ) : (
+                <CardDescription className="text-lg">{provider.service}</CardDescription>
+            )}
+
+             <div className="mt-4 flex items-center text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4 ml-2 text-accent" />
+                <span>{provider.location}</span>
              </div>
           </div>
-          <input type="file" ref={portfolioFileInputRef} onChange={(e) => handleFileChange(e, addPortfolioItem)} className="hidden" accept="image/*" />
-          <input type="file" ref={profilePicInputRef} onChange={(e) => handleFileChange(e, handleProfilePictureChange)} className="hidden" accept="image/*" />
-        </CardContent>
-         <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t">
-            {mode === 'editing' ? (
-                <>
-                     <Button onClick={handleSaveChanges} className="w-full flex-1">
-                        <Save className="w-4 h-4 ml-2" />
-                        ذخیره تغییرات
-                    </Button>
-                     <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
-                        <Camera className="w-4 h-4 ml-2" />
-                        تغییر عکس پروفایل
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                          <Button variant="destructive" className="w-full flex-1">
-                              <Trash2 className="w-4 h-4 ml-2" />
-                              حذف عکس پروفایل
-                          </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                           <AlertDialogHeader>
-                              <AlertDialogTitle>آیا از حذف عکس پروفایل خود مطمئن هستید؟</AlertDialogTitle>
-                              <AlertDialogDescription>این عمل دائمی نیست و می‌توانید بعدا عکس جدیدی آپلود کنید.</AlertDialogDescription>
-                           </AlertDialogHeader>
-                           <AlertDialogFooter>
-                              <AlertDialogCancel>لغو</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDeleteProfilePicture}>بله، حذف کن</AlertDialogAction>
-                           </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
-                        <XCircle className="w-4 h-4 ml-2" />
-                        لغو
-                    </Button>
-                </>
-            ) : (
-                <>
-                    <Button onClick={() => setMode('editing')} className="w-full">
-                        <Edit className="w-4 h-4 ml-2" />
-                        ویرایش اطلاعات اصلی
-                    </Button>
-                </>
-            )}
-        </CardFooter>
+          <div className="md:col-span-2 p-6 flex flex-col">
+            <CardHeader className="p-0 pb-4">
+                <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 flex-grow">
+              <h3 className="font-semibold mb-2">درباره شما</h3>
+              {mode === 'editing' ? (
+                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
+              ) : (
+                  <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
+              )}
+               <Separator className="my-6" />
+                <div className="mb-4">
+                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                  
+                  <input 
+                    type="file" 
+                    ref={portfolioFileInputRef} 
+                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <input
+                    type="file"
+                    ref={profilePicInputRef}
+                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                        <PlusCircle className="w-5 h-5 ml-2" />
+                        افزودن نمونه کار جدید
+                   </Button>
+                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+                </div>
+            </CardContent>
+             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
+                {mode === 'editing' ? (
+                    <>
+                         <Button onClick={handleSaveChanges} className="w-full flex-1">
+                            <Save className="w-4 h-4 ml-2" />
+                            ذخیره تغییرات
+                        </Button>
+                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
+                            <Camera className="w-4 h-4 ml-2" />
+                            تغییر عکس پروفایل
+                        </Button>
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف عکس پروفایل
+                        </Button>
+                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
+                            <XCircle className="w-4 h-4 ml-2" />
+                            لغو
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <Button onClick={() => setMode('editing')} className="w-full flex-1">
+                            <Edit className="w-4 h-4 ml-2" />
+                            ویرایش اطلاعات
+                        </Button>
+                         <Button asChild className="w-full flex-1">
+                            <Link href="/inbox">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                                صندوق ورودی
+                            </Link>
+                        </Button>
+                        <Button asChild className="w-full flex-1" variant="secondary">
+                            <Link href={`/provider/${provider.phone}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                مشاهده پروفایل عمومی
+                            </Link>
+                        </Button>
+                    </>
+                )}
+            </CardFooter>
+          </div>
+        </div>
       </Card>
     </div>
   );
