@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2 } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Handshake, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -15,6 +15,7 @@ import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/storage';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { StarRating } from '@/components/ui/star-rating';
 
 export default function ProfilePage() {
   const { user, isLoggedIn, updateUser, isAuthLoading } = useAuth();
@@ -63,12 +64,14 @@ export default function ProfilePage() {
         return;
     }
 
+    if (!user) return;
+    
     let userWasUpdated = false;
     const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex((p: Provider) => p.phone === user?.phone);
+    const providerIndex = allProviders.findIndex((p: Provider) => p.phone === user.phone);
 
     if (providerIndex > -1) {
-        if(user && user.name !== editedData.name){
+        if(user.name !== editedData.name){
             userWasUpdated = true;
         }
         allProviders[providerIndex].name = editedData.name;
@@ -281,6 +284,13 @@ export default function ProfilePage() {
                 <MapPin className="w-4 h-4 ml-2 text-accent" />
                 <span>{provider.location}</span>
              </div>
+              <div className="mt-2 flex flex-col items-center gap-1">
+                <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Handshake className="w-4 h-4" />
+                    <span>{provider.agreementsCount || 0} توافق موفق</span>
+                </div>
+            </div>
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
             <CardHeader className="p-0 pb-4">
@@ -345,14 +355,14 @@ export default function ProfilePage() {
                             ویرایش اطلاعات
                         </Button>
                          <Button asChild className="w-full flex-1">
-                            <Link href="/inbox">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                                صندوق ورودی
+                            <Link href="/agreements">
+                                <Handshake className="w-4 h-4 ml-2" />
+                                مدیریت توافق‌ها
                             </Link>
                         </Button>
                         <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.phone}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <Eye className="w-4 h-4 ml-2" />
                                 مشاهده پروفایل عمومی
                             </Link>
                         </Button>
