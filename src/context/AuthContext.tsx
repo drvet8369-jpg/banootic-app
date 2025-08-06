@@ -25,40 +25,45 @@ const USER_STORAGE_KEY = 'banootik-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // Start as true
   const router = useRouter();
 
-  const loadUserFromStorage = useCallback(() => {
+  // This effect runs ONCE on component mount to check initial auth state
+  useEffect(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
-      } else {
-        setUser(null);
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      setUser(null);
+      console.error("Failed to parse user from localStorage on initial load", error);
+      setUser(null); // Ensure state is clean on error
     } finally {
-      setIsAuthLoading(false);
+      setIsAuthLoading(false); // Signal that initial check is complete
     }
   }, []);
 
+  // This effect handles synchronization between tabs
   useEffect(() => {
-    loadUserFromStorage();
-
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === USER_STORAGE_KEY) {
-        setIsAuthLoading(true);
-        loadUserFromStorage();
+        if (event.newValue) {
+          try {
+            setUser(JSON.parse(event.newValue));
+          } catch {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
       }
     };
-
+    
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [loadUserFromStorage]);
+  }, []);
 
   const login = (userData: User) => {
     try {
@@ -68,8 +73,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           accountType: userData.accountType || 'customer' 
       };
       
-      setUser(userToSave);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
+      setUser(userToSave);
       
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -80,8 +85,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!user) return;
 
       const newUser = { ...user, ...updatedData };
-      setUser(newUser);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+      setUser(newUser);
 
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === user.phone);
@@ -94,7 +99,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = (options: { isCleanup?: boolean } = {}) => {
     const { isCleanup = false } = options;
     try {
-      // Special cleanup logic for the test user "سالن هپکو"
       if (isCleanup && user?.name === 'سالن هپکو') {
         const allUsers = getAllUsers();
         const updatedUsers = allUsers.filter(u => u.phone !== user.phone);

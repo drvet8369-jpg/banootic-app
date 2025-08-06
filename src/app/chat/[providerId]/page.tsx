@@ -79,7 +79,7 @@ export default function ChatPage() {
     const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
-      details = provider;
+      details = { ...provider, id: provider.phone };
     } else {
       const customerPhone = otherPersonIdOrProviderId;
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
@@ -111,7 +111,7 @@ export default function ChatPage() {
 
   if (isAuthLoading) {
      return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
         </div>
@@ -120,7 +120,7 @@ export default function ChatPage() {
 
   if (!isLoggedIn || !user) {
     return (
-        <div className="flex flex-col items-center justify-center text-center py-20">
+        <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
             <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
             <p className="text-muted-foreground mt-2">برای ارسال پیام باید وارد حساب کاربری خود شوید.</p>
@@ -133,7 +133,7 @@ export default function ChatPage() {
   
   if (isLoading) {
      return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
         </div>

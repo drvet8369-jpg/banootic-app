@@ -174,7 +174,7 @@ const UserDashboard = () => {
             {suggestedProviders.length > 0 ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {suggestedProviders.map(provider => (
-                        <SearchResultCard key={provider.id} provider={provider} />
+                        <SearchResultCard key={provider.phone} provider={provider} />
                     ))}
                 </div>
             ) : (
@@ -200,7 +200,7 @@ export default function Home() {
   
   if (isAuthLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );

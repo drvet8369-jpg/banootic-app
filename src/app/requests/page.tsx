@@ -38,7 +38,6 @@ export default function CustomerRequestsPage() {
     
     loadRequests();
     
-    // Add a listener to refresh data on focus, useful for multi-tab scenarios
     window.addEventListener('focus', loadRequests);
     return () => {
       window.removeEventListener('focus', loadRequests);
@@ -48,7 +47,7 @@ export default function CustomerRequestsPage() {
 
   if (isAuthLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
@@ -56,7 +55,7 @@ export default function CustomerRequestsPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفاً وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده درخواست‌های خود باید وارد حساب کاربری شوید.</p>
@@ -69,7 +68,7 @@ export default function CustomerRequestsPage() {
 
   if (user.accountType !== 'customer') {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">صفحه مخصوص مشتریان</h1>
         <p className="text-muted-foreground mt-2">این صفحه فقط برای مشتریان در دسترس است.</p>
@@ -82,7 +81,7 @@ export default function CustomerRequestsPage() {
   
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )

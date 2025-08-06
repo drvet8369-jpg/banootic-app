@@ -67,7 +67,7 @@ export default function AgreementsPage() {
   
   if (isAuthLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
@@ -75,7 +75,7 @@ export default function AgreementsPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفاً وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده این صفحه باید وارد حساب کاربری خود شوید.</p>
@@ -88,7 +88,7 @@ export default function AgreementsPage() {
 
   if (user.accountType !== 'provider') {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">صفحه مخصوص هنرمندان</h1>
         <p className="text-muted-foreground mt-2">این صفحه فقط برای هنرمندان در دسترس است.</p>
@@ -101,7 +101,7 @@ export default function AgreementsPage() {
   
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )

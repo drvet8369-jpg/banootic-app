@@ -58,7 +58,7 @@ export default function ProfilePage() {
   }, [user]);
 
   useEffect(() => {
-    if (isAuthLoading) return;
+    if (isAuthLoading) return; // Wait for auth check to complete
     setIsLoading(true);
     loadProviderData();
   }, [loadProviderData, isAuthLoading]);
@@ -237,17 +237,18 @@ export default function ProfilePage() {
     }
   };
 
-  if (isAuthLoading) {
+  if (isAuthLoading || isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <p className="mr-4">در حال بارگذاری پروفایل...</p>
       </div>
     );
   }
   
   if (!isLoggedIn) {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <User className="w-24 h-24 text-muted-foreground mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">صفحه پروفایل</h1>
             <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
@@ -260,28 +261,19 @@ export default function ProfilePage() {
      )
   }
 
-  if (user?.accountType !== 'provider') {
+  if (user?.accountType !== 'provider' || !provider) {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
-            <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
+            <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل هنرمند یافت نشد</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
-                این صفحه فقط برای ارائه‌دهندگان خدمات است. برای ثبت نام به عنوان هنرمند، به صفحه ثبت‌نام بروید.
+                این صفحه فقط برای ارائه‌دهندگان خدمات است. اگر هنرمند هستید، لطفاً دوباره وارد شوید.
             </p>
             <Button asChild size="lg" className="mt-8">
                 <Link href="/register">ثبت‌نام به عنوان هنرمند</Link>
             </Button>
         </div>
      )
-  }
-  
-  if (isLoading || !provider) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="mr-4">در حال بارگذاری پروفایل...</p>
-      </div>
-    );
   }
 
   return (
