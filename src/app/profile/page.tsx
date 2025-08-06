@@ -58,7 +58,7 @@ export default function ProfilePage() {
   }, [user]);
 
   useEffect(() => {
-    if (isAuthLoading) return; // Wait until auth state is confirmed
+    if (isAuthLoading) return;
     setIsLoading(true);
     loadProviderData();
   }, [loadProviderData, isAuthLoading]);

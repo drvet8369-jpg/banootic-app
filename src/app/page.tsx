@@ -70,7 +70,6 @@ const calculateRankingScore = (provider: Provider): number => {
     const reviewsWeight = 0.50; 
     const agreementsWeight = 0.30;
     
-    // Ensure values are numbers before calculation
     const rating = typeof provider.rating === 'number' ? provider.rating : 0;
     const reviewsCount = typeof provider.reviewsCount === 'number' ? provider.reviewsCount : 0;
     const agreementsCount = typeof provider.agreementsCount === 'number' ? provider.agreementsCount : 0;
@@ -85,95 +84,46 @@ const calculateRankingScore = (provider: Provider): number => {
 const UserDashboard = () => {
     const { user } = useAuth();
     const [suggestedProviders, setSuggestedProviders] = useState<Provider[]>([]);
-    const [providerProfile, setProviderProfile] = useState<Provider | null>(null);
-    const [isProfileLoading, setIsProfileLoading] = useState(true);
-
+    
     useEffect(() => {
-        if (!user) {
-            setIsProfileLoading(false);
-            return;
-        };
+        if (!user) return;
         
         const allProviders = getProviders();
         if (user.accountType === 'customer') {
             const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
             setSuggestedProviders(sortedProviders.slice(0, 3));
-            setIsProfileLoading(false);
-        } else if (user.accountType === 'provider' && user.phone) {
-            const profile = allProviders.find(p => p.phone === user.phone);
-            setProviderProfile(profile || null);
-            setIsProfileLoading(false);
         }
     }, [user]);
 
     if (!user) return null;
 
     if (user.accountType === 'provider') {
-        if (isProfileLoading) {
-             return (
-              <div className="flex justify-center items-center py-20 flex-grow">
-                <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              </div>
-            );
-        }
-        
-        if (!providerProfile) {
-            return (
-                 <div className="max-w-2xl mx-auto py-12 md:py-20 w-full text-center">
-                     <Card>
-                         <CardHeader>
-                             <CardTitle>خطا</CardTitle>
-                             <CardDescription>پروفایل هنرمند شما یافت نشد. لطفاً دوباره وارد شوید یا با پشتیبانی تماس بگیرید.</CardDescription>
-                         </CardHeader>
-                         <CardFooter>
-                              <Button asChild className="w-full">
-                                <Link href="/login">ورود مجدد</Link>
-                              </Button>
-                         </CardFooter>
-                     </Card>
-                 </div>
-            )
-        }
-
         return (
-            <div className="max-w-2xl mx-auto py-12 md:py-20 w-full">
-                <Card>
-                    <CardHeader>
-                        <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-right">
-                           <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg shrink-0">
-                             {providerProfile.profileImage && providerProfile.profileImage.src ? (
-                                <img src={providerProfile.profileImage.src} alt={providerProfile.name} className="object-cover w-full h-full" />
-                              ) : (
-                                 <div className="bg-muted w-full h-full flex items-center justify-center">
-                                    <User className="w-12 h-12 text-muted-foreground" />
-                                </div>
-                              )}
-                          </div>
-                           <div>
+            <div className="py-12 md:py-20 w-full text-center flex justify-center">
+                <div className="max-w-2xl w-full">
+                    <Card>
+                        <CardHeader>
                             <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
-                            <CardDescription>خوش آمدید {user.name}، پروفایل خود را از اینجا مدیریت کنید.</CardDescription>
-                           </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                            <p><strong>نام کسب‌وکار:</strong> {providerProfile.name}</p>
-                            <p><strong>نوع خدمت:</strong> {providerProfile.service}</p>
-                            <p><strong>امتیاز شما:</strong> {providerProfile.rating} ({providerProfile.reviewsCount} نظر)</p>
-                            <p><strong>تعداد توافقات ثبت شده:</strong> {providerProfile.agreementsCount || 0}</p>
-                        </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col sm:flex-row gap-2 pt-6 border-t">
-                         <Button asChild className="w-full flex-1">
-                            <Link href="/profile">
-                                مدیریت کامل پروفایل
-                            </Link>
-                        </Button>
-                         <Button asChild className="w-full flex-1" variant="outline">
-                            <Link href="/agreements">مدیریت توافق‌ها</Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
+                            <CardDescription>خوش آمدید {user.name}، برای مدیریت کامل کسب‌وکارتان به پروفایل خود بروید.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col gap-4">
+                                <Button asChild size="lg">
+                                    <Link href="/profile">
+                                        <LayoutDashboard className="w-5 h-5 ml-2" />
+                                        مدیریت پروفایل و نمونه کارها
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline" size="lg">
+                                    <Link href="/inbox">
+                                        <MessageSquare className="w-5 h-5 ml-2" />
+                                        صندوق ورودی پیام‌ها
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         )
     }
