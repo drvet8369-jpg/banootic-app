@@ -153,18 +153,12 @@ export default function RegisterForm() {
 
       login(newUser);
       
-      const isProvider = values.accountType === 'provider';
-      const destination = isProvider ? '/profile' : '/';
-      const successDescription = isProvider
-          ? 'خوش آمدید! به صفحه مدیریت پروفایل خود هدایت می‌شوید.'
-          : 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.';
-
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: successDescription,
+        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
-      router.push(destination);
+      router.push('/');
 
     } catch (error) {
          console.error("Registration failed:", error);

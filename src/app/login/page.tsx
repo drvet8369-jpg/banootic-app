@@ -64,7 +64,7 @@ export default function LoginPage() {
         } else {
           // User does not exist, create a new customer account and log them in
           userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
+            name: `مشتری ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
           };
@@ -78,8 +78,9 @@ export default function LoginPage() {
           description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+        // Always redirect to the homepage after login.
+        // The homepage will decide whether to show the dashboard or customer view.
+        router.push('/');
 
     } catch (error) {
         console.error("Login failed:", error);

@@ -188,7 +188,7 @@ export default function ProviderProfilePage() {
     return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
-  const isOwnerViewing = user && user.phone === provider?.phone;
+  const isOwnerViewing = isLoggedIn && user && user.phone === provider?.phone;
 
   const deletePortfolioItem = (itemIndex: number) => {
     if (!provider) return;
@@ -315,7 +315,10 @@ export default function ProviderProfilePage() {
                                             variant="destructive"
                                             size="icon"
                                             className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); // Prevents the dialog from opening
+                                                deletePortfolioItem(index); 
+                                            }}
                                             aria-label={`حذف نمونه کار ${index + 1}`}
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -352,7 +355,7 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {isLoggedIn && !isOwnerViewing && user?.accountType === 'customer' && (
+                {isLoggedIn && user?.accountType === 'customer' && !isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button onClick={handleRequestAgreement} className="w-full flex-1">
                         <CheckCircle className="w-4 h-4 ml-2" />

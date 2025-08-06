@@ -5,7 +5,7 @@ import { categories, getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2, User, Handshake, Inbox } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2, User, Handshake, Eye, Inbox } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState, useCallback } from 'react';
@@ -85,72 +85,36 @@ const calculateRankingScore = (provider: Provider): number => {
 const UserDashboard = () => {
     const { user } = useAuth();
     const [suggestedProviders, setSuggestedProviders] = useState<Provider[]>([]);
-    const [providerData, setProviderData] = useState<Provider | null>(null);
-
-    const loadProviderData = useCallback(() => {
-        if (!user || user.accountType !== 'provider' || !user.phone) return;
-        const allProviders = getProviders();
-        const currentProvider = allProviders.find(p => p.phone === user.phone);
-        setProviderData(currentProvider || null);
-    }, [user]);
     
     useEffect(() => {
         if (!user) return;
         
-        const allProviders = getProviders();
         if (user.accountType === 'customer') {
+            const allProviders = getProviders();
             const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
             setSuggestedProviders(sortedProviders.slice(0, 3));
-        } else if (user.accountType === 'provider') {
-            loadProviderData();
-             window.addEventListener('focus', loadProviderData);
-             return () => {
-                window.removeEventListener('focus', loadProviderData);
-            };
         }
-    }, [user, loadProviderData]);
+    }, [user]);
 
     if (!user) return null;
 
     if (user.accountType === 'provider') {
-        if (!providerData) {
-            return (
-                <div className="flex justify-center items-center py-20 flex-grow">
-                    <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                </div>
-            )
-        }
         return (
             <div className="py-12 md:py-20 w-full flex justify-center">
                 <div className="max-w-3xl w-full">
                     <Card>
                         <CardHeader className="text-center">
                             <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
-                            <CardDescription>خوش آمدید {providerData.name}!</CardDescription>
+                            <CardDescription>خوش آمدید {user.name}!</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                           <div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-muted/50">
-                               <h3 className="font-bold text-lg mb-2">{providerData.name}</h3>
-                               <p className="text-muted-foreground mb-3">{providerData.service}</p>
-                               <StarRating rating={providerData.rating} readOnly />
-                               <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4 text-sm text-muted-foreground">
-                                   <div className="flex items-center gap-1.5">
-                                       <Handshake className="w-4 h-4 text-green-600" />
-                                       <span>{providerData.agreementsCount || 0} توافق موفق</span>
-                                   </div>
-                                    <div className="flex items-center gap-1.5">
-                                       <MessageSquare className="w-4 h-4 text-blue-600" />
-                                       <span>{providerData.reviewsCount || 0} نظر ثبت شده</span>
-                                   </div>
-                               </div>
-                           </div>
-                           
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <p className="text-center text-muted-foreground">از اینجا می‌توانید به بخش‌های مختلف پنل خود دسترسی داشته باشید.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
                                     <Link href="/profile">
-                                        <LayoutDashboard className="w-8 h-8" />
+                                        <User className="w-8 h-8" />
                                         <span className="font-bold">مدیریت پروفایل</span>
-                                        <span className="text-xs font-normal">ویرایش اطلاعات و نمونه‌کارها</span>
+                                        <span className="text-xs font-normal">ویرایش اطلاعات و افزودن نمونه‌کار</span>
                                     </Link>
                                 </Button>
                                 <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
@@ -160,7 +124,7 @@ const UserDashboard = () => {
                                          <span className="text-xs font-normal">تایید درخواست‌های مشتریان</span>
                                     </Link>
                                 </Button>
-                                <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
+                               <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2 md:col-span-2">
                                     <Link href="/inbox">
                                        <Inbox className="w-8 h-8" />
                                        <span className="font-bold">صندوق ورودی</span>
@@ -169,6 +133,11 @@ const UserDashboard = () => {
                                 </Button>
                             </div>
                         </CardContent>
+                         <CardFooter>
+                            <Button asChild variant="link" className="mx-auto">
+                                <Link href={`/provider/${user.phone}`}>مشاهده پروفایل عمومی شما</Link>
+                            </Button>
+                        </CardFooter>
                     </Card>
                 </div>
             </div>

@@ -239,7 +239,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل هنرمند یافت نشد</h1>
-            <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
+            <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
                 این صفحه فقط برای ارائه‌دهندگان خدمات است. اگر هنرمند هستید، لطفاً دوباره وارد شوید.
             </p>
             <Button asChild size="lg" className="mt-8">
@@ -293,16 +293,33 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="md:col-span-2 p-6 flex flex-col">
-            <CardHeader className="p-0 pb-4">
-                <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
+            <CardHeader className="p-0 pb-4 flex flex-row justify-between items-center">
+                <CardTitle className="font-headline text-2xl">
+                    {mode === 'editing' ? 'ویرایش اطلاعات' : 'اطلاعات پروفایل'}
+                </CardTitle>
+                <Button onClick={() => mode === 'viewing' ? setMode('editing') : handleCancelEdit()} variant="ghost" size="icon">
+                  {mode === 'viewing' ? <Edit className="w-5 h-5"/> : <XCircle className="w-5 h-5"/>}
+                </Button>
             </CardHeader>
             <CardContent className="p-0 flex-grow">
-              <h3 className="font-semibold mb-2">درباره شما</h3>
-              {mode === 'editing' ? (
-                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
-              ) : (
-                  <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
-              )}
+              <div className="space-y-4">
+                  <div>
+                      <h3 className="font-semibold mb-2">درباره شما</h3>
+                      {mode === 'editing' ? (
+                          <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
+                      ) : (
+                          <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
+                      )}
+                  </div>
+                  {mode === 'viewing' && (
+                    <Button asChild className="w-full">
+                      <Link href={`/provider/${provider.phone}`}>
+                        <Eye className="w-4 h-4 ml-2" />
+                        مشاهده پروفایل عمومی
+                      </Link>
+                    </Button>
+                  )}
+              </div>
                <Separator className="my-6" />
                 <div className="mb-4">
                   <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
@@ -328,47 +345,22 @@ export default function ProfilePage() {
                    <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
                 </div>
             </CardContent>
-             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
-                {mode === 'editing' ? (
-                    <>
-                         <Button onClick={handleSaveChanges} className="w-full flex-1">
-                            <Save className="w-4 h-4 ml-2" />
-                            ذخیره تغییرات
-                        </Button>
-                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
-                            <Camera className="w-4 h-4 ml-2" />
-                            تغییر عکس پروفایل
-                        </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
-                            <Trash2 className="w-4 h-4 ml-2" />
-                            حذف عکس پروفایل
-                        </Button>
-                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
-                            <XCircle className="w-4 h-4 ml-2" />
-                            لغو
-                        </Button>
-                    </>
-                ) : (
-                    <>
-                        <Button onClick={() => setMode('editing')} className="w-full flex-1">
-                            <Edit className="w-4 h-4 ml-2" />
-                            ویرایش اطلاعات
-                        </Button>
-                         <Button asChild className="w-full flex-1">
-                            <Link href="/agreements">
-                                <Handshake className="w-4 h-4 ml-2" />
-                                مدیریت توافق‌ها
-                            </Link>
-                        </Button>
-                        <Button asChild className="w-full flex-1" variant="secondary">
-                            <Link href={`/provider/${provider.phone}`}>
-                                <Eye className="w-4 h-4 ml-2" />
-                                مشاهده پروفایل عمومی
-                            </Link>
-                        </Button>
-                    </>
-                )}
-            </CardFooter>
+             {mode === 'editing' && (
+                 <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
+                     <Button onClick={handleSaveChanges} className="w-full flex-1">
+                        <Save className="w-4 h-4 ml-2" />
+                        ذخیره تغییرات
+                    </Button>
+                     <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
+                        <Camera className="w-4 h-4 ml-2" />
+                        تغییر عکس پروفایل
+                    </Button>
+                    <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
+                        <Trash2 className="w-4 h-4 ml-2" />
+                        حذف عکس پروفایل
+                    </Button>
+                 </CardFooter>
+             )}
           </div>
         </div>
       </Card>
