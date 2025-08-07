@@ -2,15 +2,15 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/storage';
-import type { Provider, Review } from '@/lib/types';
+import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/storage';
+import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, MapPin, Edit } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Handshake, X, MapPin, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -168,11 +168,14 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -201,6 +204,32 @@ export default function ProviderProfilePage() {
     }
   }, [loadData]);
   
+  const handleRequestAgreement = () => {
+    if (!isLoggedIn || !user || !provider) {
+        toast({title: "خطا", description: "برای ارسال درخواست باید وارد شوید.", variant: "destructive"});
+        router.push('/login');
+        return;
+    }
+    setIsRequesting(true);
+
+    setTimeout(() => {
+        const allAgreements = getAgreements();
+        const newAgreement: Agreement = {
+            id: Date.now().toString(),
+            providerPhone: provider.phone,
+            providerName: provider.name, // Ensure provider name is saved
+            customerPhone: user.phone,
+            customerName: user.name,
+            status: 'pending',
+            requestedAt: new Date().toISOString()
+        };
+        saveAgreements([...allAgreements, newAgreement]);
+        setIsRequesting(false);
+        toast({title: "موفق", description: "درخواست توافق شما با موفقیت برای هنرمند ارسال شد."});
+        router.push('/requests');
+    }, 1000);
+  }
+
   const isOwnerViewing = user && user.phone === provider?.phone;
 
 
@@ -311,17 +340,15 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button asChild className="w-full">
+                    <Button onClick={handleRequestAgreement} className="w-full" disabled={isRequesting}>
+                        {isRequesting ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Handshake className="w-4 h-4 ml-2" />}
+                        ارسال درخواست توافق
+                    </Button>
+                    <Button asChild className="w-full" variant="secondary">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
-                    </Button>
-                    <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
                     </Button>
                 </CardFooter>
                 )}

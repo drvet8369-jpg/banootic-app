@@ -134,11 +134,6 @@ export default function InboxPage() {
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
-                    {user.accountType === 'customer' && (
-                        <Button asChild className="mt-6">
-                            <Link href="/">مشاهده هنرمندان</Link>
-                        </Button>
-                    )}
                 </div>
             </CardContent>
         </Card>
