@@ -272,8 +272,11 @@ export default function ProviderProfilePage() {
                         <span>{provider.location}</span>
                     </div>
                     <div className="mt-2">
-                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
                     </div>
+                     <p className="text-sm text-muted-foreground mt-2">
+                        {provider.agreementsCount || 0} توافق موفق
+                    </p>
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">

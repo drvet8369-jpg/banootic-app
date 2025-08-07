@@ -5,7 +5,24 @@ import { getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+
+// Ladder Ranking Algorithm
+const calculateScore = (provider: Provider): number => {
+    const ratingWeight = 0.5;
+    const reviewsWeight = 0.2;
+    const agreementsWeight = 0.3;
+
+    const normalizedRating = (provider.rating || 0) / 5; // Normalize rating to be between 0 and 1
+    
+    // We use logarithm to prevent a single provider with many reviews/agreements from dominating
+    const score = (normalizedRating * ratingWeight) + 
+                  (Math.log1p(provider.reviewsCount || 0) * reviewsWeight) + 
+                  (Math.log1p(provider.agreementsCount || 0) * agreementsWeight);
+                  
+    return score;
+};
+
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -13,28 +30,28 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This function now correctly re-fetches and filters data whenever the query changes.
   const performSearch = useCallback(() => {
     setIsLoading(true);
-    // Always get the latest providers from localStorage at the moment of searching.
     const allProviders = getProviders();
-    if (!query) {
-      setSearchResults(allProviders);
-      setIsLoading(false);
-      return;
+
+    let filteredProviders = allProviders;
+
+    if (query) {
+        const lowercasedQuery = query.toLowerCase();
+        filteredProviders = allProviders.filter(provider => 
+          provider.name.toLowerCase().includes(lowercasedQuery) ||
+          provider.service.toLowerCase().includes(lowercasedQuery) ||
+          (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+        );
     }
-    const lowercasedQuery = query.toLowerCase();
-    const results = allProviders.filter(provider => 
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery) ||
-      (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-    );
-    setSearchResults(results);
+    
+    // Sort providers based on the ladder score
+    const sortedProviders = filteredProviders.sort((a, b) => calculateScore(b) - calculateScore(a));
+
+    setSearchResults(sortedProviders);
     setIsLoading(false);
   }, [query]);
 
-  // useEffect now correctly depends on performSearch.
-  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
 
@@ -55,7 +72,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            نمایش تمام هنرمندان
+            نمایش تمام هنرمندان بر اساس رتبه
           </p>
         )}
       </div>
