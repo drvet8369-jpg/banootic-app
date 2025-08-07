@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services, activeCities, getProviders, saveProviders, getAllUsers, saveAllUsers } from '@/lib/storage';
+import { categories, services, getProviders, saveProviders, getAllUsers, saveAllUsers } from '@/lib/storage';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -41,17 +41,8 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  location: z.string().optional(),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
-}).refine(data => {
-    if (data.accountType === 'provider') {
-        return !!data.location;
-    }
-    return true;
-}, {
-    message: 'لطفاً شهر محل فعالیت خود را انتخاب کنید.',
-    path: ['location'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -84,7 +75,6 @@ export default function RegisterForm() {
       name: '',
       phone: '',
       accountType: 'customer',
-      location: 'ارومیه',
       bio: '',
     },
   });
@@ -99,6 +89,7 @@ export default function RegisterForm() {
       const allUsers = getAllUsers();
       const existingUser = allUsers.find(u => u.phone === values.phone);
 
+      // Check if phone number is already registered
       if (existingUser) {
         toast({
           title: 'خطا در ثبت‌نام',
@@ -109,15 +100,10 @@ export default function RegisterForm() {
         router.push('/login');
         return;
       }
-
-      const newUser: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-      };
       
       const allProviders = getProviders();
 
+      // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
         const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
@@ -129,7 +115,20 @@ export default function RegisterForm() {
             setIsLoading(false);
             return;
         }
+      }
 
+      // Create the new user object for the unified user list
+      const newUser: User = {
+        name: values.name,
+        phone: values.phone,
+        accountType: values.accountType,
+      };
+      
+      // Save the new user to the unified list
+      saveAllUsers([...allUsers, newUser]);
+
+      // Only create and save a new provider if the account type is 'provider'
+      if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
@@ -137,7 +136,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: values.location || 'ارومیه',
+          location: 'ارومیه', // Default location
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -150,8 +149,7 @@ export default function RegisterForm() {
         saveProviders([...allProviders, newProvider]);
       }
       
-      saveAllUsers([...allUsers, newUser]);
-
+      // Log the user in with their unified user object
       login(newUser);
       
       toast({
@@ -159,6 +157,7 @@ export default function RegisterForm() {
         description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
+      // Redirect to home page after successful registration
       router.push('/');
 
     } catch (error) {
@@ -244,33 +243,6 @@ export default function RegisterForm() {
 
             {accountType === 'provider' && (
               <>
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>شهر محل فعالیت</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="یک شهر را انتخاب کنید" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {activeCities.map((city) => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        در حال حاضر، فعالیت فقط در شهرهای موجود در لیست امکان‌پذیر است.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={form.control}
                   name="serviceType"

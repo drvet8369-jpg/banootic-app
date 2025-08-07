@@ -59,10 +59,6 @@ const defaultServices: Service[] = [
   { name: 'شمع‌سازی', slug: 'candles-soaps', categorySlug: 'handicrafts' },
 ];
 
-const defaultActiveCities: string[] = [
-  "ارومیه"
-];
-
 const defaultProviders: Provider[] = [
   { name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن با سال‌ها تجربه در ارائه جدیدترین متدهای کاشت و ژلیش. ما به سلامت و زیبایی دستان شما اهمیت می‌دهیم.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, agreementsCount: 60, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: 'https://placehold.co/400x400.png', aiHint: 'nail art'}] },
   { name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن. با استفاده از بهترین مواد و تکنیک‌های روز دنیا، رنگ و مدل موی دلخواه شما را به ارمغان می‌آوریم.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, agreementsCount: 85, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
@@ -85,9 +81,6 @@ const defaultProviders: Provider[] = [
   { name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز برای آرامش و زیبایی محیط شما.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, agreementsCount: 90, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-const defaultReviews: Review[] = [];
-const defaultAgreements: Agreement[] = [];
-
 // --- Generic LocalStorage Handler ---
 function getStoredData<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') {
@@ -102,7 +95,7 @@ function getStoredData<T>(key: string, defaultValue: T): T {
     localStorage.setItem(key, JSON.stringify(defaultValue));
     return defaultValue;
   } catch (error) {
-    console.error(`Failed to get/parse ${key} from localStorage.`, error);
+    console.error(`Failed to get/parse ${key} from localStorage. Returning default.`, error);
     return defaultValue;
   }
 }
@@ -122,48 +115,31 @@ function saveStoredData<T>(key: string, data: T): void {
 const PROVIDERS_KEY = 'banootik-providers';
 const REVIEWS_KEY = 'banootik-reviews';
 const AGREEMENTS_KEY = 'banootik-agreements';
-const USERS_KEY = 'banootik-users';
+const USERS_KEY = 'banootik-users'; // Unified key for all users
 const CHATS_KEY_PREFIX = 'banootik_chat_';
 const INBOX_KEY = 'banootik_inbox_chats';
-const CLEANUP_FLAG = 'banootik-cleanup-v1';
-
-
-// --- One-time Cleanup for legacy data ---
-const performCleanup = () => {
-    if (typeof window !== 'undefined') {
-        if (!localStorage.getItem(CLEANUP_FLAG)) {
-            console.log("Performing one-time cleanup of legacy data...");
-            localStorage.removeItem(REVIEWS_KEY);
-            localStorage.removeItem(AGREEMENTS_KEY);
-            localStorage.setItem(CLEANUP_FLAG, 'true');
-        }
-    }
-};
-performCleanup();
-
 
 // --- Public API for Data Access ---
 
 // Static Data (doesn't change)
 export const categories: Category[] = defaultCategories;
 export const services: Service[] = defaultServices;
-export const activeCities: string[] = defaultActiveCities;
 
 // Providers
 export const getProviders = (): Provider[] => getStoredData<Provider[]>(PROVIDERS_KEY, defaultProviders);
 export const saveProviders = (data: Provider[]): void => saveStoredData<Provider[]>(PROVIDERS_KEY, data);
 
 // Reviews
-export const getReviews = (): Review[] => getStoredData<Review[]>(REVIEWS_KEY, defaultReviews);
+export const getReviews = (): Review[] => getStoredData<Review[]>(REVIEWS_KEY, []);
 export const saveReviews = (data: Review[]): void => saveStoredData<Review[]>(REVIEWS_KEY, data);
 
 // Agreements
-export const getAgreements = (): Agreement[] => getStoredData<Agreement[]>(AGREEMENTS_KEY, defaultAgreements);
+export const getAgreements = (): Agreement[] => getStoredData<Agreement[]>(AGREEMENTS_KEY, []);
 export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreement[]>(AGREEMENTS_KEY, data);
 
-
-// --- Smart User Management ---
+// --- Smart User Management (Unified) ---
 export const getAllUsers = (): User[] => {
+    // The default user list is derived from the default providers list, ensuring all providers are also users.
     const defaultInitialUsers: User[] = defaultProviders.map(p => ({
         name: p.name,
         phone: p.phone,
@@ -172,7 +148,6 @@ export const getAllUsers = (): User[] => {
     return getStoredData<User[]>(USERS_KEY, defaultInitialUsers);
 };
 export const saveAllUsers = (data: User[]): void => saveStoredData<User[]>(USERS_KEY, data);
-
 
 // --- Chat & Inbox ---
 export const getChatMessages = (chatId: string): any[] => getStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, []);

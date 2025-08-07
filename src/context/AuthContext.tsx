@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAllUsers, saveAllUsers, getProviders, saveProviders } from '@/lib/storage';
+import { getAllUsers, saveAllUsers } from '@/lib/storage';
 
 export interface User {
   name: string;
@@ -22,19 +22,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'banootik-user';
-// We use a new, more specific cleanup flag to ensure the correct data is reset.
-const CLEANUP_FLAG_V2 = 'banootik-cleanup-v2-provider-fix';
+// A new, final cleanup flag to ensure the correct data structures are used.
+const CLEANUP_FLAG_V3 = 'banootik-cleanup-v3-unified-users';
 
 // A one-time check to see if we need to clean up localStorage from previous bad states.
 const performOneTimeCleanup = () => {
     if (typeof window !== 'undefined') {
-        if (!localStorage.getItem(CLEANUP_FLAG_V2)) {
-            console.log("Performing one-time cleanup to restore provider list...");
+        if (!localStorage.getItem(CLEANUP_FLAG_V3)) {
+            console.log("Performing one-time cleanup to unify user data...");
             // This key is where the provider data is stored. Removing it will force
             // the app to repopulate it with the correct default data on next load.
             localStorage.removeItem('banootik-providers'); 
-            localStorage.setItem(CLEANUP_FLAG_V2, 'true');
-            console.log("Cleanup complete. Provider list will be restored.");
+            // Also removing the old user list to ensure a fresh start
+            localStorage.removeItem('honarbanoo-users');
+            localStorage.removeItem('banootik-users'); // Remove old user key as well
+            localStorage.removeItem(USER_STORAGE_KEY); // Log out any logged-in user
+            
+            localStorage.setItem(CLEANUP_FLAG_V3, 'true');
+            console.log("Cleanup complete. Data will be restored on next load.");
         }
     }
 };
@@ -102,6 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
       setUser(newUser);
 
+      // Also update the unified user list
       const allUsers = getAllUsers();
       const userIndex = allUsers.findIndex(u => u.phone === user.phone);
       if (userIndex > -1) {
@@ -112,8 +118,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      // The logout function should ONLY handle logging out the current user.
-      // It should never modify the application's core data like the provider list.
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
       

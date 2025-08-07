@@ -60,13 +60,16 @@ export default function LoginPage() {
         let userToLogin: User;
 
         if (existingUser) {
+          // User is a known user
           userToLogin = existingUser;
         } else {
+          // If user doesn't exist, create a new customer account for them
           userToLogin = {
             name: `مشتری ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
           };
+          // Save the new customer to the unified users list
           saveAllUsers([...allUsers, userToLogin]);
         }
         
@@ -77,6 +80,7 @@ export default function LoginPage() {
           description: `خوش آمدید ${userToLogin.name}!`,
         });
         
+        // Redirect to home page after successful login
         router.push('/');
 
     } catch (error) {
