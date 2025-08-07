@@ -14,7 +14,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   login: (userData: User) => void;
-  logout: (options?: { isCleanup?: boolean }) => void;
+  logout: () => void;
   updateUser: (updatedData: Partial<User>) => void;
   isAuthLoading: boolean;
 }
@@ -22,6 +22,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'banootik-user';
+// We use a new, more specific cleanup flag to ensure the correct data is reset.
+const CLEANUP_FLAG_V2 = 'banootik-cleanup-v2-provider-fix';
+
+// A one-time check to see if we need to clean up localStorage from previous bad states.
+const performOneTimeCleanup = () => {
+    if (typeof window !== 'undefined') {
+        if (!localStorage.getItem(CLEANUP_FLAG_V2)) {
+            console.log("Performing one-time cleanup to restore provider list...");
+            // This key is where the provider data is stored. Removing it will force
+            // the app to repopulate it with the correct default data on next load.
+            localStorage.removeItem('banootik-providers'); 
+            localStorage.setItem(CLEANUP_FLAG_V2, 'true');
+            console.log("Cleanup complete. Provider list will be restored.");
+        }
+    }
+};
+performOneTimeCleanup();
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -92,28 +110,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
   }
 
-  const logout = (options: { isCleanup?: boolean } = {}) => {
-    const { isCleanup = false } = options;
-    const currentUserPhone = user?.phone;
+  const logout = () => {
     try {
-      if (isCleanup && currentUserPhone) {
-        const allUsers = getAllUsers();
-        const updatedUsers = allUsers.filter(u => u.phone !== currentUserPhone);
-        saveAllUsers(updatedUsers);
-
-        const allProviders = getProviders();
-        const updatedProviders = allProviders.filter(p => p.phone !== currentUserPhone);
-        saveProviders(updatedProviders);
-        
-        console.log(`Cleanup complete for user: ${currentUserPhone}`);
-      }
-
+      // The logout function should ONLY handle logging out the current user.
+      // It should never modify the application's core data like the provider list.
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
       
+      // Navigate to home for a clean user experience.
       if (window.location.pathname !== '/') {
         router.push('/');
+      } else {
+        // If already on the home page, force a reload to ensure all state is reset.
+        window.location.reload();
       }
+
     } catch (error) {
        console.error("Failed to process logout", error);
     }
