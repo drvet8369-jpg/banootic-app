@@ -2,15 +2,16 @@
 'use client';
 
 import Link from 'next/link';
-import { categories, getProviders, getReviews, getAgreements } from '@/lib/storage';
+import { categories } from '@/lib/storage';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, Edit, FileText, Search } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, Edit, FileText, Search, UserRound } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import { StarRating } from '@/components/ui/star-rating';
-import type { Provider, Review, Agreement as AgreementType } from '@/lib/types';
+import type { Provider } from '@/lib/types';
+import { getProviders } from '@/lib/storage';
 
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
@@ -24,35 +25,23 @@ const iconMap: { [key: string]: React.ElementType } = {
 
 const ProviderDashboard = () => {
     const { user } = useAuth();
-    const [stats, setStats] = useState({ 
-        reviewsCount: 0, 
-        agreementsCount: 0, 
-        averageRating: 0 
-    });
+    const [provider, setProvider] = useState<Provider | null>(null);
 
     const loadProviderData = useCallback(() => {
         if (user && user.accountType === 'provider') {
             const allProviders = getProviders();
             const currentProvider = allProviders.find(p => p.phone === user.phone);
-            
-            if (currentProvider) {
-                setStats({
-                    reviewsCount: currentProvider.reviewsCount || 0,
-                    agreementsCount: currentProvider.agreementsCount || 0,
-                    averageRating: currentProvider.rating || 0,
-                });
-            }
+            setProvider(currentProvider || null);
         }
     }, [user]);
 
     useEffect(() => {
         loadProviderData();
-        // Add focus listener to refresh data when tab is re-focused
         window.addEventListener('focus', loadProviderData);
         return () => window.removeEventListener('focus', loadProviderData);
     }, [loadProviderData]);
 
-    if (!user) return null;
+    if (!user || !provider) return null;
 
     return (
         <div className="w-full py-12 md:py-16">
@@ -63,32 +52,32 @@ const ProviderDashboard = () => {
                 </CardHeader>
                 <CardContent className="flex justify-around items-center text-center p-6 border-y">
                     <div className="flex flex-col items-center gap-1">
-                        <span className="font-bold text-2xl">{stats.agreementsCount}</span>
+                        <span className="font-bold text-2xl">{provider.agreementsCount || 0}</span>
                         <span className="text-sm text-muted-foreground">توافق موفق</span>
                     </div>
                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-bold text-2xl">{stats.reviewsCount}</span>
+                        <span className="font-bold text-2xl">{provider.reviewsCount || 0}</span>
                         <span className="text-sm text-muted-foreground">نظر مشتریان</span>
                     </div>
                      <div className="flex flex-col items-center gap-1">
-                        <StarRating rating={stats.averageRating} readOnly />
+                        <StarRating rating={provider.rating || 0} readOnly />
                         <span className="text-sm text-muted-foreground">امتیاز کل</span>
                     </div>
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    <Button asChild variant="outline" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 h-12">
+                    <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-14">
                         <Link href="/profile">
-                            <Edit className="w-5 h-5 ml-2" />
-                            <span className="font-bold">مدیریت پروفایل</span>
+                            <UserRound className="w-5 h-5 ml-2" />
+                            <span className="font-bold">پروفایل و نمونه‌کار</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 h-12">
+                     <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-14">
                         <Link href="/agreements">
                             <Handshake className="w-5 h-5 ml-2" />
                              <span className="font-bold">مدیریت توافق‌ها</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 h-12">
+                     <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-14">
                         <Link href="/inbox">
                             <Inbox className="w-5 h-5 ml-2" />
                              <span className="font-bold">صندوق ورودی</span>
@@ -113,13 +102,13 @@ const CustomerDashboard = () => {
                     <CardDescription>خوش آمدید، {user.name}!</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border-y">
-                    <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-20 text-lg">
+                    <Button asChild variant="outline" className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-20 text-lg">
                         <Link href="/requests">
                             <FileText className="w-6 h-6 ml-3" />
                             <span className="font-semibold">درخواست‌های من</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-20 text-lg">
+                     <Button asChild variant="outline" className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-20 text-lg">
                         <Link href="/inbox">
                             <Inbox className="w-6 h-6 ml-3" />
                              <span className="font-semibold">صندوق ورودی</span>
