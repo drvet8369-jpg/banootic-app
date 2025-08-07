@@ -90,7 +90,7 @@ export default function ServiceProvidersPage() {
       {serviceProviders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {serviceProviders.map((provider) => (
-            <SearchResultCard key={provider.id} provider={provider} />
+            <SearchResultCard key={provider.phone} provider={provider} />
           ))}
         </div>
       ) : (

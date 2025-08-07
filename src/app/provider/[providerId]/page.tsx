@@ -1,17 +1,16 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/storage';
-import type { Provider, Review, Agreement } from '@/lib/types';
+import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/storage';
+import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, CheckCircle, Handshake, MapPin, Edit } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Edit, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -59,7 +58,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 // Review Form Component
-const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubmit: () => void }) => {
+const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -78,24 +77,26 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
     }
     setIsSubmitting(true);
 
+    // Simulate API call
     setTimeout(() => {
         const allReviews = getReviews();
         const newReview: Review = {
-          id: Date.now().toString(),
-          providerId: providerPhone, // Use phone number as the ID
-          authorName: user.name,
-          rating,
-          comment,
-          createdAt: new Date().toISOString(),
+        id: Date.now().toString(),
+        providerId,
+        authorName: user.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString(),
         };
 
         const updatedReviews = [...allReviews, newReview];
         saveReviews(updatedReviews);
 
+        // Recalculate provider's average rating
         const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.phone === providerPhone);
+        const providerIndex = allProviders.findIndex(p => p.phone === providerId);
         if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerPhone);
+            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
             const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
             const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
             
@@ -108,7 +109,7 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
         setRating(0);
         setComment('');
         setIsSubmitting(false);
-        onSubmit();
+        onSubmit(); // Callback to trigger data refresh in parent
     }, 1000);
   };
   
@@ -158,7 +159,7 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -189,46 +190,12 @@ export default function ProviderProfilePage() {
     return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
-  const isOwnerViewing = isLoggedIn && user && user.phone === provider?.phone;
+  const isOwnerViewing = user && user.phone === provider?.phone;
 
-  const handleRequestAgreement = () => {
-    if (!provider || !user) return;
-    
-    const allAgreements = getAgreements();
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const recentRequest = allAgreements.find(a => 
-        a.providerPhone === provider.phone && 
-        a.customerPhone === user.phone &&
-        new Date(a.requestedAt) > twentyFourHoursAgo
-    );
-
-    if (recentRequest) {
-        if (recentRequest.status === 'pending') {
-             toast({ title: 'درخواست شما قبلا ثبت شده', description: 'شما یک درخواست در انتظار تایید برای این هنرمند دارید. لطفا صبور باشید.', variant: 'default' });
-        } else {
-             toast({ title: 'محدودیت درخواست', description: 'شما در ۲۴ ساعت گذشته یک توافق با این هنرمند ثبت کرده‌اید. لطفاً بعدا تلاش کنید.', variant: 'default' });
-        }
-        return;
-    }
-
-    const newAgreement: Agreement = {
-      id: Date.now().toString(),
-      providerPhone: provider.phone,
-      providerName: provider.name,
-      customerPhone: user.phone,
-      customerName: user.name,
-      status: 'pending',
-      requestedAt: new Date().toISOString()
-    };
-    
-    saveAgreements([...allAgreements, newAgreement]);
-    toast({ title: 'درخواست توافق ارسال شد', description: 'هنرمند باید درخواست شما را تایید کند. می‌توانید درخواست خود را از منوی کاربری پیگیری کنید.' });
-  }
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -260,84 +227,47 @@ export default function ProviderProfilePage() {
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{provider.location}</span>
+                     <div className="flex items-center gap-1 text-sm text-muted-foreground mt-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>{provider.location}</span>
                     </div>
-                     <div className="mt-2 flex flex-col items-center gap-1">
+                    <div className="mt-2">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Handshake className="w-4 h-4" />
-                          <span>{provider.agreementsCount || 0} توافق موفق</span>
-                        </div>
                     </div>
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
+                    <h3 className="font-headline text-xl mb-4 text-center">درباره ما</h3>
                     <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
                     <Separator className="my-4" />
-                    <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
-                    {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {provider.portfolio.map((item, index) => (
-                                    <DialogTrigger asChild key={`${provider.phone}-portfolio-${index}`}>
-                                        <div 
-                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                            onClick={() => setSelectedImage(item.src)}
-                                        >
-                                            <Image
-                                                src={item.src}
-                                                alt={`نمونه کار ${index + 1}`}
-                                                fill
-                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                                data-ai-hint={item.aiHint}
-                                            />
-                                        </div>
-                                    </DialogTrigger>
-                                ))}
+                    
+                    {!isOwnerViewing && (
+                       <div id="reviews" className="scroll-mt-20">
+                        <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
+                        {reviews.length > 0 ? (
+                            <div className="space-y-4">
+                                {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
                             </div>
-                           
-                            <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
-                                <DialogHeader className="sr-only">
-                                  <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
-                                </DialogHeader>
-                               <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
-                                  <X className="h-6 w-6" />
-                                  <span className="sr-only">بستن</span>
-                                </DialogClose>
-                                {selectedImage && (
-                                    <div className="relative w-full h-full">
-                                        <Image
-                                            src={selectedImage}
-                                            alt="نمونه کار تمام صفحه"
-                                            fill
-                                            className="object-contain"
-                                        />
-                                    </div>
-                                )}
-                            </DialogContent>
-                        </Dialog>
-                    ) : (
-                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                            <p>هنوز نمونه کاری اضافه نشده است.</p>
-                        </div>
+                        ) : (
+                            <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                                <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                            </div>
+                        )}
+                        <ReviewForm providerId={provider.phone} onSubmit={loadData} />
+                    </div>
                     )}
+
                 </CardContent>
 
-                {isLoggedIn && user?.accountType === 'customer' && !isOwnerViewing && (
+                {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button onClick={handleRequestAgreement} className="w-full flex-1">
-                        <CheckCircle className="w-4 h-4 ml-2" />
-                        درخواست توافق
-                    </Button>
-                    <Button asChild className="w-full flex-1">
+                    <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button asChild className="w-full flex-1" variant="secondary">
+                    <Button asChild className="w-full" variant="secondary">
                         <a href={`tel:${provider.phone}`}>
                             <Phone className="w-4 h-4 ml-2" />
                             تماس
@@ -346,7 +276,7 @@ export default function ProviderProfilePage() {
                 </CardFooter>
                 )}
 
-                 {isOwnerViewing && (
+                {isOwnerViewing && (
                     <CardFooter className="p-6 mt-auto border-t">
                        <Button asChild className="w-full">
                             <Link href="/profile">
@@ -356,23 +286,6 @@ export default function ProviderProfilePage() {
                         </Button>
                     </CardFooter>
                 )}
-
-
-                <Separator />
-                
-                <div id="reviews" className="p-6 scroll-mt-20">
-                    <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                    {reviews.length > 0 ? (
-                        <div className="space-y-4">
-                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
-                        </div>
-                    ) : (
-                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                            <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
-                        </div>
-                    )}
-                    <ReviewForm providerPhone={provider.phone} onSubmit={loadData} />
-                </div>
             </Card>
         </div>
     </div>

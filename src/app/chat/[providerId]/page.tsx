@@ -1,6 +1,7 @@
 'use client';
 
-import { getProviders, getChatMessages, saveChatMessages, getInboxData, saveInboxData } from '@/lib/storage';
+import { getProviders } from '@/lib/storage';
+import { getChatMessages, saveChatMessages, getInboxData, saveInboxData } from '@/lib/storage';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,7 @@ export default function ChatPage() {
     const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
-      details = { ...provider, id: provider.phone };
+      details = { ...provider };
     } else {
       const customerPhone = otherPersonIdOrProviderId;
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
