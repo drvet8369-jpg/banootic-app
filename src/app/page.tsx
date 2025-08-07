@@ -6,7 +6,7 @@ import { categories, getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2, User, Handshake, Eye, Inbox } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2, User, Handshake, Eye, Inbox, Star } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState, useCallback } from 'react';
@@ -83,62 +83,93 @@ const calculateRankingScore = (provider: Provider): number => {
     return score;
 }
 
-const UserDashboard = () => {
+const ProviderDashboard = () => {
+    const { user } = useAuth();
+    const [provider, setProvider] = useState<Provider | null>(null);
+
+    useEffect(() => {
+        if (!user) return;
+        const allProviders = getProviders();
+        const currentProvider = allProviders.find(p => p.phone === user.phone);
+        if (currentProvider) {
+            setProvider(currentProvider);
+        }
+    }, [user]);
+
+    if (!user || !provider) {
+        return (
+            <div className="flex justify-center items-center py-20 flex-grow">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            </div>
+        );
+    }
+    
+    return (
+        <div className="py-12 md:py-20 w-full flex justify-center">
+            <div className="max-w-3xl w-full">
+                <Card>
+                    <CardHeader className="text-center">
+                        <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
+                        <CardDescription>خوش آمدید {user.name}!</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="p-4 bg-muted/50 rounded-lg border">
+                            <h4 className="text-lg font-bold text-center mb-4">آمار عملکرد شما</h4>
+                            <div className="flex justify-around items-center text-center">
+                                <div className="flex flex-col items-center">
+                                    <StarRating rating={provider.rating} readOnly />
+                                    <span className="text-xs text-muted-foreground mt-1">{provider.reviewsCount} نظر</span>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-center gap-1 font-bold text-lg text-primary">
+                                        <Handshake className="w-5 h-5"/>
+                                        <span>{provider.agreementsCount || 0}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">توافق موفق</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
+                                <Link href="/profile">
+                                    <User className="w-8 h-8" />
+                                    <span className="font-bold">مدیریت پروفایل و نمونه‌کار</span>
+                                </Link>
+                            </Button>
+                             <Button asChild size="lg" variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                                <Link href="/agreements">
+                                    <Handshake className="w-8 h-8" />
+                                    <span className="font-bold">مدیریت توافق‌ها</span>
+                                </Link>
+                            </Button>
+                        </div>
+                         <Button asChild size="lg" variant="secondary" className="w-full h-auto py-4 flex flex-col gap-2">
+                            <Link href="/inbox">
+                                <Inbox className="w-8 h-8" />
+                                <span className="font-bold">صندوق ورودی</span>
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+};
+
+
+const CustomerDashboard = () => {
     const { user } = useAuth();
     const [suggestedProviders, setSuggestedProviders] = useState<Provider[]>([]);
     
     useEffect(() => {
         if (!user) return;
         
-        if (user.accountType === 'customer') {
-            const allProviders = getProviders();
-            const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
-            setSuggestedProviders(sortedProviders.slice(0, 3));
-        }
+        const allProviders = getProviders();
+        const sortedProviders = [...allProviders].sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
+        setSuggestedProviders(sortedProviders.slice(0, 3));
     }, [user]);
 
     if (!user) return null;
-
-    if (user.accountType === 'provider') {
-        return (
-            <div className="py-12 md:py-20 w-full flex justify-center">
-                <div className="max-w-3xl w-full">
-                    <Card>
-                        <CardHeader className="text-center">
-                            <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
-                            <CardDescription>خوش آمدید {user.name}!</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <p className="text-center text-muted-foreground">از اینجا می‌توانید به بخش‌های مختلف پنل خود دسترسی داشته باشید.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
-                                    <Link href="/profile">
-                                        <User className="w-8 h-8" />
-                                        <span className="font-bold">مدیریت پروفایل</span>
-                                        <span className="text-xs font-normal">ویرایش اطلاعات و نمونه‌کار</span>
-                                    </Link>
-                                </Button>
-                                <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
-                                    <Link href="/agreements">
-                                        <Handshake className="w-8 h-8" />
-                                        <span className="font-bold">مدیریت توافق‌ها</span>
-                                         <span className="text-xs font-normal">تایید درخواست‌های مشتریان</span>
-                                    </Link>
-                                </Button>
-                               <Button asChild size="lg" className="h-auto py-4 flex flex-col gap-2">
-                                    <Link href="/inbox">
-                                       <Inbox className="w-8 h-8" />
-                                       <span className="font-bold">صندوق ورودی</span>
-                                        <span className="text-xs font-normal">مشاهده پیام‌های شما</span>
-                                    </Link>
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        )
-    }
 
     return (
         <div className="py-12 md:py-20 w-full">
@@ -182,14 +213,13 @@ export default function Home() {
     );
   }
   
-  // if user is a provider, show the provider dashboard directly on the main page.
-  if (isLoggedIn && user?.accountType === 'provider') {
-      return <UserDashboard />
+  if (isLoggedIn) {
+      return user?.accountType === 'provider' ? <ProviderDashboard /> : <CustomerDashboard />;
   }
 
   return (
     <div className="flex flex-col items-center justify-center">
-      {isLoggedIn ? <UserDashboard /> : <LandingPage />}
+       <LandingPage />
     </div>
   );
 }

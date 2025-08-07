@@ -254,80 +254,36 @@ export default function ProfilePage() {
   return (
     <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8 w-full">
       <Card>
-        <div className="grid md:grid-cols-3">
-          <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
-             <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-               {provider.profileImage && provider.profileImage.src ? (
-                  <Image
-                    src={provider.profileImage.src}
-                    alt={provider.name}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={provider.profileImage.aiHint}
-                  />
-                ) : (
-                   <div className="bg-muted w-full h-full flex items-center justify-center">
-                      <User className="w-16 h-16 text-muted-foreground" />
-                  </div>
-                )}
-            </div>
-             <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
-            <CardDescription className="text-lg">{provider.service}</CardDescription>
-
-             <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4 ml-2 text-accent" />
-                <span>{provider.location}</span>
-             </div>
-             <div className="mt-4 w-full space-y-4">
-                <div className="p-3 bg-muted/50 rounded-lg">
-                    <h4 className="text-sm font-bold text-muted-foreground">آمار عملکرد</h4>
-                    <div className="flex justify-around items-center mt-2">
-                         <div className="flex flex-col items-center">
-                            <StarRating rating={provider.rating} readOnly />
-                            <span className="text-xs text-muted-foreground mt-1">{provider.reviewsCount} نظر</span>
-                        </div>
-                         <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-1 font-bold text-lg text-primary">
-                                <Handshake className="w-5 h-5"/>
-                                <span>{provider.agreementsCount || 0}</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">توافق موفق</span>
-                        </div>
-                    </div>
-                </div>
-                <Button asChild className="w-full">
-                    <Link href={`/provider/${provider.phone}`}>
-                        <Eye className="w-4 h-4 ml-2" />
-                        مشاهده پروفایل عمومی
-                    </Link>
-                </Button>
-            </div>
-          </div>
-          <div className="md:col-span-2 p-6 flex flex-col">
-            <CardHeader className="p-0 pb-4">
-                <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 flex-grow space-y-6">
-                
-                {/* Edit Info Section */}
-                <div className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold">اطلاعات پایه</h3>
-                        {mode === 'viewing' ? (
-                            <Button onClick={() => setMode('editing')} variant="outline" size="sm">
-                                <Edit className="w-4 h-4 ml-2"/> ویرایش
-                            </Button>
+        <CardHeader>
+             <CardTitle className="font-headline text-2xl">مدیریت اطلاعات پایه</CardTitle>
+             <CardDescription>اطلاعاتی که مشتریان از شما می‌بینند را ویرایش کنید.</CardDescription>
+        </CardHeader>
+        <CardContent>
+             <div className="grid md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 flex flex-col items-center text-center">
+                    <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
+                        {provider.profileImage && provider.profileImage.src ? (
+                            <Image src={provider.profileImage.src} alt={provider.name} fill className="object-cover" data-ai-hint={provider.profileImage.aiHint} />
                         ) : (
-                            <div className="flex gap-2">
-                                <Button onClick={handleSaveChanges} size="sm">
-                                    <Save className="w-4 h-4 ml-2"/> ذخیره
-                                </Button>
-                                <Button onClick={handleCancelEdit} variant="ghost" size="sm">
-                                    <XCircle className="w-4 h-4 ml-2"/> لغو
-                                </Button>
+                            <div className="bg-muted w-full h-full flex items-center justify-center">
+                                <User className="w-16 h-16 text-muted-foreground" />
                             </div>
                         )}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                         <Button onClick={handleEditProfilePicClick} variant="outline" size="sm">
+                            <Camera className="w-4 h-4 ml-2" />
+                            تغییر عکس 
+                        </Button>
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" size="sm">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف عکس
+                        </Button>
+                         <input type="file" ref={profilePicInputRef} onChange={(e) => handleFileChange(e, handleProfilePictureChange)} className="hidden" accept="image/*" />
+                    </div>
+                </div>
+
+                <div className="md:col-span-2">
                      {mode === 'editing' ? (
                         <div className="space-y-4">
                              <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} placeholder="نام شما یا کسب و کارتان"/>
@@ -335,52 +291,82 @@ export default function ProfilePage() {
                              <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} placeholder="بیوگرافی کوتاه" className="text-base text-foreground/80 leading-relaxed" rows={4} />
                         </div>
                     ) : (
-                        <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-xl">{provider.name}</h3>
+                            <p className="text-muted-foreground">{provider.service}</p>
+                            <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
+                        </div>
                     )}
                 </div>
-
-                {/* Profile Picture Management */}
-                <div className="p-4 border rounded-lg">
-                    <h3 className="font-semibold mb-4">عکس پروفایل</h3>
-                    <div className="flex flex-wrap gap-2">
-                        <Button onClick={handleEditProfilePicClick} variant="outline" className="flex-1">
-                            <Camera className="w-4 h-4 ml-2" />
-                            تغییر عکس 
-                        </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="flex-1">
-                            <Trash2 className="w-4 h-4 ml-2" />
-                            حذف عکس
-                        </Button>
-                        <input
-                            type="file"
-                            ref={profilePicInputRef}
-                            onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                            className="hidden"
-                            accept="image/*"
-                        />
-                    </div>
-                </div>
-
-                {/* Portfolio Management */}
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-semibold mb-4">نمونه کارها</h3>
-                   <input 
-                    type="file" 
-                    ref={portfolioFileInputRef} 
-                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
-                        <PlusCircle className="w-5 h-5 ml-2" />
-                        افزودن نمونه کار جدید
-                   </Button>
-                   <p className="text-xs text-center text-muted-foreground mt-2">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کنید.</p>
-                </div>
-            </CardContent>
-          </div>
-        </div>
+            </div>
+        </CardContent>
+         <CardFooter className="flex justify-end gap-2 border-t pt-6">
+            {mode === 'viewing' ? (
+                <Button onClick={() => setMode('editing')}>
+                    <Edit className="w-4 h-4 ml-2"/> ویرایش اطلاعات
+                </Button>
+            ) : (
+                <>
+                    <Button onClick={handleSaveChanges}>
+                        <Save className="w-4 h-4 ml-2"/> ذخیره تغییرات
+                    </Button>
+                    <Button onClick={handleCancelEdit} variant="ghost">
+                        <XCircle className="w-4 h-4 ml-2"/> لغو
+                    </Button>
+                </>
+            )}
+        </CardFooter>
       </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle className="font-headline text-2xl">مدیریت نمونه کارها</CardTitle>
+            <CardDescription>نمونه‌کارهای خود را برای نمایش به مشتریان اضافه کنید. برای حذف، به پروفایل عمومی خود بروید.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                <PlusCircle className="w-5 h-5 ml-2" />
+                افزودن نمونه کار جدید
+            </Button>
+             <input type="file" ref={portfolioFileInputRef} onChange={(e) => handleFileChange(e, addPortfolioItem)} className="hidden" accept="image/*" />
+            
+             {provider.portfolio && provider.portfolio.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {provider.portfolio.map((item, index) => (
+                        <div className="w-full aspect-square overflow-hidden rounded-lg shadow-md relative" key={index}>
+                             <Image
+                                src={item.src}
+                                alt={`نمونه کار ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                data-ai-hint={item.aiHint}
+                            />
+                        </div>
+                    ))}
+                </div>
+             ) : (
+                <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                    <p>هنوز نمونه کاری اضافه نشده است.</p>
+                </div>
+             )}
+        </CardContent>
+      </Card>
+      
+       <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">پیش‌نمایش پروفایل عمومی</CardTitle>
+             <CardDescription>این همان صفحه‌ای است که مشتریان شما مشاهده خواهند کرد.</CardDescription>
+          </CardHeader>
+          <CardFooter>
+              <Button asChild className="w-full">
+                <Link href={`/provider/${provider.phone}`}>
+                    <Eye className="w-4 h-4 ml-2" />
+                    مشاهده پروفایل عمومی
+                </Link>
+            </Button>
+          </CardFooter>
+      </Card>
+
     </div>
   );
 }

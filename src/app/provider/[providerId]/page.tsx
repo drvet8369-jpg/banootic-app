@@ -36,6 +36,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 // Reusable Avatar components for ReviewCard
@@ -174,8 +175,6 @@ export default function ProviderProfilePage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -203,27 +202,20 @@ export default function ProviderProfilePage() {
   
   const isOwnerViewing = isLoggedIn && user && user.phone === provider?.phone;
 
-  const handleDeletePortfolioItem = () => {
-    if (itemToDelete === null || !provider) return;
+  const handleDeletePortfolioItem = (itemIndex: number) => {
+    if (!provider) return;
 
     const allProviders = getProviders();
     const providerIndex = allProviders.findIndex(p => p.phone === provider.phone);
     if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemToDelete);
+        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
         saveProviders(allProviders);
         loadData(); // Refresh data
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } else {
         toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
     }
-    setIsDeleteAlertOpen(false);
-    setItemToDelete(null);
   };
-
-  const openDeleteConfirmation = (index: number) => {
-    setItemToDelete(index);
-    setIsDeleteAlertOpen(true);
-  }
 
 
   const handleRequestAgreement = () => {
@@ -314,7 +306,6 @@ export default function ProviderProfilePage() {
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
                         <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
-                          <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
                                     <div className="group relative" key={`${provider.phone}-portfolio-${index}`}>
@@ -333,34 +324,36 @@ export default function ProviderProfilePage() {
                                             </div>
                                         </DialogTrigger>
                                         {isOwnerViewing && (
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            onClick={(e) => { 
-                                                e.stopPropagation();
-                                                openDeleteConfirmation(index);
-                                            }}
-                                            aria-label={`حذف نمونه کار ${index + 1}`}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                    onClick={(e) => { e.stopPropagation(); }}
+                                                    aria-label={`حذف نمونه کار ${index + 1}`}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>تایید حذف</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                    آیا از حذف این نمونه کار مطمئنید؟ این عمل غیرقابل بازگشت است.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>لغو</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeletePortfolioItem(index)}>حذف</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                         )}
                                     </div>
                                 ))}
                             </div>
-                           <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>تایید حذف</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  آیا از حذف این نمونه کار مطمئنید؟ این عمل غیرقابل بازگشت است.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setItemToDelete(null)}>لغو</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeletePortfolioItem}>حذف</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
+                           
                             <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
                                 <DialogHeader className="sr-only">
                                   <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
@@ -380,7 +373,6 @@ export default function ProviderProfilePage() {
                                     </div>
                                 )}
                             </DialogContent>
-                          </AlertDialog>
                         </Dialog>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
