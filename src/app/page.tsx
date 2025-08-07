@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { categories } from '@/lib/storage';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift, UserRound, Inbox, Eye } from 'lucide-react';
 import dynamic from 'next/dynamic';
