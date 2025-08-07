@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -41,6 +41,8 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
+       <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
+       <SheetDescription className="sr-only">گزینه های اصلی برای ناوبری در سایت، ورود، ثبت نام و دسترسی به پروفایل.</SheetDescription>
       <div className="p-4 border-b">
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
