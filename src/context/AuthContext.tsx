@@ -21,6 +21,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'honarbanoo-user';
+const BROADCAST_CHANNEL_NAME = 'honarbanoo-channel';
+let authChannel: BroadcastChannel | null = null;
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -45,19 +48,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   useEffect(() => {
+    // Initial load
     syncLoginState();
     
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === USER_STORAGE_KEY) {
-        syncLoginState();
-      }
-    };
+    // Create and listen to the broadcast channel
+    if (typeof BroadcastChannel !== 'undefined') {
+        authChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === 'auth_update') {
+                syncLoginState();
+            }
+        };
+        authChannel.addEventListener('message', handleMessage);
 
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+        return () => {
+            authChannel?.removeEventListener('message', handleMessage);
+            authChannel?.close();
+            authChannel = null;
+        };
+    }
   }, [syncLoginState]);
 
   const login = (userData: User) => {
@@ -74,6 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
       setUser(userToSave);
+      authChannel?.postMessage({ type: 'auth_update' });
       
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -84,12 +94,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
+      authChannel?.postMessage({ type: 'auth_update' });
       
-      // Navigate to home for a clean user experience.
       if (window.location.pathname !== '/') {
         router.push('/');
       } else {
-        // If already on the home page, force a reload to ensure all state is reset.
         window.location.reload();
       }
 

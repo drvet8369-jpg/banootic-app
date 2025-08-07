@@ -46,6 +46,10 @@ interface StorageContextType {
 
 const StorageContext = createContext<StorageContextType | undefined>(undefined);
 
+const BROADCAST_CHANNEL_NAME = 'honarbanoo-channel';
+let storageChannel: BroadcastChannel | null = null;
+
+
 export const StorageProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [providers, setProvidersState] = useState<Provider[]>([]);
@@ -54,7 +58,6 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
   const [inboxData, setInboxDataState] = useState<Record<string, any>>({});
   const [isStorageLoading, setIsStorageLoading] = useState(true);
 
-  // Unified load and sync function
   const loadAllDataFromStorage = useCallback(() => {
     try {
       const providersData = getProvidersFromStorage();
@@ -74,22 +77,29 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Initial load and setup listener for storage changes across tabs
   useEffect(() => {
     loadAllDataFromStorage();
     
-    const handleStorageChange = (e: StorageEvent) => {
-      // Check if any of our keys changed
-      if (['honarbanoo-providers', 'honarbanoo-reviews', 'honarbanoo-agreements', 'honarbanoo_inbox_chats'].includes(e.key || '') || e.key?.startsWith('honarbanoo_chat_')) {
-          loadAllDataFromStorage();
-      }
-    };
+    if (typeof BroadcastChannel !== 'undefined') {
+        storageChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === 'storage_update') {
+                loadAllDataFromStorage();
+            }
+        };
+        storageChannel.addEventListener('message', handleMessage);
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+        return () => {
+            storageChannel?.removeEventListener('message', handleMessage);
+            storageChannel?.close();
+            storageChannel = null;
+        };
+    }
   }, [loadAllDataFromStorage]);
+  
+  const broadcastStorageUpdate = () => {
+      storageChannel?.postMessage({ type: 'storage_update' });
+  };
   
   const getProviderByPhone = useCallback((phone: string) => providers.find(p => p.phone === phone), [providers]);
   
@@ -97,6 +107,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
     const newState = [...providers, provider];
     saveProviders(newState);
     setProvidersState(newState);
+    broadcastStorageUpdate();
   }, [providers]);
 
   const updateProviderData = useCallback((phone: string, updateFn: (provider: Provider) => void) => {
@@ -106,6 +117,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
         updateFn(newState[index]);
         saveProviders(newState);
         setProvidersState(newState);
+        broadcastStorageUpdate();
         return true;
     }
     return false;
@@ -126,6 +138,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
         p.reviewsCount = providerReviews.length;
         p.rating = parseFloat((totalRating / p.reviewsCount).toFixed(1));
     });
+    // The updateProviderData function already broadcasts, so no need to call it again here.
   }, [reviews, updateProviderData]);
 
   const getAgreementsForProvider = useCallback((providerPhone: string) => {
@@ -140,6 +153,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
       const newAgreements = [...agreements, agreement];
       saveAgreements(newAgreements);
       setAgreementsState(newAgreements);
+      broadcastStorageUpdate();
   }, [agreements]);
   
   const updateAgreementStatus = useCallback((agreementId: string, status: 'confirmed') => {
@@ -154,6 +168,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
         updateProviderData(providerPhone, p => {
             p.agreementsCount = (p.agreementsCount || 0) + 1;
         });
+        // The updateProviderData function already broadcasts.
     }
   }, [agreements, updateProviderData]);
 
@@ -181,10 +196,10 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
         newInboxData[chatId].lastMessage = newText;
         saveInboxData(newInboxData);
         setInboxDataState(newInboxData);
+        broadcastStorageUpdate();
       }
     }
-    // Manually trigger a storage event for the current tab to react
-    window.dispatchEvent(new StorageEvent('storage', { key: `honarbanoo_chat_${chatId}` }));
+    broadcastStorageUpdate();
   }, []);
 
   const saveMessage = useCallback((chatId: string, message: Message, receiverPhone: string, receiverName: string) => {
@@ -219,9 +234,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
       newInboxData[chatId] = currentChat;
       saveInboxData(newInboxData);
       setInboxDataState(newInboxData);
-      // Manually trigger a storage event for the current tab to react
-      window.dispatchEvent(new StorageEvent('storage', { key: 'honarbanoo_inbox_chats' }));
-
+      broadcastStorageUpdate();
   }, [user]);
 
   const markChatAsRead = useCallback((chatId: string, userPhone: string) => {
@@ -231,8 +244,7 @@ export const StorageProvider = ({ children }: { children: ReactNode }) => {
               newInboxData[chatId].participants[userPhone].unreadCount = 0;
               saveInboxData(newInboxData);
               setInboxDataState(newInboxData);
-              // Manually trigger a storage event for the current tab to react
-              window.dispatchEvent(new StorageEvent('storage', { key: 'honarbanoo_inbox_chats' }));
+              broadcastStorageUpdate();
           }
       }
   }, []);
