@@ -55,7 +55,7 @@ const ProviderDashboard = () => {
     if (!user) return null;
 
     return (
-        <div className="py-12 md:py-16 max-w-2xl mx-auto">
+        <div className="py-12 md:py-16 w-full"> 
              <Card className="w-full shadow-lg">
                 <CardHeader className="text-center">
                     <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
@@ -106,7 +106,7 @@ const CustomerDashboard = () => {
     if (!user) return null;
 
     return (
-        <div className="py-12 md:py-16 max-w-2xl mx-auto">
+        <div className="py-12 md:py-16 w-full">
             <Card className="w-full shadow-lg">
                 <CardHeader className="text-center">
                     <CardTitle className="font-headline text-3xl">داشبورد مشتری</CardTitle>
