@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, CheckCircle, Handshake, MapPin } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, CheckCircle, Handshake, MapPin, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -378,5 +378,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-
-    
