@@ -3,9 +3,9 @@
 
 import Link from 'next/link';
 import { categories } from '@/lib/storage';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, Edit, FileText, Search, UserRound } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, UserRound, FileText, Search } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
@@ -65,22 +65,22 @@ const ProviderDashboard = () => {
                     </div>
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    <Button asChild variant="outline" className="text-primary-foreground hover:bg-primary/20 border-primary/30 h-14 bg-primary/10">
+                     <Button asChild variant="outline" className="text-primary-foreground font-bold hover:bg-primary/20 border-primary/30 h-14 bg-primary/10">
                         <Link href="/profile">
                             <UserRound className="w-5 h-5 ml-2" />
-                            <span className="font-bold">پروفایل و نمونه‌کار</span>
+                            <span>پروفایل و نمونه‌کار</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="text-primary-foreground hover:bg-primary/20 border-primary/30 h-14 bg-primary/10">
+                     <Button asChild variant="outline" className="text-primary-foreground font-bold hover:bg-primary/20 border-primary/30 h-14 bg-primary/10">
                         <Link href="/agreements">
                             <Handshake className="w-5 h-5 ml-2" />
-                             <span className="font-bold">مدیریت توافق‌ها</span>
+                             <span>مدیریت توافق‌ها</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="text-primary-foreground hover:bg-primary/20 border-primary/30 h-14 bg-primary/10">
+                     <Button asChild variant="outline" className="text-primary-foreground font-bold hover:bg-primary/20 border-primary/30 h-14 bg-primary/10">
                         <Link href="/inbox">
                             <Inbox className="w-5 h-5 ml-2" />
-                             <span className="font-bold">صندوق ورودی</span>
+                             <span>صندوق ورودی</span>
                         </Link>
                     </Button>
                 </CardFooter>
@@ -98,11 +98,11 @@ const CustomerDashboard = () => {
         <div className="w-full py-12 md:py-16">
             <Card className="w-full shadow-lg">
                 <CardHeader className="text-center">
-                    <CardTitle className="font-headline text-3xl">داشبورد مشتری</CardTitle>
+                    <CardTitle className="font-headline text-2xl">داشبورد مشتری</CardTitle>
                     <CardDescription>خوش آمدید، {user.name}!</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border-y">
-                    <Button asChild variant="outline" className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-20 text-base sm:text-lg">
+                     <Button asChild variant="outline" className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-20 text-base sm:text-lg">
                         <Link href="/requests">
                             <FileText className="w-5 h-5 ml-3" />
                             <span className="font-semibold">درخواست‌های من</span>
