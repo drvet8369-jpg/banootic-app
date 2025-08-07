@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/storage';
+import { useStorage } from '@/context/StorageContext';
 import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -67,8 +67,9 @@ const ReviewCard = ({ review }: { review: Review }) => {
 };
 
 // Review Form Component
-const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: () => void }) => {
+const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
+  const { addReview } = useStorage();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -86,39 +87,23 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
     }
     setIsSubmitting(true);
 
-    // Simulate API call
     setTimeout(() => {
-        const allReviews = getReviews();
         const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
+          id: Date.now().toString(),
+          providerId: providerPhone,
+          authorName: user.name,
+          rating,
+          comment,
+          createdAt: new Date().toISOString(),
         };
 
-        const updatedReviews = [...allReviews, newReview];
-        saveReviews(updatedReviews);
-
-        // Recalculate provider's average rating
-        const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.phone === providerId);
-        if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
-            
-            allProviders[providerIndex].rating = newAverageRating;
-            allProviders[providerIndex].reviewsCount = providerReviews.length;
-            saveProviders(allProviders);
-        }
-
+        addReview(newReview);
+        
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
         setIsSubmitting(false);
-        onSubmit(); // Callback to trigger data refresh in parent
+        onSubmit();
     }, 1000);
   };
   
@@ -168,41 +153,28 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isAuthLoading } = useAuth();
+  const { getProviderByPhone, getReviewsForProvider, isStorageLoading, addAgreement } = useStorage();
   const router = useRouter();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
 
   const loadData = useCallback(() => {
-    const allProviders = getProviders();
-    const foundProvider = allProviders.find(p => p.phone === providerPhone);
-    
+    const foundProvider = getProviderByPhone(providerPhone);
+    setProvider(foundProvider || null);
     if (foundProvider) {
-      setProvider(foundProvider);
-      const allReviews = getReviews();
-      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.phone)
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setReviews(providerReviews);
-    } else {
-      setProvider(null);
+      setReviews(getReviewsForProvider(foundProvider.phone));
     }
-    
-    setIsLoading(false);
-  }, [providerPhone]);
+  }, [providerPhone, getProviderByPhone, getReviewsForProvider]);
 
   useEffect(() => {
-    setIsLoading(true);
-    loadData();
-    window.addEventListener('focus', loadData);
-    return () => {
-      setSelectedImage(null);
-      window.removeEventListener('focus', loadData);
+    if (!isStorageLoading) {
+      loadData();
     }
-  }, [loadData]);
+  }, [isStorageLoading, loadData]);
   
   const handleRequestAgreement = () => {
     if (!isLoggedIn || !user || !provider) {
@@ -213,17 +185,16 @@ export default function ProviderProfilePage() {
     setIsRequesting(true);
 
     setTimeout(() => {
-        const allAgreements = getAgreements();
         const newAgreement: Agreement = {
             id: Date.now().toString(),
             providerPhone: provider.phone,
-            providerName: provider.name, // Ensure provider name is saved
+            providerName: provider.name,
             customerPhone: user.phone,
             customerName: user.name,
             status: 'pending',
             requestedAt: new Date().toISOString()
         };
-        saveAgreements([...allAgreements, newAgreement]);
+        addAgreement(newAgreement);
         setIsRequesting(false);
         toast({title: "موفق", description: "درخواست توافق شما با موفقیت برای هنرمند ارسال شد."});
         router.push('/requests');
@@ -232,8 +203,7 @@ export default function ProviderProfilePage() {
 
   const isOwnerViewing = user && user.phone === provider?.phone;
 
-
-  if (isLoading) {
+  if (isStorageLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -369,7 +339,7 @@ export default function ProviderProfilePage() {
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.phone} onSubmit={loadData} />
+                    <ReviewForm providerPhone={provider.phone} onSubmit={loadData} />
                 </div>
             </Card>
         </div>

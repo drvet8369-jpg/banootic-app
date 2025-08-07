@@ -1,21 +1,20 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useStorage } from '@/context/StorageContext';
 
 // Ladder Ranking Algorithm
 const calculateScore = (provider: Provider): number => {
     const ratingWeight = 0.3;
-    const reviewsWeight = 0.5; // Increased weight for reviews
+    const reviewsWeight = 0.5;
     const agreementsWeight = 0.2;
 
-    const normalizedRating = (provider.rating || 0) / 5; // Normalize rating to be between 0 and 1
+    const normalizedRating = (provider.rating || 0) / 5;
     
-    // Removed Math.log1p to give a linear and stronger weight to raw counts
     const score = (normalizedRating * ratingWeight) + 
                   ((provider.reviewsCount || 0) * reviewsWeight) + 
                   ((provider.agreementsCount || 0) * agreementsWeight);
@@ -27,39 +26,22 @@ const calculateScore = (provider: Provider): number => {
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [searchResults, setSearchResults] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const performSearch = useCallback(() => {
-    setIsLoading(true);
-    const allProviders = getProviders();
-
-    let filteredProviders = allProviders;
+  const { providers, isStorageLoading } = useStorage();
+  
+  const searchResults = useMemo(() => {
+    let filteredProviders = providers;
 
     if (query) {
         const lowercasedQuery = query.toLowerCase();
-        filteredProviders = allProviders.filter(provider => 
+        filteredProviders = providers.filter(provider => 
           provider.name.toLowerCase().includes(lowercasedQuery) ||
           provider.service.toLowerCase().includes(lowercasedQuery) ||
           (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
         );
     }
     
-    // Sort providers based on the ladder score
-    const sortedProviders = filteredProviders.sort((a, b) => calculateScore(b) - calculateScore(a));
-
-    setSearchResults(sortedProviders);
-    setIsLoading(false);
-  }, [query]);
-
-  useEffect(() => {
-    performSearch();
-
-    window.addEventListener('focus', performSearch);
-    return () => {
-      window.removeEventListener('focus', performSearch);
-    };
-  }, [performSearch]);
+    return filteredProviders.sort((a, b) => calculateScore(b) - calculateScore(a));
+  }, [providers, query]);
 
 
   return (
@@ -77,7 +59,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {isStorageLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>

@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-
 export interface Category {
   id: number;
   name: string;
@@ -43,10 +41,11 @@ export interface Review {
 }
 
 export interface Message {
+  id: string;
   text: string;
   senderId: string;
-  receiverId?: string;
-  createdAt: Timestamp;
+  createdAt: string; // Using ISO string for localStorage
+  isEdited?: boolean;
 }
 
 export interface Agreement {

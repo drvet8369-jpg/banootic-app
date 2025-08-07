@@ -1,61 +1,32 @@
 'use client';
 
-import { services, categories, getProviders } from '@/lib/storage';
+import { services, categories } from '@/lib/storage';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useCallback } from 'react';
+import { useMemo } from 'react';
 import SearchResultCard from '@/components/search-result-card';
+import { useStorage } from '@/context/StorageContext';
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
+  const { providers, isStorageLoading } = useStorage();
 
-  const [service, setService] = useState<Service | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
+  const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
 
-  // This logic is now wrapped in a useCallback to ensure it's stable
-  // and correctly re-fetches data whenever the URL slugs change.
-  const loadData = useCallback(() => {
-    setIsLoading(true);
+  const serviceProviders = useMemo(() => {
+    if (!service) return [];
+    return providers.filter((p) => p.serviceSlug === service.slug);
+  }, [providers, service]);
 
-    const foundCategory = categories.find((c) => c.slug === categorySlug);
-    const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
-    
-    setCategory(foundCategory || null);
-    setService(foundService || null);
-      
-    if (foundCategory && foundService) {
-      // Always get the latest providers from localStorage inside the function
-      const allProviders = getProviders();
-      // Correctly filter providers based on the serviceSlug from the URL.
-      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-      setServiceProviders(foundProviders);
-    } else {
-      setServiceProviders([]);
-    }
-    
-    setIsLoading(false);
-  }, [categorySlug, serviceSlug]);
 
-  // useEffect now has a stable dependency and will re-run correctly
-  // every time the user navigates to a new service page or revisits the tab.
-  useEffect(() => {
-    loadData();
-
-    window.addEventListener('focus', loadData);
-    return () => {
-      window.removeEventListener('focus', loadData);
-    };
-  }, [loadData]);
-
-  if (isLoading) {
+  if (isStorageLoading) {
     return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
         </div>

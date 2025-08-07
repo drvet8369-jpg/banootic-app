@@ -1,17 +1,14 @@
 'use client';
 
-import type { Metadata } from 'next';
-import { Vazirmatn } from 'next/font/google';
 import './globals.css';
+import { Vazirmatn } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname } from 'next/navigation';
+import { AuthProvider } from '@/context/AuthContext';
+import { StorageProvider } from '@/context/StorageContext';
+import AppContent from '@/components/layout/AppContent';
 
-const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
-const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
-const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
-const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
 const vazirmatn = Vazirmatn({
@@ -19,33 +16,6 @@ const vazirmatn = Vazirmatn({
   display: 'swap',
   variable: '--font-sans',
 });
-
-// export const metadata: Metadata = {
-//   title: 'بانوتیک',
-//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
-//   manifest: '/manifest.json',
-// };
-
-function AppBody({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox', '/requests', '/agreements'];
-  const isChatPage = pathname.startsWith('/chat/');
-  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !isChatPage;
-
-  return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      {shouldShowSearchBar && <SearchBar />}
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-        {children}
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
-const DynamicAppBody = dynamic(() => Promise.resolve(AppBody), { ssr: false });
-
 
 export default function RootLayout({
   children,
@@ -64,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>بانوتیک</title>
+          <title>هنربانو</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#B5E2BF" />
@@ -76,8 +46,10 @@ export default function RootLayout({
         )}
       >
         <AuthProvider>
-          <DynamicAppBody>{children}</DynamicAppBody>
-          <Toaster />
+          <StorageProvider>
+            <AppContent>{children}</AppContent>
+            <Toaster />
+          </StorageProvider>
         </AuthProvider>
       </body>
     </html>

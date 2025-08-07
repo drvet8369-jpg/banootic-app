@@ -20,26 +20,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'banootik-user';
-const CLEANUP_FLAG_V5 = 'banootik-cleanup-v5-final-fix';
-
-const performOneTimeCleanup = () => {
-    if (typeof window !== 'undefined') {
-        if (!localStorage.getItem(CLEANUP_FLAG_V5)) {
-            console.log("Performing one-time cleanup v5...");
-            // Remove old, potentially corrupted keys
-            localStorage.removeItem('honarbanoo-providers');
-            localStorage.removeItem('honarbanoo-user');
-            localStorage.removeItem('banootik-users'); // Remove the flawed user list
-            localStorage.removeItem(USER_STORAGE_KEY); // Log out any logged-in user to force a fresh login
-            
-            localStorage.setItem(CLEANUP_FLAG_V5, 'true');
-            console.log("Cleanup v5 complete.");
-        }
-    }
-};
-performOneTimeCleanup();
-
+const USER_STORAGE_KEY = 'honarbanoo-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -73,12 +54,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', syncLoginState);
-
-
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', syncLoginState);
     };
   }, [syncLoginState]);
 

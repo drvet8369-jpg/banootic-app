@@ -11,7 +11,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviders, saveProviders } from '@/lib/storage';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -25,9 +24,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useStorage } from '@/context/StorageContext';
 
 export default function ProfilePage() {
   const { user, isLoggedIn, isAuthLoading } = useAuth();
+  const { getProviderByPhone, updateProviderData } = useStorage();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -40,9 +41,7 @@ export default function ProfilePage() {
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
-        const allProviders = getProviders();
-        let currentProvider = allProviders.find(p => p.phone === user.phone);
-        
+        const currentProvider = getProviderByPhone(user.phone);
         if (currentProvider) {
             setProvider(currentProvider);
             setEditedData({
@@ -53,7 +52,7 @@ export default function ProfilePage() {
         }
     }
     setIsLoading(false);
-  }, [user]);
+  }, [user, getProviderByPhone]);
 
   useEffect(() => {
     if (isAuthLoading) return;
@@ -68,12 +67,13 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
+    if(!user) return;
     if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
 
-    let success = updateProviderData((p) => {
+    const success = updateProviderData(user.phone, (p) => {
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
@@ -139,23 +139,9 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
-  const updateProviderData = (updateFn: (provider: Provider) => void) => {
-    if (!user) return false;
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex((p: Provider) => p.phone === user.phone);
-
-    if (providerIndex > -1) {
-      updateFn(allProviders[providerIndex]);
-      saveProviders(allProviders);
-      // After saving, reload data into state
-      loadProviderData();
-      return true;
-    }
-    return false;
-  }
-
   const addPortfolioItem = (imageSrc: string) => {
-    const success = updateProviderData((p) => {
+    if(!user) return;
+    const success = updateProviderData(user.phone, (p) => {
       if (!p.portfolio) p.portfolio = [];
       p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
     });
@@ -167,7 +153,8 @@ export default function ProfilePage() {
   };
   
   const handleProfilePictureChange = (newImageSrc: string) => {
-      const success = updateProviderData((p) => {
+      if(!user) return;
+      const success = updateProviderData(user.phone, (p) => {
         if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
         p.profileImage.src = newImageSrc;
       });
@@ -179,7 +166,8 @@ export default function ProfilePage() {
   }
 
   const handleDeleteProfilePicture = () => {
-    const success = updateProviderData((p) => {
+    if(!user) return;
+    const success = updateProviderData(user.phone, (p) => {
       if (p.profileImage) p.profileImage.src = '';
     });
     if (success) {
@@ -190,7 +178,8 @@ export default function ProfilePage() {
   };
 
   const deletePortfolioItem = (itemIndex: number) => {
-    const success = updateProviderData((p) => {
+    if(!user) return;
+    const success = updateProviderData(user.phone, (p) => {
       p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
     });
      if (success) {

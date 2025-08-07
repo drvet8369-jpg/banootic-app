@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getAgreements, saveAgreements, getProviders, saveProviders } from '@/lib/storage';
+import { useStorage } from '@/context/StorageContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,58 +14,26 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function AgreementsPage() {
   const { user, isLoggedIn, isAuthLoading } = useAuth();
+  const { agreements, updateAgreementStatus, getAgreementsForProvider, isStorageLoading } = useStorage();
   const { toast } = useToast();
-  const [agreements, setAgreements] = useState<Agreement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [providerAgreements, setProviderAgreements] = useState<Agreement[]>([]);
   const [isClient, setIsClient] = useState(false);
 
-  const loadAgreements = useCallback(() => {
-    if (!user || user.accountType !== 'provider') {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const allAgreements = getAgreements();
-    const providerAgreements = allAgreements
-      .filter(a => a.providerPhone === user.phone)
-      .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-    setAgreements(providerAgreements);
-    setIsLoading(false);
-  }, [user]);
-  
   useEffect(() => {
     setIsClient(true);
-    if(isAuthLoading) return;
-    loadAgreements();
-  }, [loadAgreements, isAuthLoading]);
+  }, []);
+
+  useEffect(() => {
+    if (isAuthLoading || isStorageLoading || !user || user.accountType !== 'provider') return;
+    setProviderAgreements(getAgreementsForProvider(user.phone));
+  }, [isAuthLoading, isStorageLoading, user, agreements, getAgreementsForProvider]);
 
   const handleConfirmAgreement = (agreementId: string) => {
-    const allAgreements = getAgreements();
-    const agreementIndex = allAgreements.findIndex(a => a.id === agreementId);
-    
-    if (agreementIndex === -1) {
-      toast({ title: 'خطا', description: 'این توافق یافت نشد.', variant: 'destructive' });
-      return;
-    }
-    
-    // Update agreement status
-    allAgreements[agreementIndex].status = 'confirmed';
-    saveAgreements(allAgreements);
-
-    // Update provider's agreement count
-    const providerPhone = allAgreements[agreementIndex].providerPhone;
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.phone === providerPhone);
-    if (providerIndex > -1) {
-      allProviders[providerIndex].agreementsCount = (allProviders[providerIndex].agreementsCount || 0) + 1;
-      saveProviders(allProviders);
-    }
-    
+    updateAgreementStatus(agreementId, 'confirmed');
     toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
-    loadAgreements(); // Refresh the list
   };
   
-  if (isAuthLoading) {
+  if (isAuthLoading || isStorageLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -98,17 +66,9 @@ export default function AgreementsPage() {
       </div>
     );
   }
-  
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20 flex-grow">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    )
-  }
 
-  const pendingAgreements = agreements.filter(a => a.status === 'pending');
-  const confirmedAgreements = agreements.filter(a => a.status === 'confirmed');
+  const pendingAgreements = providerAgreements.filter(a => a.status === 'pending');
+  const confirmedAgreements = providerAgreements.filter(a => a.status === 'confirmed');
 
   return (
     <div className="max-w-4xl mx-auto py-12">
@@ -120,7 +80,7 @@ export default function AgreementsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {agreements.length === 0 ? (
+          {providerAgreements.length === 0 ? (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
                 <Handshake className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-bold text-xl">هیچ درخواست توافقی وجود ندارد</h3>
@@ -139,9 +99,11 @@ export default function AgreementsPage() {
                                     <div>
                                         <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
                                         <p className="text-sm text-muted-foreground">شماره تماس: {agreement.customerPhone}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {isClient && formatDistanceToNow(new Date(agreement.requestedAt), { addSuffix: true, locale: faIR })}
-                                        </p>
+                                        {isClient && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {formatDistanceToNow(new Date(agreement.requestedAt), { addSuffix: true, locale: faIR })}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex gap-2 mt-4 sm:mt-0">
                                       <Button onClick={() => handleConfirmAgreement(agreement.id)}>
@@ -166,9 +128,11 @@ export default function AgreementsPage() {
                                 <div key={agreement.id} className="flex items-center justify-between p-4 border rounded-lg opacity-70">
                                     <div>
                                         <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            تایید شده در: {isClient && new Date(agreement.requestedAt).toLocaleDateString('fa-IR')}
-                                        </p>
+                                        {isClient && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                تایید شده در: {new Date(agreement.requestedAt).toLocaleDateString('fa-IR')}
+                                            </p>
+                                        )}
                                     </div>
                                      <Check className="w-5 h-5 text-green-600" />
                                 </div>

@@ -23,9 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/storage';
+import { categories, services } from '@/lib/storage';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
+import { useStorage } from '@/context/StorageContext';
 import type { User } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 
@@ -66,6 +67,7 @@ export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
   const { login } = useAuth();
+  const { providers, addProvider } = useStorage();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -84,12 +86,9 @@ export default function RegisterForm() {
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const allProviders = getProviders();
-
-      // Universal check for existing phone number among providers
+      
       if (values.accountType === 'provider') {
-        const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+        const existingProviderByPhone = providers.find(p => p.phone === values.phone);
         if (existingProviderByPhone) {
           toast({
             title: 'خطا در ثبت‌نام',
@@ -99,11 +98,8 @@ export default function RegisterForm() {
           setIsLoading(false);
           return;
         }
-      }
 
-      // Check for existing provider by business name, only if registering as a provider
-      if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        const existingProviderByName = providers.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
             toast({
                 title: 'خطا در ثبت‌نام',
@@ -115,15 +111,12 @@ export default function RegisterForm() {
         }
       }
 
-
-      // This is the user object for the AuthContext
       const userToLogin: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
 
-      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
@@ -132,7 +125,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
+          location: 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -142,8 +135,7 @@ export default function RegisterForm() {
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
-        
-        saveProviders([...allProviders, newProvider]);
+        addProvider(newProvider);
       }
       
       login(userToLogin);
@@ -153,8 +145,7 @@ export default function RegisterForm() {
         description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
-      const destination = values.accountType === 'provider' ? '/' : '/';
-      router.push(destination);
+      router.push('/');
 
     } catch (error) {
          console.error("Registration failed:", error);

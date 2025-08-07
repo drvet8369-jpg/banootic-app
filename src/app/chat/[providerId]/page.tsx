@@ -1,7 +1,5 @@
 'use client';
 
-import { getProviders } from '@/lib/storage';
-import { getChatMessages, saveChatMessages, getInboxData, saveInboxData } from '@/lib/storage';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,17 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Provider } from '@/lib/types';
-import Image from 'next/image';
+import type { Message } from '@/lib/types';
+import { useStorage } from '@/context/StorageContext';
 
-
-interface Message {
-  id: string;
-  text: string;
-  senderId: string;
-  createdAt: string; // Using ISO string for localStorage
-  isEdited?: boolean;
-}
 
 interface OtherPersonDetails {
     id: string | number;
@@ -31,15 +21,22 @@ interface OtherPersonDetails {
     profileImage?: { src: string; aiHint?: string };
 }
 
-
 export default function ChatPage() {
   const params = useParams();
   const otherPersonIdOrProviderId = params.providerId as string;
   const { user, isLoggedIn, isAuthLoading } = useAuth();
+  const {
+    getChatMessages,
+    getOtherPersonDetails,
+    markChatAsRead,
+    updateMessage,
+    saveMessage,
+    isStorageLoading,
+    inboxData
+  } = useStorage();
   const { toast } = useToast();
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -66,25 +63,26 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+  
+  // This effect will re-run whenever the messages from the context change
+  useEffect(() => {
+    if (!isLoggedIn || !user) return;
+    const chatId = getChatId(user.phone, otherPersonIdOrProviderId);
+    if (chatId) {
+        setMessages(getChatMessages(chatId));
+    }
+  }, [getChatMessages, isLoggedIn, user, otherPersonIdOrProviderId, inboxData]); // Listen to inboxData as well
+
 
   useEffect(() => {
-    if (isAuthLoading) return; // Wait for auth state to be confirmed
+    if (isAuthLoading || isStorageLoading) return;
 
     if (!isLoggedIn || !user) {
         setIsLoading(false);
         return;
     }
 
-    let details: OtherPersonDetails | null = null;
-    const allProviders = getProviders();
-    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
-    
-    if (provider) {
-      details = { ...provider, id: provider.phone };
-    } else {
-      const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
-    }
+    const details = getOtherPersonDetails(otherPersonIdOrProviderId);
     
     if (!details) {
         toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
@@ -95,22 +93,15 @@ export default function ChatPage() {
     
     const chatId = getChatId(user.phone, details.phone);
     if (chatId) {
-      const storedMessages = getChatMessages(chatId);
-      setMessages(storedMessages);
-
-      // Mark messages as read when chat is opened
-      const allChats = getInboxData();
-      if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-          allChats[chatId].participants[user.phone].unreadCount = 0;
-          saveInboxData(allChats);
-      }
+      setMessages(getChatMessages(chatId));
+      markChatAsRead(chatId, user.phone);
     }
     
     setIsLoading(false);
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId, isAuthLoading]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId, isAuthLoading, isStorageLoading, getOtherPersonDetails, getChatMessages, markChatAsRead]);
 
-  if (isAuthLoading) {
+  if (isAuthLoading || isLoading || isStorageLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -132,15 +123,6 @@ export default function ChatPage() {
     );
   }
   
-  if (isLoading) {
-     return (
-        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
-        </div>
-    );
-  }
-  
   const handleStartEdit = (message: Message) => {
     setEditingMessageId(message.id);
     setEditingText(message.text);
@@ -156,30 +138,12 @@ export default function ChatPage() {
 
     const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (!chatId) return;
-
-    const updatedMessages = messages.map(msg => {
-      if (msg.id === editingMessageId) {
-        return { ...msg, text: editingText.trim(), isEdited: true };
-      }
-      return msg;
-    });
-
-    setMessages(updatedMessages);
-    saveChatMessages(chatId, updatedMessages);
-
-    const lastMessage = updatedMessages[updatedMessages.length - 1];
-    if (lastMessage.id === editingMessageId) {
-        const allChats = getInboxData();
-        if (allChats[chatId]) {
-            allChats[chatId].lastMessage = editingText.trim();
-            saveInboxData(allChats);
-        }
-    }
+    
+    updateMessage(chatId, editingMessageId, editingText.trim());
 
     handleCancelEdit();
     toast({ title: 'پیام ویرایش شد.' });
   };
-
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -195,47 +159,12 @@ export default function ChatPage() {
       createdAt: new Date().toISOString(),
     };
     
-    const updatedMessages = [...messages, tempUiMessage];
-    setMessages(updatedMessages);
-    setNewMessage('');
-
     const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (chatId) {
-        try {
-            const allChats = getInboxData();
-            const currentChat = allChats[chatId] || {
-                id: chatId,
-                members: [user.phone, otherPersonDetails.phone],
-                participants: {
-                    [user.phone]: { name: user.name, unreadCount: 0 },
-                    [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
-                }
-            };
-            
-            currentChat.lastMessage = text;
-            currentChat.updatedAt = new Date().toISOString();
-
-            const receiverPhone = otherPersonDetails.phone;
-            if (currentChat.participants[receiverPhone]) {
-                currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
-            } else {
-                 currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
-            }
-
-            if (!currentChat.participants[user.phone]) {
-                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
-            }
-
-            allChats[chatId] = currentChat;
-            
-            saveChatMessages(chatId, updatedMessages);
-            saveInboxData(allChats);
-        } catch(e) {
-            console.error("Failed to save to localStorage", e);
-            toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
-        }
+      saveMessage(chatId, tempUiMessage, otherPersonDetails.phone, otherPersonDetails.name);
     }
    
+    setNewMessage('');
     setTimeout(() => {
         setIsSending(false);
     }, 500);
@@ -243,14 +172,8 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    try {
-      const allChatsData = getInboxData();
-      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
-      if (userChats.length > 0) return '/inbox';
-    } catch (e) { /* ignore */ }
     return '/'; 
   }
-
 
   return (
     <div className="flex flex-col h-full py-4">
@@ -273,7 +196,7 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {messages.length === 0 && !isLoading && (
+            {messages.length === 0 && (
               <div className="text-center text-muted-foreground p-8">
                 <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
                 <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
@@ -349,9 +272,9 @@ export default function ChatPage() {
                 className="flex-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || isLoading || !!editingMessageId}
+                disabled={isSending || !!editingMessageId}
               />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !!editingMessageId}>
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || !!editingMessageId}>
                   {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
               </Button>
           </form>

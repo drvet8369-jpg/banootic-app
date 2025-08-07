@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getAgreements } from '@/lib/storage';
+import { useStorage } from '@/context/StorageContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,38 +14,20 @@ import { Badge } from '@/components/ui/badge';
 
 export default function CustomerRequestsPage() {
   const { user, isLoggedIn, isAuthLoading } = useAuth();
+  const { agreements, getAgreementsForCustomer, isStorageLoading } = useStorage();
   const [requests, setRequests] = useState<Agreement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
-  const loadRequests = useCallback(() => {
-    if (!user || user.accountType !== 'customer') {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const allAgreements = getAgreements();
-    const customerRequests = allAgreements
-      .filter(a => a.customerPhone === user.phone)
-      .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-    setRequests(customerRequests);
-    setIsLoading(false);
-  }, [user]);
-  
   useEffect(() => {
     setIsClient(true);
-    if(isAuthLoading) return;
-    
-    loadRequests();
-    
-    window.addEventListener('focus', loadRequests);
-    return () => {
-      window.removeEventListener('focus', loadRequests);
-    };
+  }, []);
 
-  }, [loadRequests, isAuthLoading]);
+  useEffect(() => {
+    if (isAuthLoading || isStorageLoading || !user || user.accountType !== 'customer') return;
+    setRequests(getAgreementsForCustomer(user.phone));
+  }, [isAuthLoading, isStorageLoading, user, agreements, getAgreementsForCustomer]);
 
-  if (isAuthLoading) {
+  if (isAuthLoading || isStorageLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -58,7 +40,7 @@ export default function CustomerRequestsPage() {
       <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفاً وارد شوید</h1>
-        <p className="text-muted-foreground mt-2">برای مشاهده درخواست‌های خود باید وارد حساب کاربری شوید.</p>
+        <p className="text-muted-foreground mt-2">برای مشاهده درخواست‌های خود باید وارد حساب کاربری خود شوید.</p>
         <Button asChild className="mt-6">
           <Link href="/login">ورود به حساب کاربری</Link>
         </Button>
@@ -79,14 +61,6 @@ export default function CustomerRequestsPage() {
     );
   }
   
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20 flex-grow">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-4xl mx-auto py-12">
       <Card>
@@ -120,9 +94,11 @@ export default function CustomerRequestsPage() {
                            مشاهده پروفایل
                         </Link>
                     </Button>
-                    <p className="text-xs text-muted-foreground">
-                      {isClient && `ارسال شده ${formatDistanceToNow(new Date(req.requestedAt), { addSuffix: true, locale: faIR })}`}
-                    </p>
+                    {isClient && (
+                      <p className="text-xs text-muted-foreground">
+                        ارسال شده {formatDistanceToNow(new Date(req.requestedAt), { addSuffix: true, locale: faIR })}
+                      </p>
+                    )}
                   </div>
                    <div className="flex items-center gap-2 mt-3 sm:mt-0">
                     {req.status === 'pending' ? (

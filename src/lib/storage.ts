@@ -1,7 +1,8 @@
+
 // This file is the SINGLE SOURCE OF TRUTH for all localStorage operations.
 // No other file should directly access localStorage for app data.
 
-import type { Provider, Review, Category, Service, Agreement } from './types';
+import type { Provider, Review, Category, Service, Agreement, Message } from './types';
 
 // --- Default Data ---
 // This data is used ONLY on the very first load to populate the app.
@@ -136,8 +137,8 @@ export const getAgreements = (): Agreement[] => getStoredData<Agreement[]>(AGREE
 export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreement[]>(AGREEMENTS_KEY, data);
 
 // --- Chat & Inbox ---
-export const getChatMessages = (chatId: string): any[] => getStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, []);
-export const saveChatMessages = (chatId: string, messages: any[]): void => saveStoredData<any[]>(`${CHATS_KEY_PREFIX}${chatId}`, messages);
+export const getChatMessages = (chatId: string): Message[] => getStoredData<Message[]>(`${CHATS_KEY_PREFIX}${chatId}`, []);
+export const saveChatMessages = (chatId: string, messages: Message[]): void => saveStoredData<Message[]>(`${CHATS_KEY_PREFIX}${chatId}`, messages);
 
 export const getInboxData = (): Record<string, any> => getStoredData<Record<string, any>>(INBOX_KEY, {});
 export const saveInboxData = (data: Record<string, any>): void => saveStoredData<Record<string, any>>(INBOX_KEY, data);

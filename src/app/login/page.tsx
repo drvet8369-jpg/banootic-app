@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/storage';
+import { useStorage } from '@/context/StorageContext';
 import type { User } from '@/context/AuthContext';
 
 
@@ -41,6 +41,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { login } = useAuth();
+  const { getProviderByPhone } = useStorage();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -55,8 +56,7 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        const existingProvider = getProviderByPhone(values.phone);
 
         let userToLogin: User;
 
