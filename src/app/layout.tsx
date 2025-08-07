@@ -32,7 +32,7 @@ function AppBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox', '/requests', '/agreements'];
   const isChatPage = pathname.startsWith('/chat/');
-  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !isChatPage;
+  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !isChatPage && pathname !== '/';
 
   return (
     <div className="relative flex min-h-screen flex-col">
