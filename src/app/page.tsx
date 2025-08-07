@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { categories, getProviders, getReviews, getAgreements } from '@/lib/storage';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, UserCheck, MessageSquare, Edit, User, FileText } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, Edit, FileText, Search } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
@@ -76,19 +76,19 @@ const ProviderDashboard = () => {
                     </div>
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-12">
+                    <Button asChild variant="outline" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 h-12">
                         <Link href="/profile">
                             <Edit className="w-5 h-5 ml-2" />
                             <span className="font-bold">مدیریت پروفایل</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-12">
+                     <Button asChild variant="outline" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 h-12">
                         <Link href="/agreements">
                             <Handshake className="w-5 h-5 ml-2" />
                              <span className="font-bold">مدیریت توافق‌ها</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-12">
+                     <Button asChild variant="outline" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 h-12">
                         <Link href="/inbox">
                             <Inbox className="w-5 h-5 ml-2" />
                              <span className="font-bold">صندوق ورودی</span>
@@ -112,7 +112,7 @@ const CustomerDashboard = () => {
                     <CardTitle className="font-headline text-3xl">داشبورد مشتری</CardTitle>
                     <CardDescription>خوش آمدید، {user.name}!</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border-y">
                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-20 text-lg">
                         <Link href="/requests">
                             <FileText className="w-6 h-6 ml-3" />
@@ -128,7 +128,10 @@ const CustomerDashboard = () => {
                 </CardContent>
                  <CardFooter className="p-4">
                     <Button asChild size="lg" className="w-full">
-                        <Link href="/search?q=">جستجوی هنرمندان</Link>
+                        <Link href="/search?q=">
+                          <Search className="w-5 h-5 ml-2" />
+                          جستجوی هنرمندان
+                        </Link>
                     </Button>
                 </CardFooter>
             </Card>
