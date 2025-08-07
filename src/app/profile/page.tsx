@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Handshake, Eye, Star } from 'lucide-react';
+import { User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Star, Handshake, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -16,12 +16,22 @@ import { getProviders, saveProviders } from '@/lib/storage';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { StarRating } from '@/components/ui/star-rating';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function ProfilePage() {
   const { user, isLoggedIn, updateUser, isAuthLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
@@ -53,7 +63,6 @@ export default function ProfilePage() {
     window.addEventListener('focus', loadProviderData);
     return () => window.removeEventListener('focus', loadProviderData);
   }, [loadProviderData, isAuthLoading]);
-
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -89,7 +98,6 @@ export default function ProfilePage() {
         loadProviderData();
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
-
     } else {
         toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
@@ -105,7 +113,6 @@ export default function ProfilePage() {
     }
     setMode('viewing');
   }
-
 
   const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
       const reader = new FileReader();
@@ -172,28 +179,31 @@ export default function ProfilePage() {
       toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   };
+
+  const deletePortfolioItem = (itemIndex: number) => {
+    const success = updateProviderData((p) => {
+      p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
+    });
+    if (success) {
+      toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+    }
+  };
   
   const handleProfilePictureChange = (newImageSrc: string) => {
-      const success = updateProviderData((p) => {
+      updateProviderData((p) => {
         if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
         p.profileImage.src = newImageSrc;
       });
-      if (success) {
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-      } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
-      }
+      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
   }
 
   const handleDeleteProfilePicture = () => {
-    const success = updateProviderData((p) => {
+    updateProviderData((p) => {
       if (p.profileImage) p.profileImage.src = '';
     });
-    if (success) {
-      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
-    }
+    toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
   };
 
   const handleAddPortfolioClick = () => {
@@ -321,7 +331,7 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
             <CardTitle className="font-headline text-2xl">مدیریت نمونه کارها</CardTitle>
-            <CardDescription>نمونه‌کارهای خود را برای نمایش به مشتریان اضافه کنید. برای حذف، به پروفایل عمومی خود بروید.</CardDescription>
+            <CardDescription>نمونه‌کارهای خود را برای نمایش به مشتریان اضافه و مدیریت کنید.</CardDescription>
         </CardHeader>
         <CardContent>
             <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
@@ -333,14 +343,39 @@ export default function ProfilePage() {
              {provider.portfolio && provider.portfolio.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {provider.portfolio.map((item, index) => (
-                        <div className="w-full aspect-square overflow-hidden rounded-lg shadow-md relative" key={index}>
+                        <div className="group relative" key={`${provider.phone}-portfolio-${index}`}>
                              <Image
                                 src={item.src}
                                 alt={`نمونه کار ${index + 1}`}
                                 fill
-                                className="object-cover"
+                                className="object-cover rounded-lg shadow-md"
                                 data-ai-hint={item.aiHint}
                             />
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                        onClick={(e) => { e.stopPropagation(); }}
+                                        aria-label={`حذف نمونه کار ${index + 1}`}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>تایید حذف</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                        آیا از حذف این نمونه کار مطمئنید؟ این عمل غیرقابل بازگشت است.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>لغو</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => deletePortfolioItem(index)}>حذف</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     ))}
                 </div>
@@ -351,22 +386,6 @@ export default function ProfilePage() {
              )}
         </CardContent>
       </Card>
-      
-       <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl">پیش‌نمایش پروفایل عمومی</CardTitle>
-             <CardDescription>این همان صفحه‌ای است که مشتریان شما مشاهده خواهند کرد.</CardDescription>
-          </CardHeader>
-          <CardFooter>
-              <Button asChild className="w-full">
-                <Link href={`/provider/${provider.phone}`}>
-                    <Eye className="w-4 h-4 ml-2" />
-                    مشاهده پروفایل عمومی
-                </Link>
-            </Button>
-          </CardFooter>
-      </Card>
-
     </div>
   );
 }
