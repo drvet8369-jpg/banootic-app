@@ -7,55 +7,41 @@ import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
-// Ranking algorithm function
-const calculateRankingScore = (provider: Provider): number => {
-    const ratingWeight = 0.20; 
-    const reviewsWeight = 0.50; 
-    const agreementsWeight = 0.30; 
-
-    // Use logarithmic scale to avoid massive scores for high counts
-    // and give new providers a chance. Add 1 to avoid log(0).
-    const normalizedReviews = Math.log( (provider.reviewsCount || 0) + 1);
-    const normalizedAgreements = Math.log( (provider.agreementsCount || 0) + 1);
-
-    const score = (provider.rating * ratingWeight) 
-                + (normalizedReviews * reviewsWeight) 
-                + (normalizedAgreements * agreementsWeight);
-
-    return score;
-}
-
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // This function now correctly re-fetches and filters data whenever the query changes.
   const performSearch = useCallback(() => {
     setIsLoading(true);
-    
+    // Always get the latest providers from localStorage at the moment of searching.
     const allProviders = getProviders();
-    let results: Provider[];
-
     if (!query) {
-      results = allProviders;
-    } else {
-      const lowercasedQuery = query.toLowerCase();
-      results = allProviders.filter(provider => 
-        provider.name.toLowerCase().includes(lowercasedQuery) ||
-        provider.service.toLowerCase().includes(lowercasedQuery) ||
-        provider.bio.toLowerCase().includes(lowercasedQuery)
-      );
+      setSearchResults(allProviders);
+      setIsLoading(false);
+      return;
     }
-    
-    const sortedResults = results.sort((a, b) => calculateRankingScore(b) - calculateRankingScore(a));
-    
-    setSearchResults(sortedResults);
+    const lowercasedQuery = query.toLowerCase();
+    const results = allProviders.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+    );
+    setSearchResults(results);
     setIsLoading(false);
   }, [query]);
 
+  // useEffect now correctly depends on performSearch.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
+
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
   }, [performSearch]);
 
 
@@ -69,7 +55,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            نمایش همه هنرمندان بر اساس محبوبیت
+            نمایش تمام هنرمندان
           </p>
         )}
       </div>

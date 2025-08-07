@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,8 +26,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, type User } from '@/context/AuthContext';
-import { getAllUsers, saveAllUsers } from '@/lib/storage';
+import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/storage';
+import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -55,22 +55,25 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const allUsers = getAllUsers();
-        const existingUser = allUsers.find(u => u.phone === values.phone);
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
+
         let userToLogin: User;
 
-        if (existingUser) {
-          // User is a known user
-          userToLogin = existingUser;
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
         } else {
-          // If user doesn't exist, create a new customer account for them
+          // User is a customer
           userToLogin = {
             name: `مشتری ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
           };
-          // Save the new customer to the unified users list
-          saveAllUsers([...allUsers, userToLogin]);
         }
         
         login(userToLogin);
@@ -80,7 +83,6 @@ export default function LoginPage() {
           description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        // Redirect to home page after successful login
         router.push('/');
 
     } catch (error) {

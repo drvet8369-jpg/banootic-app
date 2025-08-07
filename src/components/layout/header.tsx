@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { LogOut, LogIn, UserPlus, UserRound, FileText } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -39,40 +39,24 @@ export default function Header() {
     return name.substring(0, 2);
   }
 
-  const handleLogout = () => {
-    const isHepcoUser = user?.name === 'سالن هپکو';
-    logout({ isCleanup: isHepcoUser });
-  };
-
-
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <SheetHeader>
-        <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
-      </SheetHeader>
       <div className="p-4 border-b">
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-foreground" />
-              <span className="font-display text-2xl font-bold">بانوتیک</span>
+              <span className="font-display text-2xl font-bold">هنربانو</span>
             </Link>
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && user ? (
+        {isLoggedIn ? (
            <>
-             {user.accountType === 'provider' ? (
+             {user?.accountType === 'provider' && (
                 <SheetClose asChild>
                   <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
                     پروفایل من
-                  </Link>
-                </SheetClose>
-             ) : (
-                 <SheetClose asChild>
-                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
-                    <FileText className="h-5 w-5" />
-                    درخواست‌های من
                   </Link>
                 </SheetClose>
              )}
@@ -113,7 +97,7 @@ export default function Header() {
               </div>
             </div>
             <SheetClose asChild>
-              <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
+              <Button onClick={logout} variant="ghost" className="w-full justify-start">
                   <LogOut className="ml-2 h-5 w-5" />
                   خروج
               </Button>
@@ -129,7 +113,7 @@ export default function Header() {
         {/* Right Side: Branding (changed from Left Side for RTL) */}
         <Link href="/" className="flex items-center gap-2">
             <Logo className="h-10 w-10 text-foreground" />
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
         </Link>
         
         {/* Left Side: Actions (changed from Right Side for RTL) */}
@@ -154,18 +138,11 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' ? (
+                    {user.accountType === 'provider' && (
                         <DropdownMenuItem asChild>
                         <Link href="/profile">
                             <UserRound className="ml-2 h-4 w-4" />
                             <span>پروفایل من</span>
-                        </Link>
-                        </DropdownMenuItem>
-                    ) : (
-                       <DropdownMenuItem asChild>
-                        <Link href="/requests">
-                            <FileText className="ml-2 h-4 w-4" />
-                            <span>درخواست‌های من</span>
                         </Link>
                         </DropdownMenuItem>
                     )}
@@ -177,7 +154,7 @@ export default function Header() {
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
+                    <DropdownMenuItem onClick={logout}>
                         <LogOut className="ml-2 h-4 w-4" />
                         <span>خروج</span>
                     </DropdownMenuItem>

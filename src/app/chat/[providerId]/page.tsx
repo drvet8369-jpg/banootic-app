@@ -80,7 +80,7 @@ export default function ChatPage() {
     const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
     
     if (provider) {
-      details = { ...provider };
+      details = { ...provider, id: provider.phone };
     } else {
       const customerPhone = otherPersonIdOrProviderId;
       details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };

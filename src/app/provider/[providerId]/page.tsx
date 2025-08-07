@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
-import { useParams, notFound } from 'next/navigation';
+import { useParams, notFound, useRouter } from 'next/navigation';
 import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/storage';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, MapPin } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, MapPin, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -175,7 +175,6 @@ export default function ProviderProfilePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
-    setSelectedImage(null); // Reset selected image on data load
     const allProviders = getProviders();
     const foundProvider = allProviders.find(p => p.phone === providerPhone);
     
@@ -196,9 +195,15 @@ export default function ProviderProfilePage() {
     setIsLoading(true);
     loadData();
     window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
+    return () => {
+      setSelectedImage(null);
+      window.removeEventListener('focus', loadData);
+    }
   }, [loadData]);
   
+  const isOwnerViewing = user && user.phone === provider?.phone;
+
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
@@ -244,6 +249,16 @@ export default function ProviderProfilePage() {
 
                 <CardContent className="p-6 flex-grow flex flex-col">
                     <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+                    
+                    {isOwnerViewing && (
+                         <Button asChild className="w-full mb-6">
+                            <Link href="/profile">
+                                <Edit className="w-4 h-4 ml-2" />
+                                بازگشت به صفحه مدیریت
+                            </Link>
+                        </Button>
+                    )}
+
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
@@ -292,22 +307,9 @@ export default function ProviderProfilePage() {
                             <p>هنوز نمونه کاری اضافه نشده است.</p>
                         </div>
                     )}
-                    <Separator className="my-8"/>
-                    <div id="reviews" className="scroll-mt-20">
-                        <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                        {reviews.length > 0 ? (
-                            <div className="space-y-4">
-                                {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
-                            </div>
-                        ) : (
-                            <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                                <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
-                            </div>
-                        )}
-                        <ReviewForm providerId={provider.phone} onSubmit={loadData} />
-                    </div>
                 </CardContent>
 
+                {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
@@ -322,6 +324,23 @@ export default function ProviderProfilePage() {
                         </a>
                     </Button>
                 </CardFooter>
+                )}
+
+                <Separator />
+                
+                <div id="reviews" className="p-6 scroll-mt-20">
+                    <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
+                    {reviews.length > 0 ? (
+                        <div className="space-y-4">
+                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                        </div>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                        </div>
+                    )}
+                    <ReviewForm providerId={provider.phone} onSubmit={loadData} />
+                </div>
             </Card>
         </div>
     </div>

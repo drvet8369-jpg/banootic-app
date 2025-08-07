@@ -38,7 +38,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
     checkUnread();
 
     const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === 'banootik_inbox_chats') {
+        if (event.key === 'honarbanoo_inbox_chats') {
             checkUnread();
         }
     };

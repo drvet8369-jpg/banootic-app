@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services, getProviders, saveProviders, getAllUsers, saveAllUsers } from '@/lib/storage';
+import { categories, getProviders, saveProviders, services } from '@/lib/storage';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -86,22 +85,19 @@ export default function RegisterForm() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const allUsers = getAllUsers();
-      const existingUser = allUsers.find(u => u.phone === values.phone);
+      const allProviders = getProviders();
 
-      // Check if phone number is already registered
-      if (existingUser) {
+      // Universal check for existing phone number among providers
+      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      if (existingProviderByPhone) {
         toast({
           title: 'خطا در ثبت‌نام',
-          description: `این شماره تلفن قبلاً به عنوان ${existingUser.accountType === 'provider' ? 'هنرمند' : 'مشتری'} ثبت شده است. لطفاً وارد شوید.`,
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
           variant: 'destructive',
         });
         setIsLoading(false);
-        router.push('/login');
         return;
       }
-      
-      const allProviders = getProviders();
 
       // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
@@ -117,17 +113,15 @@ export default function RegisterForm() {
         }
       }
 
-      // Create the new user object for the unified user list
-      const newUser: User = {
+
+      // This is the user object for the AuthContext
+      const userToLogin: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
-      
-      // Save the new user to the unified list
-      saveAllUsers([...allUsers, newUser]);
 
-      // Only create and save a new provider if the account type is 'provider'
+      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
@@ -142,23 +136,22 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
-          agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
+        
         saveProviders([...allProviders, newProvider]);
       }
       
-      // Log the user in with their unified user object
-      login(newUser);
+      login(userToLogin);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
         description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
-      // Redirect to home page after successful registration
-      router.push('/');
+      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      router.push(destination);
 
     } catch (error) {
          console.error("Registration failed:", error);

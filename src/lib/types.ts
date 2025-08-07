@@ -28,7 +28,7 @@ export interface Provider {
   serviceSlug: Service['slug']; // Link to the service
   rating: number;
   reviewsCount: number;
-  agreementsCount: number; // To count agreements/orders
+  agreementsCount?: number;
   profileImage: PortfolioItem; // Dedicated profile image
   portfolio: PortfolioItem[];
 }
@@ -52,9 +52,9 @@ export interface Message {
 export interface Agreement {
   id: string;
   providerPhone: string;
-  providerName: string; // Name of the provider for easy display
+  providerName?: string;
   customerPhone: string;
-  customerName:string;
+  customerName: string;
   status: 'pending' | 'confirmed';
-  requestedAt: string; // ISO String format
+  requestedAt: string; // ISO String
 }

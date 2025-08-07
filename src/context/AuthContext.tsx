@@ -2,7 +2,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAllUsers, saveAllUsers } from '@/lib/storage';
 
 export interface User {
   name: string;
@@ -15,30 +14,30 @@ interface AuthContextType {
   user: User | null;
   login: (userData: User) => void;
   logout: () => void;
-  updateUser: (updatedData: Partial<User>) => void;
   isAuthLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'banootik-user';
+const USER_STORAGE_KEY = 'honarbanoo-user';
 // A new, final cleanup flag to ensure the correct data structures are used.
-const CLEANUP_FLAG_V3 = 'banootik-cleanup-v3-unified-users';
+const CLEANUP_FLAG_V4 = 'honarbanoo-cleanup-v4-final';
 
 // A one-time check to see if we need to clean up localStorage from previous bad states.
 const performOneTimeCleanup = () => {
     if (typeof window !== 'undefined') {
-        if (!localStorage.getItem(CLEANUP_FLAG_V3)) {
-            console.log("Performing one-time cleanup to unify user data...");
-            // This key is where the provider data is stored. Removing it will force
-            // the app to repopulate it with the correct default data on next load.
-            localStorage.removeItem('banootik-providers'); 
-            // Also removing the old user list to ensure a fresh start
-            localStorage.removeItem('honarbanoo-users');
-            localStorage.removeItem('banootik-users'); // Remove old user key as well
+        if (!localStorage.getItem(CLEANUP_FLAG_V4)) {
+            console.log("Performing one-time cleanup to restore data integrity...");
+            localStorage.removeItem('honarbanoo-providers'); // This key was being corrupted
             localStorage.removeItem(USER_STORAGE_KEY); // Log out any logged-in user
             
-            localStorage.setItem(CLEANUP_FLAG_V3, 'true');
+            // Remove any other potentially problematic keys from older versions
+            localStorage.removeItem('banootik-users');
+            localStorage.removeItem('banootik-providers');
+            localStorage.removeItem('banootik-user');
+
+
+            localStorage.setItem(CLEANUP_FLAG_V4, 'true');
             console.log("Cleanup complete. Data will be restored on next load.");
         }
     }
@@ -78,9 +77,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     window.addEventListener('storage', handleStorageChange);
+    // Also re-check on focus to catch changes more reliably
+    window.addEventListener('focus', syncLoginState);
+
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', syncLoginState);
     };
   }, [syncLoginState]);
 
@@ -100,22 +103,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const updateUser = (updatedData: Partial<User>) => {
-      if (!user) return;
-
-      const newUser = { ...user, ...updatedData };
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
-      setUser(newUser);
-
-      // Also update the unified user list
-      const allUsers = getAllUsers();
-      const userIndex = allUsers.findIndex(u => u.phone === user.phone);
-      if (userIndex > -1) {
-          allUsers[userIndex] = { ...allUsers[userIndex], ...updatedData };
-          saveAllUsers(allUsers);
-      }
-  }
-
   const logout = () => {
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
@@ -135,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, updateUser, isAuthLoading }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, isAuthLoading }}>
       {children}
     </AuthContext.Provider>
   );

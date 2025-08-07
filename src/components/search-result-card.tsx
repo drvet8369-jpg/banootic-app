@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, Eye, Handshake, MapPin } from 'lucide-react';
+import { User, Eye, MapPin } from 'lucide-react';
 import type { Provider } from '@/lib/types';
 import { StarRating } from '@/components/ui/star-rating';
 
@@ -37,13 +37,7 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
             </div>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center justify-center p-4 pt-0">
-           <div className="flex flex-col items-center gap-2">
-            <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
-             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Handshake className="w-4 h-4" />
-                <span>{provider.agreementsCount || 0} توافق موفق</span>
-            </div>
-           </div>
+          <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
         </CardContent>
          <CardFooter className="p-4 mt-auto border-t">
            <Button asChild className="w-full font-bold">
