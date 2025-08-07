@@ -21,16 +21,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = 'honarbanoo-user';
-const BROADCAST_CHANNEL_NAME = 'honarbanoo-channel';
-let authChannel: BroadcastChannel | null = null;
-
+const BROADCAST_CHANNEL_NAME = 'honarbanoo-auth-channel';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
-  const syncLoginState = useCallback(() => {
+  // This function is the single source of truth for loading user state
+  const syncAuthState = useCallback(() => {
     setIsAuthLoading(true);
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -42,33 +41,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
       setUser(null);
+      localStorage.removeItem(USER_STORAGE_KEY);
     } finally {
       setIsAuthLoading(false);
     }
   }, []);
   
   useEffect(() => {
-    // Initial load
-    syncLoginState();
+    // Initial load for the current tab
+    syncAuthState();
     
-    // Create and listen to the broadcast channel
-    if (typeof BroadcastChannel !== 'undefined') {
-        authChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-        const handleMessage = (event: MessageEvent) => {
-            if (event.data.type === 'auth_update') {
-                syncLoginState();
-            }
-        };
-        authChannel.addEventListener('message', handleMessage);
+    // Listen for storage changes from other tabs to stay in sync
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === USER_STORAGE_KEY) {
+        syncAuthState();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
 
-        return () => {
-            authChannel?.removeEventListener('message', handleMessage);
-            authChannel?.close();
-            authChannel = null;
-        };
-    }
-  }, [syncLoginState]);
+    // Listen to BroadcastChannel for more immediate sync
+    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    const handleChannelMessage = (event: MessageEvent) => {
+        if (event.data.type === 'auth_change') {
+            syncAuthState();
+        }
+    };
+    channel.addEventListener('message', handleChannelMessage);
 
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      channel.removeEventListener('message', handleChannelMessage);
+      channel.close();
+    };
+  }, [syncAuthState]);
+
+  const postAuthChange = () => {
+      const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+      channel.postMessage({ type: 'auth_change' });
+      channel.close();
+  };
+  
   const login = (userData: User) => {
     try {
         const allProviders = getProviders();
@@ -83,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
       setUser(userToSave);
-      authChannel?.postMessage({ type: 'auth_update' });
+      postAuthChange();
       
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -94,11 +106,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
-      authChannel?.postMessage({ type: 'auth_update' });
+      postAuthChange();
       
       if (window.location.pathname !== '/') {
         router.push('/');
       } else {
+        // A reload is sometimes necessary if state is not propagating correctly in complex layouts
         window.location.reload();
       }
 
