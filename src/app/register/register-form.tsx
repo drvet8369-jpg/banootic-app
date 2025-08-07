@@ -88,15 +88,17 @@ export default function RegisterForm() {
       const allProviders = getProviders();
 
       // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
+      if (values.accountType === 'provider') {
+        const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+        if (existingProviderByPhone) {
+          toast({
+            title: 'خطا در ثبت‌نام',
+            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Check for existing provider by business name, only if registering as a provider
@@ -136,6 +138,7 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
+          agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
@@ -150,7 +153,7 @@ export default function RegisterForm() {
         description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      const destination = values.accountType === 'provider' ? '/' : '/';
       router.push(destination);
 
     } catch (error) {
@@ -196,7 +199,7 @@ export default function RegisterForm() {
                           <RadioGroupItem value="provider" />
                         </FormControl>
                         <FormLabel className="font-normal">
-                          ارائه‌دهنده خدمات هستم (برای ارائه هنر و تخصص خود)
+                          هنرمند هستم (برای ارائه هنر و تخصص خود)
                         </FormLabel>
                       </FormItem>
                     </RadioGroup>

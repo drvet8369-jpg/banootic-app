@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, UserCheck, MessageSquare, Edit, User, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StarRating } from '@/components/ui/star-rating';
 import type { Provider, Review, Agreement as AgreementType } from '@/lib/types';
 
@@ -55,8 +55,8 @@ const ProviderDashboard = () => {
     if (!user) return null;
 
     return (
-        <div className="py-12 md:py-16 w-full"> 
-             <Card className="w-full shadow-lg">
+        <div className="w-full py-12 md:py-16">
+            <Card className="w-full shadow-lg">
                 <CardHeader className="text-center">
                     <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
                     <CardDescription>خوش آمدید، {user.name}!</CardDescription>
@@ -76,22 +76,22 @@ const ProviderDashboard = () => {
                     </div>
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
-                    <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-12">
+                    <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-12">
                         <Link href="/profile">
                             <Edit className="w-5 h-5 ml-2" />
-                            <span className="font-semibold">مدیریت پروفایل</span>
+                            <span className="font-bold">مدیریت پروفایل</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-12">
+                     <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-12">
                         <Link href="/agreements">
                             <Handshake className="w-5 h-5 ml-2" />
-                             <span className="font-semibold">مدیریت توافق‌ها</span>
+                             <span className="font-bold">مدیریت توافق‌ها</span>
                         </Link>
                     </Button>
-                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-12">
+                     <Button asChild variant="outline" className="bg-primary/20 text-primary-foreground hover:bg-primary/30 border-primary/30 h-12">
                         <Link href="/inbox">
                             <Inbox className="w-5 h-5 ml-2" />
-                             <span className="font-semibold">صندوق ورودی</span>
+                             <span className="font-bold">صندوق ورودی</span>
                         </Link>
                     </Button>
                 </CardFooter>
@@ -106,7 +106,7 @@ const CustomerDashboard = () => {
     if (!user) return null;
 
     return (
-        <div className="py-12 md:py-16 w-full">
+        <div className="w-full py-12 md:py-16">
             <Card className="w-full shadow-lg">
                 <CardHeader className="text-center">
                     <CardTitle className="font-headline text-3xl">داشبورد مشتری</CardTitle>

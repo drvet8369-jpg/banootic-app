@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { getProviders } from '@/lib/storage';
 
 export interface User {
   name: string;
@@ -19,26 +20,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'honarbanoo-user';
-// A new, final cleanup flag to ensure the correct data structures are used.
-const CLEANUP_FLAG_V4 = 'honarbanoo-cleanup-v4-final';
+const USER_STORAGE_KEY = 'banootik-user';
+const CLEANUP_FLAG_V5 = 'banootik-cleanup-v5-final-fix';
 
-// A one-time check to see if we need to clean up localStorage from previous bad states.
 const performOneTimeCleanup = () => {
     if (typeof window !== 'undefined') {
-        if (!localStorage.getItem(CLEANUP_FLAG_V4)) {
-            console.log("Performing one-time cleanup to restore data integrity...");
-            localStorage.removeItem('honarbanoo-providers'); // This key was being corrupted
-            localStorage.removeItem(USER_STORAGE_KEY); // Log out any logged-in user
+        if (!localStorage.getItem(CLEANUP_FLAG_V5)) {
+            console.log("Performing one-time cleanup v5...");
+            // Remove old, potentially corrupted keys
+            localStorage.removeItem('honarbanoo-providers');
+            localStorage.removeItem('honarbanoo-user');
+            localStorage.removeItem('banootik-users'); // Remove the flawed user list
+            localStorage.removeItem(USER_STORAGE_KEY); // Log out any logged-in user to force a fresh login
             
-            // Remove any other potentially problematic keys from older versions
-            localStorage.removeItem('banootik-users');
-            localStorage.removeItem('banootik-providers');
-            localStorage.removeItem('banootik-user');
-
-
-            localStorage.setItem(CLEANUP_FLAG_V4, 'true');
-            console.log("Cleanup complete. Data will be restored on next load.");
+            localStorage.setItem(CLEANUP_FLAG_V5, 'true');
+            console.log("Cleanup v5 complete.");
         }
     }
 };
@@ -77,7 +73,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Also re-check on focus to catch changes more reliably
     window.addEventListener('focus', syncLoginState);
 
 
@@ -89,11 +84,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: User) => {
     try {
-      const userToSave: User = { 
-          name: userData.name,
-          phone: userData.phone,
-          accountType: userData.accountType || 'customer' 
-      };
+        const allProviders = getProviders();
+        const isProvider = allProviders.some(p => p.phone === userData.phone);
+        const accountType = isProvider ? 'provider' : 'customer';
+
+        const userToSave: User = { 
+            name: userData.name,
+            phone: userData.phone,
+            accountType: accountType,
+        };
       
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
       setUser(userToSave);
