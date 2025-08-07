@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Edit, MapPin } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -37,25 +37,34 @@ const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLDivEle
 );
 
 // Review Card Component
-const ReviewCard = ({ review }: { review: Review }) => (
-  <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-    <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
-      <Avatar className="h-10 w-10">
-        <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
-      </Avatar>
-      <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
-    </div>
-    <div className="flex-grow">
-      <div className="flex items-center justify-between mb-2">
-        <StarRating rating={review.rating} size="sm" readOnly />
-        <p className="text-xs text-muted-foreground flex-shrink-0">
-          {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
-        </p>
+const ReviewCard = ({ review }: { review: Review }) => {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+      <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
+        <Avatar className="h-10 w-10">
+          <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
+        </Avatar>
+        <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
       </div>
-      <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+      <div className="flex-grow">
+        <div className="flex items-center justify-between mb-2">
+          <StarRating rating={review.rating} size="sm" readOnly />
+          {isClient && (
+            <p className="text-xs text-muted-foreground flex-shrink-0">
+              {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
+            </p>
+          )}
+        </div>
+        <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+      </div>
     </div>
-  </div>
-);
+  )
+};
 
 // Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: () => void }) => {
@@ -160,13 +169,13 @@ export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
   const { user } = useAuth();
-  const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
+    setSelectedImage(null); // Reset selected image on data load
     const allProviders = getProviders();
     const foundProvider = allProviders.find(p => p.phone === providerPhone);
     
@@ -190,12 +199,9 @@ export default function ProviderProfilePage() {
     return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
-  const isOwnerViewing = user && user.phone === provider?.phone;
-
-
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -237,12 +243,57 @@ export default function ProviderProfilePage() {
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
-                    <h3 className="font-headline text-xl mb-4 text-center">درباره ما</h3>
                     <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
                     <Separator className="my-4" />
-                    
-                    {!isOwnerViewing && (
-                       <div id="reviews" className="scroll-mt-20">
+                    <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
+                    {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {provider.portfolio.map((item, index) => (
+                                    <DialogTrigger asChild key={`${provider.phone}-portfolio-${index}`}>
+                                        <div 
+                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setSelectedImage(item.src)}
+                                        >
+                                            <Image
+                                                src={item.src}
+                                                alt={`نمونه کار ${index + 1}`}
+                                                fill
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-ai-hint={item.aiHint}
+                                            />
+                                        </div>
+                                    </DialogTrigger>
+                                ))}
+                            </div>
+                           
+                            <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                                <DialogHeader className="sr-only">
+                                  <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
+                                </DialogHeader>
+                               <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                  <X className="h-6 w-6" />
+                                  <span className="sr-only">بستن</span>
+                                </DialogClose>
+                                {selectedImage && (
+                                    <div className="relative w-full h-full">
+                                        <Image
+                                            src={selectedImage}
+                                            alt="نمونه کار تمام صفحه"
+                                            fill
+                                            className="object-contain"
+                                        />
+                                    </div>
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نمونه کاری اضافه نشده است.</p>
+                        </div>
+                    )}
+                    <Separator className="my-8"/>
+                    <div id="reviews" className="scroll-mt-20">
                         <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
                         {reviews.length > 0 ? (
                             <div className="space-y-4">
@@ -255,11 +306,8 @@ export default function ProviderProfilePage() {
                         )}
                         <ReviewForm providerId={provider.phone} onSubmit={loadData} />
                     </div>
-                    )}
-
                 </CardContent>
 
-                {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
@@ -274,18 +322,6 @@ export default function ProviderProfilePage() {
                         </a>
                     </Button>
                 </CardFooter>
-                )}
-
-                {isOwnerViewing && (
-                    <CardFooter className="p-6 mt-auto border-t">
-                       <Button asChild className="w-full">
-                            <Link href="/profile">
-                                <Edit className="w-4 h-4 ml-2" />
-                                بازگشت به صفحه مدیریت
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                )}
             </Card>
         </div>
     </div>
