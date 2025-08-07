@@ -9,16 +9,16 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 
 // Ladder Ranking Algorithm
 const calculateScore = (provider: Provider): number => {
-    const ratingWeight = 0.5;
-    const reviewsWeight = 0.2;
-    const agreementsWeight = 0.3;
+    const ratingWeight = 0.3;
+    const reviewsWeight = 0.5; // Increased weight for reviews
+    const agreementsWeight = 0.2;
 
     const normalizedRating = (provider.rating || 0) / 5; // Normalize rating to be between 0 and 1
     
-    // We use logarithm to prevent a single provider with many reviews/agreements from dominating
+    // Removed Math.log1p to give a linear and stronger weight to raw counts
     const score = (normalizedRating * ratingWeight) + 
-                  (Math.log1p(provider.reviewsCount || 0) * reviewsWeight) + 
-                  (Math.log1p(provider.agreementsCount || 0) * agreementsWeight);
+                  ((provider.reviewsCount || 0) * reviewsWeight) + 
+                  ((provider.agreementsCount || 0) * agreementsWeight);
                   
     return score;
 };
