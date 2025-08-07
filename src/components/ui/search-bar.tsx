@@ -11,7 +11,6 @@ export default function SearchBar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Redirect even if the search term is empty to show all ranked providers
     router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
   };
 
@@ -22,11 +21,11 @@ export default function SearchBar() {
           <Input
             type="search"
             placeholder="جستجو در میان هنرمندان و خدمات..."
-            className="w-full pr-10 bg-background placeholder:font-semibold text-foreground placeholder:text-foreground"
+            className="w-full pr-10 bg-background placeholder:font-semibold text-foreground placeholder:text-foreground/80"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="جستجو">
             <Search className="h-5 w-5" />
           </button>
         </form>

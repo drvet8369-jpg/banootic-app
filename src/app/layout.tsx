@@ -20,8 +20,6 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-// This can't be a dynamic export in a client component, 
-// so we define it statically here.
 // export const metadata: Metadata = {
 //   title: 'بانوتیک',
 //   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
@@ -32,7 +30,7 @@ function AppBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const noSearchBarPaths = ['/login', '/register', '/profile', '/inbox', '/requests', '/agreements'];
   const isChatPage = pathname.startsWith('/chat/');
-  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !isChatPage && pathname !== '/';
+  const shouldShowSearchBar = !noSearchBarPaths.includes(pathname) && !isChatPage;
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -69,7 +67,7 @@ export default function RootLayout({
           <title>بانوتیک</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#A3BEA6" />
+          <meta name="theme-color" content="#B5E2BF" />
       </head>
       <body
         className={cn(
