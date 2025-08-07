@@ -3,12 +3,15 @@
 
 import Link from 'next/link';
 import { categories, getProviders, getReviews, getAgreements } from '@/lib/storage';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, UserCheck, MessageSquare } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, UserCheck, MessageSquare, Edit, User, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { StarRating } from '@/components/ui/star-rating';
+import type { Provider, Review, Agreement as AgreementType } from '@/lib/types';
+
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
@@ -19,98 +22,119 @@ const iconMap: { [key: string]: React.ElementType } = {
   handicrafts: Gift,
 };
 
-const UserDashboard = () => {
+const ProviderDashboard = () => {
     const { user } = useAuth();
-    const [stats, setStats] = useState({ reviews: 0, agreements: 0 });
+    const [stats, setStats] = useState({ 
+        reviewsCount: 0, 
+        agreementsCount: 0, 
+        averageRating: 0 
+    });
 
-    useEffect(() => {
+    const loadProviderData = useCallback(() => {
         if (user && user.accountType === 'provider') {
-            const reviews = getReviews().filter(r => r.providerId === user.phone);
-            const agreements = getAgreements().filter(a => a.providerPhone === user.phone && a.status === 'confirmed');
-            setStats({ reviews: reviews.length, agreements: agreements.length });
+            const allProviders = getProviders();
+            const currentProvider = allProviders.find(p => p.phone === user.phone);
+            
+            if (currentProvider) {
+                setStats({
+                    reviewsCount: currentProvider.reviewsCount || 0,
+                    agreementsCount: currentProvider.agreementsCount || 0,
+                    averageRating: currentProvider.rating || 0,
+                });
+            }
         }
     }, [user]);
+
+    useEffect(() => {
+        loadProviderData();
+        // Add focus listener to refresh data when tab is re-focused
+        window.addEventListener('focus', loadProviderData);
+        return () => window.removeEventListener('focus', loadProviderData);
+    }, [loadProviderData]);
 
     if (!user) return null;
 
     return (
-        <div className="py-12 md:py-16">
-            <div className="text-center mb-12">
-                <h1 className="font-headline text-4xl font-bold">داشبورد شما</h1>
-                <p className="mt-3 text-lg text-muted-foreground">خوش آمدید، {user.name}!</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {/* Quick Actions */}
-                 {user.accountType === 'provider' ? (
-                     <>
+        <div className="py-12 md:py-16 max-w-2xl mx-auto">
+             <Card className="w-full shadow-lg">
+                <CardHeader className="text-center">
+                    <CardTitle className="font-headline text-3xl">داشبورد هنرمند</CardTitle>
+                    <CardDescription>خوش آمدید، {user.name}!</CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-around items-center text-center p-6 border-y">
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="font-bold text-2xl">{stats.agreementsCount}</span>
+                        <span className="text-sm text-muted-foreground">توافق موفق</span>
+                    </div>
+                     <div className="flex flex-col items-center gap-1">
+                        <span className="font-bold text-2xl">{stats.reviewsCount}</span>
+                        <span className="text-sm text-muted-foreground">نظر مشتریان</span>
+                    </div>
+                     <div className="flex flex-col items-center gap-1">
+                        <StarRating rating={stats.averageRating} readOnly />
+                        <span className="text-sm text-muted-foreground">امتیاز کل</span>
+                    </div>
+                </CardContent>
+                <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
+                    <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-12">
+                        <Link href="/profile">
+                            <Edit className="w-5 h-5 ml-2" />
+                            <span className="font-semibold">مدیریت پروفایل</span>
+                        </Link>
+                    </Button>
+                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-12">
                         <Link href="/agreements">
-                            <Card className="h-full hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-center items-center text-center p-6">
-                                <Handshake className="w-16 h-16 mb-4 text-accent"/>
-                                <CardTitle className="font-headline text-2xl">مدیریت توافق‌ها</CardTitle>
-                                <CardDescription>مشاهده و تایید درخواست‌ها</CardDescription>
-                            </Card>
+                            <Handshake className="w-5 h-5 ml-2" />
+                             <span className="font-semibold">مدیریت توافق‌ها</span>
                         </Link>
-                         <Link href="/inbox">
-                            <Card className="h-full hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-center items-center text-center p-6">
-                                <Inbox className="w-16 h-16 mb-4 text-accent"/>
-                                <CardTitle className="font-headline text-2xl">صندوق ورودی</CardTitle>
-                                <CardDescription>مشاهده پیام‌های مشتریان</CardDescription>
-                            </Card>
+                    </Button>
+                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-12">
+                        <Link href="/inbox">
+                            <Inbox className="w-5 h-5 ml-2" />
+                             <span className="font-semibold">صندوق ورودی</span>
                         </Link>
-                     </>
-                 ) : (
-                     <>
-                         <Link href="/requests">
-                            <Card className="h-full hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-center items-center text-center p-6">
-                                <Handshake className="w-16 h-16 mb-4 text-accent"/>
-                                <CardTitle className="font-headline text-2xl">درخواست‌های من</CardTitle>
-                                <CardDescription>پیگیری توافق‌های ارسالی</CardDescription>
-                            </Card>
-                        </Link>
-                         <Link href="/inbox">
-                            <Card className="h-full hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-center items-center text-center p-6">
-                                <Inbox className="w-16 h-16 mb-4 text-accent"/>
-                                <CardTitle className="font-headline text-2xl">صندوق ورودی</CardTitle>
-                                <CardDescription>گفتگو با هنرمندان</CardDescription>
-                            </Card>
-                        </Link>
-                     </>
-                 )}
-
-                {/* Stats for Provider */}
-                {user.accountType === 'provider' && (
-                    <Card className="lg:col-span-1 md:col-span-2 bg-muted/50 p-6 flex flex-col justify-center">
-                        <CardHeader className="p-0 pb-4 text-center">
-                            <CardTitle className="font-headline text-2xl">آمار شما</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0 space-y-4">
-                            <div className="flex items-center justify-between p-3 bg-background rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <Star className="w-6 h-6 text-yellow-500"/>
-                                    <span className="font-semibold">تعداد نظرات</span>
-                                </div>
-                                <span className="font-bold text-lg">{stats.reviews}</span>
-                            </div>
-                             <div className="flex items-center justify-between p-3 bg-background rounded-lg">
-                                 <div className="flex items-center gap-3">
-                                    <UserCheck className="w-6 h-6 text-green-500"/>
-                                    <span className="font-semibold">توافق‌های تایید شده</span>
-                                </div>
-                                <span className="font-bold text-lg">{stats.agreements}</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
-             <div className="mt-12 text-center">
-                <Button asChild variant="secondary" size="lg" className="text-lg">
-                  <Link href="/search?q=">جستجوی هنرمندان</Link>
-                </Button>
-            </div>
+                    </Button>
+                </CardFooter>
+            </Card>
         </div>
     );
 };
+
+
+const CustomerDashboard = () => {
+    const { user } = useAuth();
+    if (!user) return null;
+
+    return (
+        <div className="py-12 md:py-16 max-w-2xl mx-auto">
+            <Card className="w-full shadow-lg">
+                <CardHeader className="text-center">
+                    <CardTitle className="font-headline text-3xl">داشبورد مشتری</CardTitle>
+                    <CardDescription>خوش آمدید، {user.name}!</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                    <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-20 text-lg">
+                        <Link href="/requests">
+                            <FileText className="w-6 h-6 ml-3" />
+                            <span className="font-semibold">درخواست‌های من</span>
+                        </Link>
+                    </Button>
+                     <Button asChild variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 h-20 text-lg">
+                        <Link href="/inbox">
+                            <Inbox className="w-6 h-6 ml-3" />
+                             <span className="font-semibold">صندوق ورودی</span>
+                        </Link>
+                    </Button>
+                </CardContent>
+                 <CardFooter className="p-4">
+                    <Button asChild size="lg" className="w-full">
+                        <Link href="/search?q=">جستجوی هنرمندان</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    )
+}
 
 const WelcomeScreen = () => (
     <div className="flex flex-col items-center justify-center">
@@ -157,7 +181,7 @@ const WelcomeScreen = () => (
 
 
 export default function Home() {
-  const { isLoggedIn, isAuthLoading } = useAuth();
+  const { user, isLoggedIn, isAuthLoading } = useAuth();
 
   if (isAuthLoading) {
     return (
@@ -167,5 +191,9 @@ export default function Home() {
     );
   }
 
-  return isLoggedIn ? <UserDashboard /> : <WelcomeScreen />;
+  if (!isLoggedIn) {
+    return <WelcomeScreen />;
+  }
+
+  return user.accountType === 'provider' ? <ProviderDashboard /> : <CustomerDashboard />;
 }
