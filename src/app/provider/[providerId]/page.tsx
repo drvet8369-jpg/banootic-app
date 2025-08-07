@@ -346,6 +346,18 @@ export default function ProviderProfilePage() {
                 </CardFooter>
                 )}
 
+                 {isOwnerViewing && (
+                    <CardFooter className="p-6 mt-auto border-t">
+                       <Button asChild className="w-full">
+                            <Link href="/profile">
+                                <Edit className="w-4 h-4 ml-2" />
+                                بازگشت به صفحه مدیریت
+                            </Link>
+                        </Button>
+                    </CardFooter>
+                )}
+
+
                 <Separator />
                 
                 <div id="reviews" className="p-6 scroll-mt-20">
@@ -366,3 +378,5 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
+
+    

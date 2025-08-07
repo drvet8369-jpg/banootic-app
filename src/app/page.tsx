@@ -6,10 +6,10 @@ import { categories, getProviders } from '@/lib/storage';
 import type { Provider } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Palette, ChefHat, Scissors, Gift, LayoutDashboard, ArrowLeft, MessageSquare, Loader2, User, Handshake, Eye, Inbox, Star } from 'lucide-react';
+import { Palette, ChefHat, Scissors, Gift, ArrowLeft, Loader2, User, Handshake, Eye, Inbox, Star } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import SearchResultCard from '@/components/search-result-card';
 import { StarRating } from '@/components/ui/star-rating';
 
@@ -117,8 +117,7 @@ const ProviderDashboard = () => {
                             <h4 className="text-lg font-bold text-center mb-4">آمار عملکرد شما</h4>
                             <div className="flex justify-around items-center text-center">
                                 <div className="flex flex-col items-center">
-                                    <StarRating rating={provider.rating} readOnly />
-                                    <span className="text-xs text-muted-foreground mt-1">{provider.reviewsCount} نظر</span>
+                                    <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1 font-bold text-lg text-primary">
@@ -223,3 +222,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
