@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -30,8 +31,8 @@ export default function Header() {
     setIsSheetOpen(false);
   }, [pathname]);
 
-  const getInitials = (name: string) => {
-    if (!name) return '..';
+  const getInitials = (name: unknown) => {
+    if (typeof name !== 'string' || !name) return '..';
     const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
