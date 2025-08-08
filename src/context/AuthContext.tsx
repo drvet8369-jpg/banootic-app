@@ -14,7 +14,7 @@ interface AppContextType extends AppState {
   addProvider: (provider: Provider) => void;
   updateProviderData: (phone: string, updateFn: (provider: Provider) => void) => boolean;
   addReview: (review: Review) => void;
-  saveMessage: (chatId: string, message: Message, receiverPhone: string, receiverName: string) => void;
+  saveMessage: (chatId: string, text: string, receiverPhone: string, receiverName: string) => void;
   updateMessage: (chatId: string, messageId: string, newText: string) => void;
   markChatAsRead: (chatId: string, userPhone: string) => void;
   getUnreadCount: (userPhone: string) => number;
@@ -108,8 +108,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     wrappedDispatch({ type: 'ADD_REVIEW', payload: review });
   };
   
-  const saveMessage = (chatId: string, message: Message, receiverPhone: string, receiverName: string) => {
+  const saveMessage = (chatId: string, text: string, receiverPhone: string, receiverName: string) => {
     if(!state.user) return;
+    
+    const message: Message = {
+      id: `${Date.now()}-${Math.random()}`,
+      text: text,
+      senderId: state.user.phone,
+      createdAt: new Date().toISOString(),
+    };
+
     wrappedDispatch({type: 'ADD_MESSAGE', payload: { chatId, message, receiverPhone, receiverName, currentUser: state.user }})
   }
   

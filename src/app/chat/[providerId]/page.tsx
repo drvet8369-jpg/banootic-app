@@ -143,16 +143,9 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    const tempUiMessage: Message = {
-      id: `${Date.now()}-${Math.random()}`,
-      text: text,
-      senderId: user.phone,
-      createdAt: new Date().toISOString(),
-    };
-    
     const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (chatId) {
-      saveMessage(chatId, tempUiMessage, otherPersonDetails.phone, otherPersonDetails.name);
+      saveMessage(chatId, text, otherPersonDetails.phone, otherPersonDetails.name);
     }
    
     setNewMessage('');
