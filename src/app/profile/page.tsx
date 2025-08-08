@@ -333,12 +333,6 @@ export default function ProfilePage() {
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش اطلاعات
                         </Button>
-                         <Button asChild className="w-full flex-1">
-                            <Link href="/inbox">
-                                <Inbox className="w-4 h-4 ml-2" />
-                                صندوق ورودی
-                            </Link>
-                        </Button>
                         <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.id}`}>
                                 <Eye className="w-4 h-4 ml-2" />
