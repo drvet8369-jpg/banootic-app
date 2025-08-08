@@ -1,13 +1,13 @@
-
 'use client';
 
 import { useAuth } from '@/context/AppContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, Users, Handshake, Eye, Inbox, UserRound, Loader2, FileCheck2 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { StarRating } from '@/components/ui/star-rating';
+import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   icon: React.ElementType;
