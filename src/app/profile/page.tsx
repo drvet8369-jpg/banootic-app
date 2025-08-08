@@ -301,10 +301,27 @@ export default function ProfilePage() {
                             <Camera className="w-4 h-4 ml-2" />
                             تغییر عکس پروفایل
                         </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
-                            <Trash2 className="w-4 h-4 ml-2" />
-                            حذف عکس پروفایل
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" className="w-full flex-1">
+                                    <Trash2 className="w-4 h-4 ml-2" />
+                                    حذف عکس پروفایل
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>تایید حذف</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        آیا از حذف عکس پروفایل خود مطمئنید؟
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>لغو</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteProfilePicture}>حذف</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
                         <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو

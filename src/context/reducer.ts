@@ -56,12 +56,23 @@ export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'INITIALIZE_STATE': {
       const storedUser = localStorage.getItem('honarbanoo-user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
+      const providers = getProviders();
+      let user: User | null = null;
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          const isProvider = providers.some(p => p.phone === parsedUser.phone);
+          user = { ...parsedUser, accountType: isProvider ? 'provider' : 'customer' };
+        } catch(e) {
+            console.error("Failed to parse user, clearing.", e);
+            localStorage.removeItem('honarbanoo-user');
+        }
+      }
       return {
         ...state,
         user,
         isLoggedIn: !!user,
-        providers: getProviders(),
+        providers: providers,
         reviews: getReviews(),
         agreements: getAgreements(),
         inboxData: getInboxData(),
@@ -99,8 +110,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_PROVIDER': {
         const newProviders = state.providers.map(p => p.phone === action.payload.phone ? action.payload : p);
         saveProviders(newProviders);
+        let updatedUser = state.user;
+        if(state.user && state.user.phone === action.payload.phone) {
+           updatedUser = { ...state.user, name: action.payload.name };
+           localStorage.setItem('honarbanoo-user', JSON.stringify(updatedUser));
+        }
         return {
             ...state,
+            user: updatedUser,
             providers: newProviders
         };
     }
