@@ -5,7 +5,7 @@ import { Vazirmatn } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { AppProvider } from '@/context/AppContext';
+import { AuthProvider } from '@/context/AppContext';
 import AppContent from '@/components/layout/AppContent';
 
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
@@ -44,10 +44,10 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AppProvider>
+        <AuthProvider>
           <AppContent>{children}</AppContent>
           <Toaster />
-        </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

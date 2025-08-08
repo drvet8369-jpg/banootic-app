@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/storage';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/data';
 import type { Provider, Review, Message, User, Agreement } from '@/lib/types';
 import { appReducer, AppState, AppAction, initialState } from './reducer';
 
@@ -29,7 +28,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const BROADCAST_CHANNEL_NAME = 'honarbanoo-app-channel';
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const router = useRouter();
 
@@ -214,7 +213,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AppProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
