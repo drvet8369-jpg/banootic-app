@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
@@ -33,10 +34,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const router = useRouter();
 
-  // Effect to initialize state from localStorage and set up broadcast channel listener
+  // Effect to handle incoming broadcast messages
   useEffect(() => {
-    dispatch({ type: 'INITIALIZE_STATE' });
-
     const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
     const handleMessage = (event: MessageEvent) => {
       // Dispatch the action received from another tab
@@ -47,46 +46,48 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
     channel.addEventListener('message', handleMessage);
 
+    // Initial state load
+    dispatch({ type: 'INITIALIZE_STATE' });
+
     return () => {
       channel.removeEventListener('message', handleMessage);
       channel.close();
     };
   }, []);
 
-  // Effect to broadcast actions to other tabs
-  useEffect(() => {
+  // Create a wrapped dispatch function that also broadcasts actions.
+  const wrappedDispatch = useCallback((action: AppAction) => {
+    // Dispatch the action locally first
+    dispatch(action);
+
+    // If the action is coming from a broadcast, don't broadcast it again.
+    if (action.isBroadcast) {
+      return;
+    }
+    
+    // Broadcast the action to other tabs
     const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-    const originalDispatch = dispatch;
-
-    (dispatch as any) = (action: AppAction) => {
-      originalDispatch(action);
-      // Only broadcast if the action did not come from a broadcast itself
-      if (!action.isBroadcast) {
-        channel.postMessage(action);
-      }
-    };
-
-    return () => {
-      channel.close();
-    };
+    channel.postMessage(action);
+    channel.close();
   }, []);
+
 
   const login = (name: string, phone: string) => {
     const isProvider = state.providers.some(p => p.phone === phone);
     const accountType = isProvider ? 'provider' : 'customer';
     const user: User = { name, phone, accountType };
-    dispatch({ type: 'LOGIN', payload: user });
+    wrappedDispatch({ type: 'LOGIN', payload: user });
   };
 
   const logout = () => {
-    dispatch({ type: 'LOGOUT' });
+    wrappedDispatch({ type: 'LOGOUT' });
     if(window.location.pathname !== '/') {
         router.push('/');
     }
   };
 
   const addProvider = (provider: Provider) => {
-    dispatch({ type: 'ADD_PROVIDER', payload: provider });
+    wrappedDispatch({ type: 'ADD_PROVIDER', payload: provider });
   };
 
   const updateProviderData = (phone: string, updateFn: (provider: Provider) => void): boolean => {
@@ -95,35 +96,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Create a deep copy to avoid direct mutation before dispatching
       const updatedProvider = JSON.parse(JSON.stringify(providerToUpdate));
       updateFn(updatedProvider);
-      dispatch({ type: 'UPDATE_PROVIDER', payload: updatedProvider });
+      wrappedDispatch({ type: 'UPDATE_PROVIDER', payload: updatedProvider });
       return true;
     }
     return false;
   };
 
   const addReview = (review: Review) => {
-    dispatch({ type: 'ADD_REVIEW', payload: review });
+    wrappedDispatch({ type: 'ADD_REVIEW', payload: review });
   };
   
   const addAgreement = (agreement: Agreement) => {
-    dispatch({ type: 'ADD_AGREEMENT', payload: agreement });
+    wrappedDispatch({ type: 'ADD_AGREEMENT', payload: agreement });
   };
 
   const updateAgreementStatus = (agreementId: string, status: 'confirmed') => {
-    dispatch({ type: 'UPDATE_AGREEMENT_STATUS', payload: { agreementId, status } });
+    wrappedDispatch({ type: 'UPDATE_AGREEMENT_STATUS', payload: { agreementId, status } });
   };
   
   const saveMessage = (chatId: string, message: Message, receiverPhone: string, receiverName: string) => {
     if(!state.user) return;
-    dispatch({type: 'ADD_MESSAGE', payload: { chatId, message, receiverPhone, receiverName, currentUser: state.user }})
+    wrappedDispatch({type: 'ADD_MESSAGE', payload: { chatId, message, receiverPhone, receiverName, currentUser: state.user }})
   }
   
   const updateMessage = (chatId: string, messageId: string, newText: string) => {
-    dispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId, newText } });
+    wrappedDispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId, newText } });
   }
 
   const markChatAsRead = (chatId: string, userPhone: string) => {
-    dispatch({ type: 'MARK_CHAT_AS_READ', payload: { chatId, userPhone } });
+    wrappedDispatch({ type: 'MARK_CHAT_AS_READ', payload: { chatId, userPhone } });
   };
   
   const getUnreadCount = useCallback((userPhone: string): number => {
@@ -158,19 +159,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if(provider) {
         return { ...provider, id: provider.phone };
     }
+    // Attempt to find the name from inbox data if they are a customer
+    for (const chatId in state.inboxData) {
+        const chat = state.inboxData[chatId];
+        if (chat.participants && chat.participants[phone]) {
+            return { id: phone, name: chat.participants[phone].name, phone: phone };
+        }
+    }
     return { id: phone, name: `مشتری ${phone.slice(-4)}`, phone: phone };
-  }, [state.providers]);
+  }, [state.providers, state.inboxData]);
 
   const getMessagesForChat = useCallback((chatId: string): Message[] => {
-      // Since messages are not part of the global state, we fetch them directly.
-      // This could be optimized if needed.
       return getChatMessages(chatId);
   }, []);
 
   return (
     <AppContext.Provider value={{ 
         ...state, 
-        dispatch,
+        dispatch: wrappedDispatch,
         login,
         logout,
         addProvider,
