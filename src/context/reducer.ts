@@ -1,5 +1,5 @@
-import { getProviders, saveProviders, getReviews, saveReviews, getAgreements, saveAgreements, getInboxData, saveInboxData, getChatMessages, saveChatMessages } from '@/lib/storage';
-import type { Provider, Review, Agreement, Message, User } from '@/lib/types';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages } from '@/lib/storage';
+import type { Provider, Review, Message, User } from '@/lib/types';
 
 // 1. Define State Shape
 export interface AppState {
@@ -8,7 +8,6 @@ export interface AppState {
   user: User | null;
   providers: Provider[];
   reviews: Review[];
-  agreements: Agreement[];
   inboxData: Record<string, any>;
 }
 
@@ -19,7 +18,6 @@ export const initialState: AppState = {
   user: null,
   providers: [],
   reviews: [],
-  agreements: [],
   inboxData: {},
 };
 
@@ -30,8 +28,6 @@ type LogoutAction = { type: 'LOGOUT'; isBroadcast?: boolean; };
 type AddProviderAction = { type: 'ADD_PROVIDER'; payload: Provider; isBroadcast?: boolean; };
 type UpdateProviderAction = { type: 'UPDATE_PROVIDER'; payload: Provider; isBroadcast?: boolean; };
 type AddReviewAction = { type: 'ADD_REVIEW'; payload: Review; isBroadcast?: boolean; };
-type AddAgreementAction = { type: 'ADD_AGREEMENT'; payload: Agreement; isBroadcast?: boolean; };
-type UpdateAgreementStatusAction = { type: 'UPDATE_AGREEMENT_STATUS'; payload: { agreementId: string; status: 'confirmed' }; isBroadcast?: boolean; };
 type AddMessageAction = { type: 'ADD_MESSAGE'; payload: { chatId: string; message: Message; receiverPhone: string, receiverName: string; currentUser: User }; isBroadcast?: boolean; };
 type UpdateMessageAction = { type: 'UPDATE_MESSAGE'; payload: { chatId: string; messageId: string; newText: string }; isBroadcast?: boolean; };
 type MarkChatAsReadAction = { type: 'MARK_CHAT_AS_READ'; payload: { chatId: string; userPhone: string }; isBroadcast?: boolean; };
@@ -44,8 +40,6 @@ export type AppAction =
   | AddProviderAction
   | UpdateProviderAction
   | AddReviewAction
-  | AddAgreementAction
-  | UpdateAgreementStatusAction
   | AddMessageAction
   | UpdateMessageAction
   | MarkChatAsReadAction;
@@ -55,26 +49,27 @@ export type AppAction =
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'INITIALIZE_STATE': {
-      const storedUser = localStorage.getItem('honarbanoo-user');
+      const storedUserJSON = localStorage.getItem('honarbanoo-user');
       const providers = getProviders();
       let user: User | null = null;
-      if (storedUser) {
+      
+      if (storedUserJSON) {
         try {
-          const parsedUser = JSON.parse(storedUser);
-          const isProvider = providers.some(p => p.phone === parsedUser.phone);
-          user = { ...parsedUser, accountType: isProvider ? 'provider' : 'customer' };
+          const storedUser = JSON.parse(storedUserJSON);
+          const isProvider = providers.some(p => p.phone === storedUser.phone);
+          user = { ...storedUser, accountType: isProvider ? 'provider' : 'customer' };
         } catch(e) {
             console.error("Failed to parse user, clearing.", e);
             localStorage.removeItem('honarbanoo-user');
         }
       }
+
       return {
         ...state,
         user,
         isLoggedIn: !!user,
-        providers: providers,
+        providers,
         reviews: getReviews(),
-        agreements: getAgreements(),
         inboxData: getInboxData(),
         isLoading: false,
       };
@@ -108,7 +103,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'UPDATE_PROVIDER': {
-        const newProviders = state.providers.map(p => p.phone === action.payload.phone ? action.payload : p);
+        const newProviders = state.providers.map(p => p.id === action.payload.id ? action.payload : p);
         saveProviders(newProviders);
         let updatedUser = state.user;
         if(state.user && state.user.phone === action.payload.phone) {
@@ -127,7 +122,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         saveReviews(newReviews);
         
         // Also update the provider's rating
-        const providerIndex = state.providers.findIndex(p => p.phone === action.payload.providerId);
+        const providerIndex = state.providers.findIndex(p => p.id === action.payload.providerId);
         if (providerIndex > -1) {
             const newProviders = [...state.providers];
             const providerReviews = newReviews.filter(r => r.providerId === action.payload.providerId);
@@ -139,33 +134,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         }
         return { ...state, reviews: newReviews };
     }
-
-    case 'ADD_AGREEMENT': {
-        const newAgreements = [...state.agreements, action.payload];
-        saveAgreements(newAgreements);
-        return { ...state, agreements: newAgreements };
-    }
-
-    case 'UPDATE_AGREEMENT_STATUS': {
-        const newAgreements = JSON.parse(JSON.stringify(state.agreements));
-        const agreementIndex = newAgreements.findIndex((a: Agreement) => a.id === action.payload.agreementId);
-        if (agreementIndex > -1 && newAgreements[agreementIndex].status !== 'confirmed') {
-            newAgreements[agreementIndex].status = action.payload.status;
-            saveAgreements(newAgreements);
-
-            const providerPhone = newAgreements[agreementIndex].providerPhone;
-            const newProviders = JSON.parse(JSON.stringify(state.providers));
-            const providerIndex = newProviders.findIndex((p: Provider) => p.phone === providerPhone);
-            if(providerIndex > -1) {
-                newProviders[providerIndex].agreementsCount = (newProviders[providerIndex].agreementsCount || 0) + 1;
-                saveProviders(newProviders);
-                return { ...state, agreements: newAgreements, providers: newProviders };
-            }
-            return { ...state, agreements: newAgreements };
-        }
-        return state;
-    }
-
+    
     case 'ADD_MESSAGE': {
         const { chatId, message, receiverPhone, receiverName, currentUser } = action.payload;
         

@@ -340,7 +340,7 @@ export default function ProfilePage() {
                             </Link>
                         </Button>
                         <Button asChild className="w-full flex-1" variant="secondary">
-                            <Link href={`/provider/${provider.phone}`}>
+                            <Link href={`/provider/${provider.id}`}>
                                 <Eye className="w-4 h-4 ml-2" />
                                 مشاهده پروفایل عمومی
                             </Link>

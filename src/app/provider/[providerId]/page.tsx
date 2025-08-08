@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
-import { useParams, notFound, useRouter } from 'next/navigation';
+import { useParams, notFound } from 'next/navigation';
 import { useAuth } from '@/context/AppContext';
-import type { Provider, Review, Agreement } from '@/lib/types';
+import type { Provider, Review } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Handshake, X, MapPin, Edit } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, MapPin, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
 };
 
 // Review Form Component
-const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubmit: () => void }) => {
+const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
   const { user, isLoggedIn, addReview } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -89,7 +89,7 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
         if (!user) return;
         const newReview: Review = {
           id: Date.now().toString(),
-          providerId: providerPhone,
+          providerId,
           authorName: user.name,
           rating,
           comment,
@@ -151,22 +151,19 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
 
 export default function ProviderProfilePage() {
   const params = useParams();
-  const providerPhone = params.providerId as string;
-  const { user, isLoggedIn, isLoading, providers, reviews, addAgreement } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
+  const providerId = Number(params.providerId);
+  const { user, isLoading, providers, reviews } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [providerReviews, setProviderReviews] = useState<Review[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isRequesting, setIsRequesting] = useState(false);
 
   const loadData = useCallback(() => {
-    const foundProvider = providers.find(p => p.phone === providerPhone);
+    const foundProvider = providers.find(p => p.id === providerId);
     setProvider(foundProvider || null);
     if (foundProvider) {
-      setProviderReviews(reviews.filter(r => r.providerId === foundProvider.phone));
+      setProviderReviews(reviews.filter(r => r.providerId === foundProvider.id));
     }
-  }, [providerPhone, providers, reviews]);
+  }, [providerId, providers, reviews]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -174,31 +171,6 @@ export default function ProviderProfilePage() {
     }
   }, [isLoading, loadData]);
   
-  const handleRequestAgreement = () => {
-    if (!isLoggedIn || !user || !provider) {
-        toast({title: "خطا", description: "برای ارسال درخواست باید وارد شوید.", variant: "destructive"});
-        router.push('/login');
-        return;
-    }
-    setIsRequesting(true);
-
-    setTimeout(() => {
-        const newAgreement: Agreement = {
-            id: Date.now().toString(),
-            providerPhone: provider.phone,
-            providerName: provider.name,
-            customerPhone: user.phone,
-            customerName: user.name,
-            status: 'pending',
-            requestedAt: new Date().toISOString()
-        };
-        addAgreement(newAgreement);
-        setIsRequesting(false);
-        toast({title: "موفق", description: "درخواست توافق شما با موفقیت برای هنرمند ارسال شد."});
-        router.push('/requests');
-    }, 1000);
-  }
-
   const isOwnerViewing = user && user.phone === provider?.phone;
 
   if (isLoading) {
@@ -242,9 +214,6 @@ export default function ProviderProfilePage() {
                     <div className="mt-2">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
                     </div>
-                     <p className="text-sm text-muted-foreground mt-2">
-                        {provider.agreementsCount || 0} توافق موفق
-                    </p>
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
@@ -265,7 +234,7 @@ export default function ProviderProfilePage() {
                         <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
-                                    <DialogTrigger asChild key={`${provider.phone}-portfolio-${index}`}>
+                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
                                         <div 
                                             className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
                                             onClick={() => setSelectedImage(item.src)}
@@ -311,15 +280,17 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button onClick={handleRequestAgreement} className="w-full" disabled={isRequesting}>
-                        {isRequesting ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Handshake className="w-4 h-4 ml-2" />}
-                        ارسال درخواست توافق
-                    </Button>
-                    <Button asChild className="w-full" variant="secondary">
+                    <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
+                    </Button>
+                    <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
                     </Button>
                 </CardFooter>
                 )}
@@ -337,7 +308,7 @@ export default function ProviderProfilePage() {
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerPhone={provider.phone} onSubmit={loadData} />
+                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
                 </div>
             </Card>
         </div>

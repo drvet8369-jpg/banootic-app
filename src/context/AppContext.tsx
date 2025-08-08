@@ -3,20 +3,17 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProviders, saveProviders, getReviews, saveReviews, getAgreements, saveAgreements, getInboxData, saveInboxData, getChatMessages, saveChatMessages } from '@/lib/storage';
-import type { Provider, Review, Agreement, Message, User } from '@/lib/types';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages } from '@/lib/storage';
+import type { Provider, Review, Message, User } from '@/lib/types';
 import { appReducer, AppState, AppAction, initialState } from './reducer';
 
 // Define the shape of the context value
 interface AppContextType extends AppState {
-  dispatch: React.Dispatch<AppAction>;
   login: (name: string, phone: string) => void;
   logout: () => void;
   addProvider: (provider: Provider) => void;
   updateProviderData: (phone: string, updateFn: (provider: Provider) => void) => boolean;
   addReview: (review: Review) => void;
-  addAgreement: (agreement: Agreement) => void;
-  updateAgreementStatus: (agreementId: string, status: 'confirmed') => void;
   saveMessage: (chatId: string, message: Message, receiverPhone: string, receiverName: string) => void;
   updateMessage: (chatId: string, messageId: string, newText: string) => void;
   markChatAsRead: (chatId: string, userPhone: string) => void;
@@ -60,19 +57,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type) {
-         dispatch({ ...event.data, isBroadcast: true });
+         wrappedDispatch({ ...event.data, isBroadcast: true });
       }
     };
     channel.addEventListener('message', handleMessage);
 
     // Initial state load
-    dispatch({ type: 'INITIALIZE_STATE' });
+    wrappedDispatch({ type: 'INITIALIZE_STATE' });
 
     return () => {
       channel.removeEventListener('message', handleMessage);
       channel.close();
     };
-  }, []);
+  }, [wrappedDispatch]);
 
 
   const login = (name: string, phone: string) => {
@@ -107,14 +104,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addReview = (review: Review) => {
     wrappedDispatch({ type: 'ADD_REVIEW', payload: review });
-  };
-  
-  const addAgreement = (agreement: Agreement) => {
-    wrappedDispatch({ type: 'ADD_AGREEMENT', payload: agreement });
-  };
-
-  const updateAgreementStatus = (agreementId: string, status: 'confirmed') => {
-    wrappedDispatch({ type: 'UPDATE_AGREEMENT_STATUS', payload: { agreementId, status } });
   };
   
   const saveMessage = (chatId: string, message: Message, receiverPhone: string, receiverName: string) => {
@@ -182,14 +171,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppContext.Provider value={{ 
         ...state, 
-        dispatch: wrappedDispatch,
         login,
         logout,
         addProvider,
         updateProviderData,
         addReview,
-        addAgreement,
-        updateAgreementStatus,
         saveMessage,
         updateMessage,
         markChatAsRead,

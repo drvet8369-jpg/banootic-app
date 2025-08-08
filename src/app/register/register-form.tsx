@@ -122,7 +122,6 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
-          agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };

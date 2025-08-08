@@ -7,43 +7,21 @@ import { SearchX, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useAuth } from '@/context/AppContext';
 
-// Ladder Ranking Algorithm
-const calculateScore = (provider: Provider): number => {
-    const ratingWeight = 0.3;
-    const reviewsWeight = 0.5;
-    const agreementsWeight = 0.2;
-
-    const normalizedRating = (provider.rating || 0) / 5;
-    
-    // The higher the weight, the more impact it has on the score.
-    // reviewsCount now has the highest weight.
-    const score = (normalizedRating * ratingWeight) + 
-                  ((provider.reviewsCount || 0) * reviewsWeight) + 
-                  ((provider.agreementsCount || 0) * agreementsWeight);
-                  
-    return score;
-};
-
-
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const { providers, isLoading } = useAuth();
   
   const searchResults = useMemo(() => {
-    let filteredProviders = providers;
-
-    if (query) {
-        const lowercasedQuery = query.toLowerCase();
-        filteredProviders = providers.filter(provider => 
-          provider.name.toLowerCase().includes(lowercasedQuery) ||
-          provider.service.toLowerCase().includes(lowercasedQuery) ||
-          (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-        );
+    if (!query) {
+      return providers;
     }
-    
-    // Sort all providers (whether filtered or not) by the calculated score
-    return filteredProviders.sort((a, b) => calculateScore(b) - calculateScore(a));
+    const lowercasedQuery = query.toLowerCase();
+    return providers.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+    );
   }, [providers, query]);
 
 
@@ -57,7 +35,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            نمایش تمام هنرمندان بر اساس رتبه
+            تمام هنرمندان
           </p>
         )}
       </div>
@@ -70,7 +48,7 @@ export default function SearchPage() {
       ) : searchResults.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {searchResults.map((provider) => (
-            <SearchResultCard key={provider.phone} provider={provider} />
+            <SearchResultCard key={provider.id} provider={provider} />
           ))}
         </div>
       ) : (

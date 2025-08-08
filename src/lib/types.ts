@@ -1,3 +1,9 @@
+export interface User {
+  name: string;
+  phone: string; 
+  accountType: 'customer' | 'provider';
+}
+
 export interface Category {
   id: number;
   name: string;
@@ -17,23 +23,23 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
+  id: number;
   name: string;
-  service: string; // The specific service they provide, e.g., "Manicure"
+  service: string; 
   location: string;
   phone: string; // The phone number is the unique ID for the provider
   bio: string;
   categorySlug: Category['slug'];
-  serviceSlug: Service['slug']; // Link to the service
+  serviceSlug: Service['slug'];
   rating: number;
   reviewsCount: number;
-  agreementsCount?: number;
-  profileImage: PortfolioItem; // Dedicated profile image
+  profileImage: PortfolioItem; 
   portfolio: PortfolioItem[];
 }
 
 export interface Review {
   id: string;
-  providerId: string; // Now stores the provider's phone number
+  providerId: number; // Now stores the provider's ID
   authorName: string;
   rating: number;
   comment: string;
@@ -46,14 +52,4 @@ export interface Message {
   senderId: string;
   createdAt: string; // Using ISO string for localStorage
   isEdited?: boolean;
-}
-
-export interface Agreement {
-  id: string;
-  providerPhone: string;
-  providerName?: string;
-  customerPhone: string;
-  customerName: string;
-  status: 'pending' | 'confirmed';
-  requestedAt: string; // ISO String
 }
