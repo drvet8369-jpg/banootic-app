@@ -34,12 +34,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const router = useRouter();
 
+  // Create a wrapped dispatch function that also broadcasts actions.
+  const wrappedDispatch = useCallback((action: AppAction) => {
+    // Dispatch the action locally first
+    dispatch(action);
+
+    // If the action is coming from a broadcast, don't broadcast it again.
+    if (action.isBroadcast) {
+      return;
+    }
+    
+    // Broadcast the action to other tabs
+    try {
+        const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        channel.postMessage(action);
+        channel.close();
+    } catch (error) {
+        console.error("Broadcast channel error:", error);
+    }
+  }, []);
+
+
   // Effect to handle incoming broadcast messages
   useEffect(() => {
     const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
     const handleMessage = (event: MessageEvent) => {
-      // Dispatch the action received from another tab
-      // The 'isBroadcast' flag prevents an infinite loop
       if (event.data && event.data.type) {
          dispatch({ ...event.data, isBroadcast: true });
       }
@@ -53,22 +72,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       channel.removeEventListener('message', handleMessage);
       channel.close();
     };
-  }, []);
-
-  // Create a wrapped dispatch function that also broadcasts actions.
-  const wrappedDispatch = useCallback((action: AppAction) => {
-    // Dispatch the action locally first
-    dispatch(action);
-
-    // If the action is coming from a broadcast, don't broadcast it again.
-    if (action.isBroadcast) {
-      return;
-    }
-    
-    // Broadcast the action to other tabs
-    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-    channel.postMessage(action);
-    channel.close();
   }, []);
 
 
@@ -128,12 +131,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const getUnreadCount = useCallback((userPhone: string): number => {
+    if (!state.inboxData) return 0;
     return Object.values(state.inboxData)
       .filter((chat: any) => chat.members?.includes(userPhone))
       .reduce((acc: number, chat: any) => acc + (chat.participants?.[userPhone]?.unreadCount || 0), 0);
   }, [state.inboxData]);
   
   const getUserChats = useCallback((userPhone: string): any[] => {
+     if (!state.inboxData) return [];
      return Object.values(state.inboxData)
         .filter((chat: any) => chat.members?.includes(userPhone))
         .map((chat: any) => {
@@ -159,11 +164,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if(provider) {
         return { ...provider, id: provider.phone };
     }
-    // Attempt to find the name from inbox data if they are a customer
-    for (const chatId in state.inboxData) {
-        const chat = state.inboxData[chatId];
-        if (chat.participants && chat.participants[phone]) {
-            return { id: phone, name: chat.participants[phone].name, phone: phone };
+    if (state.inboxData) {
+        for (const chatId in state.inboxData) {
+            const chat = state.inboxData[chatId];
+            if (chat.participants && chat.participants[phone]) {
+                return { id: phone, name: chat.participants[phone].name, phone: phone };
+            }
         }
     }
     return { id: phone, name: `مشتری ${phone.slice(-4)}`, phone: phone };
