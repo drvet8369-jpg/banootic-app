@@ -9,6 +9,8 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AppContext';
 import { useEffect, useState } from 'react';
 import type { Provider, Agreement } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
+import { StarRating } from '@/components/ui/star-rating';
 
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
@@ -49,55 +51,50 @@ function ProviderDashboard() {
                 <CardDescription>خوش آمدید، {providerData.name}! از اینجا کسب و کار خود را مدیریت کنید.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">مجموع امتیاز</CardTitle>
-                            <Star className="w-4 h-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{providerData.rating.toFixed(1)}</div>
-                            <p className="text-xs text-muted-foreground">بر اساس {providerData.reviewsCount} نظر</p>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">مجموع مشتریان</CardTitle>
-                            <Users className="w-4 h-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{providerData.reviewsCount}</div>
-                             <p className="text-xs text-muted-foreground">تعداد نظرات ثبت شده</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">توافق‌های در انتظار</CardTitle>
-                            <Handshake className="w-4 h-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{pendingAgreements.length}</div>
-                            <p className="text-xs text-muted-foreground">برای تایید نیاز به اقدام شما دارند</p>
-                        </CardContent>
-                    </Card>
-                </div>
+                <Card className="bg-muted/50">
+                   <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-around gap-6">
+                        <div className="flex flex-col items-center gap-1 text-center">
+                           <h4 className="font-bold text-lg">امتیاز شما</h4>
+                           <StarRating rating={providerData.rating} readOnly />
+                           <p className="text-xs text-muted-foreground mt-1">از مجموع {providerData.reviewsCount} نظر</p>
+                        </div>
+                        <Separator orientation="vertical" className="h-16 hidden sm:block" />
+                        <div className="flex flex-col items-center gap-1 text-center">
+                            <h4 className="font-bold text-lg">مجموع مشتریان</h4>
+                            <div className="flex items-center gap-2">
+                                <Users className="w-6 h-6 text-primary" />
+                                <span className="text-2xl font-bold">{providerData.reviewsCount}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">تعداد نظرات ثبت شده</p>
+                        </div>
+                        <Separator orientation="vertical" className="h-16 hidden sm:block" />
+                        <div className="flex flex-col items-center gap-1 text-center">
+                            <h4 className="font-bold text-lg">توافق‌های در انتظار</h4>
+                            <div className="flex items-center gap-2">
+                                <Handshake className="w-6 h-6 text-primary" />
+                                <span className="text-2xl font-bold">{pendingAgreements.length}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">نیاز به تایید شما دارند</p>
+                        </div>
+                   </CardContent>
+                </Card>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-3 p-4 mt-auto border-t">
                  <Button asChild className="w-full">
                     <Link href="/profile">
-                        <UserRound className="w-4 h-4 ml-2" />
+                        <UserRound className="ml-2" />
                         مدیریت پروفایل
                     </Link>
                 </Button>
                 <Button asChild className="w-full" variant="secondary">
                     <Link href="/agreements">
-                       <Handshake className="w-4 h-4 ml-2" />
+                       <Handshake className="ml-2" />
                        مدیریت توافق‌ها
                     </Link>
                 </Button>
                  <Button asChild className="w-full" variant="outline">
                     <Link href="/inbox">
-                        <Inbox className="w-4 h-4 ml-2" />
+                        <Inbox className="ml-2" />
                         صندوق ورودی
                     </Link>
                 </Button>
