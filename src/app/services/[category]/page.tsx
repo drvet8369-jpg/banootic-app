@@ -1,13 +1,10 @@
-'use client'
-
-import { categories, services } from '@/lib/storage';
+import { categories, services } from '@/lib/data';
 import type { Category, Service } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useMemo } from 'react';
 
 interface PageProps {
   params: {
@@ -15,13 +12,20 @@ interface PageProps {
   };
 }
 
-export default function CategoryPage({ params }: PageProps) {
-  const { category, categoryServices } = useMemo(() => {
-    const category = categories.find((c) => c.slug === params.category);
-    const categoryServices = services.filter((s) => s.categorySlug === params.category);
-    return { category, categoryServices };
-  }, [params.category]);
+export async function generateStaticParams() {
+  return categories.map((category) => ({
+    category: category.slug,
+  }));
+}
 
+const getCategoryData = (slug: string): { category: Category | undefined, categoryServices: Service[] } => {
+  const category = categories.find((c) => c.slug === slug);
+  const categoryServices = services.filter((s) => s.categorySlug === slug);
+  return { category, categoryServices };
+};
+
+export default function CategoryPage({ params }: PageProps) {
+  const { category, categoryServices } = getCategoryData(params.category);
 
   if (!category) {
     notFound();

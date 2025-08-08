@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -18,14 +18,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from "@/components/ui/input";
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/storage';
+import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import type { User } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 
 
@@ -64,7 +65,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, addProvider, providers } = useAuth();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -83,20 +84,24 @@ export default function RegisterForm() {
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (values.accountType === 'provider') {
-        const existingProviderByPhone = providers.find(p => p.phone === values.phone);
-        if (existingProviderByPhone) {
-          toast({
-            title: 'خطا در ثبت‌نام',
-            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-            variant: 'destructive',
-          });
-          setIsLoading(false);
-          return;
-        }
 
-        const existingProviderByName = providers.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+      const allProviders = getProviders();
+
+      // Universal check for existing phone number among providers
+      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      if (existingProviderByPhone) {
+        toast({
+          title: 'خطا در ثبت‌نام',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check for existing provider by business name, only if registering as a provider
+      if (values.accountType === 'provider') {
+        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
             toast({
                 title: 'خطا در ثبت‌نام',
@@ -108,15 +113,27 @@ export default function RegisterForm() {
         }
       }
 
+
+      // This is the user object for the AuthContext
+      const userToLogin: User = {
+        name: values.name,
+        phone: values.phone,
+        accountType: values.accountType,
+        serviceType: values.serviceType,
+        bio: values.bio,
+      };
+
+      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
         const newProvider: Provider = {
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه',
+          location: 'ارومیه', // Default location
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -125,17 +142,19 @@ export default function RegisterForm() {
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
-        addProvider(newProvider);
+        
+        saveProviders([...allProviders, newProvider]);
       }
       
-      login(values.name, values.phone);
+      login(userToLogin);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
         description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
-      router.push('/');
+      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      router.push(destination);
 
     } catch (error) {
          console.error("Registration failed:", error);
@@ -180,7 +199,7 @@ export default function RegisterForm() {
                           <RadioGroupItem value="provider" />
                         </FormControl>
                         <FormLabel className="font-normal">
-                          هنرمند هستم (برای ارائه هنر و تخصص خود)
+                          ارائه‌دهنده خدمات هستم (برای ارائه هنر و تخصص خود)
                         </FormLabel>
                       </FormItem>
                     </RadioGroup>
