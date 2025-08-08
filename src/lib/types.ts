@@ -27,7 +27,7 @@ export interface Provider {
   name: string;
   service: string; 
   location: string;
-  phone: string; // The phone number is the unique ID for the provider
+  phone: string; 
   bio: string;
   categorySlug: Category['slug'];
   serviceSlug: Service['slug'];
@@ -39,7 +39,7 @@ export interface Provider {
 
 export interface Review {
   id: string;
-  providerId: number; // Now stores the provider's ID
+  providerId: number; 
   authorName: string;
   rating: number;
   comment: string;
@@ -56,10 +56,12 @@ export interface Message {
 
 export interface Agreement {
   id: string;
+  providerId: number;
   providerPhone: string;
   providerName: string;
   customerPhone: string;
   customerName: string;
   status: 'pending' | 'confirmed' | 'rejected';
+  createdAt: string; // ISO String
   requestedAt: string; // ISO String
 }

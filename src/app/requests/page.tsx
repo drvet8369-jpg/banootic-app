@@ -22,7 +22,7 @@ export default function CustomerRequestsPage() {
 
   useEffect(() => {
     if (isLoading || !user || user.accountType !== 'customer') return;
-    setRequests(agreements.filter(a => a.customerPhone === user.phone).sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
+    setRequests(agreements.filter(a => a.customerPhone === user.phone).sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.createdAt).getTime()));
   }, [isLoading, user, agreements]);
 
   if (isLoading) {

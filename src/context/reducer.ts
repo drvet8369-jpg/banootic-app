@@ -56,6 +56,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'INITIALIZE_STATE': {
       const providers = getProviders();
+      const reviews = getReviews();
+      const inboxData = getInboxData();
+      const agreements = getAgreements();
       const storedUserJSON = localStorage.getItem('honarbanoo-user');
       let user: User | null = null;
       
@@ -75,9 +78,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         user,
         isLoggedIn: !!user,
         providers,
-        reviews: getReviews(),
-        inboxData: getInboxData(),
-        agreements: getAgreements(),
+        reviews,
+        inboxData,
+        agreements,
         isLoading: false,
       };
     }
@@ -212,12 +215,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         const { provider, currentUser } = action.payload;
         const newAgreement: Agreement = {
             id: `agree_${Date.now()}`,
+            providerId: provider.id,
             providerPhone: provider.phone,
             providerName: provider.name,
             customerPhone: currentUser.phone,
             customerName: currentUser.name,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
             requestedAt: new Date().toISOString(),
-            status: 'pending'
         };
         const newAgreements = [...state.agreements, newAgreement];
         saveAgreements(newAgreements);
