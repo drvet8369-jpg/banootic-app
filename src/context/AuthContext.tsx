@@ -111,11 +111,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const saveMessage = (chatId: string, text: string, receiverPhone: string, receiverName: string) => {
     if(!state.user) return;
     
+    const timestamp = new Date().toISOString();
     const message: Message = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: `msg-${chatId}-${new Date(timestamp).getTime()}`, // Structurally unique ID
       text: text,
       senderId: state.user.phone,
-      createdAt: new Date().toISOString(),
+      createdAt: timestamp,
     };
 
     wrappedDispatch({type: 'ADD_MESSAGE', payload: { chatId, message, receiverPhone, receiverName, currentUser: state.user }})
