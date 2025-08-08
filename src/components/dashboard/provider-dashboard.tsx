@@ -3,12 +3,11 @@
 import { useAuth } from '@/context/AppContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Star, Users, Handshake, Eye, Inbox, UserRound, Loader2, FileCheck2, Hourglass } from 'lucide-react';
+import { Users, Eye, Loader2, FileCheck2, Hourglass } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { StarRating } from '@/components/ui/star-rating';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 
 interface StatItemProps {
   icon: React.ElementType;
@@ -76,7 +75,7 @@ export default function ProviderDashboard() {
           <CardDescription>نمای کلی از عملکرد شما در پلتفرم.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 items-center justify-around gap-4 text-center">
+           <div className="grid grid-cols-2 md:grid-cols-4 items-center justify-around gap-4 text-center p-4 border rounded-lg">
             <div className="col-span-2 md:col-span-1 flex flex-col items-center justify-center p-2 border-b md:border-b-0 md:border-l">
               <StarRating rating={provider.rating} size="default" readOnly />
               <p className="text-2xl font-bold mt-2">{provider.rating.toFixed(1)}</p>
@@ -86,33 +85,6 @@ export default function ProviderDashboard() {
              <StatItem icon={FileCheck2} label="تایید شده" value={confirmedAgreements} className="text-green-500" />
              <StatItem icon={Hourglass} label="در انتظار" value={pendingAgreements} className="text-yellow-500" />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>میانبرهای مدیریتی</CardTitle>
-          <CardDescription>به سرعت به بخش‌های مهم پروفایل خود دسترسی پیدا کنید.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button asChild size="lg" variant="outline">
-            <Link href="/profile">
-              <UserRound className="ml-2" />
-              مدیریت پروفایل
-            </Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/agreements">
-              <Handshake className="ml-2" />
-              مدیریت توافق‌ها
-            </Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/inbox">
-              <Inbox className="ml-2" />
-              صندوق ورودی
-            </Link>
-          </Button>
         </CardContent>
          <CardFooter className="pt-6">
              <Button asChild className="w-full">

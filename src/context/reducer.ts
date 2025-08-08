@@ -1,4 +1,4 @@
-import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/storage';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/data';
 import type { Provider, Review, Message, User, Agreement } from '@/lib/types';
 
 // 1. Define State Shape
@@ -131,14 +131,24 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         const newReviews = [...state.reviews, action.payload];
         saveReviews(newReviews);
         
-        // Also update the provider's rating
         const providerIndex = state.providers.findIndex(p => p.id === action.payload.providerId);
         if (providerIndex > -1) {
             const newProviders = [...state.providers];
+            const providerToUpdate = { ...newProviders[providerIndex] };
+            
             const providerReviews = newReviews.filter(r => r.providerId === action.payload.providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            newProviders[providerIndex].reviewsCount = providerReviews.length;
-            newProviders[providerIndex].rating = parseFloat((totalRating / newProviders[providerIndex].reviewsCount).toFixed(1));
+            const totalRatingFromReviews = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+
+            const confirmedAgreementsCount = state.agreements.filter(a => a.providerId === action.payload.providerId && a.status === 'confirmed').length;
+            const agreementBonus = confirmedAgreementsCount * 0.1;
+
+            const totalScore = totalRatingFromReviews + agreementBonus;
+            const totalItemsForAverage = providerReviews.length;
+
+            providerToUpdate.reviewsCount = providerReviews.length;
+            providerToUpdate.rating = totalItemsForAverage > 0 ? Math.min(5, totalScore / totalItemsForAverage) : Math.min(5, agreementBonus);
+
+            newProviders[providerIndex] = providerToUpdate;
             saveProviders(newProviders);
             return { ...state, reviews: newReviews, providers: newProviders };
         }
@@ -148,12 +158,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'ADD_MESSAGE': {
         const { chatId, message, receiverPhone, receiverName, currentUser } = action.payload;
         
-        // Update messages for the specific chat
         const currentMessages = getChatMessages(chatId);
         const newMessages = [...currentMessages, message];
         saveChatMessages(chatId, newMessages);
         
-        // Update inbox data
         const newInboxData = { ...state.inboxData };
         const currentChat = newInboxData[chatId] || {
             id: chatId,
@@ -231,9 +239,36 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'UPDATE_AGREEMENT_STATUS': {
         const { agreementId, status } = action.payload;
-        const newAgreements = state.agreements.map(a => a.id === agreementId ? { ...a, status } : a);
-        saveAgreements(newAgreements);
-        return { ...state, agreements: newAgreements };
+        const updatedAgreements = state.agreements.map(a => a.id === agreementId ? { ...a, status } : a);
+        saveAgreements(updatedAgreements);
+
+        if (status === 'confirmed') {
+            const agreement = updatedAgreements.find(a => a.id === agreementId);
+            if (agreement) {
+                const providerIndex = state.providers.findIndex(p => p.id === agreement.providerId);
+                if (providerIndex > -1) {
+                    const newProviders = [...state.providers];
+                    const providerToUpdate = { ...newProviders[providerIndex] };
+                    
+                    const confirmedAgreementsCount = updatedAgreements.filter(a => a.providerId === agreement.providerId && a.status === 'confirmed').length;
+                    const agreementBonus = confirmedAgreementsCount * 0.1;
+
+                    const providerReviews = state.reviews.filter(r => r.providerId === agreement.providerId);
+                    const totalRatingFromReviews = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+
+                    const totalScore = totalRatingFromReviews + agreementBonus;
+                    const totalItemsForAverage = providerReviews.length;
+
+                    providerToUpdate.rating = totalItemsForAverage > 0 ? Math.min(5, totalScore / totalItemsForAverage) : Math.min(5, agreementBonus);
+                    
+                    newProviders[providerIndex] = providerToUpdate;
+                    saveProviders(newProviders);
+                    return { ...state, agreements: updatedAgreements, providers: newProviders };
+                }
+            }
+        }
+        
+        return { ...state, agreements: updatedAgreements };
     }
 
     default:
