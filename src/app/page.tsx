@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { categories } from '@/lib/storage';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift, Loader2, Handshake, Inbox, Star, UserRound, FileText, Search } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useAuth } from '@/context/AuthContext';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 import { StarRating } from '@/components/ui/star-rating';
 
 
@@ -21,14 +20,13 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 const ProviderDashboard = () => {
-    const { user } = useAuth();
-    const { getProviderByPhone, isStorageLoading } = useStorage();
+    const { user, providers, isLoading } = useAuth();
     
     if (!user) return null;
     
-    const provider = getProviderByPhone(user.phone);
+    const provider = providers.find(p => p.phone === user.phone);
 
-    if (isStorageLoading || !provider) {
+    if (isLoading || !provider) {
        return (
         <div className="flex justify-center items-center py-20 flex-grow">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -99,20 +97,20 @@ const CustomerDashboard = () => {
             <Button
               asChild
               variant="outline"
-              className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-16 text-base"
+              className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-20 text-base sm:text-lg"
             >
               <Link href="/requests">
-                <FileText className="w-5 h-5 ml-2" />
+                <FileText className="w-5 h-5 ml-3" />
                 <span className="font-semibold">درخواست‌های من</span>
               </Link>
             </Button>
             <Button
               asChild
               variant="outline"
-              className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-16 text-base"
+              className="bg-primary/10 text-primary-foreground hover:bg-primary/20 border-primary/20 h-20 text-base sm:text-lg"
             >
               <Link href="/inbox">
-                <Inbox className="w-5 h-5 ml-2" />
+                <Inbox className="w-5 h-5 ml-3" />
                 <span className="font-semibold">صندوق ورودی</span>
               </Link>
             </Button>
@@ -175,10 +173,9 @@ const WelcomeScreen = () => (
 
 
 export default function Home() {
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const { isStorageLoading } = useStorage();
+  const { user, isLoggedIn, isLoading } = useAuth();
 
-  if (isAuthLoading || (isLoggedIn && isStorageLoading)) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

@@ -25,9 +25,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories, services } from '@/lib/storage';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import { useStorage } from '@/context/StorageContext';
-import type { User } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 import type { Provider } from '@/lib/types';
 
 
@@ -66,8 +64,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
-  const { providers, addProvider } = useStorage();
+  const { login, addProvider, providers } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -111,12 +108,6 @@ export default function RegisterForm() {
         }
       }
 
-      const userToLogin: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-      };
-
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
@@ -138,7 +129,7 @@ export default function RegisterForm() {
         addProvider(newProvider);
       }
       
-      login(userToLogin);
+      login(values.name, values.phone);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',

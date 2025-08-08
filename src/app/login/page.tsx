@@ -26,9 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { useStorage } from '@/context/StorageContext';
-import type { User } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 
 
 const formSchema = z.object({
@@ -40,8 +38,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
-  const { getProviderByPhone } = useStorage();
+  const { login, providers } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -56,31 +53,15 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const existingProvider = getProviderByPhone(values.phone);
+        const existingProvider = providers.find(p => p.phone === values.phone);
 
-        let userToLogin: User;
-
-        if (existingProvider) {
-          // User is a known provider
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          // User is a customer
-          userToLogin = {
-            name: `مشتری ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
-        }
+        const userName = existingProvider ? existingProvider.name : `مشتری ${values.phone.slice(-4)}`;
         
-        login(userToLogin);
+        login(userName, values.phone);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}!`,
+          description: `خوش آمدید ${userName}!`,
         });
         
         router.push('/');

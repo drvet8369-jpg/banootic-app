@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,8 +12,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
 export default function CustomerRequestsPage() {
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const { agreements, getAgreementsForCustomer, isStorageLoading } = useStorage();
+  const { user, isLoggedIn, isLoading, agreements } = useAuth();
   const [requests, setRequests] = useState<Agreement[]>([]);
   const [isClient, setIsClient] = useState(false);
 
@@ -23,11 +21,11 @@ export default function CustomerRequestsPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthLoading || isStorageLoading || !user || user.accountType !== 'customer') return;
-    setRequests(getAgreementsForCustomer(user.phone));
-  }, [isAuthLoading, isStorageLoading, user, agreements, getAgreementsForCustomer]);
+    if (isLoading || !user || user.accountType !== 'customer') return;
+    setRequests(agreements.filter(a => a.customerPhone === user.phone).sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
+  }, [isLoading, user, agreements]);
 
-  if (isAuthLoading || isStorageLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

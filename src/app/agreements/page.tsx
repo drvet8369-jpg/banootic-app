@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,8 +12,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AgreementsPage() {
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const { agreements, updateAgreementStatus, getAgreementsForProvider, isStorageLoading } = useStorage();
+  const { user, isLoggedIn, isLoading, agreements, updateAgreementStatus } = useAuth();
   const { toast } = useToast();
   const [providerAgreements, setProviderAgreements] = useState<Agreement[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -24,16 +22,16 @@ export default function AgreementsPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthLoading || isStorageLoading || !user || user.accountType !== 'provider') return;
-    setProviderAgreements(getAgreementsForProvider(user.phone));
-  }, [isAuthLoading, isStorageLoading, user, agreements, getAgreementsForProvider]);
+    if (isLoading || !user || user.accountType !== 'provider') return;
+    setProviderAgreements(agreements.filter(a => a.providerPhone === user.phone));
+  }, [isLoading, user, agreements]);
 
   const handleConfirmAgreement = (agreementId: string) => {
     updateAgreementStatus(agreementId, 'confirmed');
     toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
   };
   
-  if (isAuthLoading || isStorageLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

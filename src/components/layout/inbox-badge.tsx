@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
 }
 
 export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
-  const { user } = useAuth();
-  const { getUnreadCount, inboxData } = useStorage(); // Listen to inboxData changes
+  const { user, getUnreadCount, inboxData } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -20,7 +18,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
     } else {
       setUnreadCount(0);
     }
-  }, [user, getUnreadCount, inboxData]); // Rerun when inboxData changes
+  }, [user, getUnreadCount, inboxData]);
 
   if (unreadCount === 0) {
     return null;

@@ -3,7 +3,7 @@
 import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/layout/footer';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 import { usePathname } from 'next/navigation';
 
 export default function AppContent({ children }: { children: React.ReactNode }) {

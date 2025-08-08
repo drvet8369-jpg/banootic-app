@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,11 +24,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useStorage } from '@/context/StorageContext';
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const { getProviderByPhone, updateProviderData } = useStorage();
+  const { user, isLoggedIn, isLoading: isAuthLoading, updateProviderData, providers } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -41,7 +39,7 @@ export default function ProfilePage() {
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
-        const currentProvider = getProviderByPhone(user.phone);
+        const currentProvider = providers.find(p => p.phone === user.phone);
         if (currentProvider) {
             setProvider(currentProvider);
             setEditedData({
@@ -52,13 +50,13 @@ export default function ProfilePage() {
         }
     }
     setIsLoading(false);
-  }, [user, getProviderByPhone]);
+  }, [user, providers]);
 
   useEffect(() => {
     if (isAuthLoading) return;
     setIsLoading(true);
     loadProviderData();
-  }, [loadProviderData, isAuthLoading]);
+  }, [loadProviderData, isAuthLoading, providers]);
 
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

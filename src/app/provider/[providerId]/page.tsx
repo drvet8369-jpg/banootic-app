@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 import type { Provider, Review, Agreement } from '@/lib/types';
-import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -68,8 +67,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
 
 // Review Form Component
 const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubmit: () => void }) => {
-  const { user, isLoggedIn } = useAuth();
-  const { addReview } = useStorage();
+  const { user, isLoggedIn, addReview } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -88,6 +86,7 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
     setIsSubmitting(true);
 
     setTimeout(() => {
+        if (!user) return;
         const newReview: Review = {
           id: Date.now().toString(),
           providerId: providerPhone,
@@ -153,28 +152,27 @@ const ReviewForm = ({ providerPhone, onSubmit }: { providerPhone: string, onSubm
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const { getProviderByPhone, getReviewsForProvider, isStorageLoading, addAgreement } = useStorage();
+  const { user, isLoggedIn, isLoading, providers, reviews, addAgreement } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [providerReviews, setProviderReviews] = useState<Review[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
 
   const loadData = useCallback(() => {
-    const foundProvider = getProviderByPhone(providerPhone);
+    const foundProvider = providers.find(p => p.phone === providerPhone);
     setProvider(foundProvider || null);
     if (foundProvider) {
-      setReviews(getReviewsForProvider(foundProvider.phone));
+      setProviderReviews(reviews.filter(r => r.providerId === foundProvider.phone));
     }
-  }, [providerPhone, getProviderByPhone, getReviewsForProvider]);
+  }, [providerPhone, providers, reviews]);
 
   useEffect(() => {
-    if (!isStorageLoading) {
+    if (!isLoading) {
       loadData();
     }
-  }, [isStorageLoading, loadData]);
+  }, [isLoading, loadData]);
   
   const handleRequestAgreement = () => {
     if (!isLoggedIn || !user || !provider) {
@@ -203,7 +201,7 @@ export default function ProviderProfilePage() {
 
   const isOwnerViewing = user && user.phone === provider?.phone;
 
-  if (isStorageLoading || isAuthLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -330,9 +328,9 @@ export default function ProviderProfilePage() {
                 
                 <div id="reviews" className="p-6 scroll-mt-20">
                     <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                    {reviews.length > 0 ? (
+                    {providerReviews.length > 0 ? (
                         <div className="space-y-4">
-                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                            {providerReviews.map(review => <ReviewCard key={review.id} review={review} />)}
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">

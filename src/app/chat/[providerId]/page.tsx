@@ -8,10 +8,9 @@ import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-r
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/lib/types';
-import { useStorage } from '@/context/StorageContext';
 
 
 interface OtherPersonDetails {
@@ -24,16 +23,7 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonIdOrProviderId = params.providerId as string;
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const {
-    getChatMessages,
-    getOtherPersonDetails,
-    markChatAsRead,
-    updateMessage,
-    saveMessage,
-    isStorageLoading,
-    inboxData
-  } = useStorage();
+  const { user, isLoggedIn, isLoading: isAuthLoading, getMessagesForChat, getOtherPersonDetails, markChatAsRead, updateMessage, saveMessage, inboxData } = useAuth();
   const { toast } = useToast();
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
@@ -69,13 +59,13 @@ export default function ChatPage() {
     if (!isLoggedIn || !user) return;
     const chatId = getChatId(user.phone, otherPersonIdOrProviderId);
     if (chatId) {
-        setMessages(getChatMessages(chatId));
+        setMessages(getMessagesForChat(chatId));
     }
-  }, [getChatMessages, isLoggedIn, user, otherPersonIdOrProviderId, inboxData]); // Listen to inboxData as well
+  }, [getMessagesForChat, isLoggedIn, user, otherPersonIdOrProviderId, inboxData]); // Listen to inboxData as well
 
 
   useEffect(() => {
-    if (isAuthLoading || isStorageLoading) return;
+    if (isAuthLoading) return;
 
     if (!isLoggedIn || !user) {
         setIsLoading(false);
@@ -93,15 +83,15 @@ export default function ChatPage() {
     
     const chatId = getChatId(user.phone, details.phone);
     if (chatId) {
-      setMessages(getChatMessages(chatId));
+      setMessages(getMessagesForChat(chatId));
       markChatAsRead(chatId, user.phone);
     }
     
     setIsLoading(false);
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId, isAuthLoading, isStorageLoading, getOtherPersonDetails, getChatMessages, markChatAsRead]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId, isAuthLoading, getOtherPersonDetails, getMessagesForChat, markChatAsRead]);
 
-  if (isAuthLoading || isLoading || isStorageLoading) {
+  if (isAuthLoading || isLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

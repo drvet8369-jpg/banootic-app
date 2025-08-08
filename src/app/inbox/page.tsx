@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Inbox, User } from 'lucide-react';
@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { useStorage } from '@/context/StorageContext';
 
 interface Chat {
   id: string;
@@ -32,8 +31,7 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn, isAuthLoading } = useAuth();
-  const { getUserChats, isStorageLoading, inboxData } = useStorage();
+  const { user, isLoggedIn, isLoading, getUserChats, inboxData } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isClient, setIsClient] = useState(false);
 
@@ -42,12 +40,12 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthLoading || isStorageLoading || !user) return;
+    if (isLoading || !user) return;
     setChats(getUserChats(user.phone));
-  }, [user, isAuthLoading, isStorageLoading, getUserChats, inboxData]);
+  }, [user, isLoading, getUserChats, inboxData]);
 
 
-  if (isAuthLoading || isStorageLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

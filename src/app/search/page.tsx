@@ -5,7 +5,7 @@ import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 
 // Ladder Ranking Algorithm
 const calculateScore = (provider: Provider): number => {
@@ -15,6 +15,8 @@ const calculateScore = (provider: Provider): number => {
 
     const normalizedRating = (provider.rating || 0) / 5;
     
+    // The higher the weight, the more impact it has on the score.
+    // reviewsCount now has the highest weight.
     const score = (normalizedRating * ratingWeight) + 
                   ((provider.reviewsCount || 0) * reviewsWeight) + 
                   ((provider.agreementsCount || 0) * agreementsWeight);
@@ -26,7 +28,7 @@ const calculateScore = (provider: Provider): number => {
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { providers, isStorageLoading } = useStorage();
+  const { providers, isLoading } = useAuth();
   
   const searchResults = useMemo(() => {
     let filteredProviders = providers;
@@ -40,6 +42,7 @@ export default function SearchPage() {
         );
     }
     
+    // Sort all providers (whether filtered or not) by the calculated score
     return filteredProviders.sort((a, b) => calculateScore(b) - calculateScore(a));
   }, [providers, query]);
 
@@ -59,7 +62,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      {isStorageLoading ? (
+      {isLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>

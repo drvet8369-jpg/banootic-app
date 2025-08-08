@@ -8,12 +8,12 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import SearchResultCard from '@/components/search-result-card';
-import { useStorage } from '@/context/StorageContext';
+import { useAuth } from '@/context/AppContext';
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
-  const { providers, isStorageLoading } = useStorage();
+  const { providers, isLoading } = useAuth();
 
   const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
@@ -24,7 +24,7 @@ export default function ServiceProvidersPage() {
   }, [providers, service]);
 
 
-  if (isStorageLoading) {
+  if (isLoading) {
     return (
         <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />

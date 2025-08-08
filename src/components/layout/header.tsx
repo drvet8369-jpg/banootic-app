@@ -5,7 +5,7 @@ import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AppContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
