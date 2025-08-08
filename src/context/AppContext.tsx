@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages } from '@/lib/storage';
-import type { Provider, Review, Message, User } from '@/lib/types';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/storage';
+import type { Provider, Review, Message, User, Agreement } from '@/lib/types';
 import { appReducer, AppState, AppAction, initialState } from './reducer';
 
 // Define the shape of the context value
@@ -21,6 +21,8 @@ interface AppContextType extends AppState {
   getUserChats: (userPhone: string) => any[];
   getOtherPersonDetails: (phone: string) => { id: string | number; name: string; phone: string; profileImage?: { src: string; aiHint?: string; }; } | null;
   getMessagesForChat: (chatId: string) => Message[];
+  addAgreement: (provider: Provider) => void;
+  updateAgreementStatus: (agreementId: string, status: 'confirmed' | 'rejected') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -144,7 +146,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 unreadCount: selfInfo?.unreadCount || 0,
             };
         })
-        .filter(Boolean)
+        .filter((chat): chat is any => chat !== null)
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [state.inboxData]);
 
@@ -161,12 +163,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     }
+    // Fallback for customer who hasn't chatted yet
+    const storedUser = localStorage.getItem('honarbanoo-user');
+    if(storedUser) {
+        const user: User = JSON.parse(storedUser);
+        if (user.phone === phone) {
+            return { id: phone, name: user.name, phone: phone };
+        }
+    }
     return { id: phone, name: `مشتری ${phone.slice(-4)}`, phone: phone };
   }, [state.providers, state.inboxData]);
 
   const getMessagesForChat = useCallback((chatId: string): Message[] => {
       return getChatMessages(chatId);
   }, []);
+
+  const addAgreement = (provider: Provider) => {
+      if (!state.user) return;
+      wrappedDispatch({ type: 'ADD_AGREEMENT', payload: { provider, currentUser: state.user }});
+  }
+
+  const updateAgreementStatus = (agreementId: string, status: 'confirmed' | 'rejected') => {
+      wrappedDispatch({ type: 'UPDATE_AGREEMENT_STATUS', payload: { agreementId, status } });
+  }
 
   return (
     <AppContext.Provider value={{ 
@@ -182,7 +201,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         getUnreadCount,
         getUserChats,
         getOtherPersonDetails,
-        getMessagesForChat
+        getMessagesForChat,
+        addAgreement,
+        updateAgreementStatus,
     }}>
       {children}
     </AppContext.Provider>

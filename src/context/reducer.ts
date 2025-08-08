@@ -1,5 +1,5 @@
-import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages } from '@/lib/storage';
-import type { Provider, Review, Message, User } from '@/lib/types';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/storage';
+import type { Provider, Review, Message, User, Agreement } from '@/lib/types';
 
 // 1. Define State Shape
 export interface AppState {
@@ -9,6 +9,7 @@ export interface AppState {
   providers: Provider[];
   reviews: Review[];
   inboxData: Record<string, any>;
+  agreements: Agreement[];
 }
 
 // 2. Define Initial State
@@ -19,6 +20,7 @@ export const initialState: AppState = {
   providers: [],
   reviews: [],
   inboxData: {},
+  agreements: [],
 };
 
 // 3. Define Actions
@@ -31,6 +33,8 @@ type AddReviewAction = { type: 'ADD_REVIEW'; payload: Review; isBroadcast?: bool
 type AddMessageAction = { type: 'ADD_MESSAGE'; payload: { chatId: string; message: Message; receiverPhone: string, receiverName: string; currentUser: User }; isBroadcast?: boolean; };
 type UpdateMessageAction = { type: 'UPDATE_MESSAGE'; payload: { chatId: string; messageId: string; newText: string }; isBroadcast?: boolean; };
 type MarkChatAsReadAction = { type: 'MARK_CHAT_AS_READ'; payload: { chatId: string; userPhone: string }; isBroadcast?: boolean; };
+type AddAgreementAction = { type: 'ADD_AGREEMENT', payload: { provider: Provider, currentUser: User }, isBroadcast?: boolean; };
+type UpdateAgreementStatusAction = { type: 'UPDATE_AGREEMENT_STATUS', payload: { agreementId: string, status: 'confirmed' | 'rejected' }, isBroadcast?: boolean; };
 
 
 export type AppAction =
@@ -42,15 +46,17 @@ export type AppAction =
   | AddReviewAction
   | AddMessageAction
   | UpdateMessageAction
-  | MarkChatAsReadAction;
+  | MarkChatAsReadAction
+  | AddAgreementAction
+  | UpdateAgreementStatusAction;
 
 
 // 4. Create the Reducer Function
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'INITIALIZE_STATE': {
-      const storedUserJSON = localStorage.getItem('honarbanoo-user');
       const providers = getProviders();
+      const storedUserJSON = localStorage.getItem('honarbanoo-user');
       let user: User | null = null;
       
       if (storedUserJSON) {
@@ -71,6 +77,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         providers,
         reviews: getReviews(),
         inboxData: getInboxData(),
+        agreements: getAgreements(),
         isLoading: false,
       };
     }
@@ -199,6 +206,29 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             return { ...state, inboxData: newInboxData };
         }
         return state;
+    }
+
+    case 'ADD_AGREEMENT': {
+        const { provider, currentUser } = action.payload;
+        const newAgreement: Agreement = {
+            id: `agree_${Date.now()}`,
+            providerPhone: provider.phone,
+            providerName: provider.name,
+            customerPhone: currentUser.phone,
+            customerName: currentUser.name,
+            requestedAt: new Date().toISOString(),
+            status: 'pending'
+        };
+        const newAgreements = [...state.agreements, newAgreement];
+        saveAgreements(newAgreements);
+        return { ...state, agreements: newAgreements };
+    }
+
+    case 'UPDATE_AGREEMENT_STATUS': {
+        const { agreementId, status } = action.payload;
+        const newAgreements = state.agreements.map(a => a.id === agreementId ? { ...a, status } : a);
+        saveAgreements(newAgreements);
+        return { ...state, agreements: newAgreements };
     }
 
     default:

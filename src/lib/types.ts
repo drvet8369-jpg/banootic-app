@@ -53,3 +53,13 @@ export interface Message {
   createdAt: string; // Using ISO string for localStorage
   isEdited?: boolean;
 }
+
+export interface Agreement {
+  id: string;
+  providerPhone: string;
+  providerName: string;
+  customerPhone: string;
+  customerName: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  requestedAt: string; // ISO String
+}

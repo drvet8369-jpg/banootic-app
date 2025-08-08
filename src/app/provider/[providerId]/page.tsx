@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, MapPin, Edit } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, MapPin, Edit, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
       </div>
       <div className="flex-grow">
         <div className="flex items-center justify-between mb-2">
-          <StarRating rating={review.rating} size="sm" readOnly />
+          <StarRating rating={review.rating} size="sm" />
           {isClient && (
             <p className="text-xs text-muted-foreground flex-shrink-0">
               {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
@@ -151,8 +151,9 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 
 export default function ProviderProfilePage() {
   const params = useParams();
-  const providerId = Number(params.providerId);
-  const { user, isLoading, providers, reviews } = useAuth();
+  const providerId = Number(params.providerId as string);
+  const { user, isLoading, providers, reviews, addAgreement } = useAuth();
+  const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [providerReviews, setProviderReviews] = useState<Review[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -161,7 +162,7 @@ export default function ProviderProfilePage() {
     const foundProvider = providers.find(p => p.id === providerId);
     setProvider(foundProvider || null);
     if (foundProvider) {
-      setProviderReviews(reviews.filter(r => r.providerId === foundProvider.id));
+      setProviderReviews(reviews.filter(r => r.providerId === foundProvider.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     }
   }, [providerId, providers, reviews]);
 
@@ -172,6 +173,12 @@ export default function ProviderProfilePage() {
   }, [isLoading, loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
+
+  const handleRequestAgreement = () => {
+    if (!user || !provider) return;
+    addAgreement(provider);
+    toast({ title: "موفق", description: `درخواست توافق برای ${provider.name} ارسال شد. می‌توانید وضعیت آن را در صفحه "درخواست‌های من" پیگیری کنید.` });
+  }
 
   if (isLoading) {
     return (
@@ -280,17 +287,21 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button asChild className="w-full">
+                     <Button asChild className="w-full">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
+                    <Button asChild className="w-full" variant="outline">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
+                    <Button onClick={handleRequestAgreement} className="w-full" variant="secondary" disabled={!user || user.accountType !== 'customer'}>
+                       <Handshake className="w-4 h-4 ml-2" />
+                       درخواست توافق
                     </Button>
                 </CardFooter>
                 )}

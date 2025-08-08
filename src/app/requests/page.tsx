@@ -87,7 +87,7 @@ export default function CustomerRequestsPage() {
                   <div className="flex-grow space-y-2">
                     <p className="font-bold">هنرمند: {req.providerName || 'نامشخص'}</p>
                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/provider/${req.providerPhone}`}>
+                        <Link href={`/provider/${req.providerId}`}>
                            <Eye className="w-4 h-4 ml-2" />
                            مشاهده پروفایل
                         </Link>

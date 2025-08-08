@@ -1,7 +1,7 @@
 // This file is the SINGLE SOURCE OF TRUTH for all localStorage operations.
 // No other file should directly access localStorage for app data.
 
-import type { Provider, Review, Category, Service, Message } from './types';
+import type { Provider, Review, Category, Service, Message, Agreement } from './types';
 
 // --- Default Data ---
 // This data is used ONLY on the very first load to populate the app.
@@ -115,6 +115,8 @@ const PROVIDERS_KEY = 'honarbanoo-providers';
 const REVIEWS_KEY = 'honarbanoo-reviews';
 const CHATS_KEY_PREFIX = 'honarbanoo_chat_';
 const INBOX_KEY = 'honarbanoo_inbox_chats';
+const AGREEMENTS_KEY = 'honarbanoo-agreements';
+
 
 // --- Public API for Data Access ---
 
@@ -136,3 +138,7 @@ export const saveChatMessages = (chatId: string, messages: Message[]): void => s
 
 export const getInboxData = (): Record<string, any> => getStoredData<Record<string, any>>(INBOX_KEY, {});
 export const saveInboxData = (data: Record<string, any>): void => saveStoredData<Record<string, any>>(INBOX_KEY, data);
+
+// Agreements
+export const getAgreements = (): Agreement[] => getStoredData<Agreement[]>(AGREEMENTS_KEY, []);
+export const saveAgreements = (data: Agreement[]): void => saveStoredData<Agreement[]>(AGREEMENTS_KEY, data);
