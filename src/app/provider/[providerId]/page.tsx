@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { useAuth } from '@/context/AppContext';
+import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, MapPin, Edit, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -36,38 +37,29 @@ const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLDivEle
 );
 
 // Review Card Component
-const ReviewCard = ({ review }: { review: Review }) => {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  return (
-    <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-      <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
-        <Avatar className="h-10 w-10">
-          <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
-        </Avatar>
-        <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
-      </div>
-      <div className="flex-grow">
-        <div className="flex items-center justify-between mb-2">
-          <StarRating rating={review.rating} size="sm" />
-          {isClient && (
-            <p className="text-xs text-muted-foreground flex-shrink-0">
-              {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
-            </p>
-          )}
-        </div>
-        <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
-      </div>
+const ReviewCard = ({ review }: { review: Review }) => (
+  <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+    <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
+      <Avatar className="h-10 w-10">
+        <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
+      </Avatar>
+      <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
     </div>
-  )
-};
+    <div className="flex-grow">
+      <div className="flex items-center justify-between mb-2">
+        <StarRating rating={review.rating} size="sm" readOnly />
+        <p className="text-xs text-muted-foreground flex-shrink-0">
+          {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
+        </p>
+      </div>
+      <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+    </div>
+  </div>
+);
 
 // Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
-  const { user, isLoggedIn, addReview } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -85,24 +77,40 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     }
     setIsSubmitting(true);
 
+    // Simulate API call
     setTimeout(() => {
         if (!user) return;
+        const allReviews = getReviews();
         const newReview: Review = {
-          id: Date.now().toString(),
-          providerId,
-          authorName: user.name,
-          rating,
-          comment,
-          createdAt: new Date().toISOString(),
+        id: Date.now().toString(),
+        providerId,
+        authorName: user.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString(),
         };
 
-        addReview(newReview);
-        
+        const updatedReviews = [...allReviews, newReview];
+        saveReviews(updatedReviews);
+
+        // Recalculate provider's average rating
+        const allProviders = getProviders();
+        const providerIndex = allProviders.findIndex(p => p.id === providerId);
+        if (providerIndex > -1) {
+            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
+            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
+            
+            allProviders[providerIndex].rating = newAverageRating;
+            allProviders[providerIndex].reviewsCount = providerReviews.length;
+            saveProviders(allProviders);
+        }
+
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
         setIsSubmitting(false);
-        onSubmit();
+        onSubmit(); // Callback to trigger data refresh in parent
     }, 1000);
   };
   
@@ -151,38 +159,66 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 
 export default function ProviderProfilePage() {
   const params = useParams();
-  const providerId = Number(params.providerId as string);
-  const { user, isLoading, providers, reviews, addAgreement } = useAuth();
+  const providerId = params.providerId as string;
+  const { user } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [providerReviews, setProviderReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
-    const foundProvider = providers.find(p => p.id === providerId);
-    setProvider(foundProvider || null);
-    if (foundProvider) {
-      setProviderReviews(reviews.filter(r => r.providerId === foundProvider.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    const numericProviderId = parseInt(providerId, 10);
+    if (isNaN(numericProviderId)) {
+        setIsLoading(false);
+        setProvider(null);
+        return;
     }
-  }, [providerId, providers, reviews]);
+
+    const allProviders = getProviders();
+    const foundProvider = allProviders.find(p => p.id === numericProviderId);
+    
+    if (foundProvider) {
+      setProvider(foundProvider);
+      const allReviews = getReviews();
+      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
+                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setReviews(providerReviews);
+    } else {
+      setProvider(null);
+    }
+    
+    setIsLoading(false);
+  }, [providerId]);
 
   useEffect(() => {
-    if (!isLoading) {
-      loadData();
-    }
-  }, [isLoading, loadData]);
+    setIsLoading(true);
+    loadData();
+    window.addEventListener('focus', loadData);
+    return () => window.removeEventListener('focus', loadData);
+  }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
 
-  const handleRequestAgreement = () => {
-    if (!user || !provider) return;
-    addAgreement(provider);
-    toast({ title: "موفق", description: `درخواست توافق برای ${provider.name} ارسال شد. می‌توانید وضعیت آن را در صفحه "درخواست‌های من" پیگیری کنید.` });
-  }
+  const deletePortfolioItem = (itemIndex: number) => {
+    if (!provider) return;
+
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
+    if (providerIndex > -1) {
+        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
+        saveProviders(allProviders);
+        loadData(); // Refresh data
+        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+    } else {
+        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+    }
+  };
+
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -214,27 +250,13 @@ export default function ProviderProfilePage() {
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
-                     <div className="flex items-center gap-1 text-sm text-muted-foreground mt-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{provider.location}</span>
-                    </div>
                     <div className="mt-2">
-                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} />
+                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
                     </div>
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
                     <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
-                    
-                    {isOwnerViewing && (
-                         <Button asChild className="w-full mb-6">
-                            <Link href="/profile">
-                                <Edit className="w-4 h-4 ml-2" />
-                                بازگشت به صفحه مدیریت
-                            </Link>
-                        </Button>
-                    )}
-
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
@@ -253,6 +275,17 @@ export default function ProviderProfilePage() {
                                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                                                 data-ai-hint={item.aiHint}
                                             />
+                                            {isOwnerViewing && (
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
+                                                aria-label={`حذف نمونه کار ${index + 1}`}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                            )}
                                         </div>
                                     </DialogTrigger>
                                 ))}
@@ -287,21 +320,17 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                     <Button asChild className="w-full">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
-                    </Button>
-                    <Button asChild className="w-full" variant="outline">
+                    <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button onClick={handleRequestAgreement} className="w-full" variant="secondary" disabled={!user || user.accountType !== 'customer'}>
-                       <Handshake className="w-4 h-4 ml-2" />
-                       درخواست توافق
+                    <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
                     </Button>
                 </CardFooter>
                 )}
@@ -310,9 +339,9 @@ export default function ProviderProfilePage() {
                 
                 <div id="reviews" className="p-6 scroll-mt-20">
                     <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                    {providerReviews.length > 0 ? (
+                    {reviews.length > 0 ? (
                         <div className="space-y-4">
-                            {providerReviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
