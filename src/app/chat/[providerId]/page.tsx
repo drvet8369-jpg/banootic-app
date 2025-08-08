@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
@@ -143,7 +144,7 @@ export default function ChatPage() {
     setIsSending(true);
     
     const tempUiMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random()}`,
       text: text,
       senderId: user.phone,
       createdAt: new Date().toISOString(),
