@@ -3,11 +3,12 @@
 import { useAuth } from '@/context/AppContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Eye, Loader2, FileCheck2, Hourglass } from 'lucide-react';
+import { Users, Eye, Loader2, FileCheck2, Hourglass, UserRound, Handshake, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { StarRating } from '@/components/ui/star-rating';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 interface StatItemProps {
   icon: React.ElementType;
@@ -86,7 +87,34 @@ export default function ProviderDashboard() {
              <StatItem icon={Hourglass} label="در انتظار" value={pendingAgreements} className="text-yellow-500" />
           </div>
         </CardContent>
-         <CardFooter className="pt-6">
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>دسترسی سریع</CardTitle>
+            <CardDescription>پروفایل، توافق‌ها و پیام‌های خود را مدیریت کنید.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+           <Button asChild size="lg" variant="outline">
+             <Link href="/profile">
+              <UserRound className="ml-2 text-primary" />
+              مدیریت پروفایل
+             </Link>
+           </Button>
+            <Button asChild size="lg" variant="outline">
+             <Link href="/agreements">
+              <Handshake className="ml-2 text-green-600" />
+              مدیریت توافق‌ها
+             </Link>
+           </Button>
+           <Button asChild size="lg" variant="outline">
+             <Link href="/inbox">
+              <Inbox className="ml-2 text-accent" />
+              صندوق ورودی
+             </Link>
+           </Button>
+        </CardContent>
+         <CardFooter className="pt-6 border-t mt-6">
              <Button asChild className="w-full">
                 <Link href={`/provider/${provider.id}`}>
                     <Eye className="w-4 h-4 ml-2" />
