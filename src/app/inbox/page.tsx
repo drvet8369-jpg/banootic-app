@@ -42,7 +42,7 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
-    if (!user?.phone) {
+    if (isLoading || !user) {
       setChats([]);
       return;
     }
@@ -53,7 +53,7 @@ export default function InboxPage() {
       console.error("Failed to load chats", e);
       setError('خطا در بارگذاری گفتگوهای موقت.');
     }
-  }, [user?.phone, getUserChats]);
+  }, [user, getUserChats, isLoading]);
 
 
   if (isLoading) {
@@ -98,11 +98,6 @@ export default function InboxPage() {
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
-                    {user.accountType === 'customer' && (
-                        <Button asChild className="mt-6">
-                           <Link href="/search?q=">جستجوی هنرمندان</Link>
-                        </Button>
-                    )}
                 </div>
             </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 'use client';
 
-import { services, categories, getProviders } from '@/lib/data';
+import { services, categories } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,21 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import SearchResultCard from '@/components/search-result-card';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
+  const { providers, isLoading: isAuthLoading } = useAuth();
 
   const [service, setService] = useState<Service | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This logic is now wrapped in a useCallback to ensure it's stable
-  // and correctly re-fetches data whenever the URL slugs change.
   const loadData = useCallback(() => {
+    if(isAuthLoading) return;
+    
     setIsLoading(true);
 
     const foundCategory = categories.find((c) => c.slug === categorySlug);
@@ -30,32 +32,22 @@ export default function ServiceProvidersPage() {
     setService(foundService || null);
       
     if (foundCategory && foundService) {
-      // Always get the latest providers from localStorage inside the function
-      const allProviders = getProviders();
-      // Correctly filter providers based on the serviceSlug from the URL, and sort by rating.
-      const foundProviders = allProviders
+      const foundProviders = providers
         .filter((p) => p.serviceSlug === serviceSlug)
-        .sort((a,b) => b.rating - a.rating);
+        .sort((a,b) => b.rating - a.rating); // Sort by rating
       setServiceProviders(foundProviders);
     } else {
       setServiceProviders([]);
     }
     
     setIsLoading(false);
-  }, [categorySlug, serviceSlug]);
+  }, [categorySlug, serviceSlug, providers, isAuthLoading]);
 
-  // useEffect now has a stable dependency and will re-run correctly
-  // every time the user navigates to a new service page or revisits the tab.
   useEffect(() => {
     loadData();
-
-    window.addEventListener('focus', loadData);
-    return () => {
-      window.removeEventListener('focus', loadData);
-    };
   }, [loadData]);
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -83,7 +75,7 @@ export default function ServiceProvidersPage() {
       {serviceProviders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {serviceProviders.map((provider) => (
-            <SearchResultCard key={provider.phone} provider={provider} />
+            <SearchResultCard key={provider.id} provider={provider} />
           ))}
         </div>
       ) : (

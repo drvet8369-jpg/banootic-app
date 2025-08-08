@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -10,41 +10,34 @@ import { useEffect, useState, useCallback } from 'react';
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
+  const { providers, isLoading: isAuthLoading } = useAuth();
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This function now correctly re-fetches and filters data whenever the query changes.
   const performSearch = useCallback(() => {
+    if (isAuthLoading) return;
+
     setIsLoading(true);
-    // Always get the latest providers from localStorage at the moment of searching.
-    const allProviders = getProviders();
+    let results: Provider[];
+
     if (!query) {
       // If no query, show all providers sorted by rating
-      const sortedProviders = [...allProviders].sort((a, b) => b.rating - a.rating);
-      setSearchResults(sortedProviders);
-      setIsLoading(false);
-      return;
+      results = [...providers].sort((a, b) => b.rating - a.rating);
+    } else {
+      const lowercasedQuery = query.toLowerCase();
+      results = providers.filter(provider => 
+        provider.name.toLowerCase().includes(lowercasedQuery) ||
+        provider.service.toLowerCase().includes(lowercasedQuery) ||
+        (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+      ).sort((a, b) => b.rating - a.rating); // Sort filtered results by rating
     }
-    const lowercasedQuery = query.toLowerCase();
-    const results = allProviders.filter(provider => 
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery) ||
-      provider.bio.toLowerCase().includes(lowercasedQuery)
-    ).sort((a,b) => b.rating - a.rating); // Sort filtered results by rating
     
     setSearchResults(results);
     setIsLoading(false);
-  }, [query]);
+  }, [query, providers, isAuthLoading]);
 
-  // useEffect now correctly depends on performSearch.
-  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
-
-    window.addEventListener('focus', performSearch);
-    return () => {
-      window.removeEventListener('focus', performSearch);
-    };
   }, [performSearch]);
 
 
@@ -58,7 +51,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            تمام هنرمندان
+            نمایش تمام هنرمندان
           </p>
         )}
       </div>
@@ -71,7 +64,7 @@ export default function SearchPage() {
       ) : searchResults.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {searchResults.map((provider) => (
-            <SearchResultCard key={provider.phone} provider={provider} />
+            <SearchResultCard key={provider.id} provider={provider} />
           ))}
         </div>
       ) : (
