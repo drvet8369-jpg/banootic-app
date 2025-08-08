@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import ProviderDashboard from '@/components/dashboard/provider-dashboard';
 import CustomerDashboard from '@/components/dashboard/customer-dashboard';
 import { Loader2 } from 'lucide-react';
@@ -85,4 +85,3 @@ export default function Home() {
     </div>
   );
 }
-

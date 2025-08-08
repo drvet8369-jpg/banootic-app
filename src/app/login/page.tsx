@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -79,7 +79,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>

@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-r
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/lib/types';
 

@@ -31,9 +31,8 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getUserChats, isLoading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
@@ -45,54 +44,21 @@ export default function InboxPage() {
   useEffect(() => {
     if (!user?.phone) {
       setChats([]);
-      setIsLoading(false);
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
     
     try {
-      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      
-      const userChats = Object.values(allChatsData)
-        .filter((chat: any) => chat.members?.includes(user.phone))
-        .map((chat: any): Chat | null => {
-            if (!chat.participants || !chat.members) return null;
-
-            const otherMemberId = chat.members.find((id: string) => id !== user.phone);
-            if (!otherMemberId) return null;
-            
-            const otherMemberInfo = chat.participants[otherMemberId];
-            const selfInfo = chat.participants[user.phone];
-
-            const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
-
-            return {
-                id: chat.id,
-                otherMemberId: otherMemberId,
-                otherMemberName: otherMemberName,
-                lastMessage: chat.lastMessage || '',
-                updatedAt: chat.updatedAt,
-                unreadCount: selfInfo?.unreadCount || 0,
-            };
-        })
-        .filter((chat): chat is Chat => chat !== null)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        
-      setChats(userChats);
+      setChats(getUserChats(user.phone));
     } catch (e) {
-      console.error("Failed to load chats from localStorage", e);
+      console.error("Failed to load chats", e);
       setError('خطا در بارگذاری گفتگوهای موقت.');
-    } finally {
-      setIsLoading(false);
     }
-  }, [user?.phone]);
+  }, [user?.phone, getUserChats]);
 
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
@@ -100,7 +66,7 @@ export default function InboxPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>

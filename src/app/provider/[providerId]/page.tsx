@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import type { Provider, Review } from '@/lib/types';
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -388,4 +388,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-

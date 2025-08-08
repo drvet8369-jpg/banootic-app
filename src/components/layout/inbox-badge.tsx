@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface InboxBadgeProps {
   isMenu?: boolean;

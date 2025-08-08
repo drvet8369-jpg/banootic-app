@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Eye, Loader2, FileCheck2, Hourglass, UserRound, Handshake, Inbox } from 'lucide-react';
@@ -73,7 +73,6 @@ export default function ProviderDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>آمار کلی</CardTitle>
-          <CardDescription>نمای کلی از عملکرد شما در پلتفرم.</CardDescription>
         </CardHeader>
         <CardContent>
            <div className="grid grid-cols-2 md:grid-cols-4 items-center justify-around gap-4 text-center p-4 border rounded-lg">
@@ -88,7 +87,7 @@ export default function ProviderDashboard() {
           </div>
         </CardContent>
       </Card>
-
+      
       <Card>
         <CardHeader>
             <CardTitle>دسترسی سریع</CardTitle>
