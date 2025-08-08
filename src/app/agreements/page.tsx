@@ -128,7 +128,7 @@ export default function AgreementsPage() {
                                         <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
                                         {isClient && (
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                تایید شده در: {new Date(agreement.requestedAt).toLocaleDateString('fa-IR')}
+                                                تایید شده در: {new Date(agreement.createdAt).toLocaleDateString('fa-IR')}
                                             </p>
                                         )}
                                     </div>
