@@ -24,13 +24,13 @@ export default function CustomerDashboard() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Button asChild size="lg" variant="outline">
             <Link href="/requests">
-              <FileText className="ml-2 text-primary" />
+              <FileText className="ml-2 text-blue-600" />
               درخواست‌های من
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
             <Link href="/inbox">
-              <Inbox className="ml-2 text-accent" />
+              <Inbox className="ml-2 text-rose-600" />
               صندوق ورودی
             </Link>
           </Button>
