@@ -3,26 +3,28 @@
 import { useAuth } from '@/context/AppContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Star, Users, Handshake, Eye, Inbox, UserRound, Loader2, FileCheck2 } from 'lucide-react';
+import { Star, Users, Handshake, Eye, Inbox, UserRound, Loader2, FileCheck2, Hourglass } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { StarRating } from '@/components/ui/star-rating';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
-interface StatCardProps {
+interface StatItemProps {
   icon: React.ElementType;
-  title: string;
+  label: string;
   value: string | number;
-  colorClass: string;
+  className?: string;
 }
 
-const StatCard = ({ icon: Icon, title, value, colorClass }: StatCardProps) => (
-  <div className="flex flex-col items-center justify-center p-4 text-center">
-    <Icon className={cn("w-8 h-8 mb-2", colorClass)} />
-    <p className="text-2xl font-bold">{value}</p>
-    <p className="text-sm text-muted-foreground">{title}</p>
+const StatItem = ({ icon: Icon, label, value, className }: StatItemProps) => (
+  <div className="flex flex-col items-center justify-center p-2 text-center">
+    <Icon className={cn("w-7 h-7 mb-2", className)} />
+    <p className="text-xl font-bold">{value}</p>
+    <p className="text-xs text-muted-foreground">{label}</p>
   </div>
 );
+
 
 export default function ProviderDashboard() {
   const { user, providers, reviews, agreements, isLoading } = useAuth();
@@ -48,6 +50,11 @@ export default function ProviderDashboard() {
     return agreements.filter(a => a.providerPhone === user.phone && a.status === 'pending').length;
   }, [agreements, user]);
 
+  const confirmedAgreements = useMemo(() => {
+    if (!agreements || !user) return 0;
+    return agreements.filter(a => a.providerPhone === user.phone && a.status === 'confirmed').length;
+  }, [agreements, user]);
+
   if (isLoading || !provider) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -68,15 +75,17 @@ export default function ProviderDashboard() {
           <CardTitle>آمار کلی</CardTitle>
           <CardDescription>نمای کلی از عملکرد شما در پلتفرم.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x">
-          <div className="flex flex-col items-center justify-center p-4 text-center">
-              <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 items-center justify-around gap-4 text-center">
+            <div className="col-span-2 md:col-span-1 flex flex-col items-center justify-center p-2 border-b md:border-b-0 md:border-l">
+              <StarRating rating={provider.rating} size="default" readOnly />
               <p className="text-2xl font-bold mt-2">{provider.rating.toFixed(1)}</p>
-              <p className="text-sm text-muted-foreground">امتیاز کل</p>
+              <p className="text-sm text-muted-foreground">({provider.reviewsCount} نظر)</p>
+            </div>
+             <StatItem icon={Users} label="مشتریان" value={uniqueCustomers} className="text-blue-500" />
+             <StatItem icon={FileCheck2} label="تایید شده" value={confirmedAgreements} className="text-green-500" />
+             <StatItem icon={Hourglass} label="در انتظار" value={pendingAgreements} className="text-yellow-500" />
           </div>
-          <StatCard icon={Users} title="مشتریان" value={uniqueCustomers} colorClass="text-blue-500" />
-          <StatCard icon={FileCheck2} title="توافق‌های تایید شده" value={agreements.filter(a=>a.providerPhone === user?.phone && a.status === 'confirmed').length} colorClass="text-green-500" />
-          <StatCard icon={Handshake} title="توافق‌های در انتظار" value={pendingAgreements} colorClass="text-yellow-500" />
         </CardContent>
       </Card>
 

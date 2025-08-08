@@ -4,7 +4,7 @@
 import { useAuth } from '@/context/AppContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Inbox } from 'lucide-react';
+import { FileText, Inbox, Search } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CustomerDashboard() {
@@ -25,13 +25,13 @@ export default function CustomerDashboard() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Button asChild size="lg" variant="outline">
             <Link href="/requests">
-              <FileText className="ml-2" />
+              <FileText className="ml-2 text-primary" />
               درخواست‌های من
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
             <Link href="/inbox">
-              <Inbox className="ml-2" />
+              <Inbox className="ml-2 text-accent" />
               صندوق ورودی
             </Link>
           </Button>
@@ -40,6 +40,7 @@ export default function CustomerDashboard() {
        <div className="text-center">
            <Button asChild size="lg">
                 <Link href="/search?q=">
+                    <Search className="ml-2" />
                     جستجوی هنرمندان جدید
                 </Link>
             </Button>
@@ -47,4 +48,3 @@ export default function CustomerDashboard() {
     </div>
   );
 }
-
