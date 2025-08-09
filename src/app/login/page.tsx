@@ -64,7 +64,7 @@ export default function LoginPage() {
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
-            bio: existingProvider.bio,
+            bio: existingProvider.bio, // Ensure bio is included
           };
         } else {
           // User is a customer
@@ -72,7 +72,7 @@ export default function LoginPage() {
             name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
-            bio: '',
+            bio: '', // Ensure bio is included, even if empty
           };
         }
         

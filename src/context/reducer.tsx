@@ -28,7 +28,7 @@ type InitializeStateAction = { type: 'INITIALIZE_STATE'; isBroadcast?: boolean; 
 type LoginAction = { type: 'LOGIN'; payload: User; isBroadcast?: boolean; };
 type LogoutAction = { type: 'LOGOUT'; isBroadcast?: boolean; };
 type AddProviderAction = { type: 'ADD_PROVIDER'; payload: Provider; isBroadcast?: boolean; };
-type UpdateProviderAction = { type: 'UPDATE_PROVIDER'; payload: Provider; isBroadcast?: boolean; };
+type UpdateProviderDataAction = { type: 'UPDATE_PROVIDER_DATA'; payload: { phone: string, updateFn: (provider: Provider) => void }; isBroadcast?: boolean; };
 type AddReviewAction = { type: 'ADD_REVIEW'; payload: Review; isBroadcast?: boolean; };
 type AddMessageAction = { type: 'ADD_MESSAGE'; payload: { chatId: string; message: Message; receiverPhone: string, receiverName: string; currentUser: User }; isBroadcast?: boolean; };
 type UpdateMessageAction = { type: 'UPDATE_MESSAGE'; payload: { chatId: string; messageId: string; newText: string }; isBroadcast?: boolean; };
@@ -42,7 +42,7 @@ export type AppAction =
   | LoginAction
   | LogoutAction
   | AddProviderAction
-  | UpdateProviderAction
+  | UpdateProviderDataAction
   | AddReviewAction
   | AddMessageAction
   | UpdateMessageAction
@@ -64,9 +64,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       
       if (storedUserJSON) {
         try {
-          const storedUser = JSON.parse(storedUserJSON);
-          const isProvider = providers.some(p => p.phone === storedUser.phone);
-          user = { ...storedUser, accountType: isProvider ? 'provider' : 'customer' };
+          user = JSON.parse(storedUserJSON);
         } catch(e) {
             console.error("Failed to parse user, clearing.", e);
             localStorage.removeItem('honarbanoo-user');
@@ -96,10 +94,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'LOGOUT': {
       localStorage.removeItem('honarbanoo-user');
+      // No need to use router here as it's a side effect.
+      // Component using this should handle navigation.
       return {
-        ...state,
-        isLoggedIn: false,
-        user: null,
+        ...initialState,
+        isLoading: false,
       };
     }
     
@@ -112,19 +111,34 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         };
     }
 
-    case 'UPDATE_PROVIDER': {
-        const newProviders = state.providers.map(p => p.phone === action.payload.phone ? action.payload : p);
-        saveProviders(newProviders);
-        let updatedUser = state.user;
-        if(state.user && state.user.phone === action.payload.phone) {
-           updatedUser = { ...state.user, name: action.payload.name, bio: action.payload.bio };
-           localStorage.setItem('honarbanoo-user', JSON.stringify(updatedUser));
+    case 'UPDATE_PROVIDER_DATA': {
+        const { phone, updateFn } = action.payload;
+        const newProviders = [...state.providers];
+        const providerIndex = newProviders.findIndex(p => p.phone === phone);
+        if (providerIndex > -1) {
+            // Create a new object for the provider to ensure immutability
+            const updatedProvider = { ...newProviders[providerIndex] };
+            updateFn(updatedProvider);
+            newProviders[providerIndex] = updatedProvider;
+            saveProviders(newProviders);
+
+            let updatedUser = state.user;
+            if (state.user && state.user.phone === phone) {
+                updatedUser = { 
+                    ...state.user, 
+                    name: updatedProvider.name,
+                    bio: updatedProvider.bio, 
+                };
+                localStorage.setItem('honarbanoo-user', JSON.stringify(updatedUser));
+            }
+
+            return {
+                ...state,
+                providers: newProviders,
+                user: updatedUser
+            };
         }
-        return {
-            ...state,
-            user: updatedUser,
-            providers: newProviders
-        };
+        return state;
     }
     
     case 'ADD_REVIEW': {
