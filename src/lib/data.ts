@@ -120,17 +120,24 @@ const safeJSONStringifyAndSet = (key: string, value: any) => {
 
 
 // --- Providers ---
-const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers-v2';
-export const getProviders = (): Provider[] => safeJSONParse(PROVIDERS_STORAGE_KEY, defaultProviders);
+const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers-v3';
+export const getProviders = (): Provider[] => {
+    const stored = safeJSONParse(PROVIDERS_STORAGE_KEY, null);
+    if(stored === null) {
+        safeJSONStringifyAndSet(PROVIDERS_STORAGE_KEY, defaultProviders);
+        return defaultProviders;
+    }
+    return stored;
+};
 export const saveProviders = (providers: Provider[]) => safeJSONStringifyAndSet(PROVIDERS_STORAGE_KEY, providers);
 
 // --- Reviews ---
-const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews-v2';
+const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews-v3';
 export const getReviews = (): Review[] => safeJSONParse(REVIEWS_STORAGE_KEY, []);
 export const saveReviews = (reviews: Review[]) => safeJSONStringifyAndSet(REVIEWS_STORAGE_KEY, reviews);
 
 // --- Inbox ---
-const INBOX_STORAGE_KEY = 'honarbanoo-inbox-data-v2';
+const INBOX_STORAGE_KEY = 'honarbanoo-inbox-data-v3';
 export const getInboxData = (): Record<string, any> => safeJSONParse(INBOX_STORAGE_KEY, {});
 export const saveInboxData = (inboxData: Record<string, any>) => safeJSONStringifyAndSet(INBOX_STORAGE_KEY, inboxData);
 
@@ -139,6 +146,6 @@ export const getChatMessages = (chatId: string): Message[] => safeJSONParse(`cha
 export const saveChatMessages = (chatId: string, messages: Message[]) => safeJSONStringifyAndSet(`chat_${chatId}`, messages);
 
 // --- Agreements ---
-const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements-v2';
+const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements-v3';
 export const getAgreements = (): Agreement[] => safeJSONParse(AGREEMENTS_STORAGE_KEY, []);
 export const saveAgreements = (agreements: Agreement[]) => safeJSONStringifyAndSet(AGREEMENTS_STORAGE_KEY, agreements);

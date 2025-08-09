@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -14,7 +13,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const calculateUnread = useCallback(() => {
-    if (!user || !user.phone || !inboxData) {
+    if (!user?.phone || !inboxData) {
       setUnreadCount(0);
       return;
     }
@@ -33,7 +32,6 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
     }
   }, [isLoading, calculateUnread]);
   
-
   if (unreadCount === 0 || isLoading) {
     return null;
   }

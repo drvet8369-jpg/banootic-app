@@ -23,11 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
+import { categories, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
+import type { User, Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -65,7 +64,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
+  const { dispatch, providers } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -85,10 +84,7 @@ export default function RegisterForm() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const allProviders = getProviders();
-
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      const existingProviderByPhone = providers.find(p => p.phone === values.phone);
       if (existingProviderByPhone) {
         toast({
           title: 'خطا در ثبت‌نام',
@@ -99,9 +95,8 @@ export default function RegisterForm() {
         return;
       }
 
-      // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        const existingProviderByName = providers.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
             toast({
                 title: 'خطا در ثبت‌نام',
@@ -113,23 +108,19 @@ export default function RegisterForm() {
         }
       }
 
-
-      // This is the user object for the AuthContext
       const userToLogin: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
-        serviceType: values.serviceType,
         bio: values.bio,
       };
 
-      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
         const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
+          id: providers.length > 0 ? Math.max(...providers.map(p => p.id)) + 1 : 1,
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
@@ -143,10 +134,10 @@ export default function RegisterForm() {
           portfolio: [],
         };
         
-        saveProviders([...allProviders, newProvider]);
+        dispatch({ type: 'ADD_PROVIDER', payload: newProvider });
       }
       
-      login(userToLogin);
+      dispatch({ type: 'LOGIN', payload: userToLogin });
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
@@ -278,7 +269,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۶۰ کاراکتر).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

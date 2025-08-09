@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,7 +23,7 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
+  if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
     return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
@@ -31,29 +31,58 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn, getUserChats, isLoading } = useAuth();
+  const { user, isLoggedIn, inboxData, isLoading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client, preventing hydration mismatch for date formatting.
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (isLoading || !user) {
+  const loadUserChats = useCallback(() => {
+    if (!user?.phone || !inboxData) {
       setChats([]);
       return;
     }
-    
     try {
-      setChats(getUserChats(user.phone));
+      const userChats = Object.values(inboxData)
+        .filter((chat: any) => chat.members?.includes(user.phone))
+        .map((chat: any): Chat | null => {
+            if (!chat.participants || !chat.members) return null;
+
+            const otherMemberId = chat.members.find((id: string) => id !== user.phone);
+            if (!otherMemberId) return null;
+            
+            const otherMemberInfo = chat.participants[otherMemberId];
+            const selfInfo = chat.participants[user.phone];
+
+            const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
+
+            return {
+                id: chat.id,
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberName,
+                lastMessage: chat.lastMessage || '',
+                updatedAt: chat.updatedAt,
+                unreadCount: selfInfo?.unreadCount || 0,
+            };
+        })
+        .filter((chat): chat is Chat => chat !== null)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        
+      setChats(userChats);
     } catch (e) {
-      console.error("Failed to load chats", e);
+      console.error("Failed to load chats from context", e);
       setError('خطا در بارگذاری گفتگوهای موقت.');
     }
-  }, [user, getUserChats, isLoading]);
+  }, [user?.phone, inboxData]);
+
+  useEffect(() => {
+    if(!isLoading) {
+      loadUserChats();
+    }
+  }, [isLoading, loadUserChats]);
 
 
   if (isLoading) {
@@ -98,6 +127,11 @@ export default function InboxPage() {
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
+                    {user.accountType === 'customer' && (
+                        <Button asChild className="mt-6">
+                            <Link href="/">مشاهده هنرمندان</Link>
+                        </Button>
+                    )}
                 </div>
             </CardContent>
         </Card>

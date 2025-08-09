@@ -27,8 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
-import type { User } from '@/context/AuthContext';
+import type { User } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -40,7 +39,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
+  const { dispatch, providers } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -55,8 +54,7 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        const existingProvider = providers.find(p => p.phone === values.phone);
 
         let userToLogin: User;
 
@@ -66,7 +64,7 @@ export default function LoginPage() {
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
-            bio: existingProvider.bio, // Ensure bio is included
+            bio: existingProvider.bio,
           };
         } else {
           // User is a customer
@@ -74,11 +72,11 @@ export default function LoginPage() {
             name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
-            bio: '', // Ensure bio is included, even if empty
+            bio: '',
           };
         }
         
-        login(userToLogin);
+        dispatch({ type: 'LOGIN', payload: userToLogin });
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
@@ -100,7 +98,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>

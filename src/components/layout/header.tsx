@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -22,7 +22,7 @@ import dynamic from 'next/dynamic';
 const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
 
 export default function Header() {
-  const { isLoggedIn, user, logout } = useAuth();
+  const { isLoggedIn, user, dispatch } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
 
@@ -30,8 +30,12 @@ export default function Header() {
     setIsSheetOpen(false);
   }, [pathname]);
 
-  const getInitials = (name: string | undefined) => {
-    if (!name || typeof name !== 'string') return '..';
+  const handleLogout = () => {
+    dispatch({ type: 'LOGOUT' });
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return '..';
     const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
@@ -52,26 +56,11 @@ export default function Header() {
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
-             {user.accountType === 'provider' ? (
-                <>
-                  <SheetClose asChild>
-                    <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
-                      <UserRound className="h-5 w-5" />
-                      پروفایل من
-                    </Link>
-                  </SheetClose>
-                   <SheetClose asChild>
-                    <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
-                      <Handshake className="h-5 w-5" />
-                      مدیریت توافق‌ها
-                    </Link>
-                  </SheetClose>
-                </>
-             ) : (
+             {user?.accountType === 'provider' && (
                 <SheetClose asChild>
-                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
-                    <FileText className="h-5 w-5" />
-                    درخواست‌های من
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
+                    <UserRound className="h-5 w-5" />
+                    پروفایل من
                   </Link>
                 </SheetClose>
              )}
@@ -112,7 +101,7 @@ export default function Header() {
               </div>
             </div>
             <SheetClose asChild>
-              <Button onClick={logout} variant="ghost" className="w-full justify-start">
+              <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
                   <LogOut className="ml-2 h-5 w-5" />
                   خروج
               </Button>
@@ -125,24 +114,31 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-         <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-10 w-10 text-foreground" />
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
-        </Link>
-       
         <div className="flex items-center gap-2">
-            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                {isLoggedIn && user ? (
+            <div className="md:hidden">
+                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">باز کردن منو</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-[300px] sm:w-[340px]">
+                    <MobileNavMenu />
+                </SheetContent>
+                </Sheet>
+            </div>
+            {isLoggedIn && user ? (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full hidden md:flex">
                         <Avatar>
-                         <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <InboxBadge isMenu />
                     </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user.name}</p>
@@ -150,18 +146,12 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' ? (
-                       <>
+                    {user.accountType === 'provider' && (
                         <DropdownMenuItem asChild>
-                            <Link href="/profile"><UserRound className="ml-2 h-4 w-4" /><span>پروفایل من</span></Link>
-                        </DropdownMenuItem>
-                         <DropdownMenuItem asChild>
-                            <Link href="/agreements"><Handshake className="ml-2 h-4 w-4" /><span>مدیریت توافق‌ها</span></Link>
-                        </DropdownMenuItem>
-                       </>
-                    ) : (
-                        <DropdownMenuItem asChild>
-                            <Link href="/requests"><FileText className="ml-2 h-4 w-4" /><span>درخواست‌های من</span></Link>
+                        <Link href="/profile">
+                            <UserRound className="ml-2 h-4 w-4" />
+                            <span>پروفایل من</span>
+                        </Link>
                         </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
@@ -172,37 +162,28 @@ export default function Header() {
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
+                    <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="ml-2 h-4 w-4" />
                         <span>خروج</span>
                     </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 ) : (
-                <>
-                    <Button asChild>
-                     <Link href="/login">ورود</Link>
-                    </Button>
+                <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
                     <Button asChild variant="secondary">
-                     <Link href="/register">ثبت‌نام</Link>
+                      <Link href="/register">ثبت‌نام</Link>
                     </Button>
-                </>
-                )}
-            </nav>
-            <div className="md:hidden">
-                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                     <Menu className="h-6 w-6" />
-                    <span className="sr-only">باز کردن منو</span>
+                    <Button asChild>
+                      <Link href="/login">ورود</Link>
                     </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-                    <MobileNavMenu />
-                </SheetContent>
-                </Sheet>
-            </div>
+                </nav>
+            )}
         </div>
+
+        <Link href="/" className="flex items-center gap-2">
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <Logo className="h-10 w-10 text-foreground" />
+        </Link>
       </div>
     </header>
   );

@@ -2,6 +2,8 @@ export interface User {
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
+  bio?: string;
+  serviceType?: string;
 }
 
 export interface Category {

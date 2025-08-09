@@ -64,7 +64,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       
       if (storedUserJSON) {
         try {
-          user = JSON.parse(storedUserJSON);
+          const storedUser = JSON.parse(storedUserJSON);
+          const isProvider = providers.some(p => p.phone === storedUser.phone);
+          user = { ...storedUser, accountType: isProvider ? 'provider' : 'customer' };
         } catch(e) {
             console.error("Failed to parse user, clearing.", e);
             localStorage.removeItem('honarbanoo-user');
@@ -111,11 +113,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'UPDATE_PROVIDER': {
-        const newProviders = state.providers.map(p => p.id === action.payload.id ? action.payload : p);
+        const newProviders = state.providers.map(p => p.phone === action.payload.phone ? action.payload : p);
         saveProviders(newProviders);
         let updatedUser = state.user;
         if(state.user && state.user.phone === action.payload.phone) {
-           updatedUser = { ...state.user, name: action.payload.name };
+           updatedUser = { ...state.user, name: action.payload.name, bio: action.payload.bio };
            localStorage.setItem('honarbanoo-user', JSON.stringify(updatedUser));
         }
         return {
@@ -135,11 +137,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             const providerToUpdate = { ...newProviders[providerIndex] };
             
             const providerReviews = newReviews.filter(r => r.providerId === action.payload.providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            const newReviewsCount = providerReviews.length;
-            
-            providerToUpdate.reviewsCount = newReviewsCount;
-            providerToUpdate.rating = newReviewsCount > 0 ? parseFloat((totalRating / newReviewsCount).toFixed(1)) : 0;
+            const totalRatingFromReviews = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+
+            providerToUpdate.reviewsCount = providerReviews.length;
+            providerToUpdate.rating = parseFloat((totalRatingFromReviews / providerReviews.length).toFixed(1));
             
             newProviders[providerIndex] = providerToUpdate;
             saveProviders(newProviders);
