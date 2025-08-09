@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -61,12 +61,20 @@ export default function Header() {
         {isLoggedIn && user ? (
            <>
              {user?.accountType === 'provider' ? (
+                <>
                 <SheetClose asChild>
                   <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
                     پروفایل من
                   </Link>
                 </SheetClose>
+                <SheetClose asChild>
+                  <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
+                     <Handshake className="h-5 w-5" />
+                     مدیریت توافق‌ها
+                  </Link>
+                </SheetClose>
+                </>
              ) : (
                 <SheetClose asChild>
                   <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
@@ -158,12 +166,20 @@ export default function Header() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {user.accountType === 'provider' ? (
+                        <>
                         <DropdownMenuItem asChild>
                           <Link href="/profile">
                               <UserRound className="ml-2 h-4 w-4" />
                               <span>پروفایل من</span>
                           </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/agreements">
+                              <Handshake className="ml-2 h-4 w-4" />
+                              <span>مدیریت توافق‌ها</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        </>
                     ) : (
                         <DropdownMenuItem asChild>
                           <Link href="/requests">
