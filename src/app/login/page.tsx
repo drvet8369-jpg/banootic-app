@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
 import type { User } from '@/context/AuthContext';
 
 
@@ -39,7 +40,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, providers } = useAuth();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -54,19 +55,34 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const existingProvider = providers.find(p => p.phone === values.phone);
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
 
-        const userToLogin: User = {
-          name: existingProvider ? existingProvider.name : `مشتری ${values.phone.slice(-4)}`,
-          phone: values.phone,
-          accountType: existingProvider ? 'provider' : 'customer',
-        };
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+            bio: existingProvider.bio, // Ensure bio is included
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `مشتری ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+            bio: '', // Ensure bio is included, even if empty
+          };
+        }
         
         login(userToLogin);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}!`,
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
         
         router.push('/');
@@ -84,7 +100,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
