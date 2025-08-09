@@ -175,10 +175,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Fallback for customer who hasn't chatted yet
     const storedUser = localStorage.getItem('honarbanoo-user');
     if(storedUser) {
-        const user: User = JSON.parse(storedUser);
-        if (user.phone === phone) {
-            return { id: phone, name: user.name, phone: phone };
-        }
+        try {
+            const user: User = JSON.parse(storedUser);
+            if (user.phone === phone) {
+                return { id: phone, name: user.name, phone: phone };
+            }
+        } catch(e) { /* ignore malformed json */ }
     }
     return { id: phone, name: `مشتری ${phone.slice(-4)}`, phone: phone };
   }, [state.providers, state.inboxData]);
