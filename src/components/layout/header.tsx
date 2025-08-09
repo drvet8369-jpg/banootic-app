@@ -25,7 +25,12 @@ const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     setIsSheetOpen(false);
@@ -34,7 +39,7 @@ export default function Header() {
   const getInitials = (name: unknown) => {
     if (typeof name !== 'string' || !name) return '..';
     const names = name.split(' ');
-    if (names.length > 1 && names[1]) {
+    if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
       return `${names[0][0]}${names[1][0]}`;
     }
     return name.substring(0, 2);
@@ -53,7 +58,7 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && user ? (
+        {isClient && isLoggedIn && user ? (
            <>
              {user.accountType === 'provider' && (
                 <SheetClose asChild>
@@ -80,7 +85,7 @@ export default function Header() {
             </SheetClose>
            </>
         ) : (
-          <>
+          isClient && <>
             <SheetClose asChild>
               <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                 <LogIn className="h-5 w-5" />
@@ -96,7 +101,7 @@ export default function Header() {
           </>
         )}
       </nav>
-      {isLoggedIn && user && (
+      {isClient && isLoggedIn && user && (
         <div className="mt-auto p-4 border-t">
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
@@ -131,7 +136,7 @@ export default function Header() {
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                {isLoggedIn && user ? (
+                {isClient && isLoggedIn && user ? (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -180,7 +185,7 @@ export default function Header() {
                     </DropdownMenuContent>
                 </DropdownMenu>
                 ) : (
-                <>
+                isClient && <>
                     <Button asChild>
                     <Link href="/login">ورود</Link>
                     </Button>
