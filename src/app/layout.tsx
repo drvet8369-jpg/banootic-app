@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/layout/footer';
+import { AuthProvider } from '@/context/AuthContext';
 
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
@@ -55,15 +56,17 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <div className="relative flex min-h-screen flex-col">
-          <Header />
-          <SearchBar />
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-            {children}
-          </main>
-          <Footer />
-        </div>
-        <Toaster />
+        <AuthProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              <SearchBar />
+              <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+                {children}
+              </main>
+              <Footer />
+            </div>
+            <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
