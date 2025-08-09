@@ -9,7 +9,6 @@ import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import ProviderDashboard from '@/components/dashboard/provider-dashboard';
-import CustomerDashboard from '@/components/dashboard/customer-dashboard';
 import { Loader2 } from 'lucide-react';
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
@@ -81,7 +80,7 @@ export default function Home() {
 
   return (
     <div className="w-full py-8">
-      {user?.accountType === 'provider' ? <ProviderDashboard /> : <CustomerDashboard />}
+      {user?.accountType === 'provider' ? <ProviderDashboard /> : <LandingPage />}
     </div>
   );
 }
