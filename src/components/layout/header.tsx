@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -34,8 +34,8 @@ export default function Header() {
     dispatch({ type: 'LOGOUT' });
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return '..';
+  const getInitials = (name?: string | any) => {
+    if (typeof name !== 'string' || !name) return '..';
     const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
@@ -45,22 +45,33 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <SheetHeader className="p-4 border-b">
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-foreground" />
               <span className="font-display text-2xl font-bold">هنربانو</span>
             </Link>
          </SheetClose>
-      </div>
+         <div className="sr-only">
+            <SheetTitle>منو اصلی</SheetTitle>
+            <SheetDescription>برای ناوبری در سایت از لینک های زیر استفاده کنید</SheetDescription>
+        </div>
+      </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' && (
+             {user?.accountType === 'provider' ? (
                 <SheetClose asChild>
                   <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
                     پروفایل من
+                  </Link>
+                </SheetClose>
+             ) : (
+                <SheetClose asChild>
+                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
+                     <FileText className="h-5 w-5" />
+                     درخواست های من
                   </Link>
                 </SheetClose>
              )}
@@ -146,12 +157,19 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
+                    {user.accountType === 'provider' ? (
                         <DropdownMenuItem asChild>
-                        <Link href="/profile">
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
-                        </Link>
+                          <Link href="/profile">
+                              <UserRound className="ml-2 h-4 w-4" />
+                              <span>پروفایل من</span>
+                          </Link>
+                        </DropdownMenuItem>
+                    ) : (
+                        <DropdownMenuItem asChild>
+                          <Link href="/requests">
+                              <FileText className="ml-2 h-4 w-4" />
+                              <span>درخواست های من</span>
+                          </Link>
                         </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
