@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -55,13 +56,17 @@ export default function LoginPage() {
         
         const existingProvider = providers.find(p => p.phone === values.phone);
 
-        const userName = existingProvider ? existingProvider.name : `مشتری ${values.phone.slice(-4)}`;
+        const userToLogin: User = {
+          name: existingProvider ? existingProvider.name : `مشتری ${values.phone.slice(-4)}`,
+          phone: values.phone,
+          accountType: existingProvider ? 'provider' : 'customer',
+        };
         
-        login(userName, values.phone);
+        login(userToLogin);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userName}!`,
+          description: `خوش آمدید ${userToLogin.name}!`,
         });
         
         router.push('/');
