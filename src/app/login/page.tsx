@@ -71,7 +71,7 @@ export default function LoginPage() {
         } else {
           // User is a customer
           userToLogin = {
-            name: `مشتری ${values.phone.slice(-4)}`,
+            name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
             bio: '', // Ensure bio is included, even if empty
