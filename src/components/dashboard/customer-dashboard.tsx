@@ -1,1 +1,61 @@
-// This file is being emptied as part of the temporary removal of the customer dashboard.
+'use client';
+
+import Link from 'next/link';
+import { categories } from '@/lib/data';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Palette, ChefHat, Scissors, Gift, Search } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+
+const iconMap: { [key: string]: React.ElementType } = {
+  beauty: Palette,
+  cooking: ChefHat,
+  tailoring: Scissors,
+  handicrafts: Gift,
+};
+
+export default function CustomerDashboard() {
+  const { user } = useAuth();
+
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <section className="text-center py-12 lg:py-16 w-full">
+        <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tighter">
+          سلام، {user?.name}!
+        </h1>
+        <p className="mt-4 font-headline text-lg md:text-xl text-foreground">
+          به دنیای هنر بانوان ایرانی خوش آمدید.
+        </p>
+        <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+          بانوان هنرمندی که خدمات خانگی در محله شما ارائه می‌دهند را کشف و حمایت کنید. از غذاهای خانگی خوشمزه تا صنایع دستی زیبا، بهترین هنرمندان محلی را اینجا پیدا کنید.
+        </p>
+         <Button asChild size="lg" className="mt-8">
+            <Link href="/search?q=">
+              <Search className="ml-2 h-5 w-5" />
+              جستجوی همه هنرمندان
+            </Link>
+          </Button>
+      </section>
+
+      <section id="categories" className="py-16 w-full">
+        <h2 className="text-3xl font-headline font-bold text-center mb-12">دسته‌بندی خدمات</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {categories.map((category) => {
+            const Icon = iconMap[category.slug];
+            return (
+              <Link href={`/services/${category.slug}`} key={category.id}>
+                <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
+                  <CardHeader className="items-center">
+                    {Icon && <Icon className="w-16 h-16 mb-4 text-accent" />}
+                    <CardTitle className="font-headline text-2xl">{category.name}</CardTitle>
+                  </CardHeader>
+                  <CardDescription>{category.description}</CardDescription>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}

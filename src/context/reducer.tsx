@@ -64,9 +64,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       
       if (storedUserJSON) {
         try {
-          const storedUser = JSON.parse(storedUserJSON);
-          const isProvider = providers.some(p => p.phone === storedUser.phone);
-          user = { ...storedUser, accountType: isProvider ? 'provider' : 'customer' };
+          user = JSON.parse(storedUserJSON);
         } catch(e) {
             console.error("Failed to parse user, clearing.", e);
             localStorage.removeItem('honarbanoo-user');
@@ -131,14 +129,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         const newReviews = [...state.reviews, action.payload];
         saveReviews(newReviews);
         
-        // Also update the provider's rating
         const providerIndex = state.providers.findIndex(p => p.id === action.payload.providerId);
         if (providerIndex > -1) {
             const newProviders = [...state.providers];
+            const providerToUpdate = { ...newProviders[providerIndex] };
+            
             const providerReviews = newReviews.filter(r => r.providerId === action.payload.providerId);
             const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            newProviders[providerIndex].reviewsCount = providerReviews.length;
-            newProviders[providerIndex].rating = parseFloat((totalRating / newProviders[providerIndex].reviewsCount).toFixed(1));
+            const newReviewsCount = providerReviews.length;
+            
+            providerToUpdate.reviewsCount = newReviewsCount;
+            providerToUpdate.rating = newReviewsCount > 0 ? parseFloat((totalRating / newReviewsCount).toFixed(1)) : 0;
+            
+            newProviders[providerIndex] = providerToUpdate;
             saveProviders(newProviders);
             return { ...state, reviews: newReviews, providers: newProviders };
         }
@@ -148,12 +151,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'ADD_MESSAGE': {
         const { chatId, message, receiverPhone, receiverName, currentUser } = action.payload;
         
-        // Update messages for the specific chat
         const currentMessages = getChatMessages(chatId);
         const newMessages = [...currentMessages, message];
         saveChatMessages(chatId, newMessages);
         
-        // Update inbox data
         const newInboxData = { ...state.inboxData };
         const currentChat = newInboxData[chatId] || {
             id: chatId,
@@ -231,9 +232,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'UPDATE_AGREEMENT_STATUS': {
         const { agreementId, status } = action.payload;
-        const newAgreements = state.agreements.map(a => a.id === agreementId ? { ...a, status } : a);
-        saveAgreements(newAgreements);
-        return { ...state, agreements: newAgreements };
+        const updatedAgreements = state.agreements.map(a => a.id === agreementId ? { ...a, status, createdAt: new Date().toISOString() } : a);
+        saveAgreements(updatedAgreements);
+        
+        return { ...state, agreements: updatedAgreements };
     }
 
     default:
