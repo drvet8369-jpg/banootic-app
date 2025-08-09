@@ -1,9 +1,10 @@
+
 'use client';
 
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Menu, LogIn, UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
@@ -18,14 +19,16 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+       <SheetHeader className="p-4 border-b">
+         <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
+         <SheetDescription className="sr-only">گزینه‌های ناوبری اصلی سایت</SheetDescription>
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-foreground" />
               <span className="font-display text-2xl font-bold">هنربانو</span>
             </Link>
          </SheetClose>
-      </div>
+      </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
           <SheetClose asChild>
             <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground hover:bg-muted">
