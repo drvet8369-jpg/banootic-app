@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,7 +23,7 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
+  if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
     return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
@@ -31,22 +31,31 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn, inboxData, isLoading } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // This effect runs only on the client, preventing hydration mismatch for date formatting.
     setIsClient(true);
   }, []);
 
-  const loadUserChats = useCallback(() => {
-    if (!user?.phone || !inboxData) {
+  useEffect(() => {
+    if (!user?.phone) {
       setChats([]);
+      setIsLoading(false);
       return;
     }
+
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      const userChats = Object.values(inboxData)
+      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      
+      const userChats = Object.values(allChatsData)
         .filter((chat: any) => chat.members?.includes(user.phone))
         .map((chat: any): Chat | null => {
             if (!chat.participants || !chat.members) return null;
@@ -73,21 +82,17 @@ export default function InboxPage() {
         
       setChats(userChats);
     } catch (e) {
-      console.error("Failed to load chats from context", e);
+      console.error("Failed to load chats from localStorage", e);
       setError('خطا در بارگذاری گفتگوهای موقت.');
+    } finally {
+      setIsLoading(false);
     }
-  }, [user?.phone, inboxData]);
-
-  useEffect(() => {
-    if(!isLoading) {
-      loadUserChats();
-    }
-  }, [isLoading, loadUserChats]);
+  }, [user?.phone]);
 
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
@@ -95,7 +100,7 @@ export default function InboxPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
+      <div className="flex flex-col items-center justify-center text-center py-20">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>

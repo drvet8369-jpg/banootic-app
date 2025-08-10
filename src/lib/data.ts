@@ -1,5 +1,4 @@
-
-import type { Category, Provider, Service, Review, Message, Agreement } from './types';
+import type { Category, Provider, Service, Review } from './types';
 
 export const categories: Category[] = [
   {
@@ -95,60 +94,72 @@ const defaultProviders: Provider[] = [
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-const safeJSONParse = (key: string, defaultValue: any) => {
+const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
+const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
+
+// Function to get providers from localStorage or return default
+export const getProviders = (): Provider[] => {
   if (typeof window === 'undefined') {
-    return defaultValue;
+    return defaultProviders;
   }
   try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
+    const storedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
+    if (storedProviders) {
+      const parsedProviders = JSON.parse(storedProviders);
+      return parsedProviders;
+    } else {
+      // If nothing is in storage, initialize it with the default data
+      localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(defaultProviders));
+      return defaultProviders;
+    }
   } catch (error) {
-    console.error(`Error parsing JSON from localStorage key "${key}":`, error);
-    return defaultValue;
+    console.error("Failed to access localStorage, returning default providers.", error);
+    return defaultProviders;
   }
 };
 
-const safeJSONStringifyAndSet = (key: string, value: any) => {
+// Function to save providers to localStorage
+export const saveProviders = (updatedProviders: Provider[]) => {
+   if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(updatedProviders));
+  } catch (error) {
+    console.error("Failed to save providers to localStorage.", error);
+  }
+};
+
+// --- Reviews ---
+const defaultReviews: Review[] = [];
+
+// Function to get reviews from localStorage
+export const getReviews = (): Review[] => {
+  if (typeof window === 'undefined') {
+    return defaultReviews;
+  }
+  try {
+    const storedReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
+    if (storedReviews) {
+      return JSON.parse(storedReviews);
+    } else {
+      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(defaultReviews));
+      return defaultReviews;
+    }
+  } catch (error) {
+    console.error("Failed to access localStorage for reviews.", error);
+    return defaultReviews;
+  }
+};
+
+// Function to save reviews to localStorage
+export const saveReviews = (updatedReviews: Review[]) => {
   if (typeof window === 'undefined') {
     return;
   }
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews));
   } catch (error) {
-    console.error(`Error setting localStorage key "${key}":`, error);
+    console.error("Failed to save reviews to localStorage.", error);
   }
 };
-
-
-// --- Providers ---
-const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers-v3';
-export const getProviders = (): Provider[] => {
-    const stored = safeJSONParse(PROVIDERS_STORAGE_KEY, null);
-    if(stored === null) {
-        safeJSONStringifyAndSet(PROVIDERS_STORAGE_KEY, defaultProviders);
-        return defaultProviders;
-    }
-    return stored;
-};
-export const saveProviders = (providers: Provider[]) => safeJSONStringifyAndSet(PROVIDERS_STORAGE_KEY, providers);
-
-// --- Reviews ---
-const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews-v3';
-export const getReviews = (): Review[] => safeJSONParse(REVIEWS_STORAGE_KEY, []);
-export const saveReviews = (reviews: Review[]) => safeJSONStringifyAndSet(REVIEWS_STORAGE_KEY, reviews);
-
-// --- Inbox ---
-const INBOX_STORAGE_KEY = 'honarbanoo-inbox-data-v3';
-export const getInboxData = (): Record<string, any> => safeJSONParse(INBOX_STORAGE_KEY, {});
-export const saveInboxData = (inboxData: Record<string, any>) => safeJSONStringifyAndSet(INBOX_STORAGE_KEY, inboxData);
-
-// --- Chat Messages ---
-export const getChatMessages = (chatId: string): Message[] => safeJSONParse(`chat_${chatId}`, []);
-export const saveChatMessages = (chatId: string, messages: Message[]) => safeJSONStringifyAndSet(`chat_${chatId}`, messages);
-
-// --- Agreements ---
-const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements-v3';
-export const getAgreements = (): Agreement[] => safeJSONParse(AGREEMENTS_STORAGE_KEY, []);
-export const saveAgreements = (agreements: Agreement[]) => safeJSONStringifyAndSet(AGREEMENTS_STORAGE_KEY, agreements);
-
-    
