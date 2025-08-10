@@ -1,88 +1,77 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import { appReducer, initialState, AppAction, AppState } from './reducer';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getProviders, saveProviders, getReviews, saveReviews, getInboxData, saveInboxData, getChatMessages, saveChatMessages, getAgreements, saveAgreements } from '@/lib/data';
+import type { Provider, Review, Message, User, Agreement } from '@/lib/types';
+import { usePathname, useRouter } from 'next/navigation';
 
-interface AuthContextType extends AppState {
-  dispatch: React.Dispatch<AppAction>;
+
+interface AuthContextType {
+  isLoggedIn: boolean;
+  user: User | null;
+  providers: Provider[];
+  login: (userData: User) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const performCleanup = () => {
-    if (typeof window !== 'undefined') {
-        const cleanupFlag = 'honarbanoo-cleanup-v3';
-        if (!localStorage.getItem(cleanupFlag)) {
-            console.log("Performing one-time cleanup of old localStorage keys...");
-            const keysToRemove = [
-                'honarbanoo-providers', 
-                'honarbanoo-reviews',
-                'honarbanoo-inbox-data',
-                'honarbanoo-agreements',
-                'honarbanoo-providers-v2',
-                'honarbanoo-reviews-v2',
-                'honarbanoo-inbox-data-v2',
-                'honarbanoo-agreements-v2',
-                'honarbanoo-cleanup-v20-final-fix'
-            ];
-            keysToRemove.forEach(key => localStorage.removeItem(key));
-            // Also clean up old chat messages if any
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('chat_')) {
-                    const parts = key.split('_');
-                    if (parts.length > 1 && parts[1].startsWith('09')) {
-                         localStorage.removeItem(key);
-                    }
-                }
-            });
-            localStorage.setItem(cleanupFlag, 'true');
-        }
-    }
-};
-
-if (typeof window !== 'undefined') {
-    performCleanup();
-}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [user, setUser] = useState<User | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    dispatch({ type: 'INITIALIZE_STATE' });
+    try {
+      const storedUser = localStorage.getItem('honarbanoo-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+      setProviders(getProviders());
+    } catch (error) {
+      console.error("Failed to parse user from localStorage on initial load", error);
+      localStorage.removeItem('honarbanoo-user');
+    } finally {
+        setIsLoading(false);
+    }
   }, []);
 
-  // Broadcast state changes to other tabs
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'app_state_broadcast' && event.newValue) {
-        const action = JSON.parse(event.newValue);
-        if (!action.isBroadcast) { // Prevent infinite loops
-            dispatch({ ...action, isBroadcast: true });
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  const login = (userData: User) => {
+    try {
+      const userToSave = { ...userData };
+      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      setUser(userToSave);
+    } catch (error) {
+       console.error("Failed to save user to localStorage", error);
+    }
+  };
 
-  const enhancedDispatch = (action: AppAction) => {
-    dispatch(action);
-    if (!action.isBroadcast) {
-      try {
-        localStorage.setItem('app_state_broadcast', JSON.stringify({ ...action, isBroadcast: true, timestamp: Date.now() }));
-      } catch (e) {
-        console.error("Could not broadcast state change:", e);
-      }
+  const logout = () => {
+    try {
+      localStorage.removeItem('honarbanoo-user');
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+       console.error("Failed to remove user from localStorage", error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, dispatch: enhancedDispatch }}>
-      {children}
+    <AuthContext.Provider value={{ 
+        isLoggedIn: !!user, 
+        user, 
+        providers,
+        login, 
+        logout 
+    }}>
+      {isLoading ? (
+         <div className="flex items-center justify-center min-h-screen bg-background">
+            <p className="text-muted-foreground">در حال بارگذاری...</p>
+        </div>
+      ) : children}
     </AuthContext.Provider>
   );
 };

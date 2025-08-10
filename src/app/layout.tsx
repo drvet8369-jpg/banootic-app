@@ -7,9 +7,12 @@ import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/AuthContext';
-import AppContent from '@/components/layout/AppContent';
 
+const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
+const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
+
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -52,9 +55,14 @@ export default function RootLayout({
         )}
       >
         <AuthProvider>
-          <AppContent>
-            {children}
-          </AppContent>
+          <div className="relative flex min-h-screen flex-col">
+            <Header />
+            <SearchBar />
+            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+              {children}
+            </main>
+            <Footer />
+          </div>
           <Toaster />
         </AuthProvider>
       </body>
