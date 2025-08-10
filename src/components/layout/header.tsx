@@ -18,6 +18,9 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
@@ -28,7 +31,7 @@ export default function Header() {
   useEffect(() => {
     setIsSheetOpen(false);
   }, [pathname]);
-
+  
   const handleLogout = () => {
     logout();
     router.push('/');
@@ -56,7 +59,25 @@ export default function Header() {
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
-             {/* Mobile nav items for logged in user can be added here */}
+             {user.accountType === 'provider' ? (
+                <SheetClose asChild>
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    داشبورد هنرمند
+                  </Link>
+                </SheetClose>
+             ) : (
+                 <SheetClose asChild>
+                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    درخواست‌های من
+                  </Link>
+                </SheetClose>
+             )}
+            <SheetClose asChild>
+              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
+                 <span>صندوق ورودی</span>
+                 <InboxBadge />
+              </Link>
+            </SheetClose>
            </>
         ) : (
           <>
@@ -109,8 +130,9 @@ export default function Header() {
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                         <Avatar>
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
+                        <InboxBadge isMenu />
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start" forceMount>
@@ -121,14 +143,20 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {/* Logged in user menu items */}
-                    <DropdownMenuItem asChild>
-                      <Link href={user.accountType === 'provider' ? '/profile' : '/'}>
-                        داشبورد
-                      </Link>
-                    </DropdownMenuItem>
+                     {user.accountType === 'provider' ? (
+                        <DropdownMenuItem asChild>
+                          <Link href="/profile">داشبورد هنرمند</Link>
+                        </DropdownMenuItem>
+                      ) : (
+                         <DropdownMenuItem asChild>
+                           <Link href="/requests">درخواست‌های من</Link>
+                        </DropdownMenuItem>
+                      )}
                      <DropdownMenuItem asChild>
-                        <Link href="/inbox">صندوق ورودی</Link>
+                        <Link href="/inbox" className="relative">
+                            <span>صندوق ورودی</span>
+                            <InboxBadge />
+                        </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
