@@ -1,9 +1,10 @@
+
 'use client';
 
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -45,14 +46,14 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <SheetHeader className="p-4 border-b">
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-foreground" />
               <span className="font-display text-2xl font-bold">هنربانو</span>
             </Link>
          </SheetClose>
-      </div>
+      </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
@@ -157,7 +158,7 @@ export default function Header() {
                     <span className="sr-only">باز کردن منو</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+                <SheetContent side="left" className="p-0 w-[300px] sm:w-[340px]">
                     <MobileNavMenu />
                 </SheetContent>
                 </Sheet>
