@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -17,25 +17,25 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-
-const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
-  const { isLoggedIn, user, dispatch } = useAuth();
+  const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setIsSheetOpen(false);
   }, [pathname]);
-  
+
   const handleLogout = () => {
-    dispatch({ type: 'LOGOUT' });
+    logout();
+    router.push('/');
   };
 
   const getInitials = (name: string) => {
-    if (!name) return '..';
+    if (!name || typeof name !== 'string') return '..';
     const names = name.split(' ');
     if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
         return `${names[0][0]}${names[1][0]}`;
@@ -56,36 +56,7 @@ export default function Header() {
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
-             {user.accountType === 'provider' ? (
-                <>
-                    <SheetClose asChild>
-                      <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                        <UserRound className="h-5 w-5" />
-                        داشبورد
-                      </Link>
-                    </SheetClose>
-                    <SheetClose asChild>
-                        <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                        <Handshake className="h-5 w-5" />
-                        توافق‌ها
-                        </Link>
-                    </SheetClose>
-                </>
-             ) : (
-                <SheetClose asChild>
-                    <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                        <FileText className="h-5 w-5" />
-                        درخواست‌های من
-                    </Link>
-                </SheetClose>
-             )}
-            <SheetClose asChild>
-              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                 <span>صندوق ورودی</span>
-                 <InboxBadge />
-              </Link>
-            </SheetClose>
+             {/* Mobile nav items for logged in user can be added here */}
            </>
         ) : (
           <>
@@ -140,7 +111,6 @@ export default function Header() {
                         <Avatar>
                         <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
-                        <InboxBadge isMenu />
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start" forceMount>
@@ -151,35 +121,14 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                     {user.accountType === 'provider' ? (
-                        <>
-                            <DropdownMenuItem asChild>
-                                <Link href="/profile">
-                                    <UserRound className="ml-2 h-4 w-4" />
-                                    <span>داشبورد من</span>
-                                </Link>
-                            </DropdownMenuItem>
-                             <DropdownMenuItem asChild>
-                                <Link href="/agreements">
-                                    <Handshake className="ml-2 h-4 w-4" />
-                                    <span>مدیریت توافق‌ها</span>
-                                </Link>
-                            </DropdownMenuItem>
-                        </>
-                     ) : (
-                        <DropdownMenuItem asChild>
-                            <Link href="/requests">
-                                <FileText className="ml-2 h-4 w-4" />
-                                <span>درخواست‌های من</span>
-                            </Link>
-                        </DropdownMenuItem>
-                     )}
+                    {/* Logged in user menu items */}
                     <DropdownMenuItem asChild>
-                        <Link href="/inbox" className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                            <span>صندوق ورودی</span>
-                            <InboxBadge />
-                        </Link>
+                      <Link href={user.accountType === 'provider' ? '/profile' : '/requests'}>
+                        داشبورد
+                      </Link>
+                    </DropdownMenuItem>
+                     <DropdownMenuItem asChild>
+                        <Link href="/inbox">صندوق ورودی</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
