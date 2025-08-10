@@ -33,8 +33,8 @@ export default function Header() {
   const getInitials = (name: string) => {
     if (!name || typeof name !== 'string') return '..';
     const names = name.split(' ');
-    if (names.length > 1 && names[1] && !/^\d+$/.test(names[1])) {
-        return `${names[0][0]}${names[1][0]}`;
+    if (names.length > 1 && names[1]) {
+      return `${names[0][0]}${names[1][0]}`;
     }
     return name.substring(0, 2);
   }
@@ -50,7 +50,7 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && user ? (
+        {isLoggedIn ? (
            <>
              {user?.accountType === 'provider' && (
                 <SheetClose asChild>
