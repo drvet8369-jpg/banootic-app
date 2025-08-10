@@ -1,3 +1,4 @@
+
 import type { Category, Provider, Service, Review, Message, Agreement } from './types';
 
 export const categories: Category[] = [
@@ -149,3 +150,5 @@ export const saveChatMessages = (chatId: string, messages: Message[]) => safeJSO
 const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements-v3';
 export const getAgreements = (): Agreement[] => safeJSONParse(AGREEMENTS_STORAGE_KEY, []);
 export const saveAgreements = (agreements: Agreement[]) => safeJSONStringifyAndSet(AGREEMENTS_STORAGE_KEY, agreements);
+
+    
