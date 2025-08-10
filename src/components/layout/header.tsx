@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -16,9 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
@@ -124,7 +123,7 @@ export default function Header() {
                     <DropdownMenuSeparator />
                     {/* Logged in user menu items */}
                     <DropdownMenuItem asChild>
-                      <Link href={user.accountType === 'provider' ? '/profile' : '/requests'}>
+                      <Link href={user.accountType === 'provider' ? '/profile' : '/'}>
                         داشبورد
                       </Link>
                     </DropdownMenuItem>
