@@ -166,6 +166,12 @@ export default function ProviderProfilePage() {
 
   const loadData = useCallback(() => {
     setIsDataLoading(true);
+    // Ensure providers and reviews are loaded before proceeding
+    if (!providers || !reviews) {
+      setIsDataLoading(false);
+      return;
+    }
+    
     const numericProviderId = parseInt(providerId, 10);
     
     if (isNaN(numericProviderId)) {
