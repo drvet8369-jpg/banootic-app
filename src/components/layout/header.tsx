@@ -40,6 +40,7 @@ export default function Header() {
     return name.substring(0, 2);
   }
 
+  // Rewritten MobileNavMenu component with explicit property access
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
@@ -53,7 +54,7 @@ export default function Header() {
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' ? (
+             {user.accountType === 'provider' ? (
                 <>
                   <SheetClose asChild>
                     <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
@@ -141,7 +142,7 @@ export default function Header() {
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                         <Avatar>
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                           <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <InboxBadge isMenu />
                     </Button>
@@ -149,8 +150,8 @@ export default function Header() {
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
+                           <p className="text-sm font-medium leading-none">{user.name}</p>
+                           <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
