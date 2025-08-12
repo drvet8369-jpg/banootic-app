@@ -32,7 +32,7 @@ export default function Header() {
   }, [pathname]);
 
   const getInitials = (name: string) => {
-    if (!name || typeof name !== 'string') return '..';
+    if (!name || typeof name !== 'string') return '?';
     const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
@@ -43,71 +43,42 @@ export default function Header() {
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
-        <SheetClose asChild>
-          <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-8 w-8 text-primary-foreground" />
-            <span className="font-display text-2xl font-bold">هنربانو</span>
-          </Link>
-        </SheetClose>
+         <SheetClose asChild>
+            <Link href="/" className="flex items-center gap-2">
+              <Logo className="h-8 w-8 text-primary-foreground" />
+              <span className="font-display text-2xl font-bold">هنربانو</span>
+            </Link>
+         </SheetClose>
       </div>
-  
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && user ? (
-          <>
-            {user.accountType === 'provider' && (
-              <SheetClose asChild>
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted"
-                >
-                  <UserRound className="h-5 w-5" />
-                  پروفایل من
-                </Link>
-              </SheetClose>
-            )}
-  
+        {isLoggedIn ? (
+           <>
+             {user?.accountType === 'provider' && (
+                <SheetClose asChild>
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <UserRound className="h-5 w-5" />
+                    پروفایل من
+                  </Link>
+                </SheetClose>
+             )}
             <SheetClose asChild>
-              <Link
-                href="/inbox"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-5 w-5"
-                >
-                  <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-                  <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                </svg>
-                <span>صندوق ورودی</span>
-                <InboxBadge />
+              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                 <span>صندوق ورودی</span>
+                 <InboxBadge />
               </Link>
             </SheetClose>
-          </>
+           </>
         ) : (
           <>
             <SheetClose asChild>
-              <Link
-                href="/login"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted"
-              >
+              <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                 <LogIn className="h-5 w-5" />
                 ورود
               </Link>
             </SheetClose>
-  
             <SheetClose asChild>
-              <Link
-                href="/register"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted"
-              >
+              <Link href="/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                 <UserPlus className="h-5 w-5" />
                 ثبت‌نام
               </Link>
@@ -115,25 +86,23 @@ export default function Header() {
           </>
         )}
       </nav>
-  
       {isLoggedIn && user && (
         <div className="mt-auto p-4 border-t">
-          <div className="flex items-center gap-3 mb-4">
-            <Avatar>
-               <AvatarFallback>{user.name ? getInitials(user.name) : "?"}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="font-medium">{user.name}</span>
-              <span className="text-xs text-muted-foreground">{user.phone}</span>
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar>
+                <AvatarFallback>{user.name ? getInitials(user.name) : "?"}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                  <span className="font-medium">{user.name || ""}</span>
+                  <span className="text-xs text-muted-foreground">{user.phone || ""}</span>
+              </div>
             </div>
-          </div>
-  
-          <SheetClose asChild>
-              <Button onClick={logout} variant="ghost" className="w-full justify-start text-red-600 hover:bg-muted">
-                  <LogOut className="ml-2 h-5 w-5" />
-                  خروج
-              </Button>
-          </SheetClose>
+            <SheetClose asChild>
+               <Button onClick={logout} variant="ghost" className="w-full justify-start text-red-600 hover:bg-muted hover:text-red-700">
+                    <LogOut className="ml-2 h-5 w-5" />
+                    خروج
+               </Button>
+            </SheetClose>
         </div>
       )}
     </div>
@@ -145,7 +114,7 @@ export default function Header() {
         {/* Left Side: Actions */}
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
-             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
+            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
               {isLoggedIn && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -162,9 +131,9 @@ export default function Header() {
                   <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-sm font-medium leading-none">{user.name || ""}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {user.phone}
+                          {user.phone || ""}
                         </p>
                       </div>
                     </DropdownMenuLabel>
