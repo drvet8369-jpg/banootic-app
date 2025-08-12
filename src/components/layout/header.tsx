@@ -53,9 +53,9 @@ export default function Header() {
       </div>
   
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && user ? (
+        {isLoggedIn ? (
           <>
-            {user.accountType === 'provider' && (
+            {user?.accountType === 'provider' && (
               <SheetClose asChild>
                 <Link
                   href="/profile"
@@ -121,15 +121,11 @@ export default function Header() {
         <div className="mt-auto p-4 border-t">
           <div className="flex items-center gap-3 mb-4">
             <Avatar>
-              <AvatarFallback>
-                {user.name ? getInitials(user.name) : "?"}
-              </AvatarFallback>
+               <AvatarFallback>{user.name ? getInitials(user.name) : "?"}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
               <span className="font-medium">{user.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {user.phone}
-              </span>
+              <span className="text-xs text-muted-foreground">{user.phone}</span>
             </div>
           </div>
   
@@ -149,57 +145,82 @@ export default function Header() {
       <div className="container flex h-16 items-center justify-between">
         {/* Left Side: Actions */}
         <div className="flex items-center gap-2">
-            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                {isLoggedIn && user ? (
+            {/* Desktop Nav */}
+             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
+              {isLoggedIn && user ? (
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                        <Avatar>
-                        <AvatarFallback>{user.name ? getInitials(user.name) : "?"}</AvatarFallback>
-                        </Avatar>
-                        <InboxBadge isMenu />
+                      <Avatar>
+                        <AvatarFallback>
+                          {user.name ? getInitials(user.name) : "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <InboxBadge isMenu />
                     </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start" forceMount>
+                  </DropdownMenuTrigger>
+            
+                  <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
-                        </div>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user.name || ""}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user.phone || ""}
+                        </p>
+                      </div>
                     </DropdownMenuLabel>
+            
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
-                        <DropdownMenuItem asChild>
+            
+                    {user.accountType === "provider" && (
+                      <DropdownMenuItem asChild>
                         <Link href="/profile">
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
+                          <UserRound className="ml-2 h-4 w-4" />
+                          <span>پروفایل من</span>
                         </Link>
-                        </DropdownMenuItem>
+                      </DropdownMenuItem>
                     )}
+            
                     <DropdownMenuItem asChild>
-                        <Link href="/inbox" className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                            <span>صندوق ورودی</span>
-                            <InboxBadge />
-                        </Link>
+                      <Link href="/inbox" className="relative">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="ml-2 h-4 w-4"
+                        >
+                          <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                          <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                        </svg>
+                        <span>صندوق ورودی</span>
+                        <InboxBadge />
+                      </Link>
                     </DropdownMenuItem>
+            
                     <DropdownMenuSeparator />
+            
                     <DropdownMenuItem onClick={logout}>
-                        <LogOut className="ml-2 h-4 w-4" />
-                        <span>خروج</span>
+                      <LogOut className="ml-2 h-4 w-4" />
+                      <span>خروج</span>
                     </DropdownMenuItem>
-                    </DropdownMenuContent>
+                  </DropdownMenuContent>
                 </DropdownMenu>
-                ) : (
+              ) : (
                 <>
-                    <Button asChild variant="secondary">
+                  <Button asChild variant="secondary">
                     <Link href="/register">ثبت‌نام</Link>
-                    </Button>
-                    <Button asChild>
+                  </Button>
+                  <Button asChild>
                     <Link href="/login">ورود</Link>
-                    </Button>
+                  </Button>
                 </>
-                )}
+              )}
             </nav>
             {/* Mobile Nav */}
             <div className="md:hidden">
