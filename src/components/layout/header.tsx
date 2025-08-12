@@ -32,13 +32,12 @@ export default function Header() {
   }, [pathname]);
 
   const getInitials = (name: string) => {
-    if (!name) return '..';
-    const nameStr = String(name);
-    const names = nameStr.split(' ');
+    if (!name || typeof name !== 'string') return '..';
+    const names = name.split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
     }
-    return nameStr.substring(0, 2);
+    return name.substring(0, 2);
   }
 
   const MobileNavMenu = () => (
@@ -53,9 +52,9 @@ export default function Header() {
       </div>
   
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isLoggedIn && user ? (
           <>
-            {user?.accountType === 'provider' && (
+            {user.accountType === 'provider' && (
               <SheetClose asChild>
                 <Link
                   href="/profile"
@@ -163,9 +162,9 @@ export default function Header() {
                   <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name || ""}</p>
+                        <p className="text-sm font-medium leading-none">{user.name}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {user.phone || ""}
+                          {user.phone}
                         </p>
                       </div>
                     </DropdownMenuLabel>
