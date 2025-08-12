@@ -33,11 +33,11 @@ export default function Header() {
 
   const getInitials = (name: string) => {
     if (!name) return '..';
-    const names = name.split(' ');
+    const names = String(name).split(' ');
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
     }
-    return name.substring(0, 2);
+    return String(name).substring(0, 2);
   }
 
   const MobileNavMenu = () => (
@@ -117,13 +117,13 @@ export default function Header() {
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
                 <AvatarFallback>
-                  {user.name ? getInitials(String(user.name)) : "?"}
+                  {user.name ? getInitials(user.name) : "?"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-medium">{String(user.name || "")}</span>
+                <span className="font-medium">{user.name || ""}</span>
                 <span className="text-xs text-muted-foreground">
-                  {String(user.phone || "")}
+                  {user.phone || ""}
                 </span>
               </div>
             </div>
