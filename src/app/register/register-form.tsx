@@ -41,6 +41,7 @@ const formSchema = z.object({
   }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
+  location: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -57,7 +58,16 @@ const formSchema = z.object({
 }, {
     message: 'بیوگرافی باید حداقل ۱۰ کاراکتر باشد.',
     path: ['bio'],
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.location;
+    }
+    return true;
+}, {
+    message: 'لطفاً شهر خود را انتخاب کنید.',
+    path: ['location'],
 });
+
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
 
@@ -124,7 +134,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
+          location: values.location || 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -254,6 +264,31 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>شهر</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="شهر خود را انتخاب کنید" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                           <SelectItem value="ارومیه">ارومیه</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        در حال حاضر، این پلتفرم فقط در شهر ارومیه فعال است.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="bio"
@@ -269,7 +304,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۶۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۰ کاراکتر).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
