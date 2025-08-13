@@ -116,20 +116,20 @@ export default function Header() {
         )}
       </nav>
 
-      {isLoggedIn && user && (
+      {isLoggedIn && (
         <div className="mt-auto p-4 border-t">
           <div className="flex items-center gap-3 mb-4">
             <Avatar>
               <AvatarFallback>
-                {user.name ? getInitials(user.name) : "?"}
+                {user?.name ? getInitials(user.name) : "?"}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <span className="font-medium">{user.name || ""}</span>
-              <span className="text-xs text-muted-foreground">
-                {user.phone || ""}
-              </span>
-            </div>
+            {user && (
+              <div className="flex flex-col">
+                  <span className="font-medium">{user.name}</span>
+                  <span className="text-xs text-muted-foreground">{user.phone}</span>
+              </div>
+            )}
           </div>
 
           <SheetClose asChild>
