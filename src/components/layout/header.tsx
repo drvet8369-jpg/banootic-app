@@ -37,7 +37,7 @@ export default function Header() {
         {/* Left Side: Actions */}
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
+            <nav className="flex items-center gap-2 text-sm font-medium">
               {isLoggedIn && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -117,7 +117,7 @@ export default function Header() {
 
         {/* Right Side: Branding */}
         <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
             <Logo className="h-10 w-10 text-primary-foreground" />
         </Link>
       </div>
