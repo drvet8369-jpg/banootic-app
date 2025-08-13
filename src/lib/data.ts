@@ -1,4 +1,4 @@
-import type { Category, Provider, Service, Review } from './types';
+import type { Category, Provider, Service, Review, Message } from './types';
 
 export const categories: Category[] = [
   {
@@ -161,5 +161,26 @@ export const saveReviews = (updatedReviews: Review[]) => {
     localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews));
   } catch (error) {
     console.error("Failed to save reviews to localStorage.", error);
+  }
+};
+
+// --- Chat Messages ---
+export const getChatMessages = (chatId: string): Message[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(`chat_${chatId}`);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error("Failed to get chat messages from localStorage", e);
+    return [];
+  }
+};
+
+export const saveChatMessages = (chatId: string, messages: Message[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
+  } catch (e) {
+    console.error("Failed to save chat messages to localStorage", e);
   }
 };
