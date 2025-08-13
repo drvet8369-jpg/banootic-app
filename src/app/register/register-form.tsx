@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/data';
+import { categories, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User, Provider } from '@/lib/types';
@@ -64,7 +64,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { dispatch, providers } = useAuth();
+  const { login, providers } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -134,10 +134,10 @@ export default function RegisterForm() {
           portfolio: [],
         };
         
-        dispatch({ type: 'ADD_PROVIDER', payload: newProvider });
+        saveProviders([...providers, newProvider]);
       }
       
-      dispatch({ type: 'LOGIN', payload: userToLogin });
+      login(userToLogin);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
