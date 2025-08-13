@@ -39,7 +39,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { dispatch, providers } = useAuth();
+  const { login, providers } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,7 +76,7 @@ export default function LoginPage() {
           };
         }
         
-        dispatch({ type: 'LOGIN', payload: userToLogin });
+        login(userToLogin);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
