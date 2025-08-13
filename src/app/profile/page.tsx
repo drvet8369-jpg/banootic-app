@@ -6,27 +6,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2, Inbox, Eye } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
+import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading, updateProviderData, providers } = useAuth();
+  const { user, isLoggedIn, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -35,11 +25,12 @@ export default function ProfilePage() {
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
-  const [isLoading, setIsLoading] = useState(true);
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
-        const currentProvider = providers.find(p => p.phone === user.phone);
+        const allProviders = getProviders();
+        let currentProvider = allProviders.find(p => p.phone === user.phone);
+        
         if (currentProvider) {
             setProvider(currentProvider);
             setEditedData({
@@ -49,14 +40,11 @@ export default function ProfilePage() {
             });
         }
     }
-    setIsLoading(false);
-  }, [user, providers]);
+  }, [user]);
 
   useEffect(() => {
-    if (isAuthLoading) return;
-    setIsLoading(true);
     loadProviderData();
-  }, [loadProviderData, isAuthLoading, providers]);
+  }, [loadProviderData]);
 
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -65,19 +53,26 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = () => {
-    if(!user) return;
     if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
 
-    const success = updateProviderData(user.phone, (p) => {
+    let userWasUpdated = false;
+    const success = updateProviderData((p) => {
+        if(user && user.name !== editedData.name){
+            userWasUpdated = true;
+        }
         p.name = editedData.name;
         p.service = editedData.service;
         p.bio = editedData.bio;
     });
 
     if(success) {
+        if (userWasUpdated && user) {
+            const updatedUser = { ...user, name: editedData.name };
+            login(updatedUser); 
+        }
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } else {
@@ -137,9 +132,24 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
+  const updateProviderData = (updateFn: (provider: Provider) => void) => {
+    if (!user) return false;
+    const allProviders = getProviders();
+    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
+
+    if (providerIndex > -1) {
+      updateFn(updatedProvidersList[providerIndex]);
+      saveProviders(updatedProvidersList);
+      // After saving, reload data into state
+      loadProviderData();
+      return true;
+    }
+    return false;
+  }
+
   const addPortfolioItem = (imageSrc: string) => {
-    if(!user) return;
-    const success = updateProviderData(user.phone, (p) => {
+    const success = updateProviderData((p) => {
       if (!p.portfolio) p.portfolio = [];
       p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
     });
@@ -151,8 +161,7 @@ export default function ProfilePage() {
   };
   
   const handleProfilePictureChange = (newImageSrc: string) => {
-      if(!user) return;
-      const success = updateProviderData(user.phone, (p) => {
+      const success = updateProviderData((p) => {
         if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
         p.profileImage.src = newImageSrc;
       });
@@ -164,24 +173,11 @@ export default function ProfilePage() {
   }
 
   const handleDeleteProfilePicture = () => {
-    if(!user) return;
-    const success = updateProviderData(user.phone, (p) => {
+    const success = updateProviderData((p) => {
       if (p.profileImage) p.profileImage.src = '';
     });
     if (success) {
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
-    }
-  };
-
-  const deletePortfolioItem = (itemIndex: number) => {
-    if(!user) return;
-    const success = updateProviderData(user.phone, (p) => {
-      p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
-    });
-     if (success) {
-      toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } else {
       toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
@@ -203,18 +199,9 @@ export default function ProfilePage() {
     }
   };
   
-  if (isAuthLoading || isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20 flex-grow">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="mr-4">در حال بارگذاری پروفایل...</p>
-      </div>
-    );
-  }
-
   if (!isLoggedIn) {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <User className="w-24 h-24 text-muted-foreground mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">صفحه پروفایل</h1>
             <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
@@ -227,9 +214,9 @@ export default function ProfilePage() {
      )
   }
 
-  if (user?.accountType !== 'provider' || !provider) {
+  if (user?.accountType !== 'provider') {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
@@ -240,6 +227,10 @@ export default function ProfilePage() {
             </Button>
         </div>
      )
+  }
+  
+  if (!provider) {
+    return <div className="flex justify-center items-center py-20 flex-grow">در حال بارگذاری پروفایل...</div>;
   }
 
   return (
@@ -289,6 +280,30 @@ export default function ProfilePage() {
               ) : (
                   <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
+               <Separator className="my-6" />
+                <div className="mb-4">
+                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                  
+                  <input 
+                    type="file" 
+                    ref={portfolioFileInputRef} 
+                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <input
+                    type="file"
+                    ref={profilePicInputRef}
+                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                        <PlusCircle className="w-5 h-5 ml-2" />
+                        افزودن نمونه کار جدید
+                   </Button>
+                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+                </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
@@ -301,27 +316,10 @@ export default function ProfilePage() {
                             <Camera className="w-4 h-4 ml-2" />
                             تغییر عکس پروفایل
                         </Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" className="w-full flex-1">
-                                    <Trash2 className="w-4 h-4 ml-2" />
-                                    حذف عکس پروفایل
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>تایید حذف</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        آیا از حذف عکس پروفایل خود مطمئنید؟
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>لغو</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteProfilePicture}>حذف</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف عکس پروفایل
+                        </Button>
                         <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو
@@ -333,9 +331,15 @@ export default function ProfilePage() {
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش اطلاعات
                         </Button>
+                         <Button asChild className="w-full flex-1">
+                            <Link href="/inbox">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                                صندوق ورودی
+                            </Link>
+                        </Button>
                         <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.id}`}>
-                                <Eye className="w-4 h-4 ml-2" />
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 مشاهده پروفایل عمومی
                             </Link>
                         </Button>
@@ -344,76 +348,6 @@ export default function ProfilePage() {
             </CardFooter>
           </div>
         </div>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-             <h3 className="font-headline text-xl font-semibold">مدیریت نمونه کارها</h3>
-        </CardHeader>
-        <CardContent>
-            <input 
-                type="file" 
-                ref={portfolioFileInputRef} 
-                onChange={(e) => handleFileChange(e, addPortfolioItem)}
-                className="hidden"
-                accept="image/*"
-            />
-            <input
-                type="file"
-                ref={profilePicInputRef}
-                onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                className="hidden"
-                accept="image/*"
-            />
-            <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
-                <PlusCircle className="w-5 h-5 ml-2" />
-                افزودن نمونه کار جدید
-            </Button>
-            {provider.portfolio && provider.portfolio.length > 0 ? (
-                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {provider.portfolio.map((item, index) => (
-                        <div className="group relative w-full aspect-square" key={`${provider.phone}-portfolio-${index}`}>
-                            <Image
-                                src={item.src}
-                                alt={`نمونه کار ${index + 1}`}
-                                fill
-                                className="object-cover rounded-lg shadow-md"
-                                data-ai-hint={item.aiHint}
-                            />
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                        onClick={(e) => e.stopPropagation()}
-                                        aria-label={`حذف نمونه کار ${index + 1}`}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>تایید حذف</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                        آیا از حذف این نمونه کار مطمئنید؟ این عمل غیرقابل بازگشت است.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>لغو</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => deletePortfolioItem(index)}>حذف</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                    <p>هنوز نمونه کاری اضافه نشده است.</p>
-                </div>
-            )}
-        </CardContent>
       </Card>
     </div>
   );
