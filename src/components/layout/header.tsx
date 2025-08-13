@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -42,6 +42,9 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
+       <SheetHeader>
+          <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
+      </SheetHeader>
       <div className="p-4 border-b">
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
@@ -51,7 +54,7 @@ export default function Header() {
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isLoggedIn && user ? (
            <>
              {user?.accountType === 'provider' && (
                 <SheetClose asChild>
