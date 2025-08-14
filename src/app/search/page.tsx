@@ -56,7 +56,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {isLoading || isAuthLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>

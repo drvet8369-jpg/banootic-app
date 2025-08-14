@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, saveProviders } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -151,7 +150,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 
 export default function ProviderProfilePage() {
   const params = useParams();
-  const providerId = params.providerId as string;
+  const providerPhone = params.providerId as string;
   const { user, isLoggedIn, addAgreement, agreements, isLoading: isAuthLoading, providers, reviews: allReviews, updateProviderData } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
@@ -161,11 +160,9 @@ export default function ProviderProfilePage() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
   const loadData = useCallback(() => {
-    // This is the fix: prevent running until auth context (and thus providers list) is loaded.
     if (isAuthLoading) return;
     
-    const numericProviderId = parseInt(providerId, 10);
-    const foundProvider = providers.find(p => p.id === numericProviderId);
+    const foundProvider = providers.find(p => p.phone === providerPhone);
     
     if (foundProvider) {
       setProvider(foundProvider);
@@ -182,7 +179,7 @@ export default function ProviderProfilePage() {
     }
     
     setIsLoading(false);
-  }, [providerId, user, agreements, providers, allReviews, isAuthLoading]);
+  }, [providerPhone, user, agreements, providers, allReviews, isAuthLoading]);
 
   useEffect(() => {
     setIsLoading(true);

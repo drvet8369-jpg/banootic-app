@@ -37,7 +37,7 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
         </CardContent>
          <CardFooter className="p-4 mt-auto border-t">
            <Button asChild className="w-full font-bold">
-            <Link href={`/provider/${provider.id}`}>
+            <Link href={`/provider/${provider.phone}`}>
                 <Eye className="w-4 h-4 ml-2" />
                 مشاهده پروفایل
             </Link>
