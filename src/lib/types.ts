@@ -64,6 +64,6 @@ export interface Agreement {
   customerPhone: string;
   customerName: string;
   status: 'pending' | 'confirmed' | 'rejected';
-  createdAt: string; // ISO String
-  requestedAt: string; // ISO String
+  createdAt: string; // ISO String for when it was confirmed/rejected
+  requestedAt: string; // ISO String for when it was requested
 }

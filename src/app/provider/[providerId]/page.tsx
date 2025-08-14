@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
+import { getProviders, getReviews, saveProviders } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -59,7 +60,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 
 // Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, addReview } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -77,35 +78,20 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     }
     setIsSubmitting(true);
 
-    // Simulate API call
     setTimeout(() => {
         if(!user) return;
-        const allReviews = getReviews();
+        
         const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
+          id: Date.now().toString(),
+          providerId,
+          authorName: user.name,
+          rating,
+          comment,
+          createdAt: new Date().toISOString(),
         };
 
-        const updatedReviews = [...allReviews, newReview];
-        saveReviews(updatedReviews);
-
-        // Recalculate provider's average rating
-        const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.id === providerId);
-        if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
-            
-            allProviders[providerIndex].rating = newAverageRating;
-            allProviders[providerIndex].reviewsCount = providerReviews.length;
-            saveProviders(allProviders);
-        }
-
+        addReview(newReview);
+        
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
@@ -160,48 +146,51 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerId = params.providerId as string;
-  const { user } = useAuth();
+  const { user, isLoggedIn, addAgreement, agreements, isLoading: isAuthLoading, providers, reviews: allReviews } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
   const loadData = useCallback(() => {
-    const allProviders = getProviders();
     const numericProviderId = parseInt(providerId, 10);
-    const foundProvider = allProviders.find(p => p.id === numericProviderId);
+    const foundProvider = providers.find(p => p.id === numericProviderId);
     
     if (foundProvider) {
       setProvider(foundProvider);
-      const allReviews = getReviews();
       const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
                                         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReviews(providerReviews);
+
+      if (user) {
+        setHasPendingRequest(agreements.some(a => a.providerId === foundProvider.id && a.customerPhone === user.phone && a.status === 'pending'));
+      }
+
     } else {
       setProvider(null);
     }
     
     setIsLoading(false);
-  }, [providerId]);
+  }, [providerId, user, agreements, providers, allReviews]);
 
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
+  const isCustomerViewing = isLoggedIn && user?.accountType === 'customer';
 
   const deletePortfolioItem = (itemIndex: number) => {
     if (!provider) return;
 
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
+    const currentProviders = getProviders();
+    const providerIndex = currentProviders.findIndex(p => p.id === provider.id);
     if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-        saveProviders(allProviders);
+        currentProviders[providerIndex].portfolio = currentProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
+        saveProviders(currentProviders);
         loadData(); // Refresh data
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } else {
@@ -209,8 +198,14 @@ export default function ProviderProfilePage() {
     }
   };
 
+  const handleRequestAgreement = () => {
+    if (!provider || !user) return;
+    addAgreement(provider, user);
+    toast({ title: 'موفق', description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد.'});
+    setHasPendingRequest(true);
+  }
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -312,21 +307,43 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {!isOwnerViewing && (
-                <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button asChild className="w-full">
-                        <Link href={`/chat/${provider.phone}`}>
-                            <MessageSquare className="w-4 h-4 ml-2" />
-                            ارسال پیام
-                        </Link>
-                    </Button>
-                    <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
-                    </Button>
-                </CardFooter>
+                {isCustomerViewing && (
+                    <CardFooter className="flex flex-col gap-3 p-6 mt-auto border-t">
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                            <Button asChild className="w-full">
+                                <Link href={`/chat/${provider.phone}`}>
+                                    <MessageSquare className="w-4 h-4 ml-2" />
+                                    ارسال پیام
+                                </Link>
+                            </Button>
+                            <Button asChild className="w-full" variant="secondary">
+                                <a href={`tel:${provider.phone}`}>
+                                    <Phone className="w-4 h-4 ml-2" />
+                                    تماس
+                                </a>
+                            </Button>
+                        </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button className="w-full" variant="outline" disabled={hasPendingRequest}>
+                                    <Handshake className="w-4 h-4 ml-2" />
+                                    {hasPendingRequest ? 'درخواست ارسال شده' : 'ارسال درخواست توافق'}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>تایید ارسال درخواست توافق</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    با ارسال این درخواست، شما تایید می‌کنید که با این هنرمند جهت دریافت خدمات به توافق رسیده‌اید. این کار به افزایش اعتبار هنرمند در پلتفرم کمک می‌کند. آیا مایل به ادامه هستید؟
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>لغو</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleRequestAgreement}>تایید و ارسال</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </CardFooter>
                 )}
 
                 <Separator />
