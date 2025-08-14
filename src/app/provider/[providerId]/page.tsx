@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     }
     setIsSubmitting(true);
 
+    // Simulate API call
     setTimeout(() => {
         const allReviews = getReviews();
         const newReview: Review = {
@@ -91,6 +92,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         const updatedReviews = [...allReviews, newReview];
         saveReviews(updatedReviews);
 
+        // Recalculate provider's average rating
         const allProviders = getProviders();
         const providerIndex = allProviders.findIndex(p => p.id === providerId);
         if (providerIndex > -1) {
@@ -107,7 +109,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         setRating(0);
         setComment('');
         setIsSubmitting(false);
-        onSubmit();
+        onSubmit(); // Callback to trigger data refresh in parent
     }, 1000);
   };
   
@@ -157,7 +159,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn, addAgreement, agreements } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -205,18 +207,10 @@ export default function ProviderProfilePage() {
     }
   };
 
-  const handleRequestAgreement = () => {
-    if (!provider) return;
-    addAgreement(provider.phone);
-    toast({ title: 'درخواست ارسال شد', description: 'درخواست توافق شما برای هنرمند ارسال شد.' });
-  }
-
-  const hasPendingAgreement = user && provider && agreements.some(a => a.customerPhone === user.phone && a.providerPhone === provider.phone && a.status === 'pending');
-
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -261,31 +255,33 @@ export default function ProviderProfilePage() {
                         <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
-                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
-                                        <div 
-                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                            onClick={() => setSelectedImage(item.src)}
-                                        >
-                                            <Image
-                                                src={item.src}
-                                                alt={`نمونه کار ${index + 1}`}
-                                                fill
-                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                                data-ai-hint={item.aiHint}
-                                            />
-                                            {isOwnerViewing && (
-                                            <Button
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
-                                                aria-label={`حذف نمونه کار ${index + 1}`}
+                                    <div className="group relative" key={`${provider.id}-portfolio-${index}`}>
+                                        <DialogTrigger asChild>
+                                            <div 
+                                                className="w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                                onClick={() => setSelectedImage(item.src)}
                                             >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                            )}
-                                        </div>
-                                    </DialogTrigger>
+                                                <Image
+                                                    src={item.src}
+                                                    alt={`نمونه کار ${index + 1}`}
+                                                    fill
+                                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    data-ai-hint={item.aiHint}
+                                                />
+                                            </div>
+                                        </DialogTrigger>
+                                        {isOwnerViewing && (
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
+                                            aria-label={`حذف نمونه کار ${index + 1}`}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                            
@@ -316,7 +312,7 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {!isOwnerViewing && isLoggedIn && (
+                {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
@@ -330,19 +326,7 @@ export default function ProviderProfilePage() {
                             تماس
                         </a>
                     </Button>
-                    {user?.accountType === 'customer' && (
-                        <Button className="w-full" variant="outline" onClick={handleRequestAgreement} disabled={hasPendingAgreement}>
-                           <Handshake className="w-4 h-4 ml-2" />
-                           {hasPendingAgreement ? 'درخواست ارسال شده' : 'درخواست توافق'}
-                        </Button>
-                    )}
                 </CardFooter>
-                )}
-
-                 {!isLoggedIn && (
-                     <CardFooter className="p-4 mt-auto border-t">
-                         <p className="text-sm text-center text-muted-foreground w-full">برای تماس یا ارسال پیام، لطفاً <Link href="/login" className="font-bold text-primary hover:underline">وارد شوید</Link>.</p>
-                     </CardFooter>
                 )}
 
                 <Separator />
