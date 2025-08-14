@@ -131,7 +131,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Location is now hardcoded
+          location: 'ارومیه', // Location is now hardcoded to Urmia
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
