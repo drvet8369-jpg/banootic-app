@@ -1,4 +1,4 @@
-import type { Category, Provider, Service, Review, Message, Agreement } from './types';
+import type { Category, Provider, Service, Review, Message } from './types';
 import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -134,19 +134,6 @@ export const getProviders = async (): Promise<Provider[]> => {
     }
 };
 
-export const saveProviders = async (providers: Provider[]) => {
-    try {
-        const batch = writeBatch(db);
-        providers.forEach(provider => {
-            const docRef = doc(db, 'providers', provider.phone);
-            batch.set(docRef, provider, { merge: true });
-        });
-        await batch.commit();
-    } catch (error) {
-        console.error("Error saving providers to Firestore:", error);
-    }
-};
-
 export const getReviews = async (): Promise<Review[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, 'reviews'));
@@ -154,81 +141,5 @@ export const getReviews = async (): Promise<Review[]> => {
     } catch (error) {
         console.error("Error fetching reviews from Firestore:", error);
         return [];
-    }
-};
-
-export const saveReviews = async (reviews: Review[]) => {
-    try {
-        const batch = writeBatch(db);
-        reviews.forEach(review => {
-            const docRef = doc(db, 'reviews', review.id);
-            batch.set(docRef, review);
-        });
-        await batch.commit();
-    } catch (error) {
-        console.error("Error saving reviews to Firestore:", error);
-    }
-};
-
-export const getAgreements = async (): Promise<Agreement[]> => {
-    try {
-        const querySnapshot = await getDocs(collection(db, 'agreements'));
-        return querySnapshot.docs.map(doc => doc.data() as Agreement);
-    } catch (error) {
-        console.error("Error fetching agreements from Firestore:", error);
-        return [];
-    }
-};
-
-export const saveAgreements = async (agreements: Agreement[]) => {
-    try {
-        const batch = writeBatch(db);
-        agreements.forEach(agreement => {
-            const docRef = doc(db, 'agreements', agreement.id);
-            batch.set(docRef, agreement);
-        });
-        await batch.commit();
-    } catch (error) {
-        console.error("Error saving agreements to Firestore:", error);
-    }
-};
-
-export const getChatMessages = async (chatId: string): Promise<Message[]> => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'chats', chatId, 'messages'));
-      return querySnapshot.docs
-        .map(doc => doc.data() as Message)
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    } catch (error) {
-      console.error("Error fetching chat messages:", error);
-      return [];
-    }
-  };
-  
-export const saveChatMessage = async (chatId: string, message: Message): Promise<void> => {
-    try {
-        await setDoc(doc(db, 'chats', chatId, 'messages', message.id), message);
-    } catch (error) {
-        console.error("Error saving chat message:", error);
-    }
-};
-
-export const getInboxData = async (userPhone: string): Promise<Record<string, any>> => {
-    try {
-      const docRef = doc(db, 'inboxes', userPhone);
-      const docSnap = await getDoc(docRef);
-      return docSnap.exists() ? docSnap.data() : {};
-    } catch (error) {
-      console.error("Error fetching inbox data:", error);
-      return {};
-    }
-};
-  
-export const updateInboxData = async (userPhone: string, chatId: string, chatData: any): Promise<void> => {
-    try {
-      const docRef = doc(db, 'inboxes', userPhone);
-      await setDoc(docRef, { [chatId]: chatData }, { merge: true });
-    } catch (error) {
-      console.error("Error updating inbox data:", error);
     }
 };

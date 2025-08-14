@@ -1,6 +1,6 @@
 'use client';
 
-import { services, categories, getProviders } from '@/lib/data';
+import { services, categories } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import SearchResultCard from '@/components/search-result-card';
+import { getProviders } from '@/lib/data';
 
 
 export default function ServiceProvidersPage() {
@@ -37,7 +38,7 @@ export default function ServiceProvidersPage() {
 
   if (isLoading) {
     return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
         </div>

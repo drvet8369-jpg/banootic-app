@@ -10,7 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Provider, Message } from '@/lib/types';
+import type { Provider, Message as MessageType } from '@/lib/types';
+import { onSnapshot, collection, query, orderBy, getDoc, doc as firestoreDoc, setDoc, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { getProviders } from '@/lib/data';
 
 interface OtherPersonDetails {
     id: string | number;
@@ -22,43 +25,96 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonPhone = params.providerId as string;
-  const { state, dispatch } = useAuth();
-  const { user, isLoggedIn, isLoading, providers } = state;
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
 
-  // Memoize chat messages for the current chat ID
-  const chatId = useMemo(() => {
-    if (!user?.phone || !otherPersonPhone) return null;
-    return [user.phone, otherPersonPhone].sort().join('_');
-  }, [user?.phone, otherPersonPhone]);
-
-  const messages = useMemo(() => {
-    if (!chatId || !state.chatMessages[chatId]) return [];
-    return state.chatMessages[chatId];
-  }, [state.chatMessages, chatId]);
-  
+  const [messages, setMessages] = useState<MessageType[]>([]);
+  const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
-  const otherPersonDetails = useMemo<OtherPersonDetails | null>(() => {
-    const provider = providers.find(p => p.phone === otherPersonPhone);
-    if (provider) return provider;
-    
-    // Fallback for customer details if a provider is viewing the chat
-    if(user && user.accountType === 'provider' && chatId && state.inboxData[chatId]) {
-      const otherParticipant = state.inboxData[chatId].participants[otherPersonPhone];
-      if (otherParticipant) {
-        return { id: otherPersonPhone, name: otherParticipant.name, phone: otherPersonPhone };
-      }
-    }
-    // Fallback if no details are found
-    return { id: otherPersonPhone, name: `کاربر ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone };
+  const getChatId = useCallback((phone1?: string, phone2?: string) => {
+    if (!phone1 || !phone2) return null;
+    return [phone1, phone2].sort().join('_');
+  }, []);
+  
+  const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user?.phone, otherPersonPhone, getChatId]);
 
-  }, [providers, otherPersonPhone, user, chatId, state.inboxData]);
+  useEffect(() => {
+    const fetchOtherPersonDetails = async () => {
+        const allProviders = await getProviders();
+        const provider = allProviders.find(p => p.phone === otherPersonPhone);
+        if (provider) {
+            setOtherPersonDetails(provider);
+            return;
+        }
+
+        // Handle case where other person is a customer
+        if (chatId) {
+            const inboxDocRef = firestoreDoc(db, 'inboxes', otherPersonPhone);
+            const inboxSnap = await getDoc(inboxDocRef);
+            if(inboxSnap.exists()) {
+                const inboxData = inboxSnap.data();
+                const chatInfo = inboxData[chatId];
+                if(chatInfo && chatInfo.participants[user!.phone]) {
+                   setOtherPersonDetails({ id: otherPersonPhone, name: chatInfo.participants[user!.phone].name, phone: otherPersonPhone });
+                   return;
+                }
+            }
+        }
+        
+        // Fallback
+        setOtherPersonDetails({ id: otherPersonPhone, name: `کاربر ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone });
+    };
+
+    if(user){
+        fetchOtherPersonDetails();
+    }
+  }, [otherPersonPhone, user, chatId]);
+
+  
+  useEffect(() => {
+    if (!chatId) {
+        setIsLoadingChat(false);
+        return;
+    }
+
+    setIsLoadingChat(true);
+    const messagesColRef = collection(db, "chats", chatId, "messages");
+    const q = query(messagesColRef, orderBy("createdAt", "asc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const msgs: MessageType[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageType));
+      setMessages(msgs);
+      setIsLoadingChat(false);
+      
+      // Mark as read
+      if(user?.phone) {
+         const inboxRef = firestoreDoc(db, 'inboxes', user.phone);
+         getDoc(inboxRef).then(docSnap => {
+             if(docSnap.exists()){
+                const inboxData = docSnap.data();
+                if(inboxData[chatId] && inboxData[chatId].participants[user!.phone].unreadCount > 0) {
+                   setDoc(inboxRef, {
+                     [chatId]: { participants: { [user.phone]: { unreadCount: 0 } } }
+                   }, { merge: true });
+                }
+             }
+         })
+      }
+    }, (error) => {
+        console.error("Error listening to chat messages:", error);
+        toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
+        setIsLoadingChat(false);
+    });
+
+    return () => unsubscribe();
+  }, [chatId, user?.phone, toast]);
+
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -72,14 +128,8 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Mark messages as read when chat is opened
-  useEffect(() => {
-      if(chatId && user?.phone) {
-        dispatch({ type: 'MARK_CHAT_AS_READ', payload: { chatId, userPhone: user.phone } });
-      }
-  }, [chatId, user?.phone, dispatch, messages]);
-
+  
+  const isLoading = isAuthLoading || isLoadingChat || !otherPersonDetails;
 
   if (isLoading) {
      return (
@@ -103,7 +153,7 @@ export default function ChatPage() {
     );
   }
   
-  const handleStartEdit = (message: Message) => {
+  const handleStartEdit = (message: MessageType) => {
     setEditingMessageId(message.id);
     setEditingText(message.text);
   };
@@ -113,14 +163,22 @@ export default function ChatPage() {
     setEditingText('');
   };
   
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingMessageId || !editingText.trim() || !chatId) return;
-
-    dispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId: editingMessageId, newText: editingText.trim() }});
-    
-    handleCancelEdit();
-    toast({ title: 'پیام ویرایش شد.' });
+    setIsSending(true);
+    try {
+      const messageRef = firestoreDoc(db, "chats", chatId, "messages", editingMessageId);
+      await setDoc(messageRef, { text: editingText.trim(), isEdited: true }, { merge: true });
+      handleCancelEdit();
+      toast({ title: 'پیام ویرایش شد.' });
+    } catch (e) {
+      console.error("Failed to edit message", e);
+      toast({ title: "خطا", description: "پیام شما ویرایش نشد.", variant: "destructive" });
+    } finally {
+       setIsSending(false);
+    }
   };
+
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -129,28 +187,70 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    const messageToSend: Message = {
-      id: Date.now().toString(),
+    const messageToSend: Omit<MessageType, 'id'> = {
       text: text,
       senderId: user.phone,
       createdAt: new Date().toISOString(),
+      isEdited: false
     };
     
-    dispatch({ type: 'ADD_MESSAGE', payload: {
-        chatId,
-        message: messageToSend,
-        receiverPhone: otherPersonDetails.phone,
-        receiverName: otherPersonDetails.name,
-        currentUser: user,
-    }});
-    
     setNewMessage('');
-    setIsSending(false);
+    
+    try {
+       const messagesColRef = collection(db, "chats", chatId, "messages");
+       await addDoc(messagesColRef, messageToSend);
+       
+       // Update inbox for both users
+       const senderInboxRef = firestoreDoc(db, 'inboxes', user.phone);
+       const receiverInboxRef = firestoreDoc(db, 'inboxes', otherPersonDetails.phone);
+
+       const updateData = {
+         id: chatId,
+         lastMessage: text,
+         updatedAt: new Date().toISOString(),
+         members: [user.phone, otherPersonDetails.phone],
+         participants: {
+             [user.phone]: { name: user.name },
+             [otherPersonDetails.phone]: { name: otherPersonDetails.name }
+         }
+       };
+
+       await setDoc(senderInboxRef, { [chatId]: updateData }, { merge: true });
+
+       // Increment receiver's unread count
+       const receiverInboxSnap = await getDoc(receiverInboxRef);
+       const receiverInboxData = receiverInboxSnap.exists() ? receiverInboxSnap.data() : {};
+       const currentUnreadCount = receiverInboxData[chatId]?.participants?.[otherPersonDetails.phone]?.unreadCount || 0;
+       
+       const receiverUpdateData = {
+           ...updateData,
+           participants: {
+               ...updateData.participants,
+               [otherPersonDetails.phone]: {
+                   ...updateData.participants[otherPersonDetails.phone],
+                   unreadCount: currentUnreadCount + 1
+               },
+                [user.phone]: {
+                   ...updateData.participants[user.phone],
+                   unreadCount: 0
+               }
+           }
+       };
+
+       await setDoc(receiverInboxRef, { [chatId]: receiverUpdateData }, { merge: true });
+
+    } catch(e) {
+        console.error("Failed to send message", e);
+        toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
+        setNewMessage(text);
+    } finally {
+        setIsSending(false);
+    }
   };
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    if (Object.keys(state.inboxData).length > 0) return '/inbox';
+    // This logic can be simplified or improved based on app requirements
     return '/'; 
   }
 
@@ -172,13 +272,13 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {messages.length === 0 && !isLoading && (
+            {messages.length === 0 && !isLoadingChat && (
               <div className="text-center text-muted-foreground p-8">
-                <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
+                <p>پیام‌ها در پایگاه داده ذخیره می‌شوند.</p>
                 <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
@@ -210,8 +310,8 @@ export default function ChatPage() {
                                 onKeyDown={(e) => { if(e.key === 'Enter') { handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
                                 autoFocus
                             />
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit} disabled={isSending}><Save className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit} disabled={isSending}><XCircle className="w-4 h-4" /></Button>
                         </div>
                     ) : (
                          <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>

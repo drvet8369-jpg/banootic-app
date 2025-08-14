@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
 
 // The AuthContext will now ONLY handle authentication state (user, isLoggedIn, isLoading).
-// All other data (providers, reviews, etc.) will be fetched by the components that need them.
-// This is a much cleaner and more robust architecture.
+// All other data fetching is delegated to the components that need it.
+// This is a much cleaner and more robust architecture that prevents deadlocks.
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // isLoading now only refers to auth state
+  const [isLoading, setIsLoading] = useState(true); // This now only refers to auth state loading
   const router = useRouter();
 
   useEffect(() => {

@@ -5,7 +5,6 @@ import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { getProviders } from '@/lib/data';
 
 

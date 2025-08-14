@@ -10,8 +10,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-interface Chat {
+interface ChatSummary {
   id: string;
   otherMemberName: string;
   otherMemberId: string;
@@ -31,19 +33,38 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { state } = useAuth();
-  const { user, isLoggedIn, isLoading, inboxData } = state;
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const [inboxData, setInboxData] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    if (!user?.phone) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const inboxDocRef = doc(db, 'inboxes', user.phone);
+    const unsubscribe = onSnapshot(inboxDocRef, (doc) => {
+      setInboxData(doc.exists() ? doc.data() : {});
+      setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching inbox:", error);
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user?.phone]);
+
   const chats = useMemo(() => {
     if (!user) return [];
     return Object.values(inboxData)
-        .filter((chat: any) => chat.members?.includes(user.phone))
-        .map((chat: any): Chat | null => {
+        .map((chat: any): ChatSummary | null => {
             if (!chat.participants || !chat.members) return null;
 
             const otherMemberId = chat.members.find((id: string) => id !== user.phone);
@@ -62,12 +83,12 @@ export default function InboxPage() {
                 unreadCount: selfInfo?.unreadCount || 0,
             };
         })
-        .filter((chat): chat is Chat => chat !== null)
+        .filter((chat): chat is ChatSummary => chat !== null)
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [inboxData, user]);
 
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -95,7 +116,7 @@ export default function InboxPage() {
             <CardHeader>
                 <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
                  <CardDescription>
-                    {user.accountType === 'provider' 
+                    {user?.accountType === 'provider' 
                         ? 'آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید.' 
                         : 'آخرین گفتگوهای خود با هنرمندان را در اینجا مشاهده کنید.'}
                 </CardDescription>
@@ -105,11 +126,11 @@ export default function InboxPage() {
                     <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                     <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
                     <p className="text-muted-foreground mt-2">
-                        {user.accountType === 'provider'
+                        {user?.accountType === 'provider'
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
-                    {user.accountType === 'customer' && (
+                    {user?.accountType === 'customer' && (
                         <Button asChild className="mt-6">
                             <Link href="/">مشاهده هنرمندان</Link>
                         </Button>
@@ -126,7 +147,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
@@ -140,7 +161,7 @@ export default function InboxPage() {
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
                                 <p className="text-xs text-muted-foreground flex-shrink-0">
-                                  {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
+                                  {isClient && chat.updatedAt ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mt-1">

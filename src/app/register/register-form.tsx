@@ -85,7 +85,6 @@ export default function RegisterForm() {
     setIsSubmitting(true);
     
     try {
-        // Direct query to check for existing provider by phone, avoiding loading all providers.
         const providerDocRef = doc(db, "providers", values.phone);
         const providerDocSnap = await getDoc(providerDocRef);
 
@@ -99,7 +98,6 @@ export default function RegisterForm() {
           return;
         }
 
-        // Check for existing provider by business name, only if registering as a provider
         if (values.accountType === 'provider') {
           const q = query(collection(db, "providers"), where("name", "==", values.name), limit(1));
           const querySnapshot = await getDocs(q);
@@ -114,9 +112,8 @@ export default function RegisterForm() {
           }
         }
         
-        const newProviderId = Date.now(); // Simple unique ID for now
+        const newProviderId = Date.now();
 
-        // Create the user object for login
         const userToLogin: User = {
           id: values.accountType === 'provider' ? newProviderId.toString() : values.phone,
           name: values.name,
@@ -124,7 +121,6 @@ export default function RegisterForm() {
           accountType: values.accountType,
         };
 
-        // If they are a provider, create the provider document in Firestore
         if (values.accountType === 'provider' && values.serviceType && values.bio) {
             const selectedCategory = categories.find(c => c.slug === values.serviceType);
             const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
@@ -134,7 +130,7 @@ export default function RegisterForm() {
                 name: values.name,
                 phone: values.phone,
                 service: selectedCategory?.name || 'خدمت جدید',
-                location: 'ارومیه', // Add default location back
+                location: 'ارومیه',
                 bio: values.bio,
                 categorySlug: selectedCategory?.slug || 'beauty',
                 serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -144,11 +140,9 @@ export default function RegisterForm() {
                 portfolio: [],
             };
             
-            // Save the new provider to Firestore using their phone number as the document ID
             await setDoc(doc(db, "providers", newProvider.phone), newProvider);
         }
         
-        // Log the user in with the created user object
         login(userToLogin);
         
         toast({

@@ -8,6 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import { getProviders, getReviews } from '@/lib/data';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,9 +60,8 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 // Review Form Component
-const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
-  const { state, dispatch } = useAuth();
-  const { user, isLoggedIn } = state;
+const ReviewForm = ({ providerId, providerPhone, onSubmit }: { providerId: number; providerPhone: string; onSubmit: () => void }) => {
+  const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -69,30 +71,51 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     return null;
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-
-    const newReview: Review = {
-    id: Date.now().toString(),
-    providerId,
-    authorName: user.name,
-    rating,
-    comment,
-    createdAt: new Date().toISOString(),
-    };
-
-    dispatch({ type: 'ADD_REVIEW', payload: newReview });
     
-    toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
-    setRating(0);
-    setComment('');
-    setIsSubmitting(false);
-    onSubmit();
+    if(!user?.name) return;
+
+    try {
+        const newReview: Review = {
+        id: Date.now().toString(),
+        providerId,
+        authorName: user.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString(),
+        };
+
+        const reviewDocRef = doc(db, 'reviews', newReview.id);
+        await setDoc(reviewDocRef, newReview);
+        
+        // Recalculate provider's average rating
+        const allReviews = [...(await getReviews()), newReview];
+        const providerReviews = allReviews.filter(r => r.providerId === providerId);
+        const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+        const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
+        
+        const providerDocRef = doc(db, 'providers', providerPhone);
+        await setDoc(providerDocRef, {
+            rating: newAverageRating,
+            reviewsCount: providerReviews.length,
+        }, { merge: true });
+
+        toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
+        setRating(0);
+        setComment('');
+        onSubmit();
+    } catch(error) {
+        console.error("Failed to submit review:", error);
+        toast({ title: 'خطا', description: 'مشکلی در ثبت نظر رخ داد.', variant: 'destructive' });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
@@ -141,28 +164,64 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { state, dispatch } = useAuth();
-  const { user, providers, reviews, isLoading } = state;
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const provider = useMemo(() => providers.find(p => p.phone === providerPhone), [providers, providerPhone]);
-  const providerReviews = useMemo(() => reviews.filter(r => r.providerId === provider?.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [reviews, provider]);
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const allProviders = await getProviders();
+        const foundProvider = allProviders.find(p => p.phone === providerPhone);
+        
+        if (foundProvider) {
+          setProvider(foundProvider);
+          const allReviews = await getReviews();
+          const providerReviews = allReviews
+              .filter(r => r.providerId === foundProvider.id)
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setReviews(providerReviews);
+        } else {
+          setProvider(null);
+        }
+    } catch(e) {
+        console.error("Failed to load page data:", e);
+        toast({title: "خطا", description: "امکان بارگذاری اطلاعات صفحه وجود ندارد.", variant: "destructive"});
+    } finally {
+        setIsLoading(false);
+    }
+  }, [providerPhone, toast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
 
-  const deletePortfolioItem = (itemIndex: number) => {
+  const deletePortfolioItem = async (itemIndex: number) => {
     if (!provider) return;
+
     const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
-    dispatch({ type: 'UPDATE_PROVIDER', payload: {...provider, portfolio: updatedPortfolio }});
-    toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+    const providerDocRef = doc(db, 'providers', provider.phone);
+
+    try {
+        await setDoc(providerDocRef, { portfolio: updatedPortfolio }, { merge: true });
+        setProvider(prev => prev ? { ...prev, portfolio: updatedPortfolio } : null);
+        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+    } catch(e) {
+        console.error("Failed to delete portfolio item:", e);
+        toast({ title: 'خطا', description: 'امکان حذف نمونه کار وجود ندارد.', variant: 'destructive' });
+    }
   };
 
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -283,16 +342,16 @@ export default function ProviderProfilePage() {
                 
                 <div id="reviews" className="p-6 scroll-mt-20">
                     <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                    {providerReviews.length > 0 ? (
+                    {reviews.length > 0 ? (
                         <div className="space-y-4">
-                            {providerReviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.id} onSubmit={() => {}} />
+                    <ReviewForm providerId={provider.id} providerPhone={provider.phone} onSubmit={loadData} />
                 </div>
             </Card>
         </div>
