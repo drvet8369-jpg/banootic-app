@@ -57,6 +57,7 @@ export default function LoginPage() {
         let userToLogin: User;
 
         if (existingProvider) {
+          // User is a known provider
           userToLogin = {
             id: existingProvider.id.toString(),
             name: existingProvider.name,
@@ -64,6 +65,7 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
+          // User is a customer
           userToLogin = {
             id: values.phone,
             name: `کاربر ${values.phone.slice(-4)}`,
