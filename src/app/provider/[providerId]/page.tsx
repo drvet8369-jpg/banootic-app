@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders } from '@/lib/data';
+import { getProviders, saveProviders } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -38,25 +38,31 @@ const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLDivEle
 );
 
 // Review Card Component
-const ReviewCard = ({ review }: { review: Review }) => (
-  <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-    <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
-      <Avatar className="h-10 w-10">
-        <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
-      </Avatar>
-      <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
-    </div>
-    <div className="flex-grow">
-      <div className="flex items-center justify-between mb-2">
-        <StarRating rating={review.rating} size="sm" readOnly />
-        <p className="text-xs text-muted-foreground flex-shrink-0">
-          {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
-        </p>
+const ReviewCard = ({ review }: { review: Review }) => {
+    const [isClient, setIsClient] = useState(false);
+    useEffect(() => { setIsClient(true) }, []);
+
+    return (
+      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+        <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
+          <Avatar className="h-10 w-10">
+            <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
+          </Avatar>
+          <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
+        </div>
+        <div className="flex-grow">
+          <div className="flex items-center justify-between mb-2">
+            <StarRating rating={review.rating} size="sm" readOnly />
+            <p className="text-xs text-muted-foreground flex-shrink-0">
+              {isClient ? formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR }) : '...'}
+            </p>
+          </div>
+          <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+        </div>
       </div>
-      <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
-    </div>
-  </div>
-);
+    );
+};
+
 
 // Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
@@ -146,7 +152,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerId = params.providerId as string;
-  const { user, isLoggedIn, addAgreement, agreements, isLoading: isAuthLoading, providers, reviews: allReviews } = useAuth();
+  const { user, isLoggedIn, addAgreement, agreements, isLoading: isAuthLoading, providers, reviews: allReviews, updateProviderData } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -155,6 +161,9 @@ export default function ProviderProfilePage() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
   const loadData = useCallback(() => {
+    // This is the fix: prevent running until auth context (and thus providers list) is loaded.
+    if (isAuthLoading) return;
+    
     const numericProviderId = parseInt(providerId, 10);
     const foundProvider = providers.find(p => p.id === numericProviderId);
     
@@ -173,7 +182,7 @@ export default function ProviderProfilePage() {
     }
     
     setIsLoading(false);
-  }, [providerId, user, agreements, providers, allReviews]);
+  }, [providerId, user, agreements, providers, allReviews, isAuthLoading]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -186,16 +195,16 @@ export default function ProviderProfilePage() {
   const deletePortfolioItem = (itemIndex: number) => {
     if (!provider) return;
 
-    const currentProviders = getProviders();
-    const providerIndex = currentProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        currentProviders[providerIndex].portfolio = currentProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-        saveProviders(currentProviders);
-        loadData(); // Refresh data
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
-    }
+    updateProviderData(currentProviders => {
+       const providerIndex = currentProviders.findIndex(p => p.id === provider.id);
+       if (providerIndex > -1) {
+          currentProviders[providerIndex].portfolio = currentProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
+          toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+       } else {
+          toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+       }
+       return currentProviders;
+    });
   };
 
   const handleRequestAgreement = () => {
@@ -245,7 +254,7 @@ export default function ProviderProfilePage() {
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
-                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center whitespace-pre-wrap">{provider.bio}</p>
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
