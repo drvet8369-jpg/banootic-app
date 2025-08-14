@@ -74,7 +74,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, addProvider, providers, isLoading: isAuthLoading } = useAuth();
+  const { login, addProvider, providers, isLoading: isAuthLoading, getUserFromFirestore } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -93,27 +93,16 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsSubmitting(true);
     try {
-      const existingProviderByPhone = providers.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
       if (values.accountType === 'provider') {
-        const existingProviderByName = providers.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
-            toast({
-                title: 'خطا در ثبت‌نام',
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-                variant: 'destructive',
-            });
-            setIsSubmitting(false);
-            return;
+        const existingProvider = await getUserFromFirestore(values.phone);
+        if (existingProvider) {
+          toast({
+            title: 'خطا در ثبت‌نام',
+            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+            variant: 'destructive',
+          });
+          setIsSubmitting(false);
+          return;
         }
       }
 
