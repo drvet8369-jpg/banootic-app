@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -159,12 +159,12 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user } = useAuth();
+  const { user, agreements, addAgreement } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageInfo, setSelectedImageInfo] = useState<{ src: string, index: number } | null>(null);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -191,6 +191,7 @@ export default function ProviderProfilePage() {
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
+  const isCustomerViewing = user && user.accountType === 'customer';
 
   const deletePortfolioItem = (itemIndex: number) => {
     if (!provider) return;
@@ -200,17 +201,27 @@ export default function ProviderProfilePage() {
     if (providerIndex > -1) {
         allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
         saveProviders(allProviders);
-        loadData(); // Refresh data
+        loadData();
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } else {
         toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
     }
   };
+  
+  const handleRequestAgreement = () => {
+    if (!provider) return;
+    addAgreement(provider.phone);
+    toast({
+      title: "درخواست شما ارسال شد",
+      description: "درخواست توافق برای هنرمند ارسال شد. پس از تایید توسط ایشان، می‌توانید نظرات بهتری ثبت کنید.",
+    });
+  };
 
+  const hasPendingAgreement = isCustomerViewing && agreements.some(a => a.providerPhone === provider?.phone && a.customerPhone === user.phone);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -252,51 +263,51 @@ export default function ProviderProfilePage() {
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
+                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImageInfo(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
-                                    <div className="group relative" key={`${provider.id}-portfolio-${index}`}>
-                                        <DialogTrigger asChild>
-                                            <div 
-                                                className="w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                                onClick={() => setSelectedImage(item.src)}
-                                            >
-                                                <Image
-                                                    src={item.src}
-                                                    alt={`نمونه کار ${index + 1}`}
-                                                    fill
-                                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                                    data-ai-hint={item.aiHint}
-                                                />
-                                            </div>
-                                        </DialogTrigger>
-                                        {isOwnerViewing && (
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
-                                            aria-label={`حذف نمونه کار ${index + 1}`}
+                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                        <div 
+                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setSelectedImageInfo({ src: item.src, index: index })}
                                         >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                        )}
-                                    </div>
+                                            <Image
+                                                src={item.src}
+                                                alt={`نمونه کار ${index + 1}`}
+                                                fill
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-ai-hint={item.aiHint}
+                                            />
+                                        </div>
+                                    </DialogTrigger>
                                 ))}
                             </div>
                            
                             <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
                                 <DialogHeader className="sr-only">
-                                  <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
+                                  <DialogTitle>نمایش نمونه کار</DialogTitle>
                                 </DialogHeader>
-                               <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                <DialogClose className="absolute right-4 top-4 rounded-sm p-1 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
                                   <X className="h-6 w-6" />
                                   <span className="sr-only">بستن</span>
                                 </DialogClose>
-                                {selectedImage && (
+                                {isOwnerViewing && selectedImageInfo !== null && (
+                                     <DialogClose asChild>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-4 left-4 h-8 w-8 z-50 rounded-sm p-1 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100"
+                                            onClick={() => deletePortfolioItem(selectedImageInfo.index)}
+                                            aria-label="حذف نمونه کار"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </DialogClose>
+                                )}
+                                {selectedImageInfo && (
                                     <div className="relative w-full h-full">
                                         <Image
-                                            src={selectedImage}
+                                            src={selectedImageInfo.src}
                                             alt="نمونه کار تمام صفحه"
                                             fill
                                             className="object-contain"
@@ -314,18 +325,24 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button asChild className="w-full">
+                     <Button asChild className="w-full flex-1">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button asChild className="w-full" variant="secondary">
+                    <Button asChild className="w-full flex-1" variant="secondary">
                         <a href={`tel:${provider.phone}`}>
                             <Phone className="w-4 h-4 ml-2" />
                             تماس
                         </a>
                     </Button>
+                    {isCustomerViewing && (
+                         <Button onClick={handleRequestAgreement} disabled={hasPendingAgreement} className="w-full flex-1" variant="outline">
+                            <Handshake className="w-4 h-4 ml-2" />
+                           {hasPendingAgreement ? 'درخواست ارسال شده' : 'درخواست توافق'}
+                        </Button>
+                    )}
                 </CardFooter>
                 )}
 
