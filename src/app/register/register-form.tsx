@@ -41,7 +41,6 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
   serviceType: z.string().optional(),
-  location: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
@@ -53,14 +52,6 @@ const formSchema = z.object({
     path: ['serviceType'],
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.location;
-    }
-    return true;
-}, {
-    message: 'لطفاً شهر خود را انتخاب کنید.',
-    path: ['location'],
-}).refine(data => {
-    if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
     }
     return true;
@@ -70,8 +61,6 @@ const formSchema = z.object({
 });
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
-
-const locations = ['ارومیه', 'خوی', 'مهاباد', 'بوکان', 'میاندوآب'];
 
 export default function RegisterForm() {
   const { toast } = useToast();
@@ -86,7 +75,6 @@ export default function RegisterForm() {
       phone: '',
       accountType: 'customer',
       bio: '',
-      location: 'ارومیه',
     },
   });
 
@@ -143,7 +131,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: values.location || 'ارومیه',
+          location: 'ارومیه', // Location is now hardcoded
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -265,30 +253,6 @@ export default function RegisterForm() {
                           {categories.map((category) => (
                             <SelectItem key={category.id} value={category.slug}>
                               {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>شهر</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="شهر خود را انتخاب کنید" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {locations.map((loc) => (
-                            <SelectItem key={loc} value={loc}>
-                              {loc}
                             </SelectItem>
                           ))}
                         </SelectContent>
