@@ -1,44 +1,39 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow public read access for general app settings (e.g., initialization check)
-    match /settings/{settingId} {
-      allow read: if true;
-      allow write: if false; // Should only be written from a trusted server environment
-    }
 
-    // Allow public read access to providers and reviews
+    // Allow public read for providers and reviews
     match /providers/{providerId} {
       allow read: if true;
-      allow write: if request.auth != null; // Only logged-in users can potentially write
+      allow write: if request.auth != null;
     }
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow write: if request.auth != null && request.resource.data.authorName == request.auth.token.name;
+      allow create: if request.auth != null && request.resource.data.authorName == request.auth.token.name;
     }
 
-    // Users can only read/write to their own inbox document
+    // Settings should be readable by all to initialize the app
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if false; // Should only be written from server/console
+    }
+
+    // Agreements can only be read by participants, created by customers
+    match /agreements/{agreementId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.customerPhone || request.auth.uid == resource.data.providerPhone);
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.customerPhone;
+      allow update: if request.auth != null && request.auth.uid == resource.data.providerPhone;
+    }
+
+    // Inboxes are private to the user
     match /inboxes/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Users can only read/write messages in chats they are a part of
-    match /chats/{chatId}/messages/{messageId} {
-       allow read, write: if request.auth != null && chatId.split('_').includes(request.auth.uid);
-    }
-    
-    // Agreements can be read by involved parties, but only written by logged-in users
-    match /agreements/{agreementId} {
-        allow read: if request.auth != null && (request.auth.uid == resource.data.customerPhone || request.auth.uid == resource.data.providerPhone);
-        allow write: if request.auth != null;
-    }
-
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+    // Chat messages can be read/written by participants of the chat
+    match /chats/{chatId}/{messageId} {
+      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
     }
   }
 }
