@@ -27,7 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/lib/types';
+import type { User, Provider } from '@/lib/types';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 const formSchema = z.object({
@@ -39,7 +41,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, getUserFromFirestore, isLoading: isAuthLoading } = useAuth();
+  const { login, isLoading: isAuthLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -52,7 +54,9 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        const existingProvider = await getUserFromFirestore(values.phone);
+        const providerDocRef = doc(db, 'providers', values.phone);
+        const providerDoc = await getDoc(providerDocRef);
+        const existingProvider = providerDoc.exists() ? (providerDoc.data() as Provider) : null;
 
         let userToLogin: User;
 
