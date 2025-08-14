@@ -1,18 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent, useMemo } from 'react';
-import { useParams, notFound } from 'next/navigation';
+import { useParams, notFound, useRouter } from 'next/navigation';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { getProviders, getReviews } from '@/lib/data';
-import { doc, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, writeBatch, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -93,21 +92,25 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string; onSubmit: ()
         };
 
         const reviewDocRef = doc(db, 'reviews', newReview.id);
-        
-        const allReviews = [...(await getReviews()), newReview];
-        const providerReviews = allReviews.filter(r => r.providerId === providerId);
-        const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-        const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
-        
         const providerDocRef = doc(db, 'providers', providerId);
+        
+        await setDoc(reviewDocRef, newReview);
+        
+        // This part needs a transaction to be truly safe, but for this app a batch is ok.
+        const providerSnap = await getDoc(providerDocRef);
+        if(providerSnap.exists()) {
+            const providerData = providerSnap.data() as Provider;
+            const currentReviewsCount = providerData.reviewsCount || 0;
+            const currentTotalRating = (providerData.rating || 0) * currentReviewsCount;
+            const newReviewsCount = currentReviewsCount + 1;
+            const newAverageRating = (currentTotalRating + rating) / newReviewsCount;
+            
+            await updateDoc(providerDocRef, {
+                rating: parseFloat(newAverageRating.toFixed(1)),
+                reviewsCount: newReviewsCount,
+            });
+        }
 
-        const batch = writeBatch(db);
-        batch.set(reviewDocRef, newReview);
-        batch.update(providerDocRef, {
-            rating: newAverageRating,
-            reviewsCount: providerReviews.length,
-        });
-        await batch.commit();
 
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
@@ -167,41 +170,22 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string; onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading, providers, reviews: allReviews, requestAgreement } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   
-  const [provider, setProvider] = useState<Provider | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-        const allProviders = await getProviders();
-        const foundProvider = allProviders.find(p => p.phone === providerPhone);
-        
-        if (foundProvider) {
-          setProvider(foundProvider);
-          const allReviews = await getReviews();
-          const providerReviews = allReviews
-              .filter(r => r.providerId === foundProvider.id)
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setReviews(providerReviews);
-        } else {
-          setProvider(null);
-        }
-    } catch(e) {
-        console.error("Failed to load page data:", e);
-        toast({title: "خطا", description: "امکان بارگذاری اطلاعات صفحه وجود ندارد.", variant: "destructive"});
-    } finally {
-        setIsLoading(false);
-    }
-  }, [providerPhone, toast]);
+  const provider = useMemo(() => {
+    return providers.find(p => p.phone === providerPhone) || null;
+  }, [providers, providerPhone]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const reviews = useMemo(() => {
+    if (!provider) return [];
+    return allReviews
+        .filter(r => r.providerId === provider.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [allReviews, provider]);
   
   const isOwnerViewing = user && user.id === provider?.id;
 
@@ -212,17 +196,28 @@ export default function ProviderProfilePage() {
     const providerDocRef = doc(db, 'providers', provider.id);
 
     try {
-        await setDoc(providerDocRef, { portfolio: updatedPortfolio }, { merge: true });
-        setProvider(prev => prev ? { ...prev, portfolio: updatedPortfolio } : null);
+        await updateDoc(providerDocRef, { portfolio: updatedPortfolio });
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+        // Data will refresh via AuthContext listener in a real app, for now we manually reload.
+        router.refresh();
     } catch(e) {
         console.error("Failed to delete portfolio item:", e);
         toast({ title: 'خطا', description: 'امکان حذف نمونه کار وجود ندارد.', variant: 'destructive' });
     }
   };
 
+  const handleRequestAgreement = async () => {
+    if(!provider || !user) return;
+    try {
+        await requestAgreement(provider, user);
+        toast({ title: "موفق", description: "درخواست شما برای هنرمند ارسال شد."});
+    } catch(e) {
+        toast({ title: "خطا", description: "امکان ارسال درخواست وجود ندارد.", variant: "destructive"});
+    }
+  }
 
-  if (isLoading || isAuthLoading) {
+
+  if (isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -324,7 +319,7 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {!isOwnerViewing && (
+                {!isOwnerViewing && isLoggedIn && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
@@ -332,6 +327,12 @@ export default function ProviderProfilePage() {
                             ارسال پیام
                         </Link>
                     </Button>
+                     { user?.accountType === 'customer' && (
+                        <Button onClick={handleRequestAgreement} className="w-full">
+                            <Handshake className="w-4 h-4 ml-2" />
+                            درخواست توافق
+                        </Button>
+                    )}
                     <Button asChild className="w-full" variant="secondary">
                         <a href={`tel:${provider.phone}`}>
                             <Phone className="w-4 h-4 ml-2" />
@@ -354,7 +355,7 @@ export default function ProviderProfilePage() {
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
+                    <ReviewForm providerId={provider.id} onSubmit={router.refresh} />
                 </div>
             </Card>
         </div>

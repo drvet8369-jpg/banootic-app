@@ -5,24 +5,13 @@ import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
-import { getProviders } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
 
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    const fetchProviders = async () => {
-        setIsLoading(true);
-        const providersData = await getProviders();
-        setProviders(providersData);
-        setIsLoading(false);
-    }
-    fetchProviders();
-  }, [])
+  const { providers, isLoading: isAuthLoading } = useAuth();
 
   const searchResults = useMemo(() => {
     if (!query) {
@@ -52,7 +41,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {isAuthLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>

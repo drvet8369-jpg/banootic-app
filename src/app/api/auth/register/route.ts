@@ -5,6 +5,10 @@ import { categories, services } from '@/lib/data';
 
 export async function POST(req: NextRequest) {
   try {
+     if (!adminAuth || !adminDb) {
+      throw new Error('Firebase Admin SDK not initialized.');
+    }
+    
     const values = await req.json();
     const { phone, name, accountType, serviceType, bio } = values;
 
@@ -17,11 +21,8 @@ export async function POST(req: NextRequest) {
     // Check if user already exists
     try {
       await adminAuth.getUser(uid);
-      // If getUser doesn't throw, the user exists
       return NextResponse.json({ message: 'This phone number is already registered.' }, { status: 409 });
     } catch (error: any) {
-      // "user-not-found" is the expected error, so we can continue.
-      // Any other error code is a problem.
       if (error.code !== 'auth/user-not-found') {
         console.error('Error checking for user:', error);
         throw error;
@@ -35,16 +36,15 @@ export async function POST(req: NextRequest) {
         displayName: name
     });
 
-    // If the user is a provider, create a document in the 'providers' collection
     if (accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === serviceType);
         
         const newProviderData: Provider = {
-            id: uid,
+            id: uid, // Use UID as the document ID
             name: name,
-            phone: phone, // Store the plain phone number
+            phone: phone,
             service: selectedCategory?.name || 'خدمت جدید',
-            location: 'ارومیه', // Default location
+            location: 'ارومیه',
             bio: bio || '',
             categorySlug: selectedCategory?.slug || 'beauty',
             serviceSlug: services.find(s => s.categorySlug === selectedCategory?.slug)?.slug || 'manicure-pedicure',
@@ -58,7 +58,6 @@ export async function POST(req: NextRequest) {
         await providerDocRef.set(newProviderData);
     }
 
-    // Create a custom token for the new user to sign in
     const customToken = await adminAuth.createCustomToken(userRecord.uid);
     
     return NextResponse.json({ token: customToken }, { status: 201 });

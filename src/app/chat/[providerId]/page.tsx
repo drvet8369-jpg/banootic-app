@@ -11,9 +11,8 @@ import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 're
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider, Message as MessageType } from '@/lib/types';
-import { onSnapshot, collection, query, orderBy, getDoc, doc as firestoreDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
 
 interface OtherPersonDetails {
     id: string;
@@ -25,11 +24,10 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonPhone = params.providerId as string;
-  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading, providers, sendChatMessage, editChatMessage, markChatAsRead, getInboxForUser } = useAuth();
   const { toast } = useToast();
 
   const [messages, setMessages] = useState<MessageType[]>([]);
-  const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(true);
@@ -37,42 +35,23 @@ export default function ChatPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
+  const otherPersonDetails = useMemo<OtherPersonDetails | null>(() => {
+    const provider = providers.find(p => p.phone === otherPersonPhone);
+    if (provider) {
+        return provider;
+    }
+    if(user && user.accountType === 'provider') {
+        return { id: `+98${otherPersonPhone.substring(1)}`, name: `مشتری ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone };
+    }
+    return null;
+  }, [providers, otherPersonPhone, user]);
+
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
     return [phone1, phone2].sort().join('_');
   }, []);
-  
+
   const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user?.phone, otherPersonPhone, getChatId]);
-
-  useEffect(() => {
-    const fetchOtherPersonDetails = async () => {
-        const providerDoc = await getDoc(firestoreDoc(db, "providers", otherPersonPhone));
-        if (providerDoc.exists()) {
-            setOtherPersonDetails(providerDoc.data() as Provider);
-            return;
-        }
-
-        if (user && chatId) {
-            const inboxDocRef = firestoreDoc(db, 'inboxes', user.phone);
-            const inboxSnap = await getDoc(inboxDocRef);
-            if(inboxSnap.exists()) {
-                const inboxData = inboxSnap.data();
-                const chatInfo = inboxData[chatId];
-                if(chatInfo && chatInfo.participants[otherPersonPhone]) {
-                   setOtherPersonDetails({ id: otherPersonPhone, name: chatInfo.participants[otherPersonPhone].name, phone: otherPersonPhone });
-                   return;
-                }
-            }
-        }
-        
-        setOtherPersonDetails({ id: otherPersonPhone, name: `کاربر ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone });
-    };
-
-    if(user){
-        fetchOtherPersonDetails();
-    }
-  }, [otherPersonPhone, user, chatId]);
-
   
   useEffect(() => {
     if (!chatId) {
@@ -81,17 +60,21 @@ export default function ChatPage() {
     }
 
     setIsLoadingChat(true);
-    const messagesColRef = collection(db, "chats", chatId, "messages");
-    const q = query(messagesColRef, orderBy("createdAt", "asc"));
+    const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs: MessageType[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageType));
+      const msgs: MessageType[] = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              id: doc.id,
+              ...data,
+              createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() // Convert Timestamp to ISO string
+          } as MessageType
+      });
       setMessages(msgs);
       setIsLoadingChat(false);
-      
       if(user?.phone) {
-         const inboxRef = firestoreDoc(db, 'inboxes', user.phone);
-         setDoc(inboxRef, { [chatId]: { participants: { [user.phone]: { unreadCount: 0 } } } }, { merge: true });
+        markChatAsRead(chatId, user.phone);
       }
     }, (error) => {
         console.error("Error listening to chat messages:", error);
@@ -100,7 +83,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [chatId, user?.phone, toast]);
+  }, [chatId, user?.phone, markChatAsRead, toast]);
 
 
   const getInitials = (name: string) => {
@@ -115,14 +98,37 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-  
-  const isLoading = isAuthLoading || isLoadingChat || !otherPersonDetails;
 
-  if (isLoading) {
+  const [headerLink, setHeaderLink] = useState('/');
+  useEffect(() => {
+    const checkInbox = async () => {
+        if (!user) return;
+        if (user.accountType === 'provider') {
+            setHeaderLink('/inbox');
+            return;
+        }
+        try {
+            const inbox = await getInboxForUser(user.phone);
+            if (Object.keys(inbox).length > 0) {
+                setHeaderLink('/inbox');
+            } else {
+                setHeaderLink('/');
+            }
+        } catch (e) {
+            setHeaderLink('/');
+        }
+    }
+    if(user){
+        checkInbox();
+    }
+  }, [user, getInboxForUser]);
+  
+  const isLoading = isAuthLoading || isLoadingChat;
+
+  if (isAuthLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
         </div>
     );
   }
@@ -154,8 +160,7 @@ export default function ChatPage() {
     if (!editingMessageId || !editingText.trim() || !chatId) return;
     setIsSending(true);
     try {
-      const messageRef = firestoreDoc(db, "chats", chatId, "messages", editingMessageId);
-      await setDoc(messageRef, { text: editingText.trim(), isEdited: true, updatedAt: serverTimestamp() }, { merge: true });
+      await editChatMessage(chatId, editingMessageId, editingText.trim());
       handleCancelEdit();
       toast({ title: 'پیام ویرایش شد.' });
     } catch (e) {
@@ -174,39 +179,15 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    const messageToSend: Omit<MessageType, 'id' | 'createdAt'> & { createdAt: any } = {
+    const messageToSend: Omit<MessageType, 'id'|'createdAt'> = {
       text: text,
       senderId: user.phone,
-      createdAt: serverTimestamp(),
     };
     
     setNewMessage('');
     
     try {
-       const messagesColRef = collection(db, "chats", chatId, "messages");
-       await addDoc(messagesColRef, messageToSend);
-       
-       const senderInboxRef = firestoreDoc(db, 'inboxes', user.phone);
-       const receiverInboxRef = firestoreDoc(db, 'inboxes', otherPersonDetails.phone);
-
-       const receiverInboxSnap = await getDoc(receiverInboxRef);
-       const receiverInboxData = receiverInboxSnap.exists() ? receiverInboxSnap.data() : {};
-       const currentUnreadCount = receiverInboxData[chatId]?.participants?.[otherPersonDetails.phone]?.unreadCount || 0;
-       
-       const updatePayload = {
-         id: chatId,
-         lastMessage: text,
-         updatedAt: new Date().toISOString(),
-         members: [user.phone, otherPersonDetails.phone],
-         participants: {
-             [user.phone]: { name: user.name, unreadCount: 0 },
-             [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: currentUnreadCount + 1 }
-         }
-       };
-
-       await setDoc(senderInboxRef, { [chatId]: updatePayload }, { merge: true });
-       await setDoc(receiverInboxRef, { [chatId]: updatePayload }, { merge: true });
-
+       await sendChatMessage(chatId, messageToSend, { phone: otherPersonDetails.phone, name: otherPersonDetails.name }, user);
     } catch(e) {
         console.error("Failed to send message", e);
         toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
@@ -216,17 +197,11 @@ export default function ChatPage() {
     }
   };
 
-  const getHeaderLink = () => {
-    if (user.accountType === 'provider') return '/inbox';
-    return '/'; 
-  }
-
-
   return (
     <div className="flex flex-col h-full py-4">
       <Card className="flex-1 flex flex-col w-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
-           <Link href={getHeaderLink()}>
+           <Link href={headerLink}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
@@ -235,7 +210,7 @@ export default function ChatPage() {
             {otherPersonDetails?.profileImage?.src ? (
                 <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
             ) : null }
-            <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
+            <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '?')}</AvatarFallback>
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
@@ -243,7 +218,12 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {messages.length === 0 && !isLoadingChat && (
+            {isLoadingChat && (
+              <div className="flex justify-center items-center h-full">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoadingChat && messages.length === 0 && (
               <div className="text-center text-muted-foreground p-8">
                 <p>شما اولین پیام را ارسال کنید.</p>
               </div>
@@ -262,7 +242,7 @@ export default function ChatPage() {
                         {otherPersonDetails?.profileImage?.src ? (
                             <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
                         ) : null }
-                        <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
+                        <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '?')}</AvatarFallback>
                       </Avatar>
                     )}
                     

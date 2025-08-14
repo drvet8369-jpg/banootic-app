@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-
 export interface User {
   id: string; // Firebase Auth UID (which is the phone number)
   name: string;
@@ -52,11 +50,10 @@ export interface Review {
 export interface Message {
   id: string;
   text: string;
-  senderId: string;
-  createdAt: Timestamp;
+  senderId: string; // This will be the plain phone number (e.g., 09xxxx)
+  createdAt: string; // ISO string
   isEdited?: boolean;
 }
-
 
 export interface Agreement {
   id: string;

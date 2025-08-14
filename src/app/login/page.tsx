@@ -38,7 +38,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { loginWithPhoneNumber } = useAuth();
+  const { loginWithPhoneNumber, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -88,14 +88,14 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isSubmitting} />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading || isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                 {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isLoading || isSubmitting}>
+                 {(isLoading || isSubmitting) && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 ورود
               </Button>
             </form>

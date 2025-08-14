@@ -6,27 +6,16 @@ import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import SearchResultCard from '@/components/search-result-card';
-import { getProviders } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
 
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
   
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-        setIsLoading(true);
-        const providersData = await getProviders();
-        setProviders(providersData);
-        setIsLoading(false);
-    }
-    fetchProviders();
-  }, [])
+  const { providers, isLoading } = useAuth();
 
   const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);

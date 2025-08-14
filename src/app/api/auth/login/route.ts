@@ -3,6 +3,10 @@ import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   try {
+    if (!adminAuth) {
+      throw new Error('Firebase Admin SDK not initialized.');
+    }
+
     const { phone } = await req.json();
 
     if (!phone || !/^09\d{9}$/.test(phone)) {
@@ -31,6 +35,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('API /auth/login Error:', error);
-    return NextResponse.json({ message: 'An internal server error occurred.' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'An internal server error occurred.' }, { status: 500 });
   }
 }
