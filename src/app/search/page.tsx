@@ -1,29 +1,44 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@/context/AuthContext';
-
+import { useEffect, useState, useCallback } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { providers, isLoading: isAuthLoading } = useAuth();
+  const [searchResults, setSearchResults] = useState<Provider[] | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const searchResults = useMemo(() => {
+  const performSearch = useCallback(() => {
+    setIsLoading(true);
+    const allProviders = getProviders();
     if (!query) {
-      return providers; 
+      setSearchResults([]);
+      setIsLoading(false);
+      return;
     }
     const lowercasedQuery = query.toLowerCase();
-    return providers.filter(provider => 
+    const results = allProviders.filter(provider => 
       provider.name.toLowerCase().includes(lowercasedQuery) ||
       provider.service.toLowerCase().includes(lowercasedQuery) ||
-      (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+      provider.bio.toLowerCase().includes(lowercasedQuery)
     );
-  }, [query, providers]);
+    setSearchResults(results);
+    setIsLoading(false);
+  }, [query]);
+
+  useEffect(() => {
+    performSearch();
+
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
+  }, [performSearch]);
 
 
   return (
@@ -36,12 +51,12 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            تمام هنرمندان
+            لطفا عبارتی را برای جستجو وارد کنید.
           </p>
         )}
       </div>
 
-      {isAuthLoading ? (
+      {isLoading || searchResults === undefined ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
