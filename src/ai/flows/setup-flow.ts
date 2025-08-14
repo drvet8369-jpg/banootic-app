@@ -15,6 +15,12 @@ export const runSetup = ai.defineFlow(
     outputSchema: z.string(),
   },
   async () => {
+    if (!adminDb) {
+      const msg = "Firebase Admin DB is not initialized. Skipping setup.";
+      console.error(msg);
+      return msg;
+    }
+    
     // Check if the providers collection is empty as a flag to run setup.
     const providersCollection = adminDb.collection('providers');
     const providersSnapshot = await providersCollection.limit(1).get();
@@ -30,7 +36,7 @@ export const runSetup = ai.defineFlow(
 
     // Add providers from the seed file
     defaultProviders.forEach((provider) => {
-      // The document ID is the provider's phone number (without +98)
+      // The document ID is the provider's phone number
       const docRef = adminDb.collection('providers').doc(provider.phone);
       // Also save the phone number as the 'id' field inside the document
       batch.set(docRef, { ...provider, id: provider.phone });

@@ -18,9 +18,9 @@ try {
       );
     }
 
-    // Decode and parse the service account key
+    // Decode the Base64 string and then parse it as a JSON object
     const serviceAccount = JSON.parse(
-      Buffer.from(serviceAccountKey, 'base64').toString('ascii')
+      Buffer.from(serviceAccountKey, 'base64').toString('utf8')
     );
 
     console.log('Initializing Firebase Admin SDK...');

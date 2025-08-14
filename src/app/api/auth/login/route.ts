@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('API /auth/login Error:', error);
-    return NextResponse.json({ message: error.message || 'An internal server error occurred.' }, { status: 500 });
+    const errorMessage = error.message || 'An internal server error occurred.';
+    return NextResponse.json({ message: `Firebase Admin SDK Error: ${errorMessage}` }, { status: 500 });
   }
 }
