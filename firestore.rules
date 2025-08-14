@@ -1,36 +1,36 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Providers can be read by anyone, but only written by the authenticated provider themselves.
-    match /providers/{providerPhone} {
+    // Providers can be read by anyone, but only modified by the provider themselves.
+    match /providers/{providerId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.phone_number == providerPhone;
+      allow write: if request.auth != null && request.auth.token.phone_number == providerId;
     }
 
     // Reviews can be read by anyone, but only created by authenticated users.
+    // Deletion/Update is not allowed through security rules for simplicity.
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if false; // Disallow editing/deleting reviews for now
     }
     
-    // Inboxes can only be accessed by their owner.
+    // Settings can be read by anyone, but only written by admin (not possible from client).
+    match /settings/initialData {
+        allow read: if true;
+        allow write: if false;
+    }
+
+    // Inboxes are private to the user.
     match /inboxes/{userId} {
       allow read, write: if request.auth != null && request.auth.token.phone_number == userId;
     }
 
-    // Chat messages can only be read/written by participants of the chat.
-    // The chatId is assumed to be phone1_phone2 sorted alphabetically.
+    // Chat messages can only be read/written by members of the chat.
+    // The chat document ID is a composite of the two user phones.
     match /chats/{chatId}/{message=**} {
       allow read, write: if request.auth != null && request.auth.token.phone_number in chatId.split('_');
-    }
-
-    // Settings collection for one-time initialization checks.
-    match /settings/{settingId} {
-      allow read: if true;
-      allow write: if false; // Should only be written via backend/script, not client
     }
   }
 }
