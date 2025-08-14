@@ -4,6 +4,10 @@ import { firebase } from '@genkit-ai/firebase';
 import { next } from '@genkit-ai/next';
 import {defineDotprompt, dotprompt} from '@genkit-ai/dotprompt';
 import { runSetup } from './flows/setup-flow';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env.local
+dotenv.config({ path: '.env.local' });
 
 export default genkit({
   plugins: [
