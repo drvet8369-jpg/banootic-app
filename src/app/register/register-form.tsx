@@ -7,10 +7,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { signInWithCustomToken } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -20,14 +18,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from "@/components/ui/input";
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories } from '@/lib/data';
+import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
+import type { User, Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -65,8 +64,8 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { isLoading: isAuthLoading } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -79,44 +78,85 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
-  const isLoading = isSubmitting || isAuthLoading;
 
   async function onSubmit(values: UserRegistrationInput) {
-    setIsSubmitting(true);
-    
+    setIsLoading(true);
     try {
-       const response = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(values),
-        });
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-        if (!response.ok) {
-           const errorData = await response.json();
-           throw new Error(errorData.message || 'Failed to register');
+      const allProviders = getProviders();
+      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      if (existingProviderByPhone) {
+        toast({
+          title: 'خطا در ثبت‌نام',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (values.accountType === 'provider') {
+        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        if (existingProviderByName) {
+            toast({
+                title: 'خطا در ثبت‌نام',
+                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
+                variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
         }
+      }
 
-        const { token } = await response.json();
+      const newId = Date.now();
+      const userToLogin: User = {
+        id: newId.toString(),
+        name: values.name,
+        phone: values.phone,
+        accountType: values.accountType,
+      };
 
-        await signInWithCustomToken(auth, token);
+      if (values.accountType === 'provider') {
+        const selectedCategory = categories.find(c => c.slug === values.serviceType);
+        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
-        toast({
-          title: 'ثبت‌نام با موفقیت انجام شد!',
-          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-        });
-        
-        const destination = values.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+        const newProvider: Provider = {
+          id: newId,
+          name: values.name,
+          phone: values.phone,
+          service: selectedCategory?.name || 'خدمت جدید',
+          location: 'ارومیه',
+          bio: values.bio || '',
+          categorySlug: selectedCategory?.slug || 'beauty',
+          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
+          rating: 0,
+          reviewsCount: 0,
+          profileImage: { src: '', aiHint: 'woman portrait' },
+          portfolio: [],
+        };
+        saveProviders([...allProviders, newProvider]);
+      }
+      
+      login(userToLogin);
+      
+      toast({
+        title: 'ثبت‌نام با موفقیت انجام شد!',
+        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+      });
+      
+      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      router.push(destination);
 
-    } catch (error: any) {
-        console.error("Registration failed:", error);
-        toast({
+    } catch (error) {
+         console.error("Registration failed:", error);
+         toast({
             title: 'خطا در ثبت‌نام',
-            description: error.message || 'مشکلی در ارتباط با سرور رخ داده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
-        setIsSubmitting(false);
+        setIsLoading(false);
     }
   }
 

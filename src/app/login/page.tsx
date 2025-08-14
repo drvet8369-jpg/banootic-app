@@ -27,6 +27,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
+import type { User } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -38,8 +40,8 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { loginWithPhoneNumber, isLoading } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,23 +51,49 @@ export default function LoginPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
+    setIsLoading(true);
     try {
-        await loginWithPhoneNumber(values.phone);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
+
+        let userToLogin: User;
+
+        if (existingProvider) {
+          userToLogin = {
+            id: existingProvider.id.toString(),
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          userToLogin = {
+            id: values.phone,
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
+
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: 'خوش آمدید! در حال انتقال به صفحه اصلی...',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
+        
         router.push('/');
-    } catch (error: any) {
+
+    } catch (error) {
         console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: error.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
-        setIsSubmitting(false);
+        setIsLoading(false);
     }
   }
 
@@ -73,9 +101,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود به حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,22 +116,22 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading || isSubmitting} />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading || isSubmitting}>
-                 {(isLoading || isSubmitting) && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 ورود
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            حساب کاربری ندارید؟{" "}
+            هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              ثبت‌نام کنید
+              از اینجا ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>

@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { cn } from '@/lib/utils';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -20,21 +19,40 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
       return;
     }
 
-    const inboxDocRef = doc(db, 'inboxes', user.phone);
-    const unsubscribe = onSnapshot(inboxDocRef, (doc) => {
-      if (doc.exists()) {
-        const inboxData = doc.data();
-        const totalUnread = Object.values(inboxData).reduce((acc: number, chat: any) => {
-          const selfInfo = chat.participants?.[user.phone];
-          return acc + (selfInfo?.unreadCount || 0);
-        }, 0);
+    const checkUnread = () => {
+      try {
+        const allChatsData = JSON.parse(localStorage.getItem('zanmahal-inbox-chats') || '{}');
+        const totalUnread = Object.values(allChatsData)
+          .filter((chat: any) => chat.members?.includes(user.phone))
+          .reduce((acc: number, chat: any) => {
+            const selfInfo = chat.participants?.[user.phone];
+            return acc + (selfInfo?.unreadCount || 0);
+          }, 0);
         setUnreadCount(totalUnread);
-      } else {
+      } catch (e) {
         setUnreadCount(0);
       }
-    });
+    };
 
-    return () => unsubscribe();
+    checkUnread();
+
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'zanmahal-inbox-chats') {
+            checkUnread();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check on focus for changes within the same tab
+    window.addEventListener('focus', checkUnread);
+
+    const intervalId = setInterval(checkUnread, 5000); 
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', checkUnread);
+    };
   }, [user?.phone]);
 
   if (unreadCount === 0) {

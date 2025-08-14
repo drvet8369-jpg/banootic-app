@@ -1,5 +1,6 @@
+
 export interface User {
-  id: string; // Firebase Auth UID (which is the phone number)
+  id: string; // phone number or a generated ID
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
@@ -24,11 +25,11 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: string; // Document ID (the user's phone number with +98 prefix)
+  id: number; // A unique ID for the provider
   name: string;
   service: string; 
   location: string;
-  phone: string; // The user's plain phone number (e.g., 09xxxx)
+  phone: string; 
   bio: string;
   categorySlug: Category['slug'];
   serviceSlug: Service['slug'];
@@ -39,8 +40,8 @@ export interface Provider {
 }
 
 export interface Review {
-  id: string; // Document ID
-  providerId: string; // Corresponds to Provider's id
+  id: string; 
+  providerId: number; // Corresponds to Provider's id
   authorName: string;
   rating: number;
   comment: string;
@@ -50,19 +51,20 @@ export interface Review {
 export interface Message {
   id: string;
   text: string;
-  senderId: string; // This will be the plain phone number (e.g., 09xxxx)
+  senderId: string;
   createdAt: string; // ISO string
   isEdited?: boolean;
 }
 
-export interface Agreement {
-  id: string;
-  providerId: string;
-  providerPhone: string;
-  providerName: string;
-  customerPhone: string;
-  customerName: string;
-  status: 'pending' | 'confirmed' | 'rejected';
-  createdAt: string; // ISO String
-  requestedAt: string; // ISO String
+export interface Chat {
+    id: string;
+    members: string[]; // array of user phones
+    participants: {
+        [key: string]: { // key is user phone
+            name: string;
+            unreadCount: number;
+        }
+    };
+    lastMessage: string;
+    updatedAt: string; // ISO String
 }
