@@ -1,20 +1,31 @@
 'use client';
 
-import { services, categories } from '@/lib/data';
+import { services, categories, getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SearchResultCard from '@/components/search-result-card';
-import { useAuth } from '@/context/AuthContext';
+
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
-  const { providers, isLoading } = useAuth();
+  
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchProviders = async () => {
+        setIsLoading(true);
+        const providersData = await getProviders();
+        setProviders(providersData);
+        setIsLoading(false);
+    }
+    fetchProviders();
+  }, [])
 
   const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);

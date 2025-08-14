@@ -55,23 +55,24 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
+      // Direct query to Firestore to check if a provider with this phone number exists.
+      // This is the correct way, avoiding the previous deadlock.
       const providerDocRef = doc(db, "providers", values.phone);
       const providerDocSnap = await getDoc(providerDocRef);
 
       let userToLogin: User;
 
       if (providerDocSnap.exists()) {
+        // If the document exists, the user is a provider.
         const providerData = providerDocSnap.data() as Provider;
         userToLogin = {
-          id: providerData.phone,
+          id: providerData.phone, // Use phone as the unique ID
           name: providerData.name,
           phone: providerData.phone,
           accountType: 'provider',
         };
       } else {
-        // This is a regular customer login.
-        // We don't check for a "customer" document, we just log them in.
-        // A customer's identity is simply their phone number.
+        // If no provider document is found, they are a customer.
         userToLogin = {
           id: values.phone,
           name: `کاربر ${values.phone.slice(-4)}`,
@@ -87,6 +88,7 @@ export default function LoginPage() {
         description: `خوش آمدید ${userToLogin.name}!`,
       });
       
+      // Redirect based on account type
       const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
       router.push(destination);
 

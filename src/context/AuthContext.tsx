@@ -3,15 +3,15 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { getProviders } from '@/lib/data'; // Import only what's needed for initialization
-import type { Provider } from '@/lib/types';
 
+// The AuthContext will now ONLY handle authentication state (user, isLoggedIn, isLoading).
+// All other data (providers, reviews, etc.) will be fetched by the components that need them.
+// This is a much cleaner and more robust architecture.
 
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   isLoading: boolean;
-  providers: Provider[]; // Keep providers list here to be globally accessible after load
   login: (userData: User) => void;
   logout: () => void;
 }
@@ -20,33 +20,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // isLoading now only refers to auth state
   const router = useRouter();
 
   useEffect(() => {
-    const loadInitialData = async () => {
+    // This effect runs once on app load to check for a logged-in user in localStorage.
+    const loadUserFromStorage = () => {
       setIsLoading(true);
       try {
-        // 1. Load User from localStorage
         const storedUser = localStorage.getItem('honarbanoo-user');
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
-        
-        // 2. Load all providers. This is public data now.
-        const providersData = await getProviders();
-        setProviders(providersData);
-
       } catch (error) {
-        console.error("Failed to parse user from localStorage on initial load", error);
+        console.error("Failed to parse user from localStorage", error);
         localStorage.removeItem('honarbanoo-user');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadInitialData();
+    loadUserFromStorage();
   }, []);
 
   const login = useCallback((userData: User) => {
@@ -70,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, isLoading, providers }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

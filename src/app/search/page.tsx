@@ -6,13 +6,25 @@ import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
 
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { providers, isLoading } = useAuth();
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
+  useEffect(() => {
+    const fetchProviders = async () => {
+        setIsLoading(true);
+        const providersData = await getProviders();
+        setProviders(providersData);
+        setIsLoading(false);
+    }
+    fetchProviders();
+  }, [])
+
   const searchResults = useMemo(() => {
     if (!query) {
       return providers; // Show all providers if query is empty
@@ -21,7 +33,7 @@ export default function SearchPage() {
     return providers.filter(provider => 
       provider.name.toLowerCase().includes(lowercasedQuery) ||
       provider.service.toLowerCase().includes(lowercasedQuery) ||
-      provider.bio.toLowerCase().includes(lowercasedQuery)
+      (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
     );
   }, [query, providers]);
 

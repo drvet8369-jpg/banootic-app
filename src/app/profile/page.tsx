@@ -17,7 +17,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading, login, providers } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -28,21 +28,27 @@ export default function ProfilePage() {
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  const loadProviderData = useCallback(() => {
-    if (user && user.accountType === 'provider' && providers.length > 0) {
-        const currentProvider = providers.find(p => p.phone === user.phone);
-        if (currentProvider) {
+  const loadProviderData = useCallback(async () => {
+    if (user && user.accountType === 'provider') {
+        try {
+          const providerDocRef = doc(db, "providers", user.phone);
+          const providerDocSnap = await getDoc(providerDocRef);
+          if (providerDocSnap.exists()) {
+            const currentProvider = providerDocSnap.data() as Provider;
             setProvider(currentProvider);
             setEditedData({
-                name: currentProvider.name,
-                service: currentProvider.service,
-                bio: currentProvider.bio,
+              name: currentProvider.name,
+              service: currentProvider.service,
+              bio: currentProvider.bio,
             });
+          }
+        } catch (e) {
+            console.error("Failed to load provider data", e);
+            toast({ title: "خطا", description: "امکان بارگذاری اطلاعات هنرمند وجود ندارد.", variant: "destructive" });
         }
     }
-    // We set loading to false even if data is not found, to stop the spinner.
     setIsLoadingData(false);
-  }, [user, providers]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (!isAuthLoading) {
