@@ -22,8 +22,7 @@ import dynamic from 'next/dynamic';
 const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
 
 export default function Header() {
-  const { state, logout } = useAuth();
-  const { isLoggedIn, user } = state;
+  const { isLoggedIn, user, logout } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
 
