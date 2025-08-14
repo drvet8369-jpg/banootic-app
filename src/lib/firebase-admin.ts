@@ -16,6 +16,7 @@ if (!admin.apps.length) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Please ensure it is in your .env.local file.');
     }
     
+    // Correctly decode and parse the service account key
     const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('utf-8'));
 
     admin.initializeApp({
