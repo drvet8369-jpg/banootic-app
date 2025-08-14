@@ -1,3 +1,4 @@
+'use server';
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
@@ -7,28 +8,20 @@ import { getAuth } from 'firebase-admin/auth';
 let adminDb: admin.firestore.Firestore | undefined;
 let adminAuth: admin.auth.Auth | undefined;
 
-// Ensure the service account key is available.
+
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (serviceAccountKey) {
   try {
-    // Initialize the app only if it hasn't been initialized yet.
-    if (!admin.apps.length) {
-      // Parse the service account key JSON string.
-      const serviceAccount = JSON.parse(serviceAccountKey);
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      
-      adminDb = getFirestore();
-      adminAuth = getAuth();
-      console.log("Firebase Admin SDK initialized successfully.");
-    } else {
-      // If the app is already initialized, just get the instances.
-      adminDb = getFirestore(admin.app());
-      adminAuth = getAuth(admin.app());
+    const serviceAccount = JSON.parse(serviceAccountKey);
+    if (admin.apps.length === 0) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+        });
+        console.log("Firebase Admin SDK initialized successfully.");
     }
+    adminDb = getFirestore();
+    adminAuth = getAuth();
   } catch (error) {
     console.error('CRITICAL: Firebase admin initialization failed.', error);
   }
