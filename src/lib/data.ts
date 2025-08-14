@@ -1,4 +1,9 @@
 import type { Category, Provider, Service, Review, Message, Agreement } from './types';
+import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
+import { db } from './firebase';
+
+// This file now acts as the primary interface for interacting with Firestore.
+// All data fetching and saving logic will be centralized here.
 
 export const categories: Category[] = [
   {
@@ -94,66 +99,136 @@ const defaultProviders: Provider[] = [
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
-const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
-const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
-const INBOX_STORAGE_KEY = 'inbox_chats';
+/**
+ * Initializes the default provider data in Firestore if it doesn't exist.
+ * This is a one-time operation.
+ */
+export async function initializeDefaultProviders() {
+    const settingsDocRef = doc(db, 'settings', 'initialData');
+    const settingsDoc = await getDoc(settingsDocRef);
+  
+    if (!settingsDoc.exists() || !settingsDoc.data().providersInitialized) {
+      console.log('Initializing default providers in Firestore...');
+      const batch = writeBatch(db);
+      defaultProviders.forEach(provider => {
+        const docRef = doc(db, 'providers', provider.phone);
+        batch.set(docRef, provider);
+      });
+      await batch.commit();
+  
+      await setDoc(settingsDocRef, { providersInitialized: true }, { merge: true });
+      console.log('Default providers initialized successfully.');
+    }
+}
+  
+// --- Firestore Data Functions ---
 
-const createStorageGetter = <T>(key: string, defaultValue: T): () => T => {
-  return () => {
-    if (typeof window === 'undefined') return defaultValue;
+export const getProviders = async (): Promise<Provider[]> => {
     try {
-      const stored = localStorage.getItem(key);
-      if(stored) return JSON.parse(stored);
-      localStorage.setItem(key, JSON.stringify(defaultValue));
-      return defaultValue;
-    } catch (e) {
-      console.error(`Failed to get ${key} from localStorage`, e);
-      return defaultValue;
+        await initializeDefaultProviders(); // Ensure data is seeded
+        const querySnapshot = await getDocs(collection(db, 'providers'));
+        return querySnapshot.docs.map(doc => doc.data() as Provider);
+    } catch (error) {
+        console.error("Error fetching providers from Firestore:", error);
+        return []; // Return empty array on error
+    }
+};
+
+export const saveProviders = async (providers: Provider[]) => {
+    try {
+        const batch = writeBatch(db);
+        providers.forEach(provider => {
+            const docRef = doc(db, 'providers', provider.phone);
+            batch.set(docRef, provider, { merge: true });
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error saving providers to Firestore:", error);
+    }
+};
+
+export const getReviews = async (): Promise<Review[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, 'reviews'));
+        return querySnapshot.docs.map(doc => doc.data() as Review);
+    } catch (error) {
+        console.error("Error fetching reviews from Firestore:", error);
+        return [];
+    }
+};
+
+export const saveReviews = async (reviews: Review[]) => {
+    try {
+        const batch = writeBatch(db);
+        reviews.forEach(review => {
+            const docRef = doc(db, 'reviews', review.id);
+            batch.set(docRef, review);
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error saving reviews to Firestore:", error);
+    }
+};
+
+export const getAgreements = async (): Promise<Agreement[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, 'agreements'));
+        return querySnapshot.docs.map(doc => doc.data() as Agreement);
+    } catch (error) {
+        console.error("Error fetching agreements from Firestore:", error);
+        return [];
+    }
+};
+
+export const saveAgreements = async (agreements: Agreement[]) => {
+    try {
+        const batch = writeBatch(db);
+        agreements.forEach(agreement => {
+            const docRef = doc(db, 'agreements', agreement.id);
+            batch.set(docRef, agreement);
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error saving agreements to Firestore:", error);
+    }
+};
+
+export const getChatMessages = async (chatId: string): Promise<Message[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'chats', chatId, 'messages'));
+      return querySnapshot.docs
+        .map(doc => doc.data() as Message)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      return [];
     }
   };
+  
+export const saveChatMessage = async (chatId: string, message: Message): Promise<void> => {
+    try {
+        await setDoc(doc(db, 'chats', chatId, 'messages', message.id), message);
+    } catch (error) {
+        console.error("Error saving chat message:", error);
+    }
 };
 
-const createStorageSetter = <T>(key: string): (data: T) => void => {
-    return (data: T) => {
-        if (typeof window === 'undefined') return;
-        try {
-            localStorage.setItem(key, JSON.stringify(data));
-        } catch (e) {
-            console.error(`Failed to save ${key} to localStorage`, e);
-        }
-    };
+export const getInboxData = async (userPhone: string): Promise<Record<string, any>> => {
+    try {
+      const docRef = doc(db, 'inboxes', userPhone);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : {};
+    } catch (error) {
+      console.error("Error fetching inbox data:", error);
+      return {};
+    }
 };
-
-export const getProviders = createStorageGetter<Provider[]>(PROVIDERS_STORAGE_KEY, defaultProviders);
-export const saveProviders = createStorageSetter<Provider[]>(PROVIDERS_STORAGE_KEY);
-
-export const getReviews = createStorageGetter<Review[]>(REVIEWS_STORAGE_KEY, []);
-export const saveReviews = createStorageSetter<Review[]>(REVIEWS_STORAGE_KEY);
-
-export const getAgreements = createStorageGetter<Agreement[]>(AGREEMENTS_STORAGE_KEY, []);
-export const saveAgreements = createStorageSetter<Agreement[]>(AGREEMENTS_STORAGE_KEY);
-
-export const getInboxData = createStorageGetter<Record<string, any>>(INBOX_STORAGE_KEY, {});
-export const saveInboxData = createStorageSetter<Record<string, any>>(INBOX_STORAGE_KEY);
-
-// --- Chat Messages ---
-export const getChatMessages = (chatId: string): Message[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(`chat_${chatId}`);
-    return stored ? JSON.parse(stored) : [];
-  } catch (e) {
-    console.error("Failed to get chat messages from localStorage", e);
-    return [];
-  }
-};
-
-export const saveChatMessages = (chatId: string, messages: Message[]) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
-  } catch (e) {
-    console.error("Failed to save chat messages to localStorage", e);
-  }
+  
+export const updateInboxData = async (userPhone: string, chatId: string, chatData: any): Promise<void> => {
+    try {
+      const docRef = doc(db, 'inboxes', userPhone);
+      await setDoc(docRef, { [chatId]: chatData }, { merge: true });
+    } catch (error) {
+      console.error("Error updating inbox data:", error);
+    }
 };

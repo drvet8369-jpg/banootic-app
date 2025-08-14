@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface Chat {
   id: string;
@@ -31,32 +33,25 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client, preventing hydration mismatch for date formatting.
     setIsClient(true);
   }, []);
 
   useEffect(() => {
     if (!user?.phone) {
-      setChats([]);
-      setIsLoading(false);
-      return;
+        setIsLoading(false);
+        return;
     }
 
     setIsLoading(true);
-    setError(null);
-    
-    try {
-      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      
-      const userChats = Object.values(allChatsData)
-        .filter((chat: any) => chat.members?.includes(user.phone))
+    const unsub = onSnapshot(doc(db, "inboxes", user.phone), (doc) => {
+        const inboxData = doc.data() || {};
+        const userChats = Object.values(inboxData)
         .map((chat: any): Chat | null => {
             if (!chat.participants || !chat.members) return null;
 
@@ -65,7 +60,6 @@ export default function InboxPage() {
             
             const otherMemberInfo = chat.participants[otherMemberId];
             const selfInfo = chat.participants[user.phone];
-
             const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
@@ -79,20 +73,19 @@ export default function InboxPage() {
         })
         .filter((chat): chat is Chat => chat !== null)
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        
+      
       setChats(userChats);
-    } catch (e) {
-      console.error("Failed to load chats from localStorage", e);
-      setError('خطا در بارگذاری گفتگوهای موقت.');
-    } finally {
       setIsLoading(false);
-    }
+    });
+
+    return () => unsub();
   }, [user?.phone]);
 
+  const pageIsLoading = isAuthLoading || isLoading;
 
-  if (isLoading) {
+  if (pageIsLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
@@ -100,7 +93,7 @@ export default function InboxPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>
@@ -111,7 +104,7 @@ export default function InboxPage() {
     );
   }
   
-  if (chats.length === 0 && !isLoading && !error) {
+  if (chats.length === 0) {
      return (
        <div className="max-w-4xl mx-auto py-12">
         <Card>
@@ -149,15 +142,9 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="text-center py-20 text-destructive bg-destructive/10 rounded-lg">
-              <p>{error}</p>
-            </div>
-          )}
-          {!error && chats.length > 0 && (
             <div className="space-y-4">
               {chats.map((chat) => (
                 <Link href={`/chat/${chat.otherMemberId}`} key={chat.id}>
@@ -183,7 +170,6 @@ export default function InboxPage() {
                 </Link>
               ))}
             </div>
-          )}
         </CardContent>
       </Card>
     </div>

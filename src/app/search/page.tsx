@@ -5,19 +5,16 @@ import { useAuth } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { providers, isLoading: isAuthLoading } = useAuth();
-  const [searchResults, setSearchResults] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const performSearch = useCallback(() => {
-    if (isAuthLoading) return;
-
-    setIsLoading(true);
+  const { providers, isLoading } = useAuth();
+  
+  const searchResults = useMemo(() => {
+    if (!providers) return [];
+    
     let results: Provider[];
 
     if (!query) {
@@ -31,14 +28,8 @@ export default function SearchPage() {
         (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
       ).sort((a, b) => b.rating - a.rating); // Sort filtered results by rating
     }
-    
-    setSearchResults(results);
-    setIsLoading(false);
-  }, [query, providers, isAuthLoading]);
-
-  useEffect(() => {
-    performSearch();
-  }, [performSearch]);
+    return results;
+  }, [query, providers]);
 
 
   return (
@@ -56,7 +47,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      {isLoading || isAuthLoading ? (
+      {isLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>

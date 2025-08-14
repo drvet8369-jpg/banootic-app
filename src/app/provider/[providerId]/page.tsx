@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState, useCallback, FormEvent } from 'react';
+import { useEffect, useState, useCallback, FormEvent, useMemo } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import type { Provider, Review } from '@/lib/types';
+import type { Provider, Review, User } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -26,17 +26,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Avatar as UIAvatar, AvatarFallback } from '@/components/ui/avatar';
 
-// Reusable Avatar components for ReviewCard
-const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)} {...props} />
-);
 
-const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)} {...props} />
-);
-
-// Review Card Component
 const ReviewCard = ({ review }: { review: Review }) => {
     const [isClient, setIsClient] = useState(false);
     useEffect(() => { setIsClient(true) }, []);
@@ -44,9 +36,9 @@ const ReviewCard = ({ review }: { review: Review }) => {
     return (
       <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
         <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
-          <Avatar className="h-10 w-10">
+          <UIAvatar className="h-10 w-10">
             <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
-          </Avatar>
+          </UIAvatar>
           <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
         </div>
         <div className="flex-grow">
@@ -62,8 +54,6 @@ const ReviewCard = ({ review }: { review: Review }) => {
     );
 };
 
-
-// Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
   const { user, isLoggedIn, addReview } = useAuth();
   const { toast } = useToast();
@@ -75,34 +65,32 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     return null;
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
       return;
     }
+    if (!user) return;
+
     setIsSubmitting(true);
-
-    setTimeout(() => {
-        if(!user) return;
-        
-        const newReview: Review = {
-          id: Date.now().toString(),
-          providerId,
-          authorName: user.name,
-          rating,
-          comment,
-          createdAt: new Date().toISOString(),
-        };
-
-        addReview(newReview);
-        
-        toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
-        setRating(0);
-        setComment('');
-        setIsSubmitting(false);
-        onSubmit(); // Callback to trigger data refresh in parent
-    }, 1000);
+    
+    const newReview: Review = {
+      id: `${Date.now()}-${Math.random()}`,
+      providerId,
+      authorName: user.name,
+      rating,
+      comment,
+      createdAt: new Date().toISOString(),
+    };
+    
+    await addReview(newReview);
+    
+    toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
+    setRating(0);
+    setComment('');
+    setIsSubmitting(false);
+    onSubmit();
   };
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
@@ -151,67 +139,36 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn, addAgreement, agreements, isLoading: isAuthLoading, providers, reviews: allReviews, updateProviderData } = useAuth();
+  const { user, isLoggedIn, addAgreement, agreements, isLoading, providers, reviews, updateProvider } = useAuth();
   const { toast } = useToast();
-  const [provider, setProvider] = useState<Provider | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
-  const loadData = useCallback(() => {
-    if (isAuthLoading) return;
-    
-    const foundProvider = providers.find(p => p.phone === providerPhone);
-    
-    if (foundProvider) {
-      setProvider(foundProvider);
-      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setReviews(providerReviews);
+  const provider = useMemo(() => providers.find(p => p.phone === providerPhone), [providers, providerPhone]);
+  const providerReviews = useMemo(() => reviews.filter(r => r.providerId === provider?.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [reviews, provider]);
+  const hasPendingRequest = useMemo(() => {
+    if(!user || !provider) return false;
+    return agreements.some(a => a.providerId === provider.id && a.customerPhone === user.phone && a.status === 'pending')
+  }, [agreements, user, provider]);
 
-      if (user) {
-        setHasPendingRequest(agreements.some(a => a.providerId === foundProvider.id && a.customerPhone === user.phone && a.status === 'pending'));
-      }
-
-    } else {
-      setProvider(null);
-    }
-    
-    setIsLoading(false);
-  }, [providerPhone, user, agreements, providers, allReviews, isAuthLoading]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    loadData();
-  }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
   const isCustomerViewing = isLoggedIn && user?.accountType === 'customer';
 
-  const deletePortfolioItem = (itemIndex: number) => {
+  const deletePortfolioItem = async (itemIndex: number) => {
     if (!provider) return;
-
-    updateProviderData(currentProviders => {
-       const providerIndex = currentProviders.findIndex(p => p.id === provider.id);
-       if (providerIndex > -1) {
-          currentProviders[providerIndex].portfolio = currentProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-          toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-       } else {
-          toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
-       }
-       return currentProviders;
-    });
+    const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
+    await updateProvider({ ...provider, portfolio: updatedPortfolio });
+    toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
   };
 
-  const handleRequestAgreement = () => {
+  const handleRequestAgreement = async () => {
     if (!provider || !user) return;
-    addAgreement(provider, user);
+    await addAgreement(provider, user);
     toast({ title: 'موفق', description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد.'});
-    setHasPendingRequest(true);
   }
 
-  if (isLoading || isAuthLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -239,7 +196,7 @@ export default function ProviderProfilePage() {
                         />
                     ) : (
                         <div className="bg-muted w-full h-full flex items-center justify-center">
-                        <User className="w-12 h-12 text-muted-foreground" />
+                        <UIAvatar className="w-12 h-12 text-muted-foreground" />
                         </div>
                     )}
                     </div>
@@ -356,16 +313,16 @@ export default function ProviderProfilePage() {
                 
                 <div id="reviews" className="p-6 scroll-mt-20">
                     <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                    {reviews.length > 0 ? (
+                    {providerReviews.length > 0 ? (
                         <div className="space-y-4">
-                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                            {providerReviews.map(review => <ReviewCard key={review.id} review={review} />)}
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
+                    <ReviewForm providerId={provider.id} onSubmit={() => {}} />
                 </div>
             </Card>
         </div>

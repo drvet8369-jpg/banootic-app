@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
@@ -10,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Provider, Message as MessageType, User as UserType } from '@/lib/types';
+import type { Provider, Message as MessageType } from '@/lib/types';
 import { onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -40,9 +41,9 @@ export default function ChatPage() {
     if (provider) {
         return provider;
     }
-    // Logic to handle if the other person is a customer might be needed here
-    // For now, we assume chats are with providers.
     if(user && user.accountType === 'provider') {
+        // This is a provider viewing a chat with a customer
+        // We might not have the customer's full details, so create a placeholder
         return { id: otherPersonPhone, name: `مشتری ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone };
     }
     return null;
@@ -53,7 +54,7 @@ export default function ChatPage() {
     return [phone1, phone2].sort().join('_');
   }, []);
 
-  const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user, otherPersonPhone, getChatId]);
+  const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user?.phone, otherPersonPhone, getChatId]);
   
   useEffect(() => {
     if (!chatId) {
@@ -65,7 +66,13 @@ export default function ChatPage() {
     const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs = querySnapshot.docs.map(doc => doc.data() as MessageType);
+      const msgs: MessageType[] = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              id: doc.id,
+              ...data
+          } as MessageType
+      });
       setMessages(msgs);
       setIsLoadingChat(false);
       if(user?.phone) {
@@ -73,11 +80,12 @@ export default function ChatPage() {
       }
     }, (error) => {
         console.error("Error listening to chat messages:", error);
+        toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
         setIsLoadingChat(false);
     });
 
     return () => unsubscribe();
-  }, [chatId, user, markChatAsRead]);
+  }, [chatId, user?.phone, markChatAsRead, toast]);
 
 
   const getInitials = (name: string) => {
@@ -93,79 +101,10 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  if (!isLoggedIn || !user) {
-    return (
-        <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
-            <User className="w-16 h-16 text-muted-foreground mb-4" />
-            <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
-            <p className="text-muted-foreground mt-2">برای ارسال پیام باید وارد حساب کاربری خود شوید.</p>
-            <Button asChild className="mt-6">
-                <Link href="/login">ورود به حساب کاربری</Link>
-            </Button>
-        </div>
-    );
-  }
-  
-  const isLoading = isAuthLoading || isLoadingChat;
-
-  if (isLoading) {
-     return (
-        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
-        </div>
-    );
-  }
-  
-  const handleStartEdit = (message: MessageType) => {
-    setEditingMessageId(message.id);
-    setEditingText(message.text);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingMessageId(null);
-    setEditingText('');
-  };
-  
-  const handleSaveEdit = async () => {
-    if (!editingMessageId || !editingText.trim() || !chatId) return;
-    
-    await editChatMessage(chatId, editingMessageId, editingText.trim());
-
-    handleCancelEdit();
-    toast({ title: 'پیام ویرایش شد.' });
-  };
-
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const text = newMessage.trim();
-    if (!text || isSending || !otherPersonDetails || !user || !chatId) return;
-    
-    setIsSending(true);
-    
-    const tempUiMessage: MessageType = {
-      id: `${Date.now()}-${Math.random()}`,
-      text: text,
-      senderId: user.phone,
-      createdAt: new Date().toISOString(),
-    };
-    
-    setNewMessage('');
-    
-    try {
-       await sendChatMessage(chatId, tempUiMessage, { phone: otherPersonDetails.phone, name: otherPersonDetails.name }, user);
-    } catch(e) {
-        console.error("Failed to send message", e);
-        toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
-    } finally {
-        setIsSending(false);
-    }
-  };
-
   const [headerLink, setHeaderLink] = useState('/');
   useEffect(() => {
     const checkInbox = async () => {
+        if (!user) return;
         if (user.accountType === 'provider') {
             setHeaderLink('/inbox');
             return;
@@ -185,7 +124,83 @@ export default function ChatPage() {
         checkInbox();
     }
   }, [user, getInboxForUser]);
+  
+  const isLoading = isAuthLoading || isLoadingChat;
 
+  if (isAuthLoading) {
+     return (
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+    );
+  }
+
+  if (!isLoggedIn || !user) {
+    return (
+        <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
+            <User className="w-16 h-16 text-muted-foreground mb-4" />
+            <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
+            <p className="text-muted-foreground mt-2">برای ارسال پیام باید وارد حساب کاربری خود شوید.</p>
+            <Button asChild className="mt-6">
+                <Link href="/login">ورود به حساب کاربری</Link>
+            </Button>
+        </div>
+    );
+  }
+  
+  const handleStartEdit = (message: MessageType) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+  
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editingText.trim() || !chatId) return;
+    setIsSending(true);
+    try {
+      await editChatMessage(chatId, editingMessageId, editingText.trim());
+      handleCancelEdit();
+      toast({ title: 'پیام ویرایش شد.' });
+    } catch (e) {
+      console.error("Failed to edit message", e);
+      toast({ title: "خطا", description: "پیام شما ویرایش نشد.", variant: "destructive" });
+    } finally {
+       setIsSending(false);
+    }
+  };
+
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const text = newMessage.trim();
+    if (!text || isSending || !otherPersonDetails || !user || !chatId) return;
+    
+    setIsSending(true);
+    
+    const messageToSend: MessageType = {
+      id: `${Date.now()}-${Math.random()}`, // Temporary ID, will be replaced by Firestore
+      text: text,
+      senderId: user.phone,
+      createdAt: new Date().toISOString(),
+    };
+    
+    setNewMessage('');
+    
+    try {
+       await sendChatMessage(chatId, messageToSend, { phone: otherPersonDetails.phone, name: otherPersonDetails.name }, user);
+    } catch(e) {
+        console.error("Failed to send message", e);
+        toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
+        // Optionally add the message back to the input
+        setNewMessage(text);
+    } finally {
+        setIsSending(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full py-4">
@@ -200,7 +215,7 @@ export default function ChatPage() {
             {otherPersonDetails?.profileImage?.src ? (
                 <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
             ) : null }
-            <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
+            <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '?')}</AvatarFallback>
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
@@ -208,7 +223,12 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {messages.length === 0 && !isLoading && (
+            {isLoadingChat && (
+              <div className="flex justify-center items-center h-full">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoadingChat && messages.length === 0 && (
               <div className="text-center text-muted-foreground p-8">
                 <p>شما اولین پیام را ارسال کنید.</p>
               </div>
@@ -227,7 +247,7 @@ export default function ChatPage() {
                         {otherPersonDetails?.profileImage?.src ? (
                             <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
                         ) : null }
-                        <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
+                        <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '?')}</AvatarFallback>
                       </Avatar>
                     )}
                     

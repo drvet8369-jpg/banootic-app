@@ -39,8 +39,8 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, providers } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, providers, isLoading: isAuthLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,7 +50,7 @@ export default function LoginPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -61,18 +61,18 @@ export default function LoginPage() {
         if (existingProvider) {
           // User is a known provider
           userToLogin = {
+            id: existingProvider.id.toString(),
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
-            bio: existingProvider.bio, // Ensure bio is included
           };
         } else {
           // User is a customer
           userToLogin = {
+            id: values.phone,
             name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
-            bio: '', // Ensure bio is included, even if empty
           };
         }
         
@@ -93,9 +93,11 @@ export default function LoginPage() {
             variant: 'destructive'
         });
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   }
+
+  const isLoading = isAuthLoading || isSubmitting;
 
   return (
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">

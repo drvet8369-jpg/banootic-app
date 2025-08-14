@@ -6,48 +6,26 @@ import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import SearchResultCard from '@/components/search-result-card';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
-  const { providers, isLoading: isAuthLoading } = useAuth();
+  const { providers, isLoading } = useAuth();
 
-  const [service, setService] = useState<Service | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
+  const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
 
-  const loadData = useCallback(() => {
-    if(isAuthLoading) return;
-    
-    setIsLoading(true);
+  const serviceProviders = useMemo(() => {
+    if (!service || !providers) return [];
+    return providers
+      .filter((p) => p.serviceSlug === serviceSlug)
+      .sort((a,b) => b.rating - a.rating); // Sort by rating
+  }, [service, providers, serviceSlug]);
 
-    const foundCategory = categories.find((c) => c.slug === categorySlug);
-    const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
-    
-    setCategory(foundCategory || null);
-    setService(foundService || null);
-      
-    if (foundCategory && foundService) {
-      const foundProviders = providers
-        .filter((p) => p.serviceSlug === serviceSlug)
-        .sort((a,b) => b.rating - a.rating); // Sort by rating
-      setServiceProviders(foundProviders);
-    } else {
-      setServiceProviders([]);
-    }
-    
-    setIsLoading(false);
-  }, [categorySlug, serviceSlug, providers, isAuthLoading]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  if (isLoading || isAuthLoading) {
+  if (isLoading) {
     return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />

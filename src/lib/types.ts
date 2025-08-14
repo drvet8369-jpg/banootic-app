@@ -1,4 +1,6 @@
+
 export interface User {
+  id: string; // Using string for ID to be compatible with Firestore
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
@@ -25,7 +27,7 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number;
+  id: number; // Keep this for existing logic, but Firestore will use phone as doc ID
   name: string;
   service: string; 
   location: string;
@@ -52,7 +54,7 @@ export interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: string; // Using ISO string for localStorage
+  createdAt: string; // ISO String format is better for Firestore
   isEdited?: boolean;
 }
 

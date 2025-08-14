@@ -1,9 +1,21 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProviders, saveProviders, getReviews, saveReviews, getAgreements, saveAgreements, getInboxData, saveInboxData } from '@/lib/data';
-import type { Provider, User, Agreement, Review } from '@/lib/types';
+import { 
+    collection, 
+    doc, 
+    onSnapshot, 
+    setDoc, 
+    writeBatch, 
+    getDocs, 
+    query, 
+    orderBy,
+    updateDoc
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Provider, User, Agreement, Review, Message } from '@/lib/types';
+import { initializeDefaultProviders } from '@/lib/data';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -11,14 +23,18 @@ interface AuthContextType {
   providers: Provider[];
   reviews: Review[];
   agreements: Agreement[];
-  inboxData: Record<string, any>;
   isLoading: boolean;
   login: (userData: User) => void;
   logout: () => void;
-  updateProviderData: (updateFn: (providers: Provider[]) => Provider[]) => void;
-  updateAgreementStatus: (agreementId: string, status: 'confirmed' | 'rejected') => void;
-  addAgreement: (provider: Provider, currentUser: User) => void;
-  addReview: (review: Review) => void;
+  addProvider: (provider: Provider) => Promise<void>;
+  updateProvider: (provider: Provider) => Promise<void>;
+  addReview: (review: Review) => Promise<void>;
+  addAgreement: (provider: Provider, currentUser: User) => Promise<void>;
+  updateAgreementStatus: (agreementId: string, status: 'confirmed' | 'rejected') => Promise<void>;
+  sendChatMessage: (chatId: string, message: Message, receiver: {phone: string, name: string}, currentUser: User) => Promise<void>;
+  editChatMessage: (chatId: string, messageId: string, newText: string) => Promise<void>;
+  markChatAsRead: (chatId: string, userPhone: string) => Promise<void>;
+  getInboxForUser: (userPhone: string) => Promise<Record<string, any>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,165 +44,221 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
-  const [inboxData, setInboxData] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  const loadStateFromLocalStorage = useCallback(() => {
-    setIsLoading(true);
-    try {
-      const storedProviders = getProviders();
-      const storedReviews = getReviews();
-      const storedAgreements = getAgreements();
-      const storedInbox = getInboxData();
-      const storedUserJSON = localStorage.getItem('honarbanoo-user');
-      
-      let currentUser: User | null = null;
-      if (storedUserJSON) {
-        currentUser = JSON.parse(storedUserJSON);
+  // Load user from localStorage on initial mount
+  useEffect(() => {
+    const storedUserJSON = localStorage.getItem('banootik-user');
+    if (storedUserJSON) {
+      try {
+        setUser(JSON.parse(storedUserJSON));
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+        localStorage.removeItem('banootik-user');
       }
-
-      setProviders(storedProviders);
-      setReviews(storedReviews);
-      setAgreements(storedAgreements);
-      setInboxData(storedInbox);
-      setUser(currentUser);
-      
-    } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
+  // Set up Firestore listeners for real-time updates
   useEffect(() => {
-    loadStateFromLocalStorage();
-    
-    const handleStorageChange = (event: StorageEvent) => {
-        if (event.key?.startsWith('honarbanoo-')) {
-            loadStateFromLocalStorage();
-        }
+    setIsLoading(true);
+
+    const initializeData = async () => {
+        await initializeDefaultProviders();
+
+        const unsubProviders = onSnapshot(collection(db, "providers"), (snapshot) => {
+            const newProviders = snapshot.docs.map(doc => doc.data() as Provider);
+            setProviders(newProviders);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error listening to providers:", error);
+            setIsLoading(false);
+        });
+
+        const unsubReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
+            setReviews(snapshot.docs.map(doc => doc.data() as Review));
+        });
+
+        const unsubAgreements = onSnapshot(collection(db, "agreements"), (snapshot) => {
+            setAgreements(snapshot.docs.map(doc => doc.data() as Agreement));
+        });
+
+        return () => {
+            unsubProviders();
+            unsubReviews();
+            unsubAgreements();
+        };
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', loadStateFromLocalStorage);
+
+    const cleanupPromise = initializeData();
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', loadStateFromLocalStorage);
+        cleanupPromise.then(cleanup => cleanup && cleanup());
     };
-  }, [loadStateFromLocalStorage]);
+}, []);
 
   const login = (userData: User) => {
-    localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
+    localStorage.setItem('banootik-user', JSON.stringify(userData));
     setUser(userData);
-    window.dispatchEvent(new Event('storage'));
   };
 
   const logout = () => {
-    localStorage.removeItem('honarbanoo-user');
+    localStorage.removeItem('banootik-user');
     setUser(null);
     router.push('/');
-    window.dispatchEvent(new Event('storage'));
   };
   
-  const updateProviderData = (updateFn: (providers: Provider[]) => Provider[]) => {
-      const newProviders = updateFn(providers);
-      saveProviders(newProviders);
-      setProviders(newProviders);
-      window.dispatchEvent(new Event('storage'));
+  const recalculateProviderRating = async (providerId: number) => {
+    const providerRef = doc(db, 'providers', providers.find(p=>p.id === providerId)?.phone || '');
+    if(!providerRef) return;
+
+    const reviewsQuery = query(collection(db, "reviews"));
+    const agreementsQuery = query(collection(db, "agreements"));
+    
+    const [reviewsSnapshot, agreementsSnapshot] = await Promise.all([getDocs(reviewsQuery), getDocs(agreementsQuery)]);
+
+    const allReviews = reviewsSnapshot.docs.map(d => d.data() as Review);
+    const allAgreements = agreementsSnapshot.docs.map(d => d.data() as Agreement);
+
+    const providerReviews = allReviews.filter(r => r.providerId === providerId);
+    const totalRatingFromReviews = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+
+    const confirmedAgreementsCount = allAgreements.filter(a => a.providerId === providerId && a.status === 'confirmed').length;
+    const agreementBonus = confirmedAgreementsCount * 0.1;
+      
+    const totalScore = totalRatingFromReviews + agreementBonus;
+    const totalItemsForAverage = providerReviews.length;
+
+    let newRating = 0;
+    if (totalItemsForAverage > 0) {
+      newRating = Math.min(5, parseFloat((totalScore / totalItemsForAverage).toFixed(2)));
+    } else if (agreementBonus > 0) {
+      newRating = Math.min(5, parseFloat((agreementBonus * 2.5).toFixed(2)));
+    }
+
+    await updateDoc(providerRef, {
+        rating: newRating,
+        reviewsCount: providerReviews.length
+    });
   };
   
-  const addAgreement = (provider: Provider, currentUser: User) => {
-      const newAgreement: Agreement = {
-            id: `agree_${Date.now()}`,
-            providerId: provider.id,
-            providerPhone: provider.phone,
-            providerName: provider.name,
-            customerPhone: currentUser.phone,
-            customerName: currentUser.name,
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            requestedAt: new Date().toISOString(),
-        };
-        const newAgreements = [...agreements, newAgreement];
-        saveAgreements(newAgreements);
-        setAgreements(newAgreements);
-        window.dispatchEvent(new Event('storage'));
+  const addProvider = async (provider: Provider) => {
+    await setDoc(doc(db, "providers", provider.phone), provider);
+  };
+
+  const updateProvider = async (provider: Provider) => {
+    await setDoc(doc(db, "providers", provider.phone), provider, { merge: true });
+  };
+  
+  const addReview = async (review: Review) => {
+    await setDoc(doc(db, "reviews", review.id), review);
+    await recalculateProviderRating(review.providerId);
+  };
+
+  const addAgreement = async (provider: Provider, currentUser: User) => {
+    const newAgreement: Agreement = {
+      id: `agree_${Date.now()}`,
+      providerId: provider.id,
+      providerPhone: provider.phone,
+      providerName: provider.name,
+      customerPhone: currentUser.phone,
+      customerName: currentUser.name,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      requestedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, "agreements", newAgreement.id), newAgreement);
+  };
+
+  const updateAgreementStatus = async (agreementId: string, status: 'confirmed' | 'rejected') => {
+    const agreementRef = doc(db, 'agreements', agreementId);
+    const agreementToUpdate = agreements.find(a => a.id === agreementId);
+    if (!agreementToUpdate) return;
+    
+    await updateDoc(agreementRef, { status, createdAt: new Date().toISOString() });
+    
+    if (status === 'confirmed') {
+      await recalculateProviderRating(agreementToUpdate.providerId);
+    }
+  };
+
+  const sendChatMessage = async (chatId: string, message: Message, receiver: {phone: string, name: string}, currentUser: User) => {
+    const batch = writeBatch(db);
+    
+    // 1. Add new message
+    const newMessageRef = doc(collection(db, "chats", chatId, "messages"));
+    batch.set(newMessageRef, { ...message, id: newMessageRef.id });
+
+    // 2. Update sender's inbox
+    const senderInboxRef = doc(db, "inboxes", currentUser.phone);
+    const senderChatUpdate = {
+        [`${chatId}.id`]: chatId,
+        [`${chatId}.lastMessage`]: message.text,
+        [`${chatId}.updatedAt`]: message.createdAt,
+        [`${chatId}.members`]: [currentUser.phone, receiver.phone],
+        [`${chatId}.participants.${currentUser.phone}`]: { name: currentUser.name, unreadCount: 0 },
+        [`${chatId}.participants.${receiver.phone}`]: { name: receiver.name },
+    };
+    batch.set(senderInboxRef, senderChatUpdate, { merge: true });
+    
+    // 3. Update receiver's inbox
+    const receiverInboxRef = doc(db, "inboxes", receiver.phone);
+    const receiverInboxDoc = await getDoc(receiverInboxRef);
+    const receiverInboxData = receiverInboxDoc.data() || {};
+    const currentUnread = receiverInboxData[chatId]?.participants?.[receiver.phone]?.unreadCount || 0;
+
+    const receiverChatUpdate = {
+        [`${chatId}.id`]: chatId,
+        [`${chatId}.lastMessage`]: message.text,
+        [`${chatId}.updatedAt`]: message.createdAt,
+        [`${chatId}.members`]: [currentUser.phone, receiver.phone],
+        [`${chatId}.participants.${currentUser.phone}`]: { name: currentUser.name },
+        [`${chatId}.participants.${receiver.phone}`]: { name: receiver.name, unreadCount: currentUnread + 1 },
+    };
+     batch.set(receiverInboxRef, receiverChatUpdate, { merge: true });
+
+    await batch.commit();
   }
 
-  const updateAgreementStatus = (agreementId: string, status: 'confirmed' | 'rejected') => {
-      let providerToUpdateRating: Provider | undefined;
-      const newAgreements = agreements.map(a => {
-          if(a.id === agreementId){
-              if (status === 'confirmed') {
-                  const provider = providers.find(p => p.id === a.providerId);
-                  if (provider) providerToUpdateRating = provider;
-              }
-              return { ...a, status, createdAt: new Date().toISOString() };
-          }
-          return a;
+  const editChatMessage = async (chatId: string, messageId: string, newText: string) => {
+      const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+      await updateDoc(messageRef, { text: newText, isEdited: true });
+
+      // This part is complex without a proper data model. For now, we'll assume last message updates are handled elsewhere if needed.
+  };
+
+  const markChatAsRead = async (chatId: string, userPhone: string) => {
+      const inboxRef = doc(db, 'inboxes', userPhone);
+      await updateDoc(inboxRef, {
+        [`${chatId}.participants.${userPhone}.unreadCount`]: 0
       });
-      saveAgreements(newAgreements);
-      setAgreements(newAgreements);
-
-      if (providerToUpdateRating) {
-          recalculateProviderRating(providerToUpdateRating.id, newAgreements);
-      }
-      window.dispatchEvent(new Event('storage'));
   };
 
-  const recalculateProviderRating = (providerId: number, currentAgreements: Agreement[]) => {
-      const allProviders = getProviders();
-      const providerIndex = allProviders.findIndex(p => p.id === providerId);
-      if (providerIndex === -1) return;
-
-      const providerReviews = getReviews().filter(r => r.providerId === providerId);
-      const totalRatingFromReviews = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-
-      const confirmedAgreementsCount = currentAgreements.filter(a => a.providerId === providerId && a.status === 'confirmed').length;
-      const agreementBonus = confirmedAgreementsCount * 0.1;
-      
-      const totalScore = totalRatingFromReviews + agreementBonus;
-      const totalItemsForAverage = providerReviews.length;
-
-      let newRating = 0;
-      if (totalItemsForAverage > 0) {
-        newRating = Math.min(5, parseFloat((totalScore / totalItemsForAverage).toFixed(2)));
-      } else if (agreementBonus > 0) {
-        newRating = Math.min(5, parseFloat((agreementBonus * 2.5).toFixed(2))); // Give a more substantial boost if only agreements exist
-      }
-
-      allProviders[providerIndex].rating = newRating;
-      allProviders[providerIndex].reviewsCount = providerReviews.length;
-      
-      saveProviders(allProviders);
-      setProviders(allProviders);
-  };
+  const getInboxForUser = async (userPhone: string): Promise<Record<string, any>> => {
+      const docRef = doc(db, 'inboxes', userPhone);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : {};
+  }
   
-  const addReview = (review: Review) => {
-      const currentReviews = getReviews();
-      const newReviews = [...currentReviews, review];
-      saveReviews(newReviews);
-      setReviews(newReviews);
-      recalculateProviderRating(review.providerId, agreements);
-      window.dispatchEvent(new Event('storage'));
-  };
-
   const value = {
     isLoggedIn: !!user,
     user,
     providers,
     reviews,
     agreements,
-    inboxData,
     isLoading,
     login,
     logout,
-    updateProviderData,
-    updateAgreementStatus,
+    addProvider,
+    updateProvider,
+    addReview,
     addAgreement,
-    addReview
+    updateAgreementStatus,
+    sendChatMessage,
+    editChatMessage,
+    markChatAsRead,
+    getInboxForUser,
   };
 
   return (

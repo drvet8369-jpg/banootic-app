@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, saveProviders, services } from '@/lib/data';
+import { categories, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User, Provider } from '@/lib/types';
@@ -74,8 +74,8 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, providers } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, addProvider, providers, isLoading: isAuthLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -88,12 +88,11 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
+  const isLoading = isSubmitting || isAuthLoading;
 
   async function onSubmit(values: UserRegistrationInput) {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       const existingProviderByPhone = providers.find(p => p.phone === values.phone);
       if (existingProviderByPhone) {
         toast({
@@ -101,7 +100,7 @@ export default function RegisterForm() {
           description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
           variant: 'destructive',
         });
-        setIsLoading(false);
+        setIsSubmitting(false);
         return;
       }
 
@@ -113,29 +112,34 @@ export default function RegisterForm() {
                 description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
                 variant: 'destructive',
             });
-            setIsLoading(false);
+            setIsSubmitting(false);
             return;
         }
       }
 
+      let newProviderId = 1;
+      if (providers.length > 0) {
+        newProviderId = Math.max(...providers.map(p => p.id)) + 1;
+      }
+      
       const userToLogin: User = {
+        id: values.accountType === 'provider' ? newProviderId.toString() : values.phone,
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
-        bio: values.bio,
       };
 
-      if (values.accountType === 'provider') {
+      if (values.accountType === 'provider' && values.serviceType && values.bio && values.location) {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
         const newProvider: Provider = {
-          id: providers.length > 0 ? Math.max(...providers.map(p => p.id)) + 1 : 1,
+          id: newProviderId,
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: values.location || 'ارومیه',
-          bio: values.bio || '',
+          location: values.location,
+          bio: values.bio,
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
@@ -144,7 +148,7 @@ export default function RegisterForm() {
           portfolio: [],
         };
         
-        saveProviders([...providers, newProvider]);
+        await addProvider(newProvider);
       }
       
       login(userToLogin);
@@ -165,7 +169,7 @@ export default function RegisterForm() {
             variant: 'destructive'
         });
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   }
 

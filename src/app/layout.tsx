@@ -5,8 +5,8 @@ import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/AuthContext';
+import dynamic from 'next/dynamic';
 
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
 const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
