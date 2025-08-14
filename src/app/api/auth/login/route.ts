@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
-  // First, check if the adminAuth service is even available.
-  if (!adminAuth) {
-    console.error("Auth API called but adminAuth is not initialized. Check FIREBASE_SERVICE_ACCOUNT_KEY.");
-    return NextResponse.json({ error: 'Authentication service not available.' }, { status: 500 });
-  }
-
   try {
+    // The adminAuth object is now guaranteed to be initialized if the server started.
     const { phone } = await req.json();
 
     if (!phone || !/^(09)\d{9}$/.test(phone)) {
@@ -33,7 +28,7 @@ export async function POST(req: NextRequest) {
       } else {
         // Some other unexpected error occurred
         console.error(`Error getting user ${uid} in login endpoint:`, error);
-        throw error; // Let the outer catch block handle this.
+        return NextResponse.json({ error: 'Failed to verify user with Firebase.', details: error.message }, { status: 500 });
       }
     }
 
@@ -44,8 +39,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ token: customToken });
 
-  } catch (error) {
-    console.error('Error in login/signup endpoint:', error);
-    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+  } catch (error: any) {
+    console.error('CRITICAL Error in login/signup endpoint:', error);
+    return NextResponse.json({ error: 'An internal server error occurred.', details: error.message }, { status: 500 });
   }
 }
