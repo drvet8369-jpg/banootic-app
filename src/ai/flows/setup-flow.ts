@@ -4,9 +4,26 @@
  * This should only be run once.
  */
 import { ai } from '@/ai/genkit';
-import { adminDb } from '@/lib/firebase-admin';
 import { defaultProviders, defaultReviews } from '@/lib/data-seed';
 import { z } from 'zod';
+import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin SDK
+try {
+  if (!admin.apps.length) {
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+    }
+    const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('ascii'));
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+} catch (error: any) {
+  console.error('CRITICAL: Firebase admin initialization failed in setup flow.', error);
+}
 
 export const runSetup = ai.defineFlow(
   {
@@ -15,10 +32,13 @@ export const runSetup = ai.defineFlow(
     outputSchema: z.string(),
   },
   async () => {
-    if (!adminDb) {
-      const errorMsg = "Firebase Admin SDK not initialized. Setup cannot run.";
-      console.error(errorMsg);
-      return errorMsg;
+    let adminDb;
+    try {
+        adminDb = getFirestore();
+    } catch (e) {
+        const errorMsg = "Firebase Admin SDK not initialized properly. Setup cannot run.";
+        console.error(errorMsg, e);
+        return errorMsg;
     }
 
     // Check if the providers collection is empty as a flag
@@ -36,8 +56,10 @@ export const runSetup = ai.defineFlow(
 
     // Add providers
     defaultProviders.forEach((provider) => {
+      // Use the phone number as the document ID
       const docRef = adminDb.collection('providers').doc(provider.phone);
-      batch.set(docRef, provider);
+      // Add the ID to the document data itself
+      batch.set(docRef, { ...provider, id: provider.phone });
     });
     console.log(`Added ${defaultProviders.length} providers to the batch.`);
 

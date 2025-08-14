@@ -1,41 +1,57 @@
-import { adminAuth } from '@/lib/firebase-admin';
+import admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Initialize Firebase Admin SDK
+try {
+  if (!admin.apps.length) {
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+    }
+    const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('ascii'));
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+} catch (error: any) {
+  console.error('CRITICAL: Firebase admin initialization failed in login route.', error);
+}
+
 
 export async function POST(req: NextRequest) {
   try {
-    if (!adminAuth) {
-      return NextResponse.json({ message: "Firebase Admin SDK not initialized." }, { status: 500 });
-    }
-
+    const adminAuth = getAuth();
     const { phone } = await req.json();
 
     if (!phone || !/^09\d{9}$/.test(phone)) {
       return NextResponse.json({ message: 'Invalid phone number format.' }, { status: 400 });
     }
 
-    // Check if the user already exists in Firebase Auth, if not, create them
+    const uid = `+98${phone.substring(1)}`;
+
+    // Ensure user exists in Firebase Auth
     try {
-        await adminAuth.getUserByPhoneNumber(`+98${phone.substring(1)}`);
+        await adminAuth.getUser(uid);
     } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
             await adminAuth.createUser({
-                uid: phone, // Use phone number as UID for simplicity
-                phoneNumber: `+98${phone.substring(1)}`,
+                uid: uid,
+                phoneNumber: uid,
                 displayName: `کاربر ${phone.slice(-4)}`
             });
         } else {
-            // For other errors during getUser, rethrow
-            throw error;
+            throw error; // Re-throw other errors
         }
     }
     
-    // Create a custom token for the user, using their phone number as UID
-    const customToken = await adminAuth.createCustomToken(phone);
+    // Create a custom token for the user
+    const customToken = await adminAuth.createCustomToken(uid);
 
     return NextResponse.json({ token: customToken }, { status: 200 });
 
   } catch (error: any) {
     console.error('API /auth/login Error:', error);
-    return NextResponse.json({ message: 'Internal Server Error', error: error.message }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

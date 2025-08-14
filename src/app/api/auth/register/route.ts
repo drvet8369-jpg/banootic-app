@@ -1,13 +1,31 @@
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import { NextRequest, NextResponse } from 'next/server';
 import type { Provider } from '@/lib/types';
 import { categories, services } from '@/lib/data';
 
+
+// Initialize Firebase Admin SDK
+try {
+  if (!admin.apps.length) {
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+    }
+    const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('ascii'));
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+} catch (error: any) {
+  console.error('CRITICAL: Firebase admin initialization failed in register route.', error);
+}
+
 export async function POST(req: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json({ message: "Firebase Admin SDK not initialized." }, { status: 500 });
-    }
+    const adminAuth = getAuth();
+    const adminDb = getFirestore();
     
     const values = await req.json();
 
@@ -15,25 +33,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: 'Missing required fields.' }, { status: 400 });
     }
 
+    const uid = `+98${values.phone.substring(1)}`;
+
     try {
-      await adminAuth.getUserByPhoneNumber(`+98${values.phone.substring(1)}`);
+      await adminAuth.getUser(uid);
       return NextResponse.json({ message: 'This phone number is already registered.' }, { status: 409 });
     } catch (error: any) {
       if (error.code !== 'auth/user-not-found') {
         throw error;
       }
+      // User does not exist, which is what we want. Continue.
     }
 
     const userRecord = await adminAuth.createUser({
-        uid: values.phone,
-        phoneNumber: `+98${values.phone.substring(1)}`,
+        uid: uid,
+        phoneNumber: uid,
         displayName: values.name
     });
 
     if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         
-        const newProvider: Omit<Provider, 'id'> = {
+        const newProviderData: Omit<Provider, 'id'> = {
             name: values.name,
             phone: values.phone,
             service: selectedCategory?.name || 'خدمت جدید',
@@ -47,8 +68,9 @@ export async function POST(req: NextRequest) {
             portfolio: [],
         };
         
-        const providerDocRef = adminDb.collection('providers').doc(newProvider.phone);
-        await providerDocRef.set(newProvider);
+        // Use the phone number (without +98) as the document ID for consistency
+        const providerDocRef = adminDb.collection('providers').doc(values.phone);
+        await providerDocRef.set({ ...newProviderData, id: values.phone });
     }
 
     const customToken = await adminAuth.createCustomToken(userRecord.uid);
@@ -57,6 +79,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('API /auth/register Error:', error);
-    return NextResponse.json({ message: 'Internal Server Error', error: error.message }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
