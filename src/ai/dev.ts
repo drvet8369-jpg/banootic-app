@@ -1,20 +1,17 @@
-import 'dotenv/config' // Make sure this is at the very top
+import 'dotenv/config'; // Make sure this is at the very top
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { firebase } from '@genkit-ai/firebase';
 import { next } from '@genkit-ai/next';
-import {defineDotprompt, dotprompt} from '@genkit-ai/dotprompt';
 import { runSetup } from './flows/setup-flow';
 
 export default genkit({
   plugins: [
     firebase(),
-    googleAI({
-    }),
+    googleAI({}),
     next({
       port: 9002,
     }),
-    dotprompt(),
   ],
   flowStateStore: 'firebase',
   traceStore: 'firebase',
@@ -22,7 +19,7 @@ export default genkit({
   logLevel: 'debug',
   telemetry: {
     instrumentation: {
-      service: {name: 'zanmahal-app'},
+      service: { name: 'zanmahal-app' },
     },
   },
 });

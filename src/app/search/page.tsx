@@ -14,7 +14,6 @@ export default function SearchPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // This page is now responsible for fetching its own data.
   useEffect(() => {
     const fetchProviders = async () => {
         setIsLoading(true);
@@ -27,7 +26,7 @@ export default function SearchPage() {
 
   const searchResults = useMemo(() => {
     if (!query) {
-      return providers; // Show all providers if query is empty
+      return providers; 
     }
     const lowercasedQuery = query.toLowerCase();
     return providers.filter(provider => 

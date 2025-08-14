@@ -98,7 +98,6 @@ export default function RegisterForm() {
 
         const { token } = await response.json();
 
-        // Sign in the user on the client side with the received token
         await signInWithCustomToken(auth, token);
         
         toast({

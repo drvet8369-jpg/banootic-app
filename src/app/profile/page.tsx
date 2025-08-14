@@ -16,7 +16,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading, login } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -30,7 +30,7 @@ export default function ProfilePage() {
   const loadProviderData = useCallback(async () => {
     if (user && user.accountType === 'provider') {
         try {
-          const providerDocRef = doc(db, "providers", user.phone);
+          const providerDocRef = doc(db, "providers", user.id);
           const providerDocSnap = await getDoc(providerDocRef);
           if (providerDocSnap.exists()) {
             const currentProvider = providerDocSnap.data() as Provider;
@@ -62,7 +62,7 @@ export default function ProfilePage() {
 
   const updateProviderInDb = async (updatedProvider: Provider) => {
       try {
-          const providerDocRef = doc(db, "providers", updatedProvider.phone);
+          const providerDocRef = doc(db, "providers", updatedProvider.id);
           await setDoc(providerDocRef, updatedProvider, { merge: true });
           return true;
       } catch (error) {
@@ -89,10 +89,6 @@ export default function ProfilePage() {
     
     if(success) {
       setProvider(updatedProviderData);
-      if(user && user.name !== editedData.name){
-          const updatedUser = { ...user, name: editedData.name };
-          login(updatedUser); 
-      }
       toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
       setMode('viewing');
     }

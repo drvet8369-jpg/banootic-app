@@ -56,7 +56,6 @@ export default function LoginPage() {
           title: 'ورود با موفقیت انجام شد!',
           description: 'خوش آمدید! در حال انتقال به صفحه اصلی...',
         });
-        // The AuthProvider will redirect or handle the user state change.
         router.push('/');
     } catch (error: any) {
         console.error("Login failed:", error);

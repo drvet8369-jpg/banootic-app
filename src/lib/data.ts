@@ -1,9 +1,6 @@
-import type { Category, Provider, Service, Review, Agreement } from './types';
+import type { Category, Provider, Service, Review } from './types';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from './firebase';
-
-// This file now acts as the primary interface for interacting with Firestore.
-// All data fetching and saving logic will be centralized here.
 
 export const categories: Category[] = [
   {
@@ -59,82 +56,28 @@ export const services: Service[] = [
 
 /**
  * Fetches all providers from the 'providers' collection in Firestore.
- * Caches the result in memory to avoid repeated reads in the same session.
  */
-let providersCache: Provider[] | null = null;
 export const getProviders = async (): Promise<Provider[]> => {
-    if (providersCache) {
-      return providersCache;
-    }
     try {
         const querySnapshot = await getDocs(collection(db, 'providers'));
-        const providers = querySnapshot.docs.map(doc => doc.data() as Provider);
-        providersCache = providers;
-        return providers;
+        return querySnapshot.docs.map(doc => doc.data() as Provider);
     } catch (error) {
         console.error("Error fetching providers from Firestore:", error);
-        return []; // Return empty array on error
+        return []; 
     }
 };
 
-/**
- * Fetches a single provider document by their phone number (which is their ID).
- * @param phone The phone number of the provider to fetch.
- * @returns A promise that resolves to the Provider object or null if not found.
- */
-export const getProviderByPhone = async (phone: string): Promise<Provider | null> => {
-    // Check cache first
-    if (providersCache) {
-      const cachedProvider = providersCache.find(p => p.phone === phone);
-      if (cachedProvider) return cachedProvider;
-    }
-    // If not in cache, fetch from Firestore
-    try {
-        const docRef = doc(db, 'providers', phone);
-        const docSnap = await getDoc(docRef);
-        return docSnap.exists() ? (docSnap.data() as Provider) : null;
-    } catch (error) {
-        console.error(`Error fetching provider with phone ${phone}:`, error);
-        return null;
-    }
-};
 
 /**
  * Fetches all reviews from the 'reviews' collection.
  * @returns A promise that resolves to an array of Review objects.
  */
-let reviewsCache: Review[] | null = null;
 export const getReviews = async (): Promise<Review[]> => {
-    if (reviewsCache) {
-        return reviewsCache;
-    }
     try {
         const querySnapshot = await getDocs(collection(db, 'reviews'));
-        const reviews = querySnapshot.docs.map(doc => doc.data() as Review);
-        reviewsCache = reviews;
-        return reviews;
+        return querySnapshot.docs.map(doc => doc.data() as Review);
     } catch (error) {
         console.error("Error fetching reviews from Firestore:", error);
-        return [];
-    }
-};
-
-/**
- * Fetches all agreements from the 'agreements' collection.
- * @returns A promise that resolves to an array of Agreement objects.
- */
-let agreementsCache: Agreement[] | null = null;
-export const getAgreements = async (): Promise<Agreement[]> => {
-    if (agreementsCache) {
-        return agreementsCache;
-    }
-    try {
-        const querySnapshot = await getDocs(collection(db, 'agreements'));
-        const agreements = querySnapshot.docs.map(doc => doc.data() as Agreement);
-        agreementsCache = agreements;
-        return agreements;
-    } catch (error) {
-        console.error("Error fetching agreements from Firestore:", error);
         return [];
     }
 };

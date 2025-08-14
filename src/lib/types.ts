@@ -26,11 +26,11 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: string; // Document ID
+  id: string; // Document ID (the user's phone number with +98 prefix)
   name: string;
   service: string; 
   location: string;
-  phone: string; // Also the document ID in Firestore
+  phone: string; // The user's plain phone number (e.g., 09xxxx)
   bio: string;
   categorySlug: Category['slug'];
   serviceSlug: Service['slug'];
@@ -41,8 +41,8 @@ export interface Provider {
 }
 
 export interface Review {
-  id: string;
-  providerId: string; // Corresponds to Provider's phone/id
+  id: string; // Document ID
+  providerId: string; // Corresponds to Provider's id
   authorName: string;
   rating: number;
   comment: string;

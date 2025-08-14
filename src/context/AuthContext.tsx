@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithCustomToken, signOut, Auth } from 'firebase/auth';
+import { onAuthStateChanged, signInWithCustomToken, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { User, Provider } from '@/lib/types';
@@ -23,9 +23,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  const handleUserAuth = useCallback(async (firebaseUser: import('firebase/auth').User | null) => {
+  const handleUserAuth = useCallback(async (firebaseUser: FirebaseUser | null) => {
     if (firebaseUser) {
-      // User is signed in, see if they are a provider to get full details
+      // User is signed in, get their profile from Firestore
       const providerDocRef = doc(db, "providers", firebaseUser.uid);
       const providerDocSnap = await getDoc(providerDocRef);
       
@@ -40,11 +40,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           accountType: 'provider',
         };
       } else {
-        // Regular customer
+        // Regular customer - their display name was set during registration
         userProfile = {
           id: firebaseUser.uid,
           phone: firebaseUser.uid,
-          name: `کاربر ${firebaseUser.uid.slice(-4)}`,
+          name: firebaseUser.displayName || `کاربر ${firebaseUser.uid.slice(-4)}`,
           accountType: 'customer',
         };
       }
@@ -76,12 +76,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         const { token } = await response.json();
         await signInWithCustomToken(auth, token);
-        // onAuthStateChanged will handle setting the user state
+        // onAuthStateChanged will handle setting the user state and loading state
     } catch (error) {
       console.error("Login failed:", error);
-      // Let the calling component handle toast messages
       setIsLoading(false);
-      throw error;
+      throw error; // Re-throw to be caught by the calling component for UI feedback
     }
   };
 
@@ -89,13 +88,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signOut(auth);
+      // onAuthStateChanged will handle setting user to null
       router.push('/');
     } catch (error) {
       console.error("Logout failed:", error);
-    } finally {
-      // The onAuthStateChanged listener will set user to null
-      // and isLoading to false, but we can do it here to be quicker
-      setUser(null);
       setIsLoading(false);
     }
   };

@@ -16,7 +16,7 @@ import { db } from '@/lib/firebase';
 
 
 interface OtherPersonDetails {
-    id: string | number;
+    id: string;
     name: string;
     phone: string;
     profileImage?: { src: string; aiHint?: string };
@@ -178,7 +178,6 @@ export default function ChatPage() {
       text: text,
       senderId: user.phone,
       createdAt: serverTimestamp(),
-      isEdited: false
     };
     
     setNewMessage('');

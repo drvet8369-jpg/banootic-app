@@ -60,7 +60,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 // Review Form Component
-const ReviewForm = ({ providerId, providerPhone, onSubmit }: { providerId: number; providerPhone: string; onSubmit: () => void }) => {
+const ReviewForm = ({ providerId, onSubmit }: { providerId: string; onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -82,29 +82,32 @@ const ReviewForm = ({ providerId, providerPhone, onSubmit }: { providerId: numbe
     if(!user?.name) return;
 
     try {
+        const reviewId = `review_${Date.now()}`;
         const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
+          id: reviewId,
+          providerId,
+          authorName: user.name,
+          rating,
+          comment,
+          createdAt: new Date().toISOString(),
         };
 
         const reviewDocRef = doc(db, 'reviews', newReview.id);
-        await setDoc(reviewDocRef, newReview);
         
-        // Recalculate provider's average rating
         const allReviews = [...(await getReviews()), newReview];
         const providerReviews = allReviews.filter(r => r.providerId === providerId);
         const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
         const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
         
-        const providerDocRef = doc(db, 'providers', providerPhone);
-        await setDoc(providerDocRef, {
+        const providerDocRef = doc(db, 'providers', providerId);
+
+        const batch = writeBatch(db);
+        batch.set(reviewDocRef, newReview);
+        batch.update(providerDocRef, {
             rating: newAverageRating,
             reviewsCount: providerReviews.length,
-        }, { merge: true });
+        });
+        await batch.commit();
 
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
@@ -200,13 +203,13 @@ export default function ProviderProfilePage() {
     loadData();
   }, [loadData]);
   
-  const isOwnerViewing = user && user.phone === provider?.phone;
+  const isOwnerViewing = user && user.id === provider?.id;
 
   const deletePortfolioItem = async (itemIndex: number) => {
     if (!provider) return;
 
     const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
-    const providerDocRef = doc(db, 'providers', provider.phone);
+    const providerDocRef = doc(db, 'providers', provider.id);
 
     try {
         await setDoc(providerDocRef, { portfolio: updatedPortfolio }, { merge: true });
@@ -351,7 +354,7 @@ export default function ProviderProfilePage() {
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.id} providerPhone={provider.phone} onSubmit={loadData} />
+                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
                 </div>
             </Card>
         </div>
