@@ -1,4 +1,3 @@
-'use server';
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
@@ -8,26 +7,27 @@ import { getAuth } from 'firebase-admin/auth';
 let adminDb: admin.firestore.Firestore | undefined;
 let adminAuth: admin.auth.Auth | undefined;
 
+try {
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-if (serviceAccountKey) {
-  try {
-    const serviceAccount = JSON.parse(serviceAccountKey);
+  if (serviceAccountKey) {
+    // Correctly parse the service account key
+    const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('utf-8'));
+    
     if (admin.apps.length === 0) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
         });
         console.log("Firebase Admin SDK initialized successfully.");
     }
+    
     adminDb = getFirestore();
     adminAuth = getAuth();
-  } catch (error) {
-    console.error('CRITICAL: Firebase admin initialization failed.', error);
+  } else {
+    console.warn("Firebase Admin SDK not initialized: FIREBASE_SERVICE_ACCOUNT_KEY is not set in environment variables. Server-side Firebase features will be unavailable.");
   }
-} else {
-  console.warn("Firebase Admin SDK not initialized: FIREBASE_SERVICE_ACCOUNT_KEY is not set in environment variables. Server-side Firebase features will be unavailable.");
+} catch (error) {
+  console.error('CRITICAL: Firebase admin initialization failed.', error);
 }
-
 
 export { adminDb, adminAuth };
