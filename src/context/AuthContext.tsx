@@ -21,13 +21,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('honarbanoo-user');
+      const storedUser = localStorage.getItem('banootik-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banootik-user');
     } finally {
       setIsLoading(false);
     }
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = useCallback((userData: User) => {
     try {
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
+      localStorage.setItem('banootik-user', JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = useCallback(() => {
     try {
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banootik-user');
       setUser(null);
       router.push('/');
     } catch (error) {

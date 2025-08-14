@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, getDocs, collection, query, where, limit, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, query, collection, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
@@ -85,7 +85,6 @@ export default function RegisterForm() {
     setIsSubmitting(true);
     
     try {
-        // Check if phone number already exists
         const providerDocRef = doc(db, "providers", values.phone);
         const providerDocSnap = await getDoc(providerDocRef);
 
@@ -99,7 +98,6 @@ export default function RegisterForm() {
           return;
         }
 
-        // Only for providers, check if business name exists
         if (values.accountType === 'provider') {
           const q = query(collection(db, "providers"), where("name", "==", values.name), limit(1));
           const querySnapshot = await getDocs(q);
@@ -114,7 +112,7 @@ export default function RegisterForm() {
           }
         }
         
-        let newProviderId = Date.now();
+        const newProviderId = Date.now();
 
         const userToLogin: User = {
           id: values.accountType === 'provider' ? newProviderId.toString() : values.phone,

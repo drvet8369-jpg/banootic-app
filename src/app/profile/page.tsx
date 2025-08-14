@@ -13,18 +13,14 @@ import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
 import { useState, useEffect, useRef, ChangeEvent, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function ProfilePage() {
-  const { state, login, dispatch } = useAuth();
-  const { user, isLoggedIn, providers, isLoading } = state;
+  const { user, isLoggedIn, isLoading: isAuthLoading, login } = useAuth();
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   
-  const provider = useMemo(() => {
-      if (user && user.accountType === 'provider') {
-        return providers.find(p => p.phone === user.phone);
-      }
-      return null;
-  }, [user, providers]);
-
   const { toast } = useToast();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
@@ -32,22 +28,48 @@ export default function ProfilePage() {
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  useEffect(() => {
-    if (provider) {
-        setEditedData({
-            name: provider.name,
-            service: provider.service,
-            bio: provider.bio,
-        });
+  const loadProviderData = useCallback(async () => {
+    if (user && user.accountType === 'provider') {
+        setIsLoadingData(true);
+        const providerDocRef = doc(db, "providers", user.phone);
+        const docSnap = await getDoc(providerDocRef);
+        if (docSnap.exists()) {
+            const providerData = docSnap.data() as Provider;
+            setProvider(providerData);
+            setEditedData({
+                name: providerData.name,
+                service: providerData.service,
+                bio: providerData.bio,
+            });
+        }
+        setIsLoadingData(false);
     }
-  }, [provider]);
+  }, [user]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+        loadProviderData();
+    }
+  }, [isLoggedIn, loadProviderData]);
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedData(prev => ({...prev, [name]: value}));
   };
 
-  const handleSaveChanges = () => {
+  const updateProviderInDb = async (updatedProvider: Provider) => {
+      try {
+          const providerDocRef = doc(db, "providers", updatedProvider.phone);
+          await setDoc(providerDocRef, updatedProvider, { merge: true });
+          return true;
+      } catch (error) {
+          console.error("Failed to update provider in DB:", error);
+          toast({ title: "خطا", description: "امکان ذخیره اطلاعات در پایگاه داده وجود ندارد.", variant: "destructive" });
+          return false;
+      }
+  }
+
+  const handleSaveChanges = async () => {
     if(!provider || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
@@ -60,15 +82,17 @@ export default function ProfilePage() {
         bio: editedData.bio,
     };
     
-    dispatch({ type: 'UPDATE_PROVIDER', payload: updatedProviderData });
+    const success = await updateProviderInDb(updatedProviderData);
     
-    if(user && user.name !== editedData.name){
-        const updatedUser = { ...user, name: editedData.name };
-        login(updatedUser); 
+    if(success) {
+      setProvider(updatedProviderData);
+      if(user && user.name !== editedData.name){
+          const updatedUser = { ...user, name: editedData.name };
+          login(updatedUser); 
+      }
+      toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
+      setMode('viewing');
     }
-    
-    toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
-    setMode('viewing');
   };
 
   const handleCancelEdit = () => {
@@ -122,10 +146,14 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   };
 
-  const updateProviderPortfolio = (updateFn: (p: Provider) => Partial<Provider>) => {
+  const updateProviderPortfolio = async (updateFn: (p: Provider) => Partial<Provider>) => {
     if (!provider) return;
     const updates = updateFn(provider);
-    dispatch({ type: 'UPDATE_PROVIDER', payload: { ...provider, ...updates } });
+    const updatedProvider = { ...provider, ...updates };
+    const success = await updateProviderInDb(updatedProvider);
+    if (success) {
+        setProvider(updatedProvider);
+    }
   }
 
   const addPortfolioItem = (imageSrc: string) => {
@@ -165,6 +193,8 @@ export default function ProfilePage() {
       event.target.value = '';
     }
   };
+
+  const isLoading = isAuthLoading || isLoadingData;
   
   if (isLoading) {
     return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-8 h-8 animate-spin" /></div>;
@@ -201,7 +231,7 @@ export default function ProfilePage() {
   }
   
   if (!provider) {
-    return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+    return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-8 h-8 animate-spin" /><p className="mr-2">در حال بارگذاری اطلاعات هنرمند...</p></div>;
   }
 
   return (

@@ -63,7 +63,7 @@ export default function LoginPage() {
       if (providerDocSnap.exists()) {
         const providerData = providerDocSnap.data() as Provider;
         userToLogin = {
-          id: providerData.id.toString(),
+          id: providerData.phone,
           name: providerData.name,
           phone: providerData.phone,
           accountType: 'provider',
