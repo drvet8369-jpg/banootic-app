@@ -111,12 +111,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getUserFromFirestore = async (phone: string): Promise<Provider | null> => {
-      const providerRef = doc(db, 'providers', phone);
-      const docSnap = await getDoc(providerRef);
-      if (docSnap.exists()) {
-          return docSnap.data() as Provider;
+      try {
+        const providerRef = doc(db, 'providers', phone);
+        const docSnap = await getDoc(providerRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as Provider;
+        }
+        return null;
+      } catch (error) {
+        console.error("Error getting user from firestore:", error);
+        return null;
       }
-      return null;
   }
   
   const recalculateProviderRating = async (providerId: number) => {
