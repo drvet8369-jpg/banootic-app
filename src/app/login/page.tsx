@@ -55,6 +55,9 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
+      // This is the correct, direct way to check for a provider.
+      // We are not fetching the whole list, just a single document.
+      // Our new Firestore rules allow this check even for unauthenticated users.
       const providerDocRef = doc(db, "providers", values.phone);
       const providerDocSnap = await getDoc(providerDocRef);
 

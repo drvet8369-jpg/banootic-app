@@ -1,6 +1,6 @@
 {
-  "name": "هنربانو",
-  "short_name": "هنربانو",
+  "name": "بانوتیک",
+  "short_name": "بانوتیک",
   "description": "بازاری برای خدمات خانگی بانوان هنرمند",
   "start_url": "/",
   "display": "standalone",
@@ -8,12 +8,12 @@
   "theme_color": "#A3BEA6",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

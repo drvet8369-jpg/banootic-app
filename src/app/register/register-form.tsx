@@ -85,6 +85,8 @@ export default function RegisterForm() {
     setIsSubmitting(true);
     
     try {
+        // Direct check on Firestore for the specific phone number.
+        // This is fast and respects our security rules.
         const providerDocRef = doc(db, "providers", values.phone);
         const providerDocSnap = await getDoc(providerDocRef);
 
@@ -98,6 +100,7 @@ export default function RegisterForm() {
           return;
         }
 
+        // Optimized query to check for existing business name.
         if (values.accountType === 'provider') {
           const q = query(collection(db, "providers"), where("name", "==", values.name), limit(1));
           const querySnapshot = await getDocs(q);

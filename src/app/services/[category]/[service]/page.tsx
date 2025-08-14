@@ -18,6 +18,7 @@ export default function ServiceProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // This page now fetches its own provider data, making it self-sufficient.
   useEffect(() => {
     const fetchProviders = async () => {
         setIsLoading(true);

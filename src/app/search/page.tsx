@@ -14,6 +14,7 @@ export default function SearchPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  // This page is now responsible for fetching its own data.
   useEffect(() => {
     const fetchProviders = async () => {
         setIsLoading(true);

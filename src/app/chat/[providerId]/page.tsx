@@ -46,22 +46,21 @@ export default function ChatPage() {
 
   useEffect(() => {
     const fetchOtherPersonDetails = async () => {
-        const allProviders = await getProviders();
-        const provider = allProviders.find(p => p.phone === otherPersonPhone);
-        if (provider) {
-            setOtherPersonDetails(provider);
+        const providerDoc = await getDoc(firestoreDoc(db, "providers", otherPersonPhone));
+        if (providerDoc.exists()) {
+            setOtherPersonDetails(providerDoc.data() as Provider);
             return;
         }
 
-        // Handle case where other person is a customer
-        if (chatId) {
-            const inboxDocRef = firestoreDoc(db, 'inboxes', otherPersonPhone);
+        // Handle case where other person is a customer by checking the inbox of the current user
+        if (user && chatId) {
+            const inboxDocRef = firestoreDoc(db, 'inboxes', user.phone);
             const inboxSnap = await getDoc(inboxDocRef);
             if(inboxSnap.exists()) {
                 const inboxData = inboxSnap.data();
                 const chatInfo = inboxData[chatId];
-                if(chatInfo && chatInfo.participants[user!.phone]) {
-                   setOtherPersonDetails({ id: otherPersonPhone, name: chatInfo.participants[user!.phone].name, phone: otherPersonPhone });
+                if(chatInfo && chatInfo.participants[otherPersonPhone]) {
+                   setOtherPersonDetails({ id: otherPersonPhone, name: chatInfo.participants[otherPersonPhone].name, phone: otherPersonPhone });
                    return;
                 }
             }
@@ -95,16 +94,14 @@ export default function ChatPage() {
       // Mark as read
       if(user?.phone) {
          const inboxRef = firestoreDoc(db, 'inboxes', user.phone);
-         getDoc(inboxRef).then(docSnap => {
-             if(docSnap.exists()){
-                const inboxData = docSnap.data();
-                if(inboxData[chatId] && inboxData[chatId].participants[user!.phone].unreadCount > 0) {
-                   setDoc(inboxRef, {
-                     [chatId]: { participants: { [user.phone]: { unreadCount: 0 } } }
-                   }, { merge: true });
-                }
-             }
-         })
+         // Use dot notation for nested fields in setDoc with merge
+         setDoc(inboxRef, {
+            [chatId]: { 
+                participants: { 
+                    [user.phone]: { unreadCount: 0 } 
+                } 
+            }
+         }, { merge: true });
       }
     }, (error) => {
         console.error("Error listening to chat messages:", error);
@@ -200,44 +197,27 @@ export default function ChatPage() {
        const messagesColRef = collection(db, "chats", chatId, "messages");
        await addDoc(messagesColRef, messageToSend);
        
-       // Update inbox for both users
+       // Update inbox for both users in a batch
        const senderInboxRef = firestoreDoc(db, 'inboxes', user.phone);
        const receiverInboxRef = firestoreDoc(db, 'inboxes', otherPersonDetails.phone);
 
-       const updateData = {
+       const receiverInboxSnap = await getDoc(receiverInboxRef);
+       const receiverInboxData = receiverInboxSnap.exists() ? receiverInboxSnap.data() : {};
+       const currentUnreadCount = receiverInboxData[chatId]?.participants?.[otherPersonDetails.phone]?.unreadCount || 0;
+       
+       const updatePayload = {
          id: chatId,
          lastMessage: text,
          updatedAt: new Date().toISOString(),
          members: [user.phone, otherPersonDetails.phone],
          participants: {
-             [user.phone]: { name: user.name },
-             [otherPersonDetails.phone]: { name: otherPersonDetails.name }
+             [user.phone]: { name: user.name, unreadCount: 0 }, // Sender's unread is always 0
+             [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: currentUnreadCount + 1 }
          }
        };
 
-       await setDoc(senderInboxRef, { [chatId]: updateData }, { merge: true });
-
-       // Increment receiver's unread count
-       const receiverInboxSnap = await getDoc(receiverInboxRef);
-       const receiverInboxData = receiverInboxSnap.exists() ? receiverInboxSnap.data() : {};
-       const currentUnreadCount = receiverInboxData[chatId]?.participants?.[otherPersonDetails.phone]?.unreadCount || 0;
-       
-       const receiverUpdateData = {
-           ...updateData,
-           participants: {
-               ...updateData.participants,
-               [otherPersonDetails.phone]: {
-                   ...updateData.participants[otherPersonDetails.phone],
-                   unreadCount: currentUnreadCount + 1
-               },
-                [user.phone]: {
-                   ...updateData.participants[user.phone],
-                   unreadCount: 0
-               }
-           }
-       };
-
-       await setDoc(receiverInboxRef, { [chatId]: receiverUpdateData }, { merge: true });
+       await setDoc(senderInboxRef, { [chatId]: updatePayload }, { merge: true });
+       await setDoc(receiverInboxRef, { [chatId]: updatePayload }, { merge: true });
 
     } catch(e) {
         console.error("Failed to send message", e);
@@ -249,8 +229,8 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
+    // A simple heuristic for the back button
     if (user.accountType === 'provider') return '/inbox';
-    // This logic can be simplified or improved based on app requirements
     return '/'; 
   }
 
@@ -278,8 +258,7 @@ export default function ChatPage() {
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoadingChat && (
               <div className="text-center text-muted-foreground p-8">
-                <p>پیام‌ها در پایگاه داده ذخیره می‌شوند.</p>
-                <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
+                <p>شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
             {messages.map((message) => {
