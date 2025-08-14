@@ -1,4 +1,3 @@
-
 export interface User {
   id: string; // Using string for ID to be compatible with Firestore
   name: string;
@@ -56,16 +55,4 @@ export interface Message {
   senderId: string;
   createdAt: string; // ISO String format is better for Firestore
   isEdited?: boolean;
-}
-
-export interface Agreement {
-  id: string;
-  providerId: number;
-  providerPhone: string;
-  providerName: string;
-  customerPhone: string;
-  customerName: string;
-  status: 'pending' | 'confirmed' | 'rejected';
-  createdAt: string; // ISO String for when it was confirmed/rejected
-  requestedAt: string; // ISO String for when it was requested
 }
