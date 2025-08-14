@@ -1,29 +1,12 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for setting up initial database data.
- * This should only be run once.
+ * This should only be run once on server startup.
  */
 import { ai } from '@/ai/genkit';
+import { adminDb } from '@/lib/firebase-admin'; // Use the robust admin module
 import { defaultProviders, defaultReviews } from '@/lib/data-seed';
 import { z } from 'zod';
-import admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin SDK
-try {
-  if (!admin.apps.length) {
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!serviceAccountKey) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-    }
-    const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('ascii'));
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  }
-} catch (error: any) {
-  console.error('CRITICAL: Firebase admin initialization failed in setup flow.', error);
-}
 
 export const runSetup = ai.defineFlow(
   {
@@ -32,45 +15,36 @@ export const runSetup = ai.defineFlow(
     outputSchema: z.string(),
   },
   async () => {
-    let adminDb;
-    try {
-        adminDb = getFirestore();
-    } catch (e) {
-        const errorMsg = "Firebase Admin SDK not initialized properly. Setup cannot run.";
-        console.error(errorMsg, e);
-        return errorMsg;
-    }
-
-    // Check if the providers collection is empty as a flag
+    // Check if the providers collection is empty as a flag to run setup.
     const providersCollection = adminDb.collection('providers');
     const providersSnapshot = await providersCollection.limit(1).get();
 
     if (!providersSnapshot.empty) {
-        const msg = "Initial setup appears to be already completed (providers collection is not empty).";
+        const msg = "Initial setup appears to be already completed (providers collection is not empty). Skipping.";
         console.log(msg);
         return msg;
     }
 
-    console.log("Running initial database setup...");
+    console.log("Database is empty. Running initial database setup...");
     const batch = adminDb.batch();
 
-    // Add providers
+    // Add providers from the seed file
     defaultProviders.forEach((provider) => {
-      // Use the phone number as the document ID
+      // The document ID is the provider's phone number (without +98)
       const docRef = adminDb.collection('providers').doc(provider.phone);
-      // Add the ID to the document data itself
+      // Also save the phone number as the 'id' field inside the document
       batch.set(docRef, { ...provider, id: provider.phone });
     });
     console.log(`Added ${defaultProviders.length} providers to the batch.`);
 
-    // Add reviews
+    // Add reviews from the seed file
     defaultReviews.forEach((review) => {
-      const docRef = adminDb.collection('reviews').doc(); // Auto-generate ID
+      // Auto-generate a document ID for each review
+      const docRef = adminDb.collection('reviews').doc(); 
       batch.set(docRef, {...review, id: docRef.id});
     });
     console.log(`Added ${defaultReviews.length} reviews to the batch.`);
     
-
     try {
       await batch.commit();
       const successMsg = "Initial database setup completed successfully!";
@@ -79,7 +53,8 @@ export const runSetup = ai.defineFlow(
     } catch (error) {
       const errorMsg = `Error during initial setup batch commit: ${error}`;
       console.error(errorMsg);
-      return errorMsg;
+      // Throwing the error here will make it more visible in logs
+      throw new Error(errorMsg);
     }
   }
 );
