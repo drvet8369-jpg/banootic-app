@@ -26,7 +26,8 @@ import { useToast } from '@/hooks/use-toast';
 import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { User, Provider } from '@/lib/types';
+import type { User } from '@/context/AuthContext';
+import type { Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -40,6 +41,7 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
   serviceType: z.string().optional(),
+  location: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
@@ -51,6 +53,14 @@ const formSchema = z.object({
     path: ['serviceType'],
 }).refine(data => {
     if (data.accountType === 'provider') {
+        return !!data.location;
+    }
+    return true;
+}, {
+    message: 'لطفاً شهر خود را انتخاب کنید.',
+    path: ['location'],
+}).refine(data => {
+    if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
     }
     return true;
@@ -60,6 +70,8 @@ const formSchema = z.object({
 });
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
+
+const locations = ['ارومیه', 'خوی', 'مهاباد', 'بوکان', 'میاندوآب'];
 
 export default function RegisterForm() {
   const { toast } = useToast();
@@ -74,6 +86,7 @@ export default function RegisterForm() {
       phone: '',
       accountType: 'customer',
       bio: '',
+      location: 'ارومیه',
     },
   });
 
@@ -85,6 +98,8 @@ export default function RegisterForm() {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       const allProviders = getProviders();
+
+      // Universal check for existing phone number among providers
       const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
       if (existingProviderByPhone) {
         toast({
@@ -96,6 +111,7 @@ export default function RegisterForm() {
         return;
       }
 
+      // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
         const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
@@ -109,24 +125,25 @@ export default function RegisterForm() {
         }
       }
 
-      const newId = Date.now();
+
+      // This is the user object for the AuthContext
       const userToLogin: User = {
-        id: newId.toString(),
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
 
+      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
         const newProvider: Provider = {
-          id: newId,
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه',
+          location: values.location || 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -135,6 +152,7 @@ export default function RegisterForm() {
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
+        
         saveProviders([...allProviders, newProvider]);
       }
       
@@ -247,6 +265,30 @@ export default function RegisterForm() {
                           {categories.map((category) => (
                             <SelectItem key={category.id} value={category.slug}>
                               {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>شهر</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="شهر خود را انتخاب کنید" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {locations.map((loc) => (
+                            <SelectItem key={loc} value={loc}>
+                              {loc}
                             </SelectItem>
                           ))}
                         </SelectContent>
