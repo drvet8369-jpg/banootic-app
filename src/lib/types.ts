@@ -1,5 +1,7 @@
+import type { Timestamp } from 'firebase/firestore';
+
 export interface User {
-  id: string; // Using string for ID to be compatible with Firestore
+  id: string; 
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
@@ -26,7 +28,7 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number; // Keep this for existing logic, but Firestore will use phone as doc ID
+  id: number;
   name: string;
   service: string; 
   location: string;
@@ -53,6 +55,6 @@ export interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: string; // ISO String format is better for Firestore
+  createdAt: Timestamp; // Using Firestore Timestamp
   isEdited?: boolean;
 }

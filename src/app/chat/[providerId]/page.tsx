@@ -11,9 +11,9 @@ import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 're
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider, Message as MessageType } from '@/lib/types';
-import { onSnapshot, collection, query, orderBy, getDoc, doc as firestoreDoc, setDoc, addDoc } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, getDoc, doc as firestoreDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getProviders } from '@/lib/data';
+
 
 interface OtherPersonDetails {
     id: string | number;
@@ -52,7 +52,6 @@ export default function ChatPage() {
             return;
         }
 
-        // Handle case where other person is a customer by checking the inbox of the current user
         if (user && chatId) {
             const inboxDocRef = firestoreDoc(db, 'inboxes', user.phone);
             const inboxSnap = await getDoc(inboxDocRef);
@@ -66,7 +65,6 @@ export default function ChatPage() {
             }
         }
         
-        // Fallback
         setOtherPersonDetails({ id: otherPersonPhone, name: `کاربر ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone });
     };
 
@@ -91,17 +89,9 @@ export default function ChatPage() {
       setMessages(msgs);
       setIsLoadingChat(false);
       
-      // Mark as read
       if(user?.phone) {
          const inboxRef = firestoreDoc(db, 'inboxes', user.phone);
-         // Use dot notation for nested fields in setDoc with merge
-         setDoc(inboxRef, {
-            [chatId]: { 
-                participants: { 
-                    [user.phone]: { unreadCount: 0 } 
-                } 
-            }
-         }, { merge: true });
+         setDoc(inboxRef, { [chatId]: { participants: { [user.phone]: { unreadCount: 0 } } } }, { merge: true });
       }
     }, (error) => {
         console.error("Error listening to chat messages:", error);
@@ -165,7 +155,7 @@ export default function ChatPage() {
     setIsSending(true);
     try {
       const messageRef = firestoreDoc(db, "chats", chatId, "messages", editingMessageId);
-      await setDoc(messageRef, { text: editingText.trim(), isEdited: true }, { merge: true });
+      await setDoc(messageRef, { text: editingText.trim(), isEdited: true, updatedAt: serverTimestamp() }, { merge: true });
       handleCancelEdit();
       toast({ title: 'پیام ویرایش شد.' });
     } catch (e) {
@@ -184,10 +174,10 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    const messageToSend: Omit<MessageType, 'id'> = {
+    const messageToSend: Omit<MessageType, 'id' | 'createdAt'> & { createdAt: any } = {
       text: text,
       senderId: user.phone,
-      createdAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
       isEdited: false
     };
     
@@ -197,7 +187,6 @@ export default function ChatPage() {
        const messagesColRef = collection(db, "chats", chatId, "messages");
        await addDoc(messagesColRef, messageToSend);
        
-       // Update inbox for both users in a batch
        const senderInboxRef = firestoreDoc(db, 'inboxes', user.phone);
        const receiverInboxRef = firestoreDoc(db, 'inboxes', otherPersonDetails.phone);
 
@@ -211,7 +200,7 @@ export default function ChatPage() {
          updatedAt: new Date().toISOString(),
          members: [user.phone, otherPersonDetails.phone],
          participants: {
-             [user.phone]: { name: user.name, unreadCount: 0 }, // Sender's unread is always 0
+             [user.phone]: { name: user.name, unreadCount: 0 },
              [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: currentUnreadCount + 1 }
          }
        };
@@ -229,7 +218,6 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    // A simple heuristic for the back button
     if (user.accountType === 'provider') return '/inbox';
     return '/'; 
   }
