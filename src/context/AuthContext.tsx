@@ -1,75 +1,64 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useReducer, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { appReducer, initialState, AppAction } from './reducer';
 import type { User } from '@/lib/types';
 
-
-// Define the shape of the context value
 interface AuthContextType {
-  state: typeof initialState;
-  dispatch: React.Dispatch<AppAction>;
+  isLoggedIn: boolean;
+  user: User | null;
+  isLoading: boolean;
   login: (userData: User) => void;
   logout: () => void;
 }
 
-// Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Define the broadcast channel
-const channel = typeof window !== 'undefined' ? new BroadcastChannel('honarbanoo-app-state') : null;
-
-// AuthProvider Component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Initial data load when the app starts
-    dispatch({ type: 'INITIALIZE_STATE' });
-    
-    // Listen for messages from other tabs
-    if(channel) {
-      channel.onmessage = (event: MessageEvent<AppAction>) => {
-        // When a message is received, dispatch the action but mark it as a broadcast
-        // to prevent an infinite loop of broadcasting.
-        if (event.data) {
-          dispatch({ ...event.data, isBroadcast: true });
-        }
-      };
+    try {
+      const storedUser = localStorage.getItem('honarbanoo-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage on initial load", error);
+      localStorage.removeItem('honarbanoo-user');
+    } finally {
+      setIsLoading(false);
     }
-
-    return () => {
-      channel?.close();
-    };
   }, []);
 
-  const enhancedDispatch = (action: AppAction) => {
-    dispatch(action);
-    // If the action did not originate from a broadcast, send it to other tabs.
-    if (!action.isBroadcast && channel) {
-      channel.postMessage(action);
-    }
-  };
-  
   const login = useCallback((userData: User) => {
-    enhancedDispatch({ type: 'LOGIN', payload: userData });
+    try {
+      localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+       console.error("Failed to save user to localStorage", error);
+    }
   }, []);
 
   const logout = useCallback(() => {
-    enhancedDispatch({ type: 'LOGOUT' });
-    router.push('/');
+    try {
+      localStorage.removeItem('honarbanoo-user');
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+       console.error("Failed to remove user from localStorage", error);
+    }
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ state, dispatch: enhancedDispatch, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use the Auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

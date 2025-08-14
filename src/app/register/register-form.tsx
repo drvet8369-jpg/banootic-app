@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { doc, getDoc, getDocs, collection, query, where, limit, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -64,8 +66,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, dispatch, state } = useAuth();
-  const { isLoading, providers } = state;
+  const { login } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -83,78 +84,88 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsSubmitting(true);
     
-    const existingProviderByPhone = providers.find(p => p.phone === values.phone);
-    if (existingProviderByPhone) {
-      toast({
-        title: 'خطا در ثبت‌نام',
-        description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-        variant: 'destructive',
-      });
-      setIsSubmitting(false);
-      return;
-    }
+    try {
+        // Check if phone number already exists
+        const providerDocRef = doc(db, "providers", values.phone);
+        const providerDocSnap = await getDoc(providerDocRef);
 
-    if (values.accountType === 'provider') {
-      const existingProviderByName = providers.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-      if (existingProviderByName) {
+        if (providerDocSnap.exists()) {
           toast({
-              title: 'خطا در ثبت‌نام',
-              description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-              variant: 'destructive',
+            title: 'خطا در ثبت‌نام',
+            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+            variant: 'destructive',
           });
           setIsSubmitting(false);
           return;
-      }
-    }
+        }
 
-    let newProviderId = 1;
-    if(providers.length > 0) {
-      newProviderId = Math.max(...providers.map(p => p.id)) + 1;
-    }
+        // Only for providers, check if business name exists
+        if (values.accountType === 'provider') {
+          const q = query(collection(db, "providers"), where("name", "==", values.name), limit(1));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            toast({
+                title: 'خطا در ثبت‌نام',
+                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
+                variant: 'destructive',
+            });
+            setIsSubmitting(false);
+            return;
+          }
+        }
+        
+        let newProviderId = Date.now();
 
-    const userToLogin: User = {
-      id: values.accountType === 'provider' ? newProviderId.toString() : values.phone,
-      name: values.name,
-      phone: values.phone,
-      accountType: values.accountType,
-    };
+        const userToLogin: User = {
+          id: values.accountType === 'provider' ? newProviderId.toString() : values.phone,
+          name: values.name,
+          phone: values.phone,
+          accountType: values.accountType,
+        };
 
-    if (values.accountType === 'provider' && values.serviceType && values.bio) {
-      const selectedCategory = categories.find(c => c.slug === values.serviceType);
-      const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
-      
-      const newProvider: Provider = {
-        id: newProviderId,
-        name: values.name,
-        phone: values.phone,
-        service: selectedCategory?.name || 'خدمت جدید',
-        location: 'ارومیه',
-        bio: values.bio,
-        categorySlug: selectedCategory?.slug || 'beauty',
-        serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-        rating: 0,
-        reviewsCount: 0,
-        profileImage: { src: '', aiHint: 'woman portrait' },
-        portfolio: [],
-      };
-      
-      dispatch({ type: 'ADD_PROVIDER', payload: newProvider });
+        if (values.accountType === 'provider' && values.serviceType && values.bio) {
+            const selectedCategory = categories.find(c => c.slug === values.serviceType);
+            const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
+            
+            const newProvider: Provider = {
+                id: newProviderId,
+                name: values.name,
+                phone: values.phone,
+                service: selectedCategory?.name || 'خدمت جدید',
+                location: 'ارومیه',
+                bio: values.bio,
+                categorySlug: selectedCategory?.slug || 'beauty',
+                serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
+                rating: 0,
+                reviewsCount: 0,
+                profileImage: { src: '', aiHint: 'woman portrait' },
+                portfolio: [],
+            };
+            
+            await setDoc(doc(db, "providers", newProvider.phone), newProvider);
+        }
+        
+        login(userToLogin);
+        
+        toast({
+          title: 'ثبت‌نام با موفقیت انجام شد!',
+          description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        });
+        
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
+
+    } catch (error) {
+        console.error("Registration failed:", error);
+        toast({
+            title: 'خطا در ثبت‌نام',
+            description: 'مشکلی در ارتباط با پایگاه داده رخ داده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsSubmitting(false);
     }
-    
-    login(userToLogin);
-    
-    toast({
-      title: 'ثبت‌نام با موفقیت انجام شد!',
-      description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-    });
-    
-    const destination = values.accountType === 'provider' ? '/profile' : '/';
-    router.push(destination);
-    
-    setIsSubmitting(false);
   }
-
-  const isPageLoading = isLoading || isSubmitting;
 
   return (
     <Card>
@@ -172,7 +183,7 @@ export default function RegisterForm() {
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
-                      disabled={isPageLoading}
+                      disabled={isSubmitting}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
@@ -204,7 +215,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isPageLoading} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -218,7 +229,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isPageLoading} />
+                    <Input placeholder="09123456789" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -233,7 +244,7 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPageLoading}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -262,7 +273,7 @@ export default function RegisterForm() {
                           placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
                           className="resize-none"
                           {...field}
-                          disabled={isPageLoading}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <FormDescription>
@@ -275,8 +286,8 @@ export default function RegisterForm() {
               </>
             )}
             
-            <Button type="submit" className="w-full" size="lg" disabled={isPageLoading}>
-              {isPageLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               ثبت‌نام
             </Button>
             
