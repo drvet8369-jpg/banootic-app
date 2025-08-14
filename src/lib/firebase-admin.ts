@@ -12,7 +12,7 @@ try {
   if (serviceAccountKey && !admin.apps.length) {
     const serviceAccount = JSON.parse(serviceAccountKey);
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccount.project_id ? serviceAccount : JSON.parse(serviceAccount as any)),
     });
     adminDb = getFirestore();
     console.log("Firebase Admin SDK initialized successfully.");
