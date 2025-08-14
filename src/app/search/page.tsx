@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/data';
+import { getAgreements, getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -16,18 +16,47 @@ export default function SearchPage() {
   const performSearch = useCallback(() => {
     setIsLoading(true);
     const allProviders = getProviders();
+    const allAgreements = getAgreements();
+
     if (!query) {
       setSearchResults([]);
       setIsLoading(false);
       return;
     }
+    
+    // Create a map of provider phone to confirmed agreements count
+    const agreementsCountMap = new Map<string, number>();
+    allAgreements.forEach(agreement => {
+        if (agreement.status === 'confirmed') {
+            agreementsCountMap.set(agreement.providerPhone, (agreementsCountMap.get(agreement.providerPhone) || 0) + 1);
+        }
+    });
+
     const lowercasedQuery = query.toLowerCase();
-    const results = allProviders.filter(provider => 
+    const filteredResults = allProviders.filter(provider => 
       provider.name.toLowerCase().includes(lowercasedQuery) ||
       provider.service.toLowerCase().includes(lowercasedQuery) ||
       provider.bio.toLowerCase().includes(lowercasedQuery)
     );
-    setSearchResults(results);
+
+    // Sort results based on the ladder system
+    const sortedResults = filteredResults.sort((a, b) => {
+      const agreementsA = agreementsCountMap.get(a.phone) || 0;
+      const agreementsB = agreementsCountMap.get(b.phone) || 0;
+
+      // 1. Sort by reviewsCount (descending)
+      if (b.reviewsCount !== a.reviewsCount) {
+        return b.reviewsCount - a.reviewsCount;
+      }
+      // 2. Sort by agreementsCount (descending)
+      if (agreementsB !== agreementsA) {
+        return agreementsB - agreementsA;
+      }
+      // 3. Sort by rating (descending)
+      return b.rating - a.rating;
+    });
+
+    setSearchResults(sortedResults);
     setIsLoading(false);
   }, [query]);
 
