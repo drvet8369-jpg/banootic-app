@@ -59,7 +59,6 @@ export const services: Service[] = [
 
 /**
  * Fetches all providers from the 'providers' collection in Firestore.
- * This is now a simple fetch operation without any initialization logic.
  * @returns A promise that resolves to an array of Provider objects.
  */
 export const getProviders = async (): Promise<Provider[]> => {
@@ -68,8 +67,6 @@ export const getProviders = async (): Promise<Provider[]> => {
         return querySnapshot.docs.map(doc => doc.data() as Provider);
     } catch (error) {
         console.error("Error fetching providers from Firestore:", error);
-        // In a real app, you might want to show a user-facing error.
-        // For now, we return an empty array to prevent the app from crashing.
         return [];
     }
 };
