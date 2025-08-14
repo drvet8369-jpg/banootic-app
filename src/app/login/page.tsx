@@ -69,7 +69,9 @@ export default function LoginPage() {
           accountType: 'provider',
         };
       } else {
-        // User is a customer
+        // This is a regular customer login.
+        // We don't check for a "customer" document, we just log them in.
+        // A customer's identity is simply their phone number.
         userToLogin = {
           id: values.phone,
           name: `کاربر ${values.phone.slice(-4)}`,

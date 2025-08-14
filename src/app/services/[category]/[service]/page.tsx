@@ -13,14 +13,14 @@ import { useAuth } from '@/context/AuthContext';
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
-  const { state } = useAuth();
-  const { providers, isLoading } = state;
+  const { providers, isLoading } = useAuth();
 
 
   const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
 
   const serviceProviders = useMemo(() => {
+    if (!providers) return [];
     return providers.filter((p) => p.serviceSlug === serviceSlug);
   }, [providers, serviceSlug]);
 

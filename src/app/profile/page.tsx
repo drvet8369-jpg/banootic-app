@@ -17,7 +17,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading, login } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading, login, providers } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -28,29 +28,27 @@ export default function ProfilePage() {
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  const loadProviderData = useCallback(async () => {
-    if (user && user.accountType === 'provider') {
-        setIsLoadingData(true);
-        const providerDocRef = doc(db, "providers", user.phone);
-        const docSnap = await getDoc(providerDocRef);
-        if (docSnap.exists()) {
-            const providerData = docSnap.data() as Provider;
-            setProvider(providerData);
+  const loadProviderData = useCallback(() => {
+    if (user && user.accountType === 'provider' && providers.length > 0) {
+        const currentProvider = providers.find(p => p.phone === user.phone);
+        if (currentProvider) {
+            setProvider(currentProvider);
             setEditedData({
-                name: providerData.name,
-                service: providerData.service,
-                bio: providerData.bio,
+                name: currentProvider.name,
+                service: currentProvider.service,
+                bio: currentProvider.bio,
             });
         }
-        setIsLoadingData(false);
     }
-  }, [user]);
+    // We set loading to false even if data is not found, to stop the spinner.
+    setIsLoadingData(false);
+  }, [user, providers]);
 
   useEffect(() => {
-    if (isLoggedIn) {
-        loadProviderData();
+    if (!isAuthLoading) {
+      loadProviderData();
     }
-  }, [isLoggedIn, loadProviderData]);
+  }, [isAuthLoading, loadProviderData]);
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

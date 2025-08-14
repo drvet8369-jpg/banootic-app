@@ -5,35 +5,25 @@ import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
-import { getProviders } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
+
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [allProviders, setAllProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-        setIsLoading(true);
-        const providers = await getProviders();
-        setAllProviders(providers);
-        setIsLoading(false);
-    }
-    fetchProviders();
-  }, [])
+  const { providers, isLoading } = useAuth();
   
   const searchResults = useMemo(() => {
     if (!query) {
-      return allProviders;
+      return providers; // Show all providers if query is empty
     }
     const lowercasedQuery = query.toLowerCase();
-    return allProviders.filter(provider => 
+    return providers.filter(provider => 
       provider.name.toLowerCase().includes(lowercasedQuery) ||
       provider.service.toLowerCase().includes(lowercasedQuery) ||
       provider.bio.toLowerCase().includes(lowercasedQuery)
     );
-  }, [query, allProviders]);
+  }, [query, providers]);
 
 
   return (
