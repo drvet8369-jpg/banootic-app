@@ -39,7 +39,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login, providers, isLoading: isAuthLoading } = useAuth();
+  const { login, getUserFromFirestore, isLoading: isAuthLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -52,14 +52,11 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const existingProvider = providers.find(p => p.phone === values.phone);
+        const existingProvider = await getUserFromFirestore(values.phone);
 
         let userToLogin: User;
 
         if (existingProvider) {
-          // User is a known provider
           userToLogin = {
             id: existingProvider.id.toString(),
             name: existingProvider.name,
@@ -67,7 +64,6 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          // User is a customer
           userToLogin = {
             id: values.phone,
             name: `کاربر ${values.phone.slice(-4)}`,
@@ -80,10 +76,11 @@ export default function LoginPage() {
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+          description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        router.push('/');
+        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
 
     } catch (error) {
         console.error("Login failed:", error);

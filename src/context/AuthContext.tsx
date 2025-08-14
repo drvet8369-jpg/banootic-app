@@ -8,10 +8,11 @@ import {
     onSnapshot, 
     setDoc, 
     writeBatch, 
-    getDocs, 
-    query, 
-    orderBy,
-    updateDoc
+    getDoc,
+    updateDoc,
+    query,
+    getDocs,
+    serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Provider, User, Agreement, Review, Message } from '@/lib/types';
@@ -31,10 +32,11 @@ interface AuthContextType {
   addReview: (review: Review) => Promise<void>;
   addAgreement: (provider: Provider, currentUser: User) => Promise<void>;
   updateAgreementStatus: (agreementId: string, status: 'confirmed' | 'rejected') => Promise<void>;
-  sendChatMessage: (chatId: string, message: Message, receiver: {phone: string, name: string}, currentUser: User) => Promise<void>;
+  sendChatMessage: (chatId: string, message: Omit<Message, 'id' | 'createdAt'>, receiver: {phone: string, name: string}, currentUser: User) => Promise<void>;
   editChatMessage: (chatId: string, messageId: string, newText: string) => Promise<void>;
   markChatAsRead: (chatId: string, userPhone: string) => Promise<void>;
   getInboxForUser: (userPhone: string) => Promise<Record<string, any>>;
+  getUserFromFirestore: (phone: string) => Promise<Provider | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Load user from localStorage on initial mount
   useEffect(() => {
+    setIsLoading(true);
     const storedUserJSON = localStorage.getItem('banootik-user');
     if (storedUserJSON) {
       try {
@@ -58,30 +61,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('banootik-user');
       }
     }
+    // Finished checking for user, auth loading is done.
+    // Data loading will continue in the background.
+    setIsLoading(false);
   }, []);
 
-  // Set up Firestore listeners for real-time updates
+  // Set up Firestore listeners for real-time updates once auth state is determined
   useEffect(() => {
-    setIsLoading(true);
-
-    const initializeData = async () => {
+    const initializeAndListen = async () => {
+        // This can run in the background without blocking the UI
         await initializeDefaultProviders();
 
         const unsubProviders = onSnapshot(collection(db, "providers"), (snapshot) => {
             const newProviders = snapshot.docs.map(doc => doc.data() as Provider);
             setProviders(newProviders);
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Error listening to providers:", error);
-            setIsLoading(false);
         });
 
         const unsubReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
-            setReviews(snapshot.docs.map(doc => doc.data() as Review));
+            setReviews(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Review));
         });
 
         const unsubAgreements = onSnapshot(collection(db, "agreements"), (snapshot) => {
-            setAgreements(snapshot.docs.map(doc => doc.data() as Agreement));
+            setAgreements(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Agreement));
         });
 
         return () => {
@@ -91,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
     };
 
-    const cleanupPromise = initializeData();
+    const cleanupPromise = initializeAndListen();
     
     return () => {
         cleanupPromise.then(cleanup => cleanup && cleanup());
@@ -108,9 +109,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     router.push('/');
   };
+
+  const getUserFromFirestore = async (phone: string): Promise<Provider | null> => {
+      const providerRef = doc(db, 'providers', phone);
+      const docSnap = await getDoc(providerRef);
+      if (docSnap.exists()) {
+          return docSnap.data() as Provider;
+      }
+      return null;
+  }
   
   const recalculateProviderRating = async (providerId: number) => {
-    const providerRef = doc(db, 'providers', providers.find(p=>p.id === providerId)?.phone || '');
+    const providerDoc = providers.find(p => p.id === providerId);
+    if (!providerDoc) return;
+    const providerRef = doc(db, 'providers', providerDoc.phone);
     if(!providerRef) return;
 
     const reviewsQuery = query(collection(db, "reviews"));
@@ -152,13 +164,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const addReview = async (review: Review) => {
-    await setDoc(doc(db, "reviews", review.id), review);
+    const reviewRef = doc(collection(db, 'reviews'));
+    await setDoc(reviewRef, {...review, id: reviewRef.id});
     await recalculateProviderRating(review.providerId);
   };
 
   const addAgreement = async (provider: Provider, currentUser: User) => {
+    const agreementRef = doc(collection(db, 'agreements'));
     const newAgreement: Agreement = {
-      id: `agree_${Date.now()}`,
+      id: agreementRef.id,
       providerId: provider.id,
       providerPhone: provider.phone,
       providerName: provider.name,
@@ -168,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date().toISOString(),
       requestedAt: new Date().toISOString(),
     };
-    await setDoc(doc(db, "agreements", newAgreement.id), newAgreement);
+    await setDoc(agreementRef, newAgreement);
   };
 
   const updateAgreementStatus = async (agreementId: string, status: 'confirmed' | 'rejected') => {
@@ -183,19 +197,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const sendChatMessage = async (chatId: string, message: Message, receiver: {phone: string, name: string}, currentUser: User) => {
+  const sendChatMessage = async (chatId: string, message: Omit<Message, 'id' | 'createdAt'>, receiver: {phone: string, name: string}, currentUser: User) => {
     const batch = writeBatch(db);
+    const timestamp = new Date().toISOString();
     
     // 1. Add new message
     const newMessageRef = doc(collection(db, "chats", chatId, "messages"));
-    batch.set(newMessageRef, { ...message, id: newMessageRef.id });
+    const messageWithTimestamp = { ...message, id: newMessageRef.id, createdAt: timestamp };
+    batch.set(newMessageRef, messageWithTimestamp);
 
     // 2. Update sender's inbox
     const senderInboxRef = doc(db, "inboxes", currentUser.phone);
     const senderChatUpdate = {
         [`${chatId}.id`]: chatId,
         [`${chatId}.lastMessage`]: message.text,
-        [`${chatId}.updatedAt`]: message.createdAt,
+        [`${chatId}.updatedAt`]: timestamp,
         [`${chatId}.members`]: [currentUser.phone, receiver.phone],
         [`${chatId}.participants.${currentUser.phone}`]: { name: currentUser.name, unreadCount: 0 },
         [`${chatId}.participants.${receiver.phone}`]: { name: receiver.name },
@@ -211,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const receiverChatUpdate = {
         [`${chatId}.id`]: chatId,
         [`${chatId}.lastMessage`]: message.text,
-        [`${chatId}.updatedAt`]: message.createdAt,
+        [`${chatId}.updatedAt`]: timestamp,
         [`${chatId}.members`]: [currentUser.phone, receiver.phone],
         [`${chatId}.participants.${currentUser.phone}`]: { name: currentUser.name },
         [`${chatId}.participants.${receiver.phone}`]: { name: receiver.name, unreadCount: currentUnread + 1 },
@@ -224,15 +240,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const editChatMessage = async (chatId: string, messageId: string, newText: string) => {
       const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
       await updateDoc(messageRef, { text: newText, isEdited: true });
-
-      // This part is complex without a proper data model. For now, we'll assume last message updates are handled elsewhere if needed.
   };
 
   const markChatAsRead = async (chatId: string, userPhone: string) => {
       const inboxRef = doc(db, 'inboxes', userPhone);
-      await updateDoc(inboxRef, {
-        [`${chatId}.participants.${userPhone}.unreadCount`]: 0
-      });
+      const inboxDoc = await getDoc(inboxRef);
+      if (inboxDoc.exists() && inboxDoc.data()[chatId]) {
+        await updateDoc(inboxRef, {
+          [`${chatId}.participants.${userPhone}.unreadCount`]: 0
+        });
+      }
   };
 
   const getInboxForUser = async (userPhone: string): Promise<Record<string, any>> => {
@@ -259,6 +276,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     editChatMessage,
     markChatAsRead,
     getInboxForUser,
+    getUserFromFirestore,
   };
 
   return (
