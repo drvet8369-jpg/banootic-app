@@ -8,7 +8,8 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, query, collection, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { signInWithCustomToken } from 'firebase/auth';
 import { getProviderByPhone } from '@/lib/data';
 
 
@@ -113,6 +114,19 @@ export default function RegisterForm() {
           }
         }
         
+        // Call server for custom token
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: values.phone }),
+        });
+
+        if(!response.ok) {
+            throw new Error('Failed to get custom token');
+        }
+        const { token } = await response.json();
+        await signInWithCustomToken(auth, token);
+
         const newProviderId = Date.now();
 
         const userToLogin: User = {

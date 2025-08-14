@@ -3,39 +3,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Providers can be listed and read by anyone, but only the authenticated provider can write to their own document.
-    match /providers/{providerId} {
-      allow get, list: if true;
-      allow write: if request.auth != null && request.auth.token.phone_number == providerId;
-    }
-
-    // Reviews can be listed and read by anyone, but only authenticated users can create them.
-    match /reviews/{reviewId} {
-      allow get, list: if true;
+    // Providers can be read by anyone.
+    // A user can create their own provider document.
+    // A user can only update their own provider document.
+    match /providers/{userId} {
+      allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if false; // Reviews are immutable
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
     }
 
-    // Agreements can only be read or written by authenticated users.
-    // Further specific logic would be needed in backend functions for security.
-    match /agreements/{agreementId} {
-      allow read, write: if request.auth != null;
+    // Reviews can be read by anyone.
+    // An authenticated user can create a review.
+    // No one can update or delete reviews for integrity.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
     }
 
-    // A user can only access their own inbox document.
+    // A user's inbox can only be read or written to by that user.
     match /inboxes/{userId} {
-      allow read, write: if request.auth != null && request.auth.token.phone_number == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Messages can only be read/written by authenticated users who are members of the chat.
-    // This relies on the inbox document having a map of chatIds for that user.
-    match /chats/{chatId}/{message=**} {
-       allow read, write: if request.auth != null && exists(/databases/$(database)/documents/inboxes/$(request.auth.token.phone_number)) && chatId in get(/databases/$(database)/documents/inboxes/$(request.auth.token.phone_number)).data;
-    }
-    
-    // Settings collection is locked down.
-    match /settings/{settingId} {
-      allow read, write: if false;
+    // Chat messages can only be read or written by the participants of the chat.
+    // The document key is expected to be "phone1_phone2" sorted alphabetically.
+    match /chats/{chatId}/{messageId} {
+       allow read, write: if request.auth != null && request.auth.uid in chatId.split('_');
     }
   }
 }

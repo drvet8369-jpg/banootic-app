@@ -21,20 +21,22 @@ export const runSetup = ai.defineFlow(
       return errorMsg;
     }
 
-    const setupRef = adminDb.collection('settings').doc('setup');
-    const setupDoc = await setupRef.get();
-
-    if (setupDoc.exists && setupDoc.data()?.completed) {
-      const msg = "Initial setup has already been completed.";
-      console.log(msg);
-      return msg;
+    // Check if the providers collection is empty. If not, assume setup has run.
+    const providersCollection = adminDb.collection('providers');
+    const snapshot = await providersCollection.limit(1).get();
+    if (!snapshot.empty) {
+        const msg = "Initial setup appears to be already completed (providers collection is not empty).";
+        console.log(msg);
+        return msg;
     }
 
-    console.log("Running initial database setup...");
+
+    console.log("Running initial database setup as providers collection is empty...");
     const batch = adminDb.batch();
 
     // Add providers
     defaultProviders.forEach((provider) => {
+      // The document ID will be the provider's phone number
       const docRef = adminDb.collection('providers').doc(provider.phone);
       batch.set(docRef, provider);
     });
@@ -46,9 +48,6 @@ export const runSetup = ai.defineFlow(
       batch.set(docRef, review);
     });
     console.log(`Added ${defaultReviews.length} reviews to the batch.`);
-
-    // Mark setup as complete
-    batch.set(setupRef, { completed: true, completedAt: new Date() });
     
     try {
       await batch.commit();
@@ -58,8 +57,6 @@ export const runSetup = ai.defineFlow(
     } catch (error) {
       const errorMsg = `Error during initial setup batch commit: ${error}`;
       console.error(errorMsg);
-      // Don't mark setup as complete if it fails
-      await setupRef.delete().catch(() => {}); // Clean up lock doc on failure
       return errorMsg;
     }
   }

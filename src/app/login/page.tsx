@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import type { User, Provider } from '@/lib/types';
+import { signInWithCustomToken } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 
 const formSchema = z.object({
@@ -54,6 +56,22 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
+      // In a real app, this is where you'd call a server endpoint
+      // to generate a custom token for the given phone number.
+      // For this demo, we'll simulate it.
+      const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: values.phone }),
+      });
+
+      if(!response.ok) {
+          throw new Error('Failed to get custom token');
+      }
+
+      const { token } = await response.json();
+      await signInWithCustomToken(auth, token);
+      
       const existingProvider = await getProviderByPhone(values.phone);
 
       let userToLogin: User;
@@ -74,7 +92,7 @@ export default function LoginPage() {
         };
       }
       
-      login(userToLogin);
+      login(userToLogin); // This now just updates the client-side state
 
       toast({
         title: 'ورود با موفقیت انجام شد!',
@@ -88,7 +106,7 @@ export default function LoginPage() {
        console.error("Login error:", error);
        toast({
          title: 'خطا در ورود',
-         description: 'مشکلی در ارتباط با پایگاه داده رخ داده است. لطفاً دوباره تلاش کنید.',
+         description: 'مشکلی در فرآیند ورود رخ داده است. لطفاً دوباره تلاش کنید.',
          variant: 'destructive',
        });
     } finally {
