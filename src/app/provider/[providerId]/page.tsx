@@ -1,17 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback, FormEvent, useMemo } from 'react';
-import { useParams, notFound, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, FormEvent } from 'react';
+import { useParams, notFound } from 'next/navigation';
+import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { doc, setDoc, writeBatch, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -59,7 +58,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 // Review Form Component
-const ReviewForm = ({ providerId, onSubmit }: { providerId: string; onSubmit: () => void }) => {
+const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -70,58 +69,48 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string; onSubmit: ()
     return null;
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-    
-    if(!user?.name) return;
 
-    try {
-        const reviewId = `review_${Date.now()}`;
+    // Simulate API call
+    setTimeout(() => {
+        const allReviews = getReviews();
         const newReview: Review = {
-          id: reviewId,
-          providerId,
-          authorName: user.name,
-          rating,
-          comment,
-          createdAt: new Date().toISOString(),
+        id: Date.now().toString(),
+        providerId,
+        authorName: user.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString(),
         };
 
-        const reviewDocRef = doc(db, 'reviews', newReview.id);
-        const providerDocRef = doc(db, 'providers', providerId);
-        
-        await setDoc(reviewDocRef, newReview);
-        
-        // This part needs a transaction to be truly safe, but for this app a batch is ok.
-        const providerSnap = await getDoc(providerDocRef);
-        if(providerSnap.exists()) {
-            const providerData = providerSnap.data() as Provider;
-            const currentReviewsCount = providerData.reviewsCount || 0;
-            const currentTotalRating = (providerData.rating || 0) * currentReviewsCount;
-            const newReviewsCount = currentReviewsCount + 1;
-            const newAverageRating = (currentTotalRating + rating) / newReviewsCount;
-            
-            await updateDoc(providerDocRef, {
-                rating: parseFloat(newAverageRating.toFixed(1)),
-                reviewsCount: newReviewsCount,
-            });
-        }
+        const updatedReviews = [...allReviews, newReview];
+        saveReviews(updatedReviews);
 
+        // Recalculate provider's average rating
+        const allProviders = getProviders();
+        const providerIndex = allProviders.findIndex(p => p.id === providerId);
+        if (providerIndex > -1) {
+            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
+            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
+            
+            allProviders[providerIndex].rating = newAverageRating;
+            allProviders[providerIndex].reviewsCount = providerReviews.length;
+            saveProviders(allProviders);
+        }
 
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
-        onSubmit();
-    } catch(error) {
-        console.error("Failed to submit review:", error);
-        toast({ title: 'خطا', description: 'مشکلی در ثبت نظر رخ داد.', variant: 'destructive' });
-    } finally {
         setIsSubmitting(false);
-    }
+        onSubmit(); // Callback to trigger data refresh in parent
+    }, 1000);
   };
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
@@ -170,56 +159,58 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string; onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn, isLoading: isAuthLoading, providers, reviews: allReviews, requestAgreement } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const router = useRouter();
-  
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const provider = useMemo(() => {
-    return providers.find(p => p.phone === providerPhone) || null;
-  }, [providers, providerPhone]);
+  const loadData = useCallback(() => {
+    const allProviders = getProviders();
+    const foundProvider = allProviders.find(p => p.phone === providerPhone);
+    
+    if (foundProvider) {
+      setProvider(foundProvider);
+      const allReviews = getReviews();
+      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
+                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setReviews(providerReviews);
+    } else {
+      setProvider(null);
+    }
+    
+    setIsLoading(false);
+  }, [providerPhone]);
 
-  const reviews = useMemo(() => {
-    if (!provider) return [];
-    return allReviews
-        .filter(r => r.providerId === provider.id)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [allReviews, provider]);
+  useEffect(() => {
+    setIsLoading(true);
+    loadData();
+    window.addEventListener('focus', loadData);
+    return () => window.removeEventListener('focus', loadData);
+  }, [loadData]);
   
-  const isOwnerViewing = user && user.id === provider?.id;
+  const isOwnerViewing = user && user.phone === provider?.phone;
 
-  const deletePortfolioItem = async (itemIndex: number) => {
+  const deletePortfolioItem = (itemIndex: number) => {
     if (!provider) return;
 
-    const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
-    const providerDocRef = doc(db, 'providers', provider.id);
-
-    try {
-        await updateDoc(providerDocRef, { portfolio: updatedPortfolio });
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
+    if (providerIndex > -1) {
+        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
+        saveProviders(allProviders);
+        loadData(); // Refresh data
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-        // Data will refresh via AuthContext listener in a real app, for now we manually reload.
-        router.refresh();
-    } catch(e) {
-        console.error("Failed to delete portfolio item:", e);
-        toast({ title: 'خطا', description: 'امکان حذف نمونه کار وجود ندارد.', variant: 'destructive' });
+    } else {
+        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
     }
   };
 
-  const handleRequestAgreement = async () => {
-    if(!provider || !user) return;
-    try {
-        await requestAgreement(provider, user);
-        toast({ title: "موفق", description: "درخواست شما برای هنرمند ارسال شد."});
-    } catch(e) {
-        toast({ title: "خطا", description: "امکان ارسال درخواست وجود ندارد.", variant: "destructive"});
-    }
-  }
 
-
-  if (isAuthLoading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -319,7 +310,7 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {!isOwnerViewing && isLoggedIn && (
+                {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
@@ -327,12 +318,6 @@ export default function ProviderProfilePage() {
                             ارسال پیام
                         </Link>
                     </Button>
-                     { user?.accountType === 'customer' && (
-                        <Button onClick={handleRequestAgreement} className="w-full">
-                            <Handshake className="w-4 h-4 ml-2" />
-                            درخواست توافق
-                        </Button>
-                    )}
                     <Button asChild className="w-full" variant="secondary">
                         <a href={`tel:${provider.phone}`}>
                             <Phone className="w-4 h-4 ml-2" />
@@ -355,7 +340,7 @@ export default function ProviderProfilePage() {
                             <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
                         </div>
                     )}
-                    <ReviewForm providerId={provider.id} onSubmit={router.refresh} />
+                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
                 </div>
             </Card>
         </div>

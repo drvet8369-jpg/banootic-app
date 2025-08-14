@@ -59,26 +59,11 @@ export default function Header() {
         </SheetClose>
         {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' ? (
-                <>
-                  <SheetClose asChild>
-                    <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                      <UserRound className="h-5 w-5" />
-                      پروفایل من
-                    </Link>
-                  </SheetClose>
-                   <SheetClose asChild>
-                    <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                      <FileText className="h-5 w-5" />
-                      مدیریت توافق‌ها
-                    </Link>
-                  </SheetClose>
-                </>
-             ) : (
+             {user?.accountType === 'provider' && (
                 <SheetClose asChild>
-                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                    <FileText className="h-5 w-5" />
-                    درخواست‌های من
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <UserRound className="h-5 w-5" />
+                    پروفایل من
                   </Link>
                 </SheetClose>
              )}
@@ -154,27 +139,12 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                     {user.accountType === 'provider' ? (
-                        <>
-                          <DropdownMenuItem asChild>
-                            <Link href="/profile">
-                              <UserRound className="ml-2 h-4 w-4" />
-                              <span>پروفایل من</span>
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/agreements">
-                                <FileText className="ml-2 h-4 w-4" />
-                                <span>مدیریت توافق‌ها</span>
-                            </Link>
-                          </DropdownMenuItem>
-                        </>
-                      ) : (
+                     {user.accountType === 'provider' && (
                         <DropdownMenuItem asChild>
-                           <Link href="/requests">
-                              <FileText className="ml-2 h-4 w-4" />
-                              <span>درخواست‌های من</span>
-                           </Link>
+                        <Link href="/profile">
+                            <UserRound className="ml-2 h-4 w-4" />
+                            <span>پروفایل من</span>
+                        </Link>
                         </DropdownMenuItem>
                       )}
                     <DropdownMenuItem asChild>
