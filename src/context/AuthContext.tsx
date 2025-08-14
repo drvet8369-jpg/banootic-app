@@ -1,38 +1,61 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/lib/types';
-import { getProviders } from '@/lib/data';
+import type { User, Agreement } from '@/lib/types';
+import { getAgreements, saveAgreements } from '@/lib/data';
+
 
 export interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   login: (userData: User) => void;
   logout: () => void;
+  isLoading: boolean;
+  agreements: Agreement[];
+  addAgreement: (providerPhone: string) => void;
+  updateAgreementStatus: (agreementId: string, status: 'confirmed') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
+  const fetchAppData = useCallback(() => {
     try {
-      const storedUser = localStorage.getItem('zanmahal-user');
+      const storedUser = localStorage.getItem('honarbanoo-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
+      const storedAgreements = getAgreements();
+      setAgreements(storedAgreements);
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('zanmahal-user');
+      console.error("Failed to parse data from localStorage", error);
+      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('honarbanoo-agreements');
+    } finally {
+        setIsLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    fetchAppData();
+    
+    // Listen for storage changes from other tabs
+    window.addEventListener('storage', fetchAppData);
+    return () => {
+      window.removeEventListener('storage', fetchAppData);
+    };
+  }, [fetchAppData]);
+
+
   const login = (userData: User) => {
     try {
-      localStorage.setItem('zanmahal-user', JSON.stringify(userData));
+      localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -41,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('zanmahal-user');
+      localStorage.removeItem('honarbanoo-user');
       setUser(null);
       router.push('/');
     } catch (error) {
@@ -49,8 +72,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addAgreement = (providerPhone: string) => {
+    if (!user || user.accountType !== 'customer') return;
+    
+    const existingAgreement = agreements.find(a => a.providerPhone === providerPhone && a.customerPhone === user.phone);
+    if(existingAgreement) return; // Don't add duplicates
+
+    const newAgreement: Agreement = {
+      id: `${Date.now()}-${user.phone}`,
+      providerPhone,
+      customerPhone: user.phone,
+      customerName: user.name,
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+    };
+    const updatedAgreements = [...agreements, newAgreement];
+    saveAgreements(updatedAgreements);
+    setAgreements(updatedAgreements);
+  };
+  
+  const updateAgreementStatus = (agreementId: string, status: 'confirmed') => {
+    const updatedAgreements = agreements.map(a => 
+      a.id === agreementId ? { ...a, status, confirmedAt: new Date().toISOString() } : a
+    );
+    saveAgreements(updatedAgreements);
+    setAgreements(updatedAgreements);
+  };
+
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
+    <AuthContext.Provider value={{ 
+        isLoggedIn: !!user, 
+        user, 
+        login, 
+        logout, 
+        isLoading, 
+        agreements, 
+        addAgreement, 
+        updateAgreementStatus 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -23,7 +23,9 @@ export default function AgreementsPage() {
 
   useEffect(() => {
     if (isLoading || !user || user.accountType !== 'provider') return;
-    setProviderAgreements(agreements.filter(a => a.providerPhone === user.phone));
+    if (agreements) {
+      setProviderAgreements(agreements.filter(a => a.providerPhone === user.phone));
+    }
   }, [isLoading, user, agreements]);
 
   const handleConfirmAgreement = (agreementId: string) => {
@@ -126,9 +128,9 @@ export default function AgreementsPage() {
                                 <div key={agreement.id} className="flex items-center justify-between p-4 border rounded-lg opacity-70">
                                     <div>
                                         <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
-                                        {isClient && (
+                                        {isClient && agreement.confirmedAt && (
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                تایید شده در: {new Date(agreement.createdAt).toLocaleDateString('fa-IR')}
+                                                تایید شده در: {new Date(agreement.confirmedAt).toLocaleDateString('fa-IR')}
                                             </p>
                                         )}
                                     </div>

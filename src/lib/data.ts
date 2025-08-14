@@ -1,12 +1,13 @@
-import type { Category, Provider, Service, Review } from './types';
+import type { Category, Provider, Service, Review, Agreement } from './types';
 
 // This file now acts as the single source of truth for all app data,
 // using localStorage for persistence. This simplifies the app by removing
 // the need for a complex backend setup for this prototype.
 
-const PROVIDERS_STORAGE_KEY = 'zanmahal-providers';
-const REVIEWS_STORAGE_KEY = 'zanmahal-reviews';
-const INBOX_CHATS_STORAGE_KEY = 'zanmahal-inbox-chats';
+const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
+const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
+const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
+
 
 // --- Static Data ---
 export const categories: Category[] = [
@@ -92,13 +93,13 @@ const saveToStorage = <T>(key: string, value: T) => {
 
 // --- Default Data for Initialization ---
 const defaultProviders: Provider[] = [
-  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: "https://placehold.co/600x400.png", aiHint: "nail art"}] },
-  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
-  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه، استادان', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
-  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه، خیابان فردوسی', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [] },
-  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه، خیابان کشاورز', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [] },
-  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه، خیابان مدرس', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [] },
-  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [] },
+  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: "https://placehold.co/600x400.png", aiHint: "nail art"}] },
+  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
+  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
+  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [] },
+  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [] },
+  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [] },
+  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [] },
 ];
 
 const defaultReviews: Review[] = [
@@ -106,6 +107,8 @@ const defaultReviews: Review[] = [
     { id: '2', providerId: 4, authorName: 'فاطمه', rating: 5, comment: 'قورمه‌سبزی به این خوشمزگی نخورده بودم! کاملا طعم غذای خانگی اصیل رو داشت.', createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
     { id: '3', providerId: 1, authorName: 'زهرا', rating: 4, comment: 'طراحی خوبی داشتند ولی کمی زمان انتظارم طولانی شد.', createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
 ];
+
+const defaultAgreements: Agreement[] = [];
 
 // --- Data Access Functions ---
 export const getProviders = (): Provider[] => {
@@ -124,10 +127,24 @@ export const saveReviews = (updatedReviews: Review[]) => {
   saveToStorage(REVIEWS_STORAGE_KEY, updatedReviews);
 };
 
+export const getAgreements = (): Agreement[] => {
+  return getFromStorage(AGREEMENTS_STORAGE_KEY, defaultAgreements);
+};
+
+export const saveAgreements = (updatedAgreements: Agreement[]) => {
+  saveToStorage(AGREEMENTS_STORAGE_KEY, updatedAgreements);
+};
+
+
 // Initialize default data if it doesn't exist
-if (typeof window !== 'undefined' && !localStorage.getItem(PROVIDERS_STORAGE_KEY)) {
-  saveProviders(defaultProviders);
-}
-if (typeof window !== 'undefined' && !localStorage.getItem(REVIEWS_STORAGE_KEY)) {
-  saveReviews(defaultReviews);
+if (typeof window !== 'undefined') {
+    if (!localStorage.getItem(PROVIDERS_STORAGE_KEY)) {
+      saveProviders(defaultProviders);
+    }
+    if (!localStorage.getItem(REVIEWS_STORAGE_KEY)) {
+      saveReviews(defaultReviews);
+    }
+    if (!localStorage.getItem(AGREEMENTS_STORAGE_KEY)) {
+      saveAgreements(defaultAgreements);
+    }
 }

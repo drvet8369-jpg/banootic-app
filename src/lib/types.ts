@@ -68,3 +68,13 @@ export interface Chat {
     lastMessage: string;
     updatedAt: string; // ISO String
 }
+
+export interface Agreement {
+  id: string;
+  providerPhone: string;
+  customerPhone: string;
+  customerName: string;
+  status: 'pending' | 'confirmed';
+  requestedAt: string; // ISO string
+  confirmedAt?: string; // ISO string
+}
