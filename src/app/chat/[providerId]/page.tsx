@@ -10,9 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Provider, Message as MessageType, User as UserType } from '@/lib/types';
-import { onSnapshot, collection, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import type { Provider, Message } from '@/lib/types';
 
 interface OtherPersonDetails {
     id: string | number;
@@ -24,61 +22,43 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonPhone = params.providerId as string;
-  const { user, isLoggedIn, isLoading: isAuthLoading, providers, sendChatMessage, editChatMessage, markChatAsRead, getInboxForUser } = useAuth();
+  const { state, dispatch } = useAuth();
+  const { user, isLoggedIn, isLoading, providers } = state;
   const { toast } = useToast();
 
-  const [messages, setMessages] = useState<MessageType[]>([]);
+  // Memoize chat messages for the current chat ID
+  const chatId = useMemo(() => {
+    if (!user?.phone || !otherPersonPhone) return null;
+    return [user.phone, otherPersonPhone].sort().join('_');
+  }, [user?.phone, otherPersonPhone]);
+
+  const messages = useMemo(() => {
+    if (!chatId || !state.chatMessages[chatId]) return [];
+    return state.chatMessages[chatId];
+  }, [state.chatMessages, chatId]);
+  
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isLoadingChat, setIsLoadingChat] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
   const otherPersonDetails = useMemo<OtherPersonDetails | null>(() => {
     const provider = providers.find(p => p.phone === otherPersonPhone);
-    if (provider) {
-        return provider;
-    }
-    // Logic to handle if the other person is a customer might be needed here
-    // For now, we assume chats are with providers.
-    if(user && user.accountType === 'provider') {
-        return { id: otherPersonPhone, name: `مشتری ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone };
-    }
-    return null;
-  }, [providers, otherPersonPhone, user]);
-
-  const getChatId = useCallback((phone1?: string, phone2?: string) => {
-    if (!phone1 || !phone2) return null;
-    return [phone1, phone2].sort().join('_');
-  }, []);
-
-  const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user, otherPersonPhone, getChatId]);
-  
-  useEffect(() => {
-    if (!chatId) {
-        setIsLoadingChat(false);
-        return;
-    }
-
-    setIsLoadingChat(true);
-    const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+    if (provider) return provider;
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs = querySnapshot.docs.map(doc => doc.data() as MessageType);
-      setMessages(msgs);
-      setIsLoadingChat(false);
-      if(user?.phone) {
-        markChatAsRead(chatId, user.phone);
+    // Fallback for customer details if a provider is viewing the chat
+    if(user && user.accountType === 'provider' && chatId && state.inboxData[chatId]) {
+      const otherParticipant = state.inboxData[chatId].participants[otherPersonPhone];
+      if (otherParticipant) {
+        return { id: otherPersonPhone, name: otherParticipant.name, phone: otherPersonPhone };
       }
-    }, (error) => {
-        console.error("Error listening to chat messages:", error);
-        setIsLoadingChat(false);
-    });
+    }
+    // Fallback if no details are found
+    return { id: otherPersonPhone, name: `کاربر ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone };
 
-    return () => unsubscribe();
-  }, [chatId, user, markChatAsRead]);
-
+  }, [providers, otherPersonPhone, user, chatId, state.inboxData]);
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -93,6 +73,23 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Mark messages as read when chat is opened
+  useEffect(() => {
+      if(chatId && user?.phone) {
+        dispatch({ type: 'MARK_CHAT_AS_READ', payload: { chatId, userPhone: user.phone } });
+      }
+  }, [chatId, user?.phone, dispatch, messages]);
+
+
+  if (isLoading) {
+     return (
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
+        </div>
+    );
+  }
+
   if (!isLoggedIn || !user) {
     return (
         <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
@@ -106,18 +103,7 @@ export default function ChatPage() {
     );
   }
   
-  const isLoading = isAuthLoading || isLoadingChat;
-
-  if (isLoading) {
-     return (
-        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
-        </div>
-    );
-  }
-  
-  const handleStartEdit = (message: MessageType) => {
+  const handleStartEdit = (message: Message) => {
     setEditingMessageId(message.id);
     setEditingText(message.text);
   };
@@ -127,15 +113,14 @@ export default function ChatPage() {
     setEditingText('');
   };
   
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = () => {
     if (!editingMessageId || !editingText.trim() || !chatId) return;
-    
-    await editChatMessage(chatId, editingMessageId, editingText.trim());
 
+    dispatch({ type: 'UPDATE_MESSAGE', payload: { chatId, messageId: editingMessageId, newText: editingText.trim() }});
+    
     handleCancelEdit();
     toast({ title: 'پیام ویرایش شد.' });
   };
-
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -144,54 +129,37 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    const tempUiMessage: MessageType = {
-      id: `${Date.now()}-${Math.random()}`,
+    const messageToSend: Message = {
+      id: Date.now().toString(),
       text: text,
       senderId: user.phone,
       createdAt: new Date().toISOString(),
     };
     
-    setNewMessage('');
+    dispatch({ type: 'ADD_MESSAGE', payload: {
+        chatId,
+        message: messageToSend,
+        receiverPhone: otherPersonDetails.phone,
+        receiverName: otherPersonDetails.name,
+        currentUser: user,
+    }});
     
-    try {
-       await sendChatMessage(chatId, tempUiMessage, { phone: otherPersonDetails.phone, name: otherPersonDetails.name }, user);
-    } catch(e) {
-        console.error("Failed to send message", e);
-        toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
-    } finally {
-        setIsSending(false);
-    }
+    setNewMessage('');
+    setIsSending(false);
   };
 
-  const [headerLink, setHeaderLink] = useState('/');
-  useEffect(() => {
-    const checkInbox = async () => {
-        if (user.accountType === 'provider') {
-            setHeaderLink('/inbox');
-            return;
-        }
-        try {
-            const inbox = await getInboxForUser(user.phone);
-            if (Object.keys(inbox).length > 0) {
-                setHeaderLink('/inbox');
-            } else {
-                setHeaderLink('/');
-            }
-        } catch (e) {
-            setHeaderLink('/');
-        }
-    }
-    if(user){
-        checkInbox();
-    }
-  }, [user, getInboxForUser]);
+  const getHeaderLink = () => {
+    if (user.accountType === 'provider') return '/inbox';
+    if (Object.keys(state.inboxData).length > 0) return '/inbox';
+    return '/'; 
+  }
 
 
   return (
     <div className="flex flex-col h-full py-4">
       <Card className="flex-1 flex flex-col w-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
-           <Link href={headerLink}>
+           <Link href={getHeaderLink()}>
              <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5"/>
              </Button>
@@ -204,13 +172,14 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
-                <p>شما اولین پیام را ارسال کنید.</p>
+                <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
+                <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
             {messages.map((message) => {

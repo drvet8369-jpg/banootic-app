@@ -6,24 +6,23 @@ import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import SearchResultCard from '@/components/search-result-card';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
-  const { providers, isLoading } = useAuth();
+  const { state } = useAuth();
+  const { providers, isLoading } = state;
+
 
   const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
 
   const serviceProviders = useMemo(() => {
-    if (!service || !providers) return [];
-    return providers
-      .filter((p) => p.serviceSlug === serviceSlug)
-      .sort((a,b) => b.rating - a.rating); // Sort by rating
-  }, [service, providers, serviceSlug]);
+    return providers.filter((p) => p.serviceSlug === serviceSlug);
+  }, [providers, serviceSlug]);
 
   if (isLoading) {
     return (

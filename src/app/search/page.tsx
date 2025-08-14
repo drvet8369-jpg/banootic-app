@@ -5,30 +5,24 @@ import { useAuth } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { providers, isLoading } = useAuth();
+  const { state } = useAuth();
+  const { providers, isLoading } = state;
   
   const searchResults = useMemo(() => {
-    if (!providers) return [];
-    
-    let results: Provider[];
-
     if (!query) {
-      // If no query, show all providers sorted by rating
-      results = [...providers].sort((a, b) => b.rating - a.rating);
-    } else {
-      const lowercasedQuery = query.toLowerCase();
-      results = providers.filter(provider => 
-        provider.name.toLowerCase().includes(lowercasedQuery) ||
-        provider.service.toLowerCase().includes(lowercasedQuery) ||
-        (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-      ).sort((a, b) => b.rating - a.rating); // Sort filtered results by rating
+      return providers;
     }
-    return results;
+    const lowercasedQuery = query.toLowerCase();
+    return providers.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      provider.bio.toLowerCase().includes(lowercasedQuery)
+    );
   }, [query, providers]);
 
 
@@ -42,7 +36,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            نمایش تمام هنرمندان
+            لطفا عبارتی را برای جستجو وارد کنید.
           </p>
         )}
       </div>

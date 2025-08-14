@@ -11,64 +11,60 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, useRef, ChangeEvent, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, login, updateProvider, providers, isLoading } = useAuth();
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const { state, login, dispatch } = useAuth();
+  const { user, isLoggedIn, providers, isLoading } = state;
+  
+  const provider = useMemo(() => {
+      if (user && user.accountType === 'provider') {
+        return providers.find(p => p.phone === user.phone);
+      }
+      return null;
+  }, [user, providers]);
+
   const { toast } = useToast();
-  const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  const loadProviderData = useCallback(() => {
-    if (user && user.accountType === 'provider' && providers.length > 0) {
-        let currentProvider = providers.find(p => p.phone === user.phone);
-        if (currentProvider) {
-            setProvider(currentProvider);
-            setEditedData({
-                name: currentProvider.name,
-                service: currentProvider.service,
-                bio: currentProvider.bio,
-            });
-        }
-    }
-  }, [user, providers]);
-
   useEffect(() => {
-    if (!isLoading) {
-        loadProviderData();
+    if (provider) {
+        setEditedData({
+            name: provider.name,
+            service: provider.service,
+            bio: provider.bio,
+        });
     }
-  }, [isLoading, loadProviderData]);
-
+  }, [provider]);
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedData(prev => ({...prev, [name]: value}));
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if(!provider || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
-    
-    const updatedProviderData = {
+
+    const updatedProviderData: Provider = {
         ...provider,
         name: editedData.name,
         service: editedData.service,
         bio: editedData.bio,
     };
-
-    await updateProvider(updatedProviderData);
+    
+    dispatch({ type: 'UPDATE_PROVIDER', payload: updatedProviderData });
     
     if(user && user.name !== editedData.name){
-      const updatedUser = { ...user, name: editedData.name };
-      login(updatedUser); 
+        const updatedUser = { ...user, name: editedData.name };
+        login(updatedUser); 
     }
     
     toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
@@ -85,7 +81,6 @@ export default function ProfilePage() {
     }
     setMode('viewing');
   };
-
 
   const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
       const reader = new FileReader();
@@ -127,36 +122,31 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   };
 
-  const updateProviderPortfolio = async (updateFn: (p: Provider) => Provider) => {
+  const updateProviderPortfolio = (updateFn: (p: Provider) => Partial<Provider>) => {
     if (!provider) return;
-    const updated = updateFn(provider);
-    await updateProvider(updated);
+    const updates = updateFn(provider);
+    dispatch({ type: 'UPDATE_PROVIDER', payload: { ...provider, ...updates } });
   }
 
-
   const addPortfolioItem = (imageSrc: string) => {
-    updateProviderPortfolio(p => {
-        if (!p.portfolio) p.portfolio = [];
-        p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
-        toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-        return p;
+    updateProviderPortfolio((p) => {
+      const newPortfolio = [...(p.portfolio || []), { src: imageSrc, aiHint: 'new work' }];
+      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+      return { portfolio: newPortfolio };
     });
   };
   
   const handleProfilePictureChange = (newImageSrc: string) => {
-    updateProviderPortfolio(p => {
-        if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
-        p.profileImage.src = newImageSrc;
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-        return p;
+    updateProviderPortfolio((p) => {
+      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
+      return { profileImage: { src: newImageSrc, aiHint: p.profileImage?.aiHint || 'woman portrait' } };
     });
-  }
+  };
 
   const handleDeleteProfilePicture = () => {
-    updateProviderPortfolio(p => {
-        if (p.profileImage) p.profileImage.src = '';
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-        return p;
+    updateProviderPortfolio((p) => {
+      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+      return { profileImage: { ...p.profileImage, src: '' } };
     });
   };
 
@@ -166,7 +156,7 @@ export default function ProfilePage() {
   
   const handleEditProfilePicClick = () => {
     profilePicInputRef.current?.click();
-  }
+  };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (dataUrl: string) => void) => {
     const file = event.target.files?.[0];

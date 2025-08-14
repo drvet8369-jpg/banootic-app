@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useCallback, FormEvent, useMemo } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import type { Provider, Review, User } from '@/lib/types';
+import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -25,37 +25,41 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Avatar as UIAvatar, AvatarFallback } from '@/components/ui/avatar';
 
+// Reusable Avatar components for ReviewCard
+const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)} {...props} />
+);
 
-const ReviewCard = ({ review }: { review: Review }) => {
-    const [isClient, setIsClient] = useState(false);
-    useEffect(() => { setIsClient(true) }, []);
+const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)} {...props} />
+);
 
-    return (
-      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-        <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
-          <UIAvatar className="h-10 w-10">
-            <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
-          </UIAvatar>
-          <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
-        </div>
-        <div className="flex-grow">
-          <div className="flex items-center justify-between mb-2">
-            <StarRating rating={review.rating} size="sm" readOnly />
-            <p className="text-xs text-muted-foreground flex-shrink-0">
-              {isClient ? formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR }) : '...'}
-            </p>
-          </div>
-          <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
-        </div>
+// Review Card Component
+const ReviewCard = ({ review }: { review: Review }) => (
+  <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+    <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
+      <Avatar className="h-10 w-10">
+        <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
+      </Avatar>
+      <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
+    </div>
+    <div className="flex-grow">
+      <div className="flex items-center justify-between mb-2">
+        <StarRating rating={review.rating} size="sm" readOnly />
+        <p className="text-xs text-muted-foreground flex-shrink-0">
+          {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
+        </p>
       </div>
-    );
-};
+      <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+    </div>
+  </div>
+);
 
+// Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
-  const { user, isLoggedIn, addReview } = useAuth();
+  const { state, dispatch } = useAuth();
+  const { user, isLoggedIn } = state;
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -65,26 +69,24 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     return null;
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
       return;
     }
-    if (!user) return;
-
     setIsSubmitting(true);
-    
+
     const newReview: Review = {
-      id: `${Date.now()}-${Math.random()}`,
-      providerId,
-      authorName: user.name,
-      rating,
-      comment,
-      createdAt: new Date().toISOString(),
+    id: Date.now().toString(),
+    providerId,
+    authorName: user.name,
+    rating,
+    comment,
+    createdAt: new Date().toISOString(),
     };
-    
-    await addReview(newReview);
+
+    dispatch({ type: 'ADD_REVIEW', payload: newReview });
     
     toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
     setRating(0);
@@ -139,38 +141,28 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn, addAgreement, agreements, isLoading, providers, reviews, updateProvider } = useAuth();
+  const { state, dispatch } = useAuth();
+  const { user, providers, reviews, isLoading } = state;
   const { toast } = useToast();
   
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const provider = useMemo(() => providers.find(p => p.phone === providerPhone), [providers, providerPhone]);
-  const providerReviews = useMemo(() => reviews.filter(r => r.providerId === provider?.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [reviews, provider]);
-  const hasPendingRequest = useMemo(() => {
-    if(!user || !provider) return false;
-    return agreements.some(a => a.providerId === provider.id && a.customerPhone === user.phone && a.status === 'pending')
-  }, [agreements, user, provider]);
-
+  const providerReviews = useMemo(() => reviews.filter(r => r.providerId === provider?.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [reviews, provider]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
-  const isCustomerViewing = isLoggedIn && user?.accountType === 'customer';
 
-  const deletePortfolioItem = async (itemIndex: number) => {
+  const deletePortfolioItem = (itemIndex: number) => {
     if (!provider) return;
     const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
-    await updateProvider({ ...provider, portfolio: updatedPortfolio });
+    dispatch({ type: 'UPDATE_PROVIDER', payload: {...provider, portfolio: updatedPortfolio }});
     toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
   };
 
-  const handleRequestAgreement = async () => {
-    if (!provider || !user) return;
-    await addAgreement(provider, user);
-    toast({ title: 'موفق', description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد.'});
-  }
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -196,7 +188,7 @@ export default function ProviderProfilePage() {
                         />
                     ) : (
                         <div className="bg-muted w-full h-full flex items-center justify-center">
-                        <UIAvatar className="w-12 h-12 text-muted-foreground" />
+                        <User className="w-12 h-12 text-muted-foreground" />
                         </div>
                     )}
                     </div>
@@ -208,7 +200,7 @@ export default function ProviderProfilePage() {
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
-                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center whitespace-pre-wrap">{provider.bio}</p>
+                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
@@ -270,43 +262,21 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {isCustomerViewing && (
-                    <CardFooter className="flex flex-col gap-3 p-6 mt-auto border-t">
-                        <div className="grid grid-cols-2 gap-3 w-full">
-                            <Button asChild className="w-full">
-                                <Link href={`/chat/${provider.phone}`}>
-                                    <MessageSquare className="w-4 h-4 ml-2" />
-                                    ارسال پیام
-                                </Link>
-                            </Button>
-                            <Button asChild className="w-full" variant="secondary">
-                                <a href={`tel:${provider.phone}`}>
-                                    <Phone className="w-4 h-4 ml-2" />
-                                    تماس
-                                </a>
-                            </Button>
-                        </div>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button className="w-full" variant="outline" disabled={hasPendingRequest}>
-                                    <Handshake className="w-4 h-4 ml-2" />
-                                    {hasPendingRequest ? 'درخواست ارسال شده' : 'ارسال درخواست توافق'}
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>تایید ارسال درخواست توافق</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    با ارسال این درخواست، شما تایید می‌کنید که با این هنرمند جهت دریافت خدمات به توافق رسیده‌اید. این کار به افزایش اعتبار هنرمند در پلتفرم کمک می‌کند. آیا مایل به ادامه هستید؟
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>لغو</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleRequestAgreement}>تایید و ارسال</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </CardFooter>
+                {!isOwnerViewing && (
+                <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
+                    <Button asChild className="w-full">
+                        <Link href={`/chat/${provider.phone}`}>
+                            <MessageSquare className="w-4 h-4 ml-2" />
+                            ارسال پیام
+                        </Link>
+                    </Button>
+                    <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
+                </CardFooter>
                 )}
 
                 <Separator />

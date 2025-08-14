@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -22,7 +22,8 @@ import dynamic from 'next/dynamic';
 const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
 
 export default function Header() {
-  const { isLoggedIn, user, logout } = useAuth();
+  const { state, logout } = useAuth();
+  const { isLoggedIn, user } = state;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
 
@@ -42,12 +43,12 @@ export default function Header() {
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
       <SheetHeader>
-        <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
+         <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
         <div className="p-4 border-b">
            <SheetClose asChild>
               <Link href="/" className="flex items-center gap-2">
                 <Logo className="h-8 w-8 text-primary-foreground" />
-                <span className="font-display text-2xl font-bold">بانوتیک</span>
+                <span className="font-display text-2xl font-bold">هنربانو</span>
               </Link>
            </SheetClose>
         </div>
@@ -55,26 +56,11 @@ export default function Header() {
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' ? (
-                <>
-                  <SheetClose asChild>
-                    <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                      <UserRound className="h-5 w-5" />
-                      داشبورد من
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                      <Handshake className="h-5 w-5" />
-                      مدیریت توافق‌ها
-                    </Link>
-                  </SheetClose>
-                </>
-             ) : (
+             {user?.accountType === 'provider' && (
                 <SheetClose asChild>
-                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                    <FileText className="h-5 w-5" />
-                    درخواست‌های من
+                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <UserRound className="h-5 w-5" />
+                    پروفایل من
                   </Link>
                 </SheetClose>
              )}
@@ -150,27 +136,12 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                     {user.accountType === 'provider' ? (
-                        <>
-                            <DropdownMenuItem asChild>
-                                <Link href="/profile">
-                                    <UserRound className="ml-2 h-4 w-4" />
-                                    <span>داشبورد من</span>
-                                </Link>
-                            </DropdownMenuItem>
-                             <DropdownMenuItem asChild>
-                                <Link href="/agreements">
-                                    <Handshake className="ml-2 h-4 w-4" />
-                                    <span>مدیریت توافق‌ها</span>
-                                </Link>
-                            </DropdownMenuItem>
-                        </>
-                    ) : (
-                         <DropdownMenuItem asChild>
-                            <Link href="/requests">
-                                <FileText className="ml-2 h-4 w-4" />
-                                <span>درخواست‌های من</span>
-                            </Link>
+                    {user.accountType === 'provider' && (
+                        <DropdownMenuItem asChild>
+                        <Link href="/profile">
+                            <UserRound className="ml-2 h-4 w-4" />
+                            <span>پروفایل من</span>
+                        </Link>
                         </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
@@ -216,7 +187,7 @@ export default function Header() {
 
         {/* Right Side: Branding */}
         <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
             <Logo className="h-10 w-10 text-primary-foreground" />
         </Link>
       </div>

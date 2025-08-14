@@ -10,8 +10,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 interface Chat {
   id: string;
@@ -33,25 +31,18 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { state } = useAuth();
+  const { user, isLoggedIn, isLoading, inboxData } = state;
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (!user?.phone) {
-        setIsLoading(false);
-        return;
-    }
-
-    setIsLoading(true);
-    const unsub = onSnapshot(doc(db, "inboxes", user.phone), (doc) => {
-        const inboxData = doc.data() || {};
-        const userChats = Object.values(inboxData)
+  const chats = useMemo(() => {
+    if (!user) return [];
+    return Object.values(inboxData)
+        .filter((chat: any) => chat.members?.includes(user.phone))
         .map((chat: any): Chat | null => {
             if (!chat.participants || !chat.members) return null;
 
@@ -73,17 +64,10 @@ export default function InboxPage() {
         })
         .filter((chat): chat is Chat => chat !== null)
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      
-      setChats(userChats);
-      setIsLoading(false);
-    });
+  }, [inboxData, user]);
 
-    return () => unsub();
-  }, [user?.phone]);
 
-  const pageIsLoading = isAuthLoading || isLoading;
-
-  if (pageIsLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -142,7 +126,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
