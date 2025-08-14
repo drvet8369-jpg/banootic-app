@@ -9,8 +9,10 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, query, collection, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getProviderByPhone } from '@/lib/data';
 
-import { Button } from '@/components/ui/button';
+
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -20,7 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -85,12 +87,9 @@ export default function RegisterForm() {
     setIsSubmitting(true);
     
     try {
-        // Direct check on Firestore for the specific phone number.
-        // This is fast and respects our security rules.
-        const providerDocRef = doc(db, "providers", values.phone);
-        const providerDocSnap = await getDoc(providerDocRef);
+        const existingProvider = await getProviderByPhone(values.phone);
 
-        if (providerDocSnap.exists()) {
+        if (existingProvider) {
           toast({
             title: 'خطا در ثبت‌نام',
             description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
@@ -100,7 +99,6 @@ export default function RegisterForm() {
           return;
         }
 
-        // Optimized query to check for existing business name.
         if (values.accountType === 'provider') {
           const q = query(collection(db, "providers"), where("name", "==", values.name), limit(1));
           const querySnapshot = await getDocs(q);

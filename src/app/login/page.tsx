@@ -7,8 +7,7 @@ import Link from "next/link";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getProviderByPhone } from '@/lib/data';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -55,20 +54,15 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
-      // This is the correct, direct way to check for a provider.
-      // We are not fetching the whole list, just a single document.
-      // Our new Firestore rules allow this check even for unauthenticated users.
-      const providerDocRef = doc(db, "providers", values.phone);
-      const providerDocSnap = await getDoc(providerDocRef);
+      const existingProvider = await getProviderByPhone(values.phone);
 
       let userToLogin: User;
 
-      if (providerDocSnap.exists()) {
-        const providerData = providerDocSnap.data() as Provider;
+      if (existingProvider) {
         userToLogin = {
-          id: providerData.phone,
-          name: providerData.name,
-          phone: providerData.phone,
+          id: existingProvider.phone,
+          name: existingProvider.name,
+          phone: existingProvider.phone,
           accountType: 'provider',
         };
       } else {
