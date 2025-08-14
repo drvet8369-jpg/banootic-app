@@ -18,7 +18,7 @@ interface AuthContextType {
   providers: Provider[];
   reviews: Review[];
   agreements: Agreement[];
-  sendChatMessage: (chatId: string, message: MessageType, receiver: {phone: string, name: string}, sender: User) => Promise<void>;
+  sendChatMessage: (chatId: string, message: Omit<MessageType, 'id' | 'createdAt'>, receiver: {phone: string, name: string}, sender: User) => Promise<void>;
   editChatMessage: (chatId: string, messageId: string, newText: string) => Promise<void>;
   markChatAsRead: (chatId: string, userPhone: string) => Promise<void>;
   getInboxForUser: (userPhone: string) => Promise<any>;
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const [providersSnapshot, reviewsSnapshot, agreementsSnapshot] = await Promise.all([
             getDocs(providersQuery),
             getDocs(reviewsQuery),
-            getDocs(agreementsSnapshot)
+            getDocs(agreementsQuery)
         ]);
 
         const providersData = providersSnapshot.docs.map(doc => doc.data() as Provider);
@@ -99,6 +99,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, handleUserAuth);
     return () => unsubscribe();
   }, [handleUserAuth]);
+  
+  useEffect(() => {
+    // Add real-time listeners for agreements to update UI across app
+    const q = query(collection(db, "agreements"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const agreementsData = snapshot.docs.map(doc => doc.data() as Agreement);
+      setAgreements(agreementsData);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const loginWithPhoneNumber = async (phone: string) => {
     setIsLoading(true);
@@ -142,11 +152,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const senderInboxRef = doc(db, 'inboxes', sender.phone);
       const receiverInboxRef = doc(db, 'inboxes', receiver.phone);
-
+      
       const receiverInboxSnap = await getDoc(receiverInboxRef);
       const receiverInboxData = receiverInboxSnap.exists() ? receiverInboxSnap.data() : {};
       const currentUnreadCount = receiverInboxData[chatId]?.participants?.[receiver.phone]?.unreadCount || 0;
-      
+
       const updatePayload = {
         id: chatId,
         lastMessage: message.text,
@@ -195,13 +205,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       const agreementDocRef = doc(db, 'agreements', agreementId);
       await setDoc(agreementDocRef, newAgreement);
-      setAgreements(prev => [...prev, newAgreement]);
   };
 
   const updateAgreementStatus = async (agreementId: string, status: 'confirmed' | 'rejected') => {
       const agreementDocRef = doc(db, 'agreements', agreementId);
       await updateDoc(agreementDocRef, { status });
-      setAgreements(prev => prev.map(a => a.id === agreementId ? { ...a, status } : a));
   };
 
 
