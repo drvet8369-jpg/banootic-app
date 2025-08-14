@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -87,7 +87,6 @@ export default function RegisterForm() {
 
       const allProviders = getProviders();
 
-      // Universal check for existing phone number among providers
       const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
       if (existingProviderByPhone) {
         toast({
@@ -99,7 +98,6 @@ export default function RegisterForm() {
         return;
       }
 
-      // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
         const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
         if (existingProviderByName) {
@@ -114,14 +112,12 @@ export default function RegisterForm() {
       }
 
 
-      // This is the user object for the AuthContext
       const userToLogin: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
 
-      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
@@ -131,7 +127,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Location is now hardcoded to Urmia
+          location: 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -237,6 +233,23 @@ export default function RegisterForm() {
 
             {accountType === 'provider' && (
               <>
+                <FormItem>
+                  <FormLabel>شهر</FormLabel>
+                  <div className="relative">
+                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <FormControl>
+                      <Input
+                        defaultValue="ارومیه"
+                        className="pr-10"
+                        disabled
+                      />
+                    </FormControl>
+                  </div>
+                  <FormDescription>
+                    در حال حاضر، ثبت‌نام فقط برای هنرمندان شهر ارومیه امکان‌پذیر است.
+                  </FormDescription>
+                </FormItem>
+
                 <FormField
                   control={form.control}
                   name="serviceType"
