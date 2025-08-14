@@ -14,7 +14,6 @@ if (!admin.apps.length) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
     }
     
-    // Correctly parse the service account key
     const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('ascii'));
 
     admin.initializeApp({
@@ -24,11 +23,9 @@ if (!admin.apps.length) {
     console.log("Firebase Admin SDK initialized successfully.");
   } catch (error: any) {
     console.error('CRITICAL: Firebase admin initialization failed.', error.message);
-    // In a real app, you might want to handle this more gracefully
   }
 }
 
-// It's safer to get the instances after the initialization block
 try {
     adminDb = getFirestore();
     adminAuth = getAuth();

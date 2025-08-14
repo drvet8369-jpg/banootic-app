@@ -10,12 +10,8 @@ export default genkit({
   plugins: [
     firebase(),
     googleAI({
-      // Optional, default to GOOGLE_API_KEY environment variable.
-      // apiKey: process.env.GOOGLE_API_KEY,
     }),
     next({
-      // The Next.js development server is running on port 9002.
-      // Make sure to match this to the port in package.json
       port: 9002,
     }),
     dotprompt(),
@@ -26,8 +22,7 @@ export default genkit({
   logLevel: 'debug',
   telemetry: {
     instrumentation: {
-      // Required to use metrics in the Firebase dashboard
-      service: {name: 'banootik-app'},
+      service: {name: 'zanmahal-app'},
     },
   },
 });

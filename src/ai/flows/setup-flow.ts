@@ -21,12 +21,12 @@ export const runSetup = ai.defineFlow(
       return errorMsg;
     }
 
-    // Use a specific document as a flag to check if setup has been completed.
-    const setupFlagRef = adminDb.collection('_internal').doc('setup_flag');
-    const flagDoc = await setupFlagRef.get();
+    // Check if the providers collection is empty as a flag
+    const providersCollection = adminDb.collection('providers');
+    const providersSnapshot = await providersCollection.limit(1).get();
 
-    if (flagDoc.exists && flagDoc.data()?.completed) {
-        const msg = "Initial setup appears to be already completed (setup_flag exists and is true).";
+    if (!providersSnapshot.empty) {
+        const msg = "Initial setup appears to be already completed (providers collection is not empty).";
         console.log(msg);
         return msg;
     }
@@ -36,7 +36,6 @@ export const runSetup = ai.defineFlow(
 
     // Add providers
     defaultProviders.forEach((provider) => {
-      // The document ID will be the provider's phone number
       const docRef = adminDb.collection('providers').doc(provider.phone);
       batch.set(docRef, provider);
     });
@@ -44,13 +43,11 @@ export const runSetup = ai.defineFlow(
 
     // Add reviews
     defaultReviews.forEach((review) => {
-      const docRef = adminDb.collection('reviews').doc(review.id);
-      batch.set(docRef, review);
+      const docRef = adminDb.collection('reviews').doc(); // Auto-generate ID
+      batch.set(docRef, {...review, id: docRef.id});
     });
     console.log(`Added ${defaultReviews.length} reviews to the batch.`);
     
-    // Set the completion flag
-    batch.set(setupFlagRef, { completed: true, timestamp: new Date() });
 
     try {
       await batch.commit();

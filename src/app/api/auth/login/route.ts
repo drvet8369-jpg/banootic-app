@@ -1,10 +1,10 @@
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
     if (!adminAuth) {
-      throw new Error("Firebase Admin SDK not initialized. Cannot process authentication.");
+      return NextResponse.json({ message: "Firebase Admin SDK not initialized." }, { status: 500 });
     }
 
     const { phone } = await req.json();
@@ -13,24 +13,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Invalid phone number format.' }, { status: 400 });
     }
 
-    // Check if the user already exists in Firebase Auth
+    // Check if the user already exists in Firebase Auth, if not, create them
     try {
-        await adminAuth.getUser(phone);
+        await adminAuth.getUserByPhoneNumber(`+98${phone.substring(1)}`);
     } catch (error: any) {
-        // If user not found, create them
         if (error.code === 'auth/user-not-found') {
             await adminAuth.createUser({
-                uid: phone,
-                phoneNumber: `+98${phone.substring(1)}`, // Assuming Iranian phone numbers
+                uid: phone, // Use phone number as UID for simplicity
+                phoneNumber: `+98${phone.substring(1)}`,
                 displayName: `کاربر ${phone.slice(-4)}`
             });
         } else {
-            // For other errors, rethrow
+            // For other errors during getUser, rethrow
             throw error;
         }
     }
     
-    // Create a custom token for the user
+    // Create a custom token for the user, using their phone number as UID
     const customToken = await adminAuth.createCustomToken(phone);
 
     return NextResponse.json({ token: customToken }, { status: 200 });

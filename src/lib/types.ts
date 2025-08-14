@@ -26,7 +26,7 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number;
+  id: string; // Document ID
   name: string;
   service: string; 
   location: string;
@@ -42,7 +42,7 @@ export interface Provider {
 
 export interface Review {
   id: string;
-  providerId: number; 
+  providerId: string; // Corresponds to Provider's phone/id
   authorName: string;
   rating: number;
   comment: string;
@@ -53,14 +53,14 @@ export interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: Timestamp | { seconds: number, nanoseconds: number } | Date; // Allow multiple types for compatibility
+  createdAt: Timestamp;
   isEdited?: boolean;
 }
 
 
 export interface Agreement {
   id: string;
-  providerId: number;
+  providerId: string;
   providerPhone: string;
   providerName: string;
   customerPhone: string;
