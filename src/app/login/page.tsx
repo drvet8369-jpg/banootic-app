@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { getProviderByPhone } from '@/lib/data';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +27,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import type { User, Provider } from '@/lib/types';
-import { signInWithCustomToken } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import type { User } from '@/lib/types';
+import { getProviderByPhone } from '@/lib/data';
 
 
 const formSchema = z.object({
@@ -43,7 +41,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { login } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,64 +51,51 @@ export default function LoginPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    
+    setIsLoading(true);
     try {
-      // In a real app, this is where you'd call a server endpoint
-      // to generate a custom token for the given phone number.
-      // For this demo, we'll simulate it.
-      const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: values.phone }),
-      });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const existingProvider = await getProviderByPhone(values.phone);
 
-      if(!response.ok) {
-          throw new Error('Failed to get custom token');
-      }
+        let userToLogin: User;
 
-      const { token } = await response.json();
-      await signInWithCustomToken(auth, token);
-      
-      const existingProvider = await getProviderByPhone(values.phone);
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            id: existingProvider.phone,
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            id: values.phone,
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
 
-      let userToLogin: User;
-
-      if (existingProvider) {
-        userToLogin = {
-          id: existingProvider.phone,
-          name: existingProvider.name,
-          phone: existingProvider.phone,
-          accountType: 'provider',
-        };
-      } else {
-        userToLogin = {
-          id: values.phone,
-          name: `کاربر ${values.phone.slice(-4)}`,
-          phone: values.phone,
-          accountType: 'customer',
-        };
-      }
-      
-      login(userToLogin); // This now just updates the client-side state
-
-      toast({
-        title: 'ورود با موفقیت انجام شد!',
-        description: `خوش آمدید ${userToLogin.name}!`,
-      });
-      
-      const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-      router.push(destination);
+        toast({
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+        });
+        
+        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
 
     } catch (error) {
-       console.error("Login error:", error);
-       toast({
-         title: 'خطا در ورود',
-         description: 'مشکلی در فرآیند ورود رخ داده است. لطفاً دوباره تلاش کنید.',
-         variant: 'destructive',
-       });
+        console.error("Login failed:", error);
+        toast({
+            title: 'خطا در ورود',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
     } finally {
-        setIsSubmitting(false);
+        setIsLoading(false);
     }
   }
 
@@ -133,14 +118,14 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isSubmitting} />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                 {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 ورود
               </Button>
             </form>

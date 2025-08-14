@@ -8,8 +8,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, query, collection, where, limit, getDocs } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
-import { signInWithCustomToken } from 'firebase/auth';
+import { db } from '@/lib/firebase';
 import { getProviderByPhone } from '@/lib/data';
 
 
@@ -25,7 +24,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories, services } from '@/lib/data';
@@ -114,23 +113,10 @@ export default function RegisterForm() {
           }
         }
         
-        // Call server for custom token
-        const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: values.phone }),
-        });
-
-        if(!response.ok) {
-            throw new Error('Failed to get custom token');
-        }
-        const { token } = await response.json();
-        await signInWithCustomToken(auth, token);
-
         const newProviderId = Date.now();
 
         const userToLogin: User = {
-          id: values.accountType === 'provider' ? newProviderId.toString() : values.phone,
+          id: values.phone,
           name: values.name,
           phone: values.phone,
           accountType: values.accountType,

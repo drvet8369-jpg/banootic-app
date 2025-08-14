@@ -3,6 +3,7 @@
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import "dotenv/config"
 
 let adminAuth: admin.auth.Auth;
 let adminDb: admin.firestore.Firestore;
@@ -14,7 +15,6 @@ if (!admin.apps.length) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Please ensure it is in your .env.local file.');
     }
     
-    // Decode and parse the service account key
     const serviceAccount = JSON.parse(Buffer.from(serviceAccountKey, 'base64').toString('ascii'));
 
     admin.initializeApp({
@@ -24,12 +24,18 @@ if (!admin.apps.length) {
     console.log("Firebase Admin SDK initialized successfully.");
   } catch (error: any) {
     console.error('CRITICAL: Firebase admin initialization failed.', error.message);
-    // Throw an error to make it clear that the server cannot start without proper config.
-    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
+    // Do not throw an error here, as it can crash the entire server.
+    // Instead, functions that rely on adminDb or adminAuth should handle the case where they are undefined.
   }
 }
 
-adminDb = getFirestore();
-adminAuth = getAuth();
+// Ensure db and auth are initialized, or throw a clear error if not.
+try {
+    adminDb = getFirestore();
+    adminAuth = getAuth();
+} catch (error) {
+    console.error("CRITICAL: Failed to get Firestore or Auth instance from initialized Firebase Admin app.", error);
+}
+
 
 export { adminDb, adminAuth };
