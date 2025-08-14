@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, Home, FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -42,25 +42,44 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <SheetHeader>
+       <SheetHeader className="p-4 border-b">
          <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
-        <div className="p-4 border-b">
-           <SheetClose asChild>
-              <Link href="/" className="flex items-center gap-2">
-                <Logo className="h-8 w-8 text-primary-foreground" />
-                <span className="font-display text-2xl font-bold">هنربانو</span>
-              </Link>
-           </SheetClose>
-        </div>
+         <SheetClose asChild>
+            <Link href="/" className="flex items-center gap-2">
+              <Logo className="h-8 w-8 text-primary-foreground" />
+              <span className="font-display text-2xl font-bold">بانوتیک</span>
+            </Link>
+         </SheetClose>
       </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
+         <SheetClose asChild>
+            <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <Home className="h-5 w-5" />
+                صفحه اصلی
+            </Link>
+        </SheetClose>
         {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' && (
+             {user?.accountType === 'provider' ? (
+                <>
+                  <SheetClose asChild>
+                    <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                      <UserRound className="h-5 w-5" />
+                      پروفایل من
+                    </Link>
+                  </SheetClose>
+                   <SheetClose asChild>
+                    <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                      <FileText className="h-5 w-5" />
+                      مدیریت توافق‌ها
+                    </Link>
+                  </SheetClose>
+                </>
+             ) : (
                 <SheetClose asChild>
-                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                    <UserRound className="h-5 w-5" />
-                    پروفایل من
+                  <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                    <FileText className="h-5 w-5" />
+                    درخواست‌های من
                   </Link>
                 </SheetClose>
              )}
@@ -136,14 +155,29 @@ export default function Header() {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
+                     {user.accountType === 'provider' ? (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link href="/profile">
+                              <UserRound className="ml-2 h-4 w-4" />
+                              <span>پروفایل من</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/agreements">
+                                <FileText className="ml-2 h-4 w-4" />
+                                <span>مدیریت توافق‌ها</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
                         <DropdownMenuItem asChild>
-                        <Link href="/profile">
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
-                        </Link>
+                           <Link href="/requests">
+                              <FileText className="ml-2 h-4 w-4" />
+                              <span>درخواست‌های من</span>
+                           </Link>
                         </DropdownMenuItem>
-                    )}
+                      )}
                     <DropdownMenuItem asChild>
                         <Link href="/inbox" className="relative">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
@@ -187,7 +221,7 @@ export default function Header() {
 
         {/* Right Side: Branding */}
         <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
             <Logo className="h-10 w-10 text-primary-foreground" />
         </Link>
       </div>
