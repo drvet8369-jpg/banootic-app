@@ -73,9 +73,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود به حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -101,9 +101,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
+            حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
+              ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>

@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const providerData = providerDocSnap.data() as Provider;
         userProfile = {
           id: firebaseUser.uid,
-          phone: firebaseUser.uid,
+          phone: providerData.phone, // Use plain phone from doc
           name: providerData.name,
           accountType: 'provider',
         };
@@ -43,8 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Regular customer - their display name was set during registration
         userProfile = {
           id: firebaseUser.uid,
-          phone: firebaseUser.uid,
-          name: firebaseUser.displayName || `کاربر ${firebaseUser.uid.slice(-4)}`,
+          phone: firebaseUser.phoneNumber ? `0${firebaseUser.phoneNumber.substring(3)}` : 'N/A', // Convert +98 to 09
+          name: firebaseUser.displayName || `کاربر`,
           accountType: 'customer',
         };
       }
