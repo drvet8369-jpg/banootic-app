@@ -1,12 +1,10 @@
 import type { Timestamp } from 'firebase/firestore';
 
 export interface User {
-  id: string; 
+  id: string; // Firebase Auth UID (which is the phone number)
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
-  bio?: string;
-  serviceType?: string;
 }
 
 export interface Category {
@@ -32,7 +30,7 @@ export interface Provider {
   name: string;
   service: string; 
   location: string;
-  phone: string; 
+  phone: string; // Also the document ID in Firestore
   bio: string;
   categorySlug: Category['slug'];
   serviceSlug: Service['slug'];
@@ -55,6 +53,19 @@ export interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: Timestamp; // Using Firestore Timestamp
+  createdAt: Timestamp | { seconds: number, nanoseconds: number } | Date; // Allow multiple types for compatibility
   isEdited?: boolean;
+}
+
+
+export interface Agreement {
+  id: string;
+  providerId: number;
+  providerPhone: string;
+  providerName: string;
+  customerPhone: string;
+  customerName: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  createdAt: string; // ISO String
+  requestedAt: string; // ISO String
 }

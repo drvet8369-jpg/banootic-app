@@ -27,8 +27,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/lib/types';
-import { getProviderByPhone } from '@/lib/data';
 
 
 const formSchema = z.object({
@@ -40,8 +38,8 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { loginWithPhoneNumber } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,51 +49,24 @@ export default function LoginPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const existingProvider = await getProviderByPhone(values.phone);
-
-        let userToLogin: User;
-
-        if (existingProvider) {
-          // User is a known provider
-          userToLogin = {
-            id: existingProvider.phone,
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          // User is a customer
-          userToLogin = {
-            id: values.phone,
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
-        }
-        
-        login(userToLogin);
-
+        await loginWithPhoneNumber(values.phone);
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+          description: 'خوش آمدید! در حال انتقال به صفحه اصلی...',
         });
-        
-        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
-
-    } catch (error) {
+        // The AuthProvider will redirect or handle the user state change.
+        router.push('/');
+    } catch (error: any) {
         console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: error.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   }
 
@@ -118,14 +89,14 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                      <Input placeholder="09123456789" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                 {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 ورود
               </Button>
             </form>

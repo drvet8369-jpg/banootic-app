@@ -1,5 +1,5 @@
-import type { Category, Provider, Service, Review } from './types';
-import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
+import type { Category, Provider, Service, Review, Agreement } from './types';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 
 // This file now acts as the primary interface for interacting with Firestore.
@@ -59,15 +59,21 @@ export const services: Service[] = [
 
 /**
  * Fetches all providers from the 'providers' collection in Firestore.
- * @returns A promise that resolves to an array of Provider objects.
+ * Caches the result in memory to avoid repeated reads in the same session.
  */
+let providersCache: Provider[] | null = null;
 export const getProviders = async (): Promise<Provider[]> => {
+    if (providersCache) {
+      return providersCache;
+    }
     try {
         const querySnapshot = await getDocs(collection(db, 'providers'));
-        return querySnapshot.docs.map(doc => doc.data() as Provider);
+        const providers = querySnapshot.docs.map(doc => doc.data() as Provider);
+        providersCache = providers;
+        return providers;
     } catch (error) {
         console.error("Error fetching providers from Firestore:", error);
-        return [];
+        return []; // Return empty array on error
     }
 };
 
@@ -77,13 +83,19 @@ export const getProviders = async (): Promise<Provider[]> => {
  * @returns A promise that resolves to the Provider object or null if not found.
  */
 export const getProviderByPhone = async (phone: string): Promise<Provider | null> => {
+    // Check cache first
+    if (providersCache) {
+      const cachedProvider = providersCache.find(p => p.phone === phone);
+      if (cachedProvider) return cachedProvider;
+    }
+    // If not in cache, fetch from Firestore
     try {
         const docRef = doc(db, 'providers', phone);
         const docSnap = await getDoc(docRef);
         return docSnap.exists() ? (docSnap.data() as Provider) : null;
     } catch (error) {
         console.error(`Error fetching provider with phone ${phone}:`, error);
-        throw error; // Re-throw the error to be handled by the caller.
+        return null;
     }
 };
 
@@ -91,12 +103,38 @@ export const getProviderByPhone = async (phone: string): Promise<Provider | null
  * Fetches all reviews from the 'reviews' collection.
  * @returns A promise that resolves to an array of Review objects.
  */
+let reviewsCache: Review[] | null = null;
 export const getReviews = async (): Promise<Review[]> => {
+    if (reviewsCache) {
+        return reviewsCache;
+    }
     try {
         const querySnapshot = await getDocs(collection(db, 'reviews'));
-        return querySnapshot.docs.map(doc => doc.data() as Review);
+        const reviews = querySnapshot.docs.map(doc => doc.data() as Review);
+        reviewsCache = reviews;
+        return reviews;
     } catch (error) {
         console.error("Error fetching reviews from Firestore:", error);
+        return [];
+    }
+};
+
+/**
+ * Fetches all agreements from the 'agreements' collection.
+ * @returns A promise that resolves to an array of Agreement objects.
+ */
+let agreementsCache: Agreement[] | null = null;
+export const getAgreements = async (): Promise<Agreement[]> => {
+    if (agreementsCache) {
+        return agreementsCache;
+    }
+    try {
+        const querySnapshot = await getDocs(collection(db, 'agreements'));
+        const agreements = querySnapshot.docs.map(doc => doc.data() as Agreement);
+        agreementsCache = agreements;
+        return agreements;
+    } catch (error) {
+        console.error("Error fetching agreements from Firestore:", error);
         return [];
     }
 };

@@ -7,10 +7,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc, query, collection, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getProviderByPhone } from '@/lib/data';
-
+import { signInWithCustomToken } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +25,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/data';
+import { categories } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { User, Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -68,7 +65,7 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
+  const { isLoading: isAuthLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
@@ -82,69 +79,27 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
+  const isLoading = isSubmitting || isAuthLoading;
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsSubmitting(true);
     
     try {
-        const existingProvider = await getProviderByPhone(values.phone);
+       const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
 
-        if (existingProvider) {
-          toast({
-            title: 'خطا در ثبت‌نام',
-            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-            variant: 'destructive',
-          });
-          setIsSubmitting(false);
-          return;
+        if (!response.ok) {
+           const errorData = await response.json();
+           throw new Error(errorData.message || 'Failed to register');
         }
 
-        if (values.accountType === 'provider') {
-          const q = query(collection(db, "providers"), where("name", "==", values.name), limit(1));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            toast({
-                title: 'خطا در ثبت‌نام',
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-                variant: 'destructive',
-            });
-            setIsSubmitting(false);
-            return;
-          }
-        }
-        
-        const newProviderId = Date.now();
+        const { token } = await response.json();
 
-        const userToLogin: User = {
-          id: values.phone,
-          name: values.name,
-          phone: values.phone,
-          accountType: values.accountType,
-        };
-
-        if (values.accountType === 'provider' && values.serviceType && values.bio) {
-            const selectedCategory = categories.find(c => c.slug === values.serviceType);
-            const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
-            
-            const newProvider: Provider = {
-                id: newProviderId,
-                name: values.name,
-                phone: values.phone,
-                service: selectedCategory?.name || 'خدمت جدید',
-                location: 'ارومیه',
-                bio: values.bio,
-                categorySlug: selectedCategory?.slug || 'beauty',
-                serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-                rating: 0,
-                reviewsCount: 0,
-                profileImage: { src: '', aiHint: 'woman portrait' },
-                portfolio: [],
-            };
-            
-            await setDoc(doc(db, "providers", newProvider.phone), newProvider);
-        }
-        
-        login(userToLogin);
+        // Sign in the user on the client side with the received token
+        await signInWithCustomToken(auth, token);
         
         toast({
           title: 'ثبت‌نام با موفقیت انجام شد!',
@@ -154,11 +109,11 @@ export default function RegisterForm() {
         const destination = values.accountType === 'provider' ? '/profile' : '/';
         router.push(destination);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Registration failed:", error);
         toast({
             title: 'خطا در ثبت‌نام',
-            description: 'مشکلی در ارتباط با پایگاه داده رخ داده است، لطفاً دوباره تلاش کنید.',
+            description: error.message || 'مشکلی در ارتباط با سرور رخ داده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -182,7 +137,7 @@ export default function RegisterForm() {
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
@@ -214,7 +169,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isSubmitting} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -228,7 +183,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isSubmitting} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -243,7 +198,7 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -272,7 +227,7 @@ export default function RegisterForm() {
                           placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
                           className="resize-none"
                           {...field}
-                          disabled={isSubmitting}
+                          disabled={isLoading}
                         />
                       </FormControl>
                       <FormDescription>
@@ -285,8 +240,8 @@ export default function RegisterForm() {
               </>
             )}
             
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               ثبت‌نام
             </Button>
             

@@ -1,19 +1,19 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/lib/types';
-
-// This context provides a simplified authentication state management
-// based on localStorage. It is intended for demonstration purposes
-// and does not involve real Firebase authentication.
+import { onAuthStateChanged, signInWithCustomToken, signOut, Auth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import type { User, Provider } from '@/lib/types';
+import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
-  isLoggedIn: boolean;
   user: User | null;
+  isLoggedIn: boolean;
   isLoading: boolean;
-  login: (userData: User) => void;
-  logout: () => void;
+  loginWithPhoneNumber: (phone: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,44 +23,92 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // On initial mount, try to load the user from localStorage.
-  useEffect(() => {
-    setIsLoading(true);
-    try {
-      const storedUser = localStorage.getItem('banootik-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+  const handleUserAuth = useCallback(async (firebaseUser: import('firebase/auth').User | null) => {
+    if (firebaseUser) {
+      // User is signed in, see if they are a provider to get full details
+      const providerDocRef = doc(db, "providers", firebaseUser.uid);
+      const providerDocSnap = await getDoc(providerDocRef);
+      
+      let userProfile: User;
+
+      if (providerDocSnap.exists()) {
+        const providerData = providerDocSnap.data() as Provider;
+        userProfile = {
+          id: firebaseUser.uid,
+          phone: firebaseUser.uid,
+          name: providerData.name,
+          accountType: 'provider',
+        };
+      } else {
+        // Regular customer
+        userProfile = {
+          id: firebaseUser.uid,
+          phone: firebaseUser.uid,
+          name: `کاربر ${firebaseUser.uid.slice(-4)}`,
+          accountType: 'customer',
+        };
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('banootik-user');
-    } finally {
-      setIsLoading(false);
+      setUser(userProfile);
+
+    } else {
+      // User is signed out
+      setUser(null);
     }
+    setIsLoading(false);
   }, []);
 
-  const login = (userData: User) => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, handleUserAuth);
+    return () => unsubscribe(); // Unsubscribe on cleanup
+  }, [handleUserAuth]);
+
+  const loginWithPhoneNumber = async (phone: string) => {
+    setIsLoading(true);
     try {
-      localStorage.setItem('banootik-user', JSON.stringify(userData));
-      setUser(userData);
+       const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone }),
+        });
+        if (!response.ok) {
+           const errorData = await response.json();
+           throw new Error(errorData.message || 'Failed to get custom token');
+        }
+        const { token } = await response.json();
+        await signInWithCustomToken(auth, token);
+        // onAuthStateChanged will handle setting the user state
     } catch (error) {
-       console.error("Failed to save user to localStorage", error);
+      console.error("Login failed:", error);
+      // Let the calling component handle toast messages
+      setIsLoading(false);
+      throw error;
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    setIsLoading(true);
     try {
-      localStorage.removeItem('banootik-user');
-      setUser(null);
+      await signOut(auth);
       router.push('/');
     } catch (error) {
-       console.error("Failed to remove user from localStorage", error);
+      console.error("Logout failed:", error);
+    } finally {
+      // The onAuthStateChanged listener will set user to null
+      // and isLoading to false, but we can do it here to be quicker
+      setUser(null);
+      setIsLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout, isLoading }}>
-      {children}
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, loginWithPhoneNumber, logout }}>
+      {isLoading ? (
+         <div className="flex justify-center items-center h-screen w-screen">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+         </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

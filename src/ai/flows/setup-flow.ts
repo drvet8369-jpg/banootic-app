@@ -21,17 +21,17 @@ export const runSetup = ai.defineFlow(
       return errorMsg;
     }
 
-    // Check if the providers collection is empty. If not, assume setup has run.
-    const providersCollection = adminDb.collection('providers');
-    const snapshot = await providersCollection.limit(1).get();
-    if (!snapshot.empty) {
-        const msg = "Initial setup appears to be already completed (providers collection is not empty).";
+    // Use a specific document as a flag to check if setup has been completed.
+    const setupFlagRef = adminDb.collection('_internal').doc('setup_flag');
+    const flagDoc = await setupFlagRef.get();
+
+    if (flagDoc.exists && flagDoc.data()?.completed) {
+        const msg = "Initial setup appears to be already completed (setup_flag exists and is true).";
         console.log(msg);
         return msg;
     }
 
-
-    console.log("Running initial database setup as providers collection is empty...");
+    console.log("Running initial database setup...");
     const batch = adminDb.batch();
 
     // Add providers
@@ -49,6 +49,9 @@ export const runSetup = ai.defineFlow(
     });
     console.log(`Added ${defaultReviews.length} reviews to the batch.`);
     
+    // Set the completion flag
+    batch.set(setupFlagRef, { completed: true, timestamp: new Date() });
+
     try {
       await batch.commit();
       const successMsg = "Initial database setup completed successfully!";

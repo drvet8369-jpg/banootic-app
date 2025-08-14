@@ -45,4 +45,8 @@ export const defaultProviders: Provider[] = [
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
 
-export const defaultReviews: Review[] = [];
+export const defaultReviews: Review[] = [
+    { id: '1', providerId: 1, authorName: 'نگار', rating: 5, comment: 'کارشون عالی و بسیار تمیز بود. خیلی راضی بودم!', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: '2', providerId: 4, authorName: 'فاطمه', rating: 5, comment: 'قورمه‌سبزی به این خوشمزگی نخورده بودم! کاملا طعم غذای خانگی اصیل رو داشت.', createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: '3', providerId: 1, authorName: 'زهرا', rating: 4, comment: 'طراحی خوبی داشتند ولی کمی زمان انتظارم طولانی شد.', createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
+];

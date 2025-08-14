@@ -3,34 +3,46 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Providers can be read by anyone.
-    // A user can create their own provider document.
-    // A user can only update their own provider document.
-    match /providers/{userId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false;
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
 
-    // Reviews can be read by anyone.
-    // An authenticated user can create a review.
-    // No one can update or delete reviews for integrity.
+    // Allow server-side setup flow to write initial data
+    // This requires a custom claim, which we won't implement now.
+    // Instead, we will allow any authenticated user to create a provider doc for simplicity of setup.
+    // In a production app, you would secure this further.
+    match /providers/{providerId} {
+      allow read: if true;
+      allow create: if request.auth != null; // Any signed-in user can register as a provider.
+      allow update: if isOwner(providerId); // Only the provider can update their own profile.
+      allow delete: if false; // Disallow deletion for now.
+    }
+
     match /reviews/{reviewId} {
       allow read: if true;
+      // Allow any signed-in user to create a review.
       allow create: if request.auth != null;
-      allow update, delete: if false;
+      allow update, delete: if false; // Keep reviews immutable for now
+    }
+    
+    match /agreements/{agreementId} {
+      allow read, write: if request.auth != null;
     }
 
-    // A user's inbox can only be read or written to by that user.
+    // A user must be a member of the chat to read/write messages.
+    // The chatId is composed of the two members' UIDs.
+    match /chats/{chatId}/{message=**} {
+      allow read, write: if request.auth != null && chatId.split('_').indexOf(request.auth.uid) != -1;
+    }
+    
+    // A user can only access their own inbox document.
     match /inboxes/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
-
-    // Chat messages can only be read or written by the participants of the chat.
-    // The document key is expected to be "phone1_phone2" sorted alphabetically.
-    match /chats/{chatId}/{messageId} {
-       allow read, write: if request.auth != null && request.auth.uid in chatId.split('_');
+    
+    // Allow the server-side setup flow to check for its completion flag.
+    match /_internal/setup_flag {
+      allow read, write: if true; // In a production app, this would be locked down.
     }
   }
 }
