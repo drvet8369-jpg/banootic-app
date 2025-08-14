@@ -7,30 +7,34 @@ import { getAuth } from 'firebase-admin/auth';
 let adminDb: admin.firestore.Firestore | undefined;
 let adminAuth: admin.auth.Auth | undefined;
 
-try {
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+// Ensure the service account key is available.
+const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-  if (serviceAccountKey && !admin.apps.length) {
-    // Check if the key is a stringified JSON or a JSON object
-    const serviceAccount = typeof serviceAccountKey === 'string' ? JSON.parse(serviceAccountKey) : serviceAccountKey;
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    
-    adminDb = getFirestore();
-    adminAuth = getAuth();
-    console.log("Firebase Admin SDK initialized successfully.");
-
-  } else if (admin.apps.length > 0) {
-    adminDb = getFirestore(admin.app());
-    adminAuth = getAuth(admin.app());
-  } else {
-    console.warn("Firebase Admin SDK not initialized: FIREBASE_SERVICE_ACCOUNT_KEY is not set in environment variables. Server-side Firebase features will be unavailable.");
+if (serviceAccountKey) {
+  try {
+    // Initialize the app only if it hasn't been initialized yet.
+    if (!admin.apps.length) {
+      // Parse the service account key JSON string.
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      
+      adminDb = getFirestore();
+      adminAuth = getAuth();
+      console.log("Firebase Admin SDK initialized successfully.");
+    } else {
+      // If the app is already initialized, just get the instances.
+      adminDb = getFirestore(admin.app());
+      adminAuth = getAuth(admin.app());
+    }
+  } catch (error) {
+    console.error('CRITICAL: Firebase admin initialization failed.', error);
   }
-
-} catch (error) {
-  console.error('CRITICAL: Firebase admin initialization failed.', error);
+} else {
+  console.warn("Firebase Admin SDK not initialized: FIREBASE_SERVICE_ACCOUNT_KEY is not set in environment variables. Server-side Firebase features will be unavailable.");
 }
+
 
 export { adminDb, adminAuth };
