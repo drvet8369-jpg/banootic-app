@@ -21,30 +21,35 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// On localhost, connect to the local emulators. This should happen BEFORE enabling persistence.
-if (typeof window !== 'undefined' && window.location.hostname === "localhost") {
-  console.log("Firebase Provider: Connecting to local Firebase emulators.");
-  // NOTE: This check is to prevent multiple connections in React's strict mode.
-  if (!(db as any)._settings.host) {
-      connectFirestoreEmulator(db, 'localhost', 8080);
-  }
-}
+// This flag ensures we only attempt to connect to emulators and enable persistence once.
+let isFirebaseSetup = false;
 
-// Enable offline persistence. This must be done on the client side AFTER emulator connection.
-if (typeof window !== 'undefined') {
-  try {
-    enableIndexedDbPersistence(db)
-      .then(() => console.log("Firebase offline persistence enabled."))
-      .catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn("Firebase persistence failed: Multiple tabs open.");
-        } else if (err.code === 'unimplemented') {
-          console.warn("Firebase persistence is not supported in this browser.");
+if (typeof window !== 'undefined' && !isFirebaseSetup) {
+    // Connect to emulators if on localhost. This must be done BEFORE any other Firestore operations.
+    if (window.location.hostname === "localhost") {
+        console.log("Firebase Provider: Connecting to local Firebase emulators.");
+        // Use a flag on the db object to prevent multiple connections in React's strict mode.
+        if (!(db as any)._settings.host) {
+            connectFirestoreEmulator(db, 'localhost', 8080);
         }
-      });
-  } catch (error) {
-      console.error("Error enabling Firebase offline persistence:", error);
-  }
+    }
+
+    // Enable offline persistence. This must be done on the client side.
+    try {
+        enableIndexedDbPersistence(db)
+          .then(() => console.log("Firebase offline persistence enabled."))
+          .catch((err) => {
+            if (err.code === 'failed-precondition') {
+              console.warn("Firebase persistence failed: Can only be enabled in one tab at a time.");
+            } else if (err.code === 'unimplemented') {
+              console.warn("Firebase persistence is not supported in this browser.");
+            }
+          });
+    } catch (error) {
+        console.error("Error enabling Firebase offline persistence:", error);
+    }
+    
+    isFirebaseSetup = true;
 }
 
 export { app, db, auth };
