@@ -183,6 +183,17 @@ export default function ProfilePage() {
     }
   };
 
+  const deletePortfolioItem = (itemIndex: number) => {
+    const success = updateProviderData((p) => {
+        p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
+    });
+    if (success) {
+        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+    } else {
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+    }
+  };
+
   const handleAddPortfolioClick = () => {
     portfolioFileInputRef.current?.click();
   };
@@ -281,28 +292,60 @@ export default function ProfilePage() {
                   <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
                <Separator className="my-6" />
-                <div className="mb-4">
-                  <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                  
-                  <input 
-                    type="file" 
-                    ref={portfolioFileInputRef} 
-                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                   <input
-                    type="file"
-                    ref={profilePicInputRef}
-                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
-                        <PlusCircle className="w-5 h-5 ml-2" />
-                        افزودن نمونه کار جدید
-                   </Button>
-                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+                <div className="space-y-6">
+                  <div>
+                      <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                      {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {provider.portfolio.map((item, index) => (
+                                <div key={`${provider.id}-portfolio-${index}`} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
+                                    <Image
+                                        src={item.src}
+                                        alt={`نمونه کار ${index + 1}`}
+                                        fill
+                                        className="object-cover"
+                                        data-ai-hint={item.aiHint}
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Button
+                                          variant="destructive"
+                                          size="icon"
+                                          className="h-10 w-10"
+                                          onClick={() => deletePortfolioItem(index)}
+                                          aria-label={`حذف نمونه کار ${index + 1}`}
+                                      >
+                                          <Trash2 className="w-5 h-5" />
+                                      </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                        </div>
+                      )}
+                  </div>
+                  <div>
+                    <input 
+                      type="file" 
+                      ref={portfolioFileInputRef} 
+                      onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <input
+                      type="file"
+                      ref={profilePicInputRef}
+                      onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
+                          <PlusCircle className="w-5 h-5 ml-2" />
+                          افزودن نمونه کار جدید
+                    </Button>
+                  </div>
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">

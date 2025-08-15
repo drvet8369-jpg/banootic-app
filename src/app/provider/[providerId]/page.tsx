@@ -100,7 +100,6 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
             const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
             const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
             
-            allProviders[providerIndex].rating = newAverageRating;
             allProviders[providerIndex].reviewsCount = providerReviews.length;
             saveProviders(allProviders);
         }
@@ -164,7 +163,7 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedImageInfo, setSelectedImageInfo] = useState<{ src: string, index: number } | null>(null);
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -192,21 +191,6 @@ export default function ProviderProfilePage() {
   
   const isOwnerViewing = user && user.phone === provider?.phone;
   const isCustomerViewing = user && user.accountType === 'customer';
-
-  const deletePortfolioItem = (itemIndex: number) => {
-    if (!provider) return;
-
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-        saveProviders(allProviders);
-        loadData();
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
-    }
-  };
   
   const handleRequestAgreement = () => {
     if (!provider) return;
@@ -263,13 +247,13 @@ export default function ProviderProfilePage() {
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImageInfo(null)}>
+                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImageSrc(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
                                     <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
                                         <div 
                                             className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                            onClick={() => setSelectedImageInfo({ src: item.src, index: index })}
+                                            onClick={() => setSelectedImageSrc(item.src)}
                                         >
                                             <Image
                                                 src={item.src}
@@ -291,23 +275,10 @@ export default function ProviderProfilePage() {
                                   <X className="h-6 w-6" />
                                   <span className="sr-only">بستن</span>
                                 </DialogClose>
-                                {isOwnerViewing && selectedImageInfo !== null && (
-                                     <DialogClose asChild>
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-4 left-4 h-8 w-8 z-50 rounded-sm p-1 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100"
-                                            onClick={() => deletePortfolioItem(selectedImageInfo.index)}
-                                            aria-label="حذف نمونه کار"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </DialogClose>
-                                )}
-                                {selectedImageInfo && (
+                                {selectedImageSrc && (
                                     <div className="relative w-full h-full">
                                         <Image
-                                            src={selectedImageInfo.src}
+                                            src={selectedImageSrc}
                                             alt="نمونه کار تمام صفحه"
                                             fill
                                             className="object-contain"
