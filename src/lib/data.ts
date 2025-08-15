@@ -15,6 +15,7 @@ import {
     limit,
     increment,
     deleteDoc,
+    Timestamp,
 } from 'firebase/firestore';
 import type { Category, Provider, Service, Review, Agreement, User, Message } from './types';
 
@@ -75,8 +76,7 @@ export const createUser = async (user: User): Promise<void> => {
 };
 
 export const getUserByPhone = async (phone: string): Promise<User | null> => {
-  const usersCollection = collection(db, 'users');
-  const userDocRef = doc(usersCollection, phone);
+  const userDocRef = doc(db, 'users', phone);
   const userDoc = await getDoc(userDocRef);
   return userDoc.exists() ? userDoc.data() as User : null;
 };
@@ -144,16 +144,15 @@ export const deleteProviderProfileImage = async (providerId: string) => {
 
 // --- Review Management ---
 export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Promise<string> => {
-  const reviewsCollection = collection(db, 'reviews');
   const providerRef = doc(db, 'providers', review.providerId);
   const reviewData = { 
       ...review, 
-      createdAt: serverTimestamp() 
+      createdAt: new Date().toISOString()
   };
 
   const batch = writeBatch(db);
   
-  const reviewRef = doc(reviewsCollection);
+  const reviewRef = doc(collection(db, 'reviews'));
   batch.set(reviewRef, reviewData);
   
   const providerDoc = await getDoc(providerRef);
@@ -180,7 +179,14 @@ export const getReviewsForProvider = async (providerId: string): Promise<Review[
     const reviewsCollection = collection(db, 'reviews');
     const q = query(reviewsCollection, where("providerId", "==", providerId), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Review));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            ...data,
+            id: doc.id,
+            createdAt: (data.createdAt as any)
+        } as Review;
+    });
 }
 
 // --- Agreement Management ---
@@ -198,8 +204,7 @@ export const createAgreement = async (providerPhone: string, customerPhone: stri
 };
 
 export const updateAgreement = async (agreementId: string, data: Partial<Agreement>) => {
-    const agreementsCollection = collection(db, 'agreements');
-    const agreementRef = doc(agreementsCollection, agreementId);
+    const agreementRef = doc(db, 'agreements', agreementId);
     await updateDoc(agreementRef, data);
 
      if (data.status === 'confirmed') {
@@ -237,23 +242,25 @@ export const getInboxForUser = async (userPhone: string): Promise<any> => {
     return docSnap.exists() ? docSnap.data() : {};
 }
 
-export const createChatMessage = async (chatId: string, message: Omit<Message, 'id'>, otherUser: {phone: string, name: string}, sender: User) => {
+export const createChatMessage = async (chatId: string, message: Omit<Message, 'id' | 'createdAt'>, otherUser: {phone: string, name: string}, sender: User) => {
     const batch = writeBatch(db);
-    const messagesCollection = collection(db, "chats", chatId, "messages");
-    const messageRef = doc(messagesCollection);
-    batch.set(messageRef, message);
+    
+    const finalMessage = { ...message, createdAt: serverTimestamp() };
+    
+    const messageRef = doc(collection(db, "chats", chatId, "messages"));
+    batch.set(messageRef, finalMessage);
     
     // Update sender's inbox
     const senderInboxRef = doc(db, 'inboxes', sender.phone);
     const senderChatInfo = {
         id: chatId,
-        members: [sender.phone, otherUser.phone],
+        members: [sender.phone, otherUser.phone].sort(),
         participants: {
             [sender.phone]: { name: sender.name, unreadCount: 0 },
-            [otherUser.phone]: { name: otherUser.name, unreadCount: 0 }
+            [otherUser.phone]: { name: otherUser.name }
         },
         lastMessage: message.text,
-        updatedAt: message.createdAt
+        updatedAt: serverTimestamp()
     };
     batch.set(senderInboxRef, { [chatId]: senderChatInfo }, { merge: true });
 
@@ -261,13 +268,13 @@ export const createChatMessage = async (chatId: string, message: Omit<Message, '
     const receiverInboxRef = doc(db, 'inboxes', otherUser.phone);
     const receiverChatInfo = {
         id: chatId,
-        members: [sender.phone, otherUser.phone],
+        members: [sender.phone, otherUser.phone].sort(),
         participants: {
-            [sender.phone]: { name: sender.name, unreadCount: 0 },
+            [sender.phone]: { name: sender.name },
             [otherUser.phone]: { name: otherUser.name, unreadCount: increment(1) }
         },
         lastMessage: message.text,
-        updatedAt: message.createdAt,
+        updatedAt: serverTimestamp(),
     };
     batch.set(receiverInboxRef, { [chatId]: receiverChatInfo }, { merge: true });
 
@@ -284,9 +291,12 @@ export const updateChatMessage = async (chatId: string, messageId: string, newTe
 
 export const setChatRead = async (chatId: string, userPhone: string) => {
     const inboxRef = doc(db, "inboxes", userPhone);
-    const fieldPath = `${chatId}.participants.${userPhone}.unreadCount`;
     const docSnap = await getDoc(inboxRef);
     if(docSnap.exists()){
-       await updateDoc(inboxRef, { [fieldPath]: 0 }).catch(e => console.log("Minor error: could not mark chat as read if field does not exist.", e));
+        const inboxData = docSnap.data();
+        if(inboxData[chatId]?.participants?.[userPhone]?.unreadCount > 0) {
+            const fieldPath = `${chatId}.participants.${userPhone}.unreadCount`;
+            await updateDoc(inboxRef, { [fieldPath]: 0 });
+        }
     }
 }

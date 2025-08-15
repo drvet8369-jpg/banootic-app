@@ -2,10 +2,9 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User, Agreement, Provider, Chat, Message } from '@/lib/types';
+import type { User, Agreement, Provider, Message } from '@/lib/types';
 import { 
-    getProviders, 
-    getProviderByPhone,
+    getProviders,
     getAgreementsForProvider, 
     getAgreementsForCustomer,
     updateAgreement,
@@ -15,9 +14,6 @@ import {
     updateChatMessage,
     setChatRead
 } from '@/lib/data';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
-
 
 export interface AuthContextType {
   isLoggedIn: boolean;
@@ -30,7 +26,7 @@ export interface AuthContextType {
   addAgreement: (providerPhone: string) => void;
   updateAgreementStatus: (agreementId: string, status: 'confirmed') => void;
   getInboxForUser: (userPhone: string) => Promise<any>;
-  sendChatMessage: (chatId: string, message: Message, otherUser: {phone: string, name: string}, sender: User) => Promise<void>;
+  sendChatMessage: (chatId: string, message: Omit<Message, 'id' | 'createdAt'>, otherUser: {phone: string, name: string}, sender: User) => Promise<void>;
   editChatMessage: (chatId: string, messageId: string, newText: string) => Promise<void>;
   markChatAsRead: (chatId: string, userPhone: string) => Promise<void>;
 }
@@ -45,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   const fetchAppData = useCallback(async (currentUser: User | null) => {
+    setIsLoading(true);
     try {
         const allProviders = await getProviders();
         setProviders(allProviders);
@@ -57,6 +54,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 userAgreements = await getAgreementsForCustomer(currentUser.phone);
             }
             setAgreements(userAgreements);
+        } else {
+            setAgreements([]);
         }
     } catch (error) {
       console.error("Failed to fetch app data from Firestore", error);
@@ -66,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    let storedUser = null;
+    let storedUser: User | null = null;
     try {
       const storedUserJSON = localStorage.getItem('banoutique-user');
       if (storedUserJSON) {

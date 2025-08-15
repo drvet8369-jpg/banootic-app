@@ -1,61 +1,42 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [searchResults, setSearchResults] = useState<Provider[] | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const { providers, isLoading: isAuthLoading } = useAuth();
+  
+  const searchResults = useMemo(() => {
+    if (isAuthLoading) return undefined;
 
-  const performSearch = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const allProviders = await getProviders();
-      
-      const lowercasedQuery = query.toLowerCase();
-      
-      // Filter results if there's a query, otherwise use all providers
-      const filteredResults = query 
-        ? allProviders.filter(provider => 
-            provider.name.toLowerCase().includes(lowercasedQuery) ||
-            provider.service.toLowerCase().includes(lowercasedQuery) ||
-            provider.bio.toLowerCase().includes(lowercasedQuery)
-          )
-        : allProviders;
+    const lowercasedQuery = query.toLowerCase();
+    
+    const filteredResults = query 
+      ? providers.filter(provider => 
+          provider.name.toLowerCase().includes(lowercasedQuery) ||
+          provider.service.toLowerCase().includes(lowercasedQuery) ||
+          provider.bio.toLowerCase().includes(lowercasedQuery)
+        )
+      : providers;
 
-      // Sort results based on the ladder system
-      const sortedResults = filteredResults.sort((a, b) => {
-        // 1. Sort by reviewsCount (descending)
-        if (b.reviewsCount !== a.reviewsCount) {
-          return b.reviewsCount - a.reviewsCount;
-        }
-        // 2. Sort by agreementsCount (descending)
-        if (b.agreementsCount !== a.agreementsCount) {
-          return b.agreementsCount - a.agreementsCount;
-        }
-        // 3. Sort by rating (descending)
-        return b.rating - a.rating;
-      });
-
-      setSearchResults(sortedResults);
-    } catch (error) {
-      console.error("Failed to perform search:", error);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [query]);
-
-  useEffect(() => {
-    performSearch();
-  }, [performSearch]);
-
+    return filteredResults.sort((a, b) => {
+      if (b.reviewsCount !== a.reviewsCount) {
+        return b.reviewsCount - a.reviewsCount;
+      }
+      if (b.agreementsCount !== a.agreementsCount) {
+        return b.agreementsCount - a.agreementsCount;
+      }
+      return b.rating - a.rating;
+    });
+  }, [query, providers, isAuthLoading]);
+  
+  const isLoading = isAuthLoading || searchResults === undefined;
 
   return (
     <div className="py-12 md:py-20">
@@ -74,12 +55,12 @@ export default function SearchPage() {
         )}
       </div>
 
-      {isLoading || searchResults === undefined ? (
+      {isLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
         </div>
-      ) : searchResults.length > 0 ? (
+      ) : searchResults && searchResults.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {searchResults.map((provider) => (
             <SearchResultCard key={provider.id} provider={provider} />
