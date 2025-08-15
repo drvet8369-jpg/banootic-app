@@ -61,8 +61,15 @@ export default function ServiceProvidersPage() {
     setIsLoading(false);
   }, [category, service, serviceSlug]);
 
+  // useEffect now has a stable dependency and will re-run correctly
+  // every time the user navigates to a new service page or revisits the tab.
   useEffect(() => {
     loadData();
+
+    window.addEventListener('focus', loadData);
+    return () => {
+      window.removeEventListener('focus', loadData);
+    };
   }, [loadData]);
 
   if (isLoading) {
