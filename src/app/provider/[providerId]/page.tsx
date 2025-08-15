@@ -1,10 +1,9 @@
-
 'use client';
 
-import { useEffect, useState, useCallback, FormEvent } from 'react';
+import { useEffect, useState, useCallback, FormEvent, useTransition } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviderByPhone, getReviewsForProvider, createReview, getProviders } from '@/lib/data';
-import type { Provider, Review } from '@/lib/types';
+import { getProviderByPhone, getReviewsForProvider, createReview, addAgreementAction } from '@/lib/actions';
+import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -64,7 +63,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   if (!isLoggedIn || user?.accountType !== 'customer') {
     return null;
@@ -76,29 +75,28 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
       return;
     }
-    setIsSubmitting(true);
+    
+    startTransition(async () => {
+       try {
+            await createReview({
+                providerId,
+                authorName: user.name,
+                rating,
+                comment,
+            });
 
-    try {
-        await createReview({
-            providerId,
-            authorName: user.name,
-            rating,
-            comment,
-        });
-
-        toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
-        setRating(0);
-        setComment('');
-        onSubmit(); // Callback to trigger data refresh in parent
-    } catch(error) {
-        console.error("Failed to submit review", error);
-        toast({ title: "خطا", description: "مشکلی در ثبت نظر پیش آمد.", variant: "destructive" });
-    } finally {
-        setIsSubmitting(false);
-    }
+            toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
+            setRating(0);
+            setComment('');
+            onSubmit(); // Callback to trigger data refresh in parent
+        } catch(error) {
+            console.error("Failed to submit review", error);
+            toast({ title: "خطا", description: "مشکلی در ثبت نظر پیش آمد.", variant: "destructive" });
+        }
+    });
   };
   
-  const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
+  const isButtonDisabled = isPending || rating === 0 || !comment.trim();
 
   return (
     <Card className="mt-8 bg-muted/30">
@@ -119,15 +117,15 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
               placeholder="تجربه خود را اینجا بنویسید..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isPending}
             />
           </div>
           <div className="flex flex-col gap-2">
             <Button type="submit" disabled={isButtonDisabled} className="w-full">
-                {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="w-4 h-4 ml-2" />}
+                {isPending ? <Loader2 className="animate-spin" /> : <Send className="w-4 h-4 ml-2" />}
                 ارسال نظر
             </Button>
-             {isButtonDisabled && !isSubmitting && (
+             {isButtonDisabled && !isPending && (
                 <p className="text-xs text-center text-muted-foreground">
                     {rating === 0 && !comment.trim() ? "لطفاً برای ثبت نظر، امتیاز و متن نظر را وارد کنید." :
                      rating === 0 ? "لطفاً امتیاز خود را با انتخاب ستاره‌ها مشخص کنید." :
@@ -144,25 +142,33 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, agreements, addAgreement, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const loadData = useCallback(async () => {
-    const foundProvider = await getProviderByPhone(providerPhone);
-    
-    if (foundProvider) {
-      setProvider(foundProvider);
-      const providerReviews = await getReviewsForProvider(foundProvider.id);
-      setReviews(providerReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    } else {
+    try {
+      const foundProvider = await getProviderByPhone(providerPhone);
+      if (foundProvider) {
+        setProvider(foundProvider);
+        const [providerReviews] = await Promise.all([
+          getReviewsForProvider(foundProvider.id),
+        ]);
+        setReviews(providerReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      } else {
+        setProvider(null);
+      }
+    } catch (e) {
+      console.error(e);
       setProvider(null);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }, [providerPhone]);
 
   useEffect(() => {
@@ -175,10 +181,18 @@ export default function ProviderProfilePage() {
   
   const handleRequestAgreement = () => {
     if (!provider || !user) return;
-    addAgreement(provider.phone);
-    toast({
-      title: "درخواست شما ارسال شد",
-      description: "درخواست توافق برای هنرمند ارسال شد. پس از تایید توسط ایشان، می‌توانید نظرات بهتری ثبت کنید.",
+
+    startTransition(async () => {
+      try {
+        await addAgreementAction(provider.phone, user.phone, user.name);
+        toast({
+          title: "درخواست شما ارسال شد",
+          description: "درخواست توافق برای هنرمند ارسال شد. پس از تایید توسط ایشان، می‌توانید نظرات بهتری ثبت کنید.",
+        });
+        // Optionally re-fetch agreements or update state
+      } catch (error) {
+        toast({ title: "خطا", description: "مشکلی در ارسال درخواست پیش آمد.", variant: "destructive" });
+      }
     });
   };
 
@@ -277,7 +291,7 @@ export default function ProviderProfilePage() {
                     )}
                 </CardContent>
 
-                {!isOwnerViewing && (
+                {!isOwnerViewing && user && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                      <Button asChild className="w-full flex-1">
                         <Link href={`/chat/${provider.phone}`}>
@@ -292,7 +306,7 @@ export default function ProviderProfilePage() {
                         </a>
                     </Button>
                     {isCustomerViewing && (
-                         <Button onClick={handleRequestAgreement} disabled={hasPendingAgreement} className="w-full flex-1" variant="outline">
+                         <Button onClick={handleRequestAgreement} disabled={hasPendingAgreement || isPending} className="w-full flex-1" variant="outline">
                             <Handshake className="w-4 h-4 ml-2" />
                            {hasPendingAgreement ? 'درخواست ارسال شده' : 'درخواست توافق'}
                         </Button>
@@ -320,5 +334,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-
-    

@@ -10,10 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Message as MessageType, Provider } from '@/lib/types';
-import { onSnapshot, collection, query, orderBy, doc, updateDoc, serverTimestamp, writeBatch, getDoc, setDoc, increment } from 'firebase/firestore';
-import { getDb } from '@/lib/firebase';
-import { getProviderByPhone } from '@/lib/data';
+import type { Message as MessageType } from '@/lib/types';
+import { getProviderByPhone } from '@/lib/actions';
+// Local storage has been completely removed in favor of a server-side solution.
+// The chat functionality will be re-implemented later using a real-time database.
 
 interface OtherPersonDetails {
     id: string;
@@ -28,21 +28,7 @@ export default function ChatPage() {
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
 
-  const [messages, setMessages] = useState<MessageType[]>([]);
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
-  const [newMessage, setNewMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [isLoadingChat, setIsLoadingChat] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState('');
-
-  const getChatId = useCallback((phone1?: string, phone2?: string) => {
-    if (!phone1 || !phone2) return null;
-    return [phone1, phone2].sort().join('_');
-  }, []);
-
-  const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user?.phone, otherPersonPhone, getChatId]);
   
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -59,72 +45,6 @@ export default function ChatPage() {
     fetchOtherPersonDetails();
   }, [otherPersonPhone, isLoggedIn]);
 
-  const markChatAsRead = useCallback(async () => {
-    if (!chatId || !user?.phone) return;
-    try {
-      const db = getDb();
-      const chatDocRef = doc(db, "chats", chatId);
-      const chatDocSnap = await getDoc(chatDocRef);
-      if (chatDocSnap.exists()) {
-        const selfPath = `participants.${user.phone}.unreadCount`;
-        const currentUnread = chatDocSnap.data().participants?.[user.phone]?.unreadCount;
-        if (currentUnread > 0) {
-           await updateDoc(chatDocRef, { [selfPath]: 0 });
-        }
-      }
-    } catch (e) {
-      console.error("Failed to mark chat as read", e);
-    }
-  }, [chatId, user?.phone]);
-
-  useEffect(() => {
-    if (!chatId || !user?.phone) {
-        setIsLoadingChat(false);
-        return;
-    }
-
-    let unsubscribe: () => void;
-    const setupListener = async () => {
-        try {
-            setIsLoadingChat(true);
-            const db = getDb();
-            const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
-            
-            unsubscribe = onSnapshot(q, (querySnapshot) => {
-              const msgs: MessageType[] = querySnapshot.docs.map(doc => {
-                  const data = doc.data();
-                  return {
-                      id: doc.id,
-                      text: data.text,
-                      senderId: data.senderId,
-                      isEdited: data.isEdited,
-                      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-                  } as MessageType
-              });
-              setMessages(msgs);
-              setIsLoadingChat(false);
-              markChatAsRead();
-            }, (error) => {
-                console.error("Error listening to chat messages:", error);
-                toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
-                setIsLoadingChat(false);
-            });
-        } catch(e) {
-            console.error("Failed to setup chat listener", e);
-            toast({ title: "خطای اتصال", description: "امکان برقراری ارتباط با سرور چت وجود ندارد.", variant: "destructive" });
-            setIsLoadingChat(false);
-        }
-    };
-    
-    setupListener();
-
-    return () => {
-        if(unsubscribe) {
-            unsubscribe();
-        }
-    };
-  }, [chatId, user?.phone, toast, markChatAsRead]);
-
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -134,11 +54,7 @@ export default function ChatPage() {
     }
     return name.substring(0, 2);
   }
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
+  
   const headerLink = user?.accountType === 'provider' ? '/inbox' : '/';
   
   if (isAuthLoading) {
@@ -162,85 +78,6 @@ export default function ChatPage() {
     );
   }
   
-  const handleStartEdit = (message: MessageType) => {
-    setEditingMessageId(message.id);
-    setEditingText(message.text);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingMessageId(null);
-    setEditingText('');
-  };
-  
-  const handleSaveEdit = async () => {
-    if (!editingMessageId || !editingText.trim() || !chatId) return;
-    setIsSending(true);
-    try {
-      const db = getDb();
-      const messageRef = doc(db, "chats", chatId, "messages", editingMessageId);
-      await updateDoc(messageRef, { text: editingText.trim(), isEdited: true });
-      
-      const chatRef = doc(db, "chats", chatId);
-      const lastMessage = messages[messages.length - 1];
-      if(lastMessage.id === editingMessageId) {
-          await updateDoc(chatRef, { lastMessage: editingText.trim() });
-      }
-
-      handleCancelEdit();
-      toast({ title: 'پیام ویرایش شد.' });
-    } catch (e) {
-      console.error("Failed to edit message", e);
-      toast({ title: "خطا", description: "پیام شما ویرایش نشد.", variant: "destructive" });
-    } finally {
-       setIsSending(false);
-    }
-  };
-
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const text = newMessage.trim();
-    if (!text || isSending || !otherPersonDetails || !user || !chatId) return;
-    
-    setIsSending(true);
-    setNewMessage('');
-    
-    try {
-       const db = getDb();
-       const batch = writeBatch(db);
-    
-        const messageRef = doc(collection(db, "chats", chatId, "messages"));
-        batch.set(messageRef, {
-            text: text,
-            senderId: user.phone,
-            createdAt: serverTimestamp(),
-            isEdited: false
-        });
-
-        const chatRef = doc(db, "chats", chatId);
-        const receiverPath = `participants.${otherPersonDetails.phone}.unreadCount`;
-
-        batch.set(chatRef, {
-            lastMessage: text,
-            updatedAt: serverTimestamp(),
-            members: [user.phone, otherPersonDetails.phone].sort(),
-            participants: {
-                [user.phone]: { name: user.name, unreadCount: 0 },
-                [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: increment(1) }
-            }
-        }, { merge: true });
-        
-        await batch.commit();
-    } catch(e) {
-        console.error("Failed to send message", e);
-        toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
-        setNewMessage(text);
-    } finally {
-        setIsSending(false);
-    }
-  };
-  
-  const isLoadingPage = isAuthLoading || isLoadingChat || !otherPersonDetails;
 
   return (
     <div className="flex flex-col h-full py-4">
@@ -259,94 +96,25 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
+            <CardDescription>{'چت (غیرفعال)'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {isLoadingPage && (
-              <div className="flex justify-center items-center h-full">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!isLoadingPage && messages.length === 0 && (
-              <div className="text-center text-muted-foreground p-8">
-                <p>شما اولین پیام را ارسال کنید.</p>
-              </div>
-            )}
-            {!isLoadingPage && messages.map((message) => {
-                const senderIsUser = message.senderId === user?.phone;
-                const isEditing = editingMessageId === message.id;
-
-                return (
-                  <div 
-                    key={message.id} 
-                    className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {!senderIsUser && (
-                      <Avatar className="h-8 w-8 select-none">
-                        {otherPersonDetails?.profileImage?.src ? (
-                            <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
-                        ) : null }
-                        <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '?')}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    
-                    {isEditing ? (
-                        <div className="flex-1 flex items-center gap-1">
-                            <Input
-                                type="text"
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                className="h-9"
-                                onKeyDown={(e) => { if(e.key === 'Enter') { handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
-                                autoFocus
-                            />
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
-                        </div>
-                    ) : (
-                         <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
-                             <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                <p className="text-sm font-semibold break-words">
-                                  {message.text}
-                                  {message.isEdited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
-                                </p>
-                            </div>
-                            {senderIsUser && (
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleStartEdit(message)}
-                                >
-                                    <Edit className="w-4 h-4"/>
-                                </Button>
-                            )}
-                        </div>
-                    )}
-
-                     {senderIsUser && !isEditing && (
-                       <Avatar className="h-8 w-8 select-none">
-                          <AvatarFallback>شما</AvatarFallback>
-                      </Avatar>
-                    )}
-                </div>
-                )
-            })}
-            <div ref={messagesEndRef} />
+            <div className="text-center text-muted-foreground p-8">
+              <p>قابلیت چت در حال حاضر در دست توسعه است.</p>
+              <p className="text-xs mt-2">ما در حال انتقال به یک زیرساخت جدید برای ارائه یک تجربه گفتگوی پایدار و آنی هستیم.</p>
+            </div>
         </CardContent>
         <div className="p-4 border-t bg-background shrink-0">
-          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2">
               <Input 
                 type="text" 
-                placeholder="پیام خود را بنویسید..." 
+                placeholder="چت غیرفعال است" 
                 className="flex-1"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || isLoadingPage || !!editingMessageId}
+                disabled
               />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoadingPage || !!editingMessageId}>
-                  {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled>
+                  <ArrowUp className="w-5 h-5" />
               </Button>
           </form>
         </div>

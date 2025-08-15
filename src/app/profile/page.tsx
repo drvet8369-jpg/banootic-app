@@ -11,8 +11,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviderByPhone, updateProvider, addPortfolioItemToProvider, deletePortfolioItemFromProvider, updateProviderProfileImage, deleteProviderProfileImage } from '@/lib/data';
-import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
+import { getProviderByPhone, updateProvider, addPortfolioItemToProvider, deletePortfolioItemFromProvider, updateProviderProfileImage, deleteProviderProfileImage } from '@/lib/actions';
+import { useState, useEffect, useRef, ChangeEvent, useCallback, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 
@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
 
   const loadProviderData = useCallback(async () => {
     if (user && user.accountType === 'provider') {
@@ -42,6 +43,8 @@ export default function ProfilePage() {
             });
         }
         setIsDataLoading(false);
+    } else {
+      setIsDataLoading(false);
     }
   }, [user]);
 
@@ -51,49 +54,42 @@ export default function ProfilePage() {
     }
   }, [isAuthLoading, loadProviderData]);
 
-
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedData(prev => ({...prev, [name]: value}));
   }
 
-  const handleSaveChanges = async () => {
+  const handleAction = (action: () => Promise<any>, successMessage: string, errorMessage: string) => {
+    startTransition(async () => {
+      try {
+        await action();
+        toast({ title: "موفق", description: successMessage });
+        await loadProviderData();
+      } catch (error) {
+        toast({ title: "خطا", description: errorMessage, variant: "destructive" });
+      }
+    });
+  };
+
+  const handleSaveChanges = () => {
     if(!provider || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
-    
-    try {
-        const updatedFields = {
+    handleAction(async () => {
+       const updatedFields = {
             name: editedData.name,
             service: editedData.service,
             bio: editedData.bio,
         };
         await updateProvider(provider.id, updatedFields);
-
         if(user && user.name !== editedData.name){
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
-        toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
-        loadProviderData(); // Refresh data
-    } catch (error) {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
-    }
-  }
-
-  const handleCancelEdit = () => {
-    if (provider) {
-       setEditedData({
-            name: provider.name,
-            service: provider.service,
-            bio: provider.bio,
-        });
-    }
-    setMode('viewing');
-  }
-
+    }, "اطلاعات شما با موفقیت به‌روز شد.", 'خطا در به‌روزرسانی اطلاعات.');
+  };
 
   const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
       const reader = new FileReader();
@@ -118,7 +114,6 @@ export default function ProfilePage() {
               height = MAX_HEIGHT;
             }
           }
-
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
@@ -133,61 +128,8 @@ export default function ProfilePage() {
         img.src = imageSrc;
       };
       reader.readAsDataURL(file);
-  }
-
-  const addPortfolioItem = async (imageSrc: string) => {
-    if(!provider) return;
-    try {
-        await addPortfolioItemToProvider(provider.id, { src: imageSrc, aiHint: 'new work' });
-        toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-        loadProviderData();
-    } catch(e) {
-        toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
-    }
   };
   
-  const handleProfilePictureChange = async (newImageSrc: string) => {
-      if(!provider) return;
-      try {
-        await updateProviderProfileImage(provider.id, newImageSrc);
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-        loadProviderData();
-      } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
-      }
-  }
-
-  const handleDeleteProfilePicture = async () => {
-    if(!provider) return;
-    try {
-        await deleteProviderProfileImage(provider.id);
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-        loadProviderData();
-    } catch (e) {
-         toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });
-    }
-  };
-
-  const deletePortfolioItem = async (itemSrc: string) => {
-    if (!provider) return;
-    try {
-        await deletePortfolioItemFromProvider(provider.id, itemSrc);
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-        setSelectedImageSrc(null); // Close the dialog
-        loadProviderData();
-    } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
-    }
-  };
-
-  const handleAddPortfolioClick = () => {
-    portfolioFileInputRef.current?.click();
-  };
-  
-  const handleEditProfilePicClick = () => {
-    profilePicInputRef.current?.click();
-  }
-
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (dataUrl: string) => void) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -195,8 +137,54 @@ export default function ProfilePage() {
       event.target.value = '';
     }
   };
+
+  const addPortfolioItem = (imageSrc: string) => {
+    if(!provider) return;
+    handleAction(
+      () => addPortfolioItemToProvider(provider.id, { src: imageSrc, aiHint: 'new work' }),
+      'نمونه کار جدید با موفقیت اضافه شد.',
+      'خطا در افزودن نمونه کار.'
+    );
+  };
   
-  if (isAuthLoading) {
+  const handleProfilePictureChange = (newImageSrc: string) => {
+      if(!provider) return;
+      handleAction(
+        () => updateProviderProfileImage(provider.id, newImageSrc),
+        'عکس پروفایل شما با موفقیت به‌روز شد.',
+        'خطا در به‌روزرسانی عکس پروفایل.'
+      );
+  };
+
+  const handleDeleteProfilePicture = () => {
+    if(!provider) return;
+    handleAction(
+      () => deleteProviderProfileImage(provider.id),
+      'عکس پروفایل شما با موفقیت حذف شد.',
+      'خطا در حذف عکس پروفایل.'
+    );
+  };
+
+  const deletePortfolioItem = (itemSrc: string) => {
+    if (!provider) return;
+     handleAction(
+      () => deletePortfolioItemFromProvider(provider.id, itemSrc),
+      'نمونه کار حذف شد.',
+      'خطا در حذف نمونه کار.'
+    );
+    setSelectedImageSrc(null); // Close the dialog
+  };
+
+  const handleAddPortfolioClick = () => portfolioFileInputRef.current?.click();
+  const handleEditProfilePicClick = () => profilePicInputRef.current?.click();
+  const handleCancelEdit = () => {
+    if (provider) setEditedData({ name: provider.name, service: provider.service, bio: provider.bio });
+    setMode('viewing');
+  };
+  
+  const isLoading = isAuthLoading || isDataLoading || isPending;
+
+  if (isLoading && !provider) {
     return <div>در حال بارگذاری...</div>;
   }
   
@@ -225,10 +213,6 @@ export default function ProfilePage() {
             </p>
         </div>
      )
-  }
-  
-  if (isDataLoading) {
-    return <div>در حال بارگذاری پروفایل...</div>;
   }
   
   if (!provider) {
@@ -300,6 +284,7 @@ export default function ProfilePage() {
                         onChange={(e) => handleFileChange(e, addPortfolioItem)}
                         className="hidden"
                         accept="image/*"
+                        disabled={isLoading}
                       />
                       <input
                         type="file"
@@ -307,8 +292,9 @@ export default function ProfilePage() {
                         onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
                         className="hidden"
                         accept="image/*"
+                        disabled={isLoading}
                       />
-                      <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                      <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6" disabled={isLoading}>
                             <PlusCircle className="w-5 h-5 ml-2" />
                             افزودن نمونه کار جدید
                       </Button>
@@ -355,6 +341,7 @@ export default function ProfilePage() {
                                       className="absolute left-4 top-4 h-10 w-10 z-50"
                                       onClick={() => deletePortfolioItem(selectedImageSrc)}
                                       aria-label={`حذف نمونه کار`}
+                                      disabled={isLoading}
                                   >
                                       <Trash2 className="w-5 h-5" />
                                   </Button>
@@ -376,26 +363,26 @@ export default function ProfilePage() {
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
                     <>
-                         <Button onClick={handleSaveChanges} className="w-full flex-1">
+                         <Button onClick={handleSaveChanges} className="w-full flex-1" disabled={isLoading}>
                             <Save className="w-4 h-4 ml-2" />
                             ذخیره تغییرات
                         </Button>
-                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
+                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1" disabled={isLoading}>
                             <Camera className="w-4 h-4 ml-2" />
                             تغییر عکس پروفایل
                         </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1" disabled={isLoading}>
                             <Trash2 className="w-4 h-4 ml-2" />
                             حذف عکس پروفایل
                         </Button>
-                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
+                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto" disabled={isLoading}>
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو
                         </Button>
                     </>
                 ) : (
                     <>
-                        <Button onClick={() => setMode('editing')} className="w-full flex-1">
+                        <Button onClick={() => setMode('editing')} className="w-full flex-1" disabled={isLoading}>
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش اطلاعات
                         </Button>

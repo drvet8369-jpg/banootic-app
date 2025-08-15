@@ -23,10 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services, getUserByPhone, createUser, createProvider } from '@/lib/data';
+import { categories, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/lib/types';
+import { getUserByPhone, createUser, createProvider } from '@/lib/actions';
 
 
 const formSchema = z.object({
