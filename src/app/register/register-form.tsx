@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
+import { categories, getProviders, saveProviders, services, getUsers, saveUsers } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
@@ -85,40 +85,31 @@ export default function RegisterForm() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const allProviders = getProviders();
+      const allUsers = getUsers();
+      const existingUser = allUsers.find(u => u.phone === values.phone);
 
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
+      if (existingUser) {
         toast({
           title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          description: 'این شماره تلفن قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.',
           variant: 'destructive',
         });
         setIsLoading(false);
         return;
       }
-
-      if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
-            toast({
-                title: 'خطا در ثبت‌نام',
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-                variant: 'destructive',
-            });
-            setIsLoading(false);
-            return;
-        }
-      }
-
-
+      
       const userToLogin: User = {
+        id: values.phone,
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
 
+      // Add the new user to the central users list
+      saveUsers([...allUsers, userToLogin]);
+
       if (values.accountType === 'provider') {
+        const allProviders = getProviders();
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
@@ -133,6 +124,7 @@ export default function RegisterForm() {
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
+          agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };

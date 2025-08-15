@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
+import { getUsers } from '@/lib/data';
 import type { User } from '@/lib/types';
 
 
@@ -55,32 +55,24 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        const allUsers = getUsers();
+        const existingUser = allUsers.find(u => u.phone === values.phone);
 
-        let userToLogin: User;
-
-        if (existingProvider) {
-          userToLogin = {
-            id: existingProvider.id.toString(),
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          userToLogin = {
-            id: values.phone,
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
+        if (!existingUser) {
+           toast({
+              title: 'کاربر یافت نشد',
+              description: 'این شماره تلفن ثبت‌نام نکرده است. لطفاً ابتدا ثبت‌نام کنید.',
+              variant: 'destructive'
+          });
+           setIsLoading(false);
+           return;
         }
         
-        login(userToLogin);
+        login(existingUser);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+          description: `خوش آمدید ${existingUser.name}!`,
         });
         
         router.push('/');
@@ -101,9 +93,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود به حساب کاربری خود، شماره تلفن را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,9 +121,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
+            حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
+              ایجاد حساب کاربری
             </Link>
           </div>
         </CardContent>

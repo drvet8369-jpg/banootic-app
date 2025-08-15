@@ -1,12 +1,9 @@
-import type { Category, Provider, Service, Review, Agreement } from './types';
-
-// This file now acts as the single source of truth for all app data,
-// using localStorage for persistence. This simplifies the app by removing
-// the need for a complex backend setup for this prototype.
+import type { Category, Provider, Service, Review, Agreement, User } from './types';
 
 const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
 const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
 const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
+const USERS_STORAGE_KEY = 'honarbanoo-users';
 
 
 // --- Static Data ---
@@ -93,13 +90,13 @@ const saveToStorage = <T>(key: string, value: T) => {
 
 // --- Default Data for Initialization ---
 const defaultProviders: Provider[] = [
-  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: "https://placehold.co/600x400.png", aiHint: "nail art"}] },
-  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
-  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
-  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [] },
-  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [] },
-  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [] },
-  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [] },
+  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: "https://placehold.co/600x400.png", aiHint: "nail art"}], agreementsCount: 5 },
+  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [], agreementsCount: 10 },
+  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [], agreementsCount: 2 },
+  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [], agreementsCount: 25 },
+  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [], agreementsCount: 15 },
+  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [], agreementsCount: 8 },
+  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [], agreementsCount: 12 },
 ];
 
 const defaultReviews: Review[] = [
@@ -111,30 +108,17 @@ const defaultReviews: Review[] = [
 const defaultAgreements: Agreement[] = [];
 
 // --- Data Access Functions ---
-export const getProviders = (): Provider[] => {
-  return getFromStorage(PROVIDERS_STORAGE_KEY, defaultProviders);
-};
+export const getProviders = (): Provider[] => getFromStorage(PROVIDERS_STORAGE_KEY, defaultProviders);
+export const saveProviders = (providers: Provider[]) => saveToStorage(PROVIDERS_STORAGE_KEY, providers);
 
-export const saveProviders = (updatedProviders: Provider[]) => {
-  saveToStorage(PROVIDERS_STORAGE_KEY, updatedProviders);
-};
+export const getUsers = (): User[] => getFromStorage(USERS_STORAGE_KEY, []);
+export const saveUsers = (users: User[]) => saveToStorage(USERS_STORAGE_KEY, users);
 
-export const getReviews = (): Review[] => {
-  return getFromStorage(REVIEWS_STORAGE_KEY, defaultReviews);
-};
+export const getReviews = (): Review[] => getFromStorage(REVIEWS_STORAGE_KEY, defaultReviews);
+export const saveReviews = (reviews: Review[]) => saveToStorage(REVIEWS_STORAGE_KEY, reviews);
 
-export const saveReviews = (updatedReviews: Review[]) => {
-  saveToStorage(REVIEWS_STORAGE_KEY, updatedReviews);
-};
-
-export const getAgreements = (): Agreement[] => {
-  return getFromStorage(AGREEMENTS_STORAGE_KEY, defaultAgreements);
-};
-
-export const saveAgreements = (updatedAgreements: Agreement[]) => {
-  saveToStorage(AGREEMENTS_STORAGE_KEY, updatedAgreements);
-};
-
+export const getAgreements = (): Agreement[] => getFromStorage(AGREEMENTS_STORAGE_KEY, defaultAgreements);
+export const saveAgreements = (agreements: Agreement[]) => saveToStorage(AGREEMENTS_STORAGE_KEY, agreements);
 
 // Initialize default data if it doesn't exist
 if (typeof window !== 'undefined') {
@@ -146,5 +130,15 @@ if (typeof window !== 'undefined') {
     }
     if (!localStorage.getItem(AGREEMENTS_STORAGE_KEY)) {
       saveAgreements(defaultAgreements);
+    }
+    // Initialize users from providers list if users list is empty
+    if (!localStorage.getItem(USERS_STORAGE_KEY) || getFromStorage(USERS_STORAGE_KEY, []).length === 0) {
+        const providerUsers: User[] = defaultProviders.map(p => ({
+            id: p.phone,
+            name: p.name,
+            phone: p.phone,
+            accountType: 'provider'
+        }));
+        saveUsers(providerUsers);
     }
 }
