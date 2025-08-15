@@ -1,10 +1,8 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getFirestore, Firestore }from "firebase/firestore";
-import { getAuth, Auth } from "firebase/auth";
-
-// THIS FILE IS FOR CLIENT-SIDE FIREBASE ONLY
+import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,36 +13,60 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Singleton pattern to ensure only one instance of Firebase is initialized.
 let app: FirebaseApp;
-let db: Firestore;
 let auth: Auth;
+let db: Firestore;
 
-if (typeof window !== 'undefined' && !getApps().length) {
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-  auth = getAuth(app);
-} else if (getApps().length) {
-  app = getApp();
-  db = getFirestore(app);
-  auth = getAuth(app);
-}
+// This function initializes and returns the Firebase app instance.
+// It's safe to call this multiple times.
+const getAppInstance = (): FirebaseApp => {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
+  return app;
+};
 
-// @ts-ignore
-export { app, db, auth };
-
-// A simple getter function to ensure db is initialized before use.
-// Components should use this to avoid race conditions.
-export const getDb = (): Firestore => {
+// This function initializes and returns the Firestore instance.
+const getDbInstance = (): Firestore => {
+  const app = getAppInstance();
   if (!db) {
-    // This case should ideally not happen in the client-side context
-    // if the singleton pattern above works correctly.
-    if (!getApps().length) {
-        const newApp = initializeApp(firebaseConfig);
-        db = getFirestore(newApp);
-    } else {
-        db = getFirestore(getApp());
+    db = getFirestore(app);
+    // Connect to emulator if in development and the host is available.
+    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && window.location.hostname === "localhost") {
+       try {
+        console.log("Connecting to Firestore emulator");
+        connectFirestoreEmulator(db, 'localhost', 8080);
+       } catch (e) {
+        console.warn("Could not connect to Firestore emulator. It might not be running.", e);
+       }
     }
   }
   return db;
 };
+
+// This function initializes and returns the Auth instance.
+const getAuthInstance = (): Auth => {
+   const app = getAppInstance();
+   if (!auth) {
+    auth = getAuth(app);
+     if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && window.location.hostname === "localhost") {
+        try {
+          console.log("Connecting to Auth emulator");
+          connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+        } catch(e) {
+          console.warn("Could not connect to Auth emulator. It might not be running.", e);
+        }
+    }
+   }
+   return auth;
+};
+
+
+// Export the initialized services.
+const clientApp = getAppInstance();
+const clientAuth = getAuthInstance();
+const clientDb = getDbInstance();
+
+export { clientApp, clientAuth, clientDb };
