@@ -100,6 +100,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
             const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
             const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
             
+            allProviders[providerIndex].rating = newAverageRating;
             allProviders[providerIndex].reviewsCount = providerReviews.length;
             saveProviders(allProviders);
         }
@@ -191,22 +192,6 @@ export default function ProviderProfilePage() {
   
   const isOwnerViewing = user && user.phone === provider?.phone;
   const isCustomerViewing = user && user.accountType === 'customer';
-
-  const deletePortfolioItem = (itemSrc: string) => {
-    if (!provider) return;
-
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((item) => item.src !== itemSrc);
-        saveProviders(allProviders);
-        loadData(); // Refresh data
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-        setSelectedImageSrc(null); // Close the dialog
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
-    }
-  };
   
   const handleRequestAgreement = () => {
     if (!provider) return;
@@ -292,27 +277,14 @@ export default function ProviderProfilePage() {
                                   <span className="sr-only">بستن</span>
                                 </DialogClose>
                                 {selectedImageSrc && (
-                                    <>
-                                      {isOwnerViewing && (
-                                          <Button
-                                              variant="destructive"
-                                              size="icon"
-                                              className="absolute left-4 top-4 h-10 w-10 z-50"
-                                              onClick={(e) => { e.stopPropagation(); deletePortfolioItem(selectedImageSrc); }}
-                                              aria-label={`حذف نمونه کار`}
-                                          >
-                                              <Trash2 className="w-5 h-5" />
-                                          </Button>
-                                      )}
-                                      <div className="relative w-full h-full">
-                                          <Image
-                                              src={selectedImageSrc}
-                                              alt="نمونه کار تمام صفحه"
-                                              fill
-                                              className="object-contain"
-                                          />
-                                      </div>
-                                    </>
+                                    <div className="relative w-full h-full">
+                                        <Image
+                                            src={selectedImageSrc}
+                                            alt="نمونه کار تمام صفحه"
+                                            fill
+                                            className="object-contain"
+                                        />
+                                    </div>
                                 )}
                             </DialogContent>
                         </Dialog>
