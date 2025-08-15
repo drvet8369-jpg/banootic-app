@@ -17,12 +17,6 @@ export default function SearchPage() {
     setIsLoading(true);
     const allProviders = getProviders();
     const allAgreements = getAgreements();
-
-    if (!query) {
-      setSearchResults([]);
-      setIsLoading(false);
-      return;
-    }
     
     // Create a map of provider phone to confirmed agreements count
     const agreementsCountMap = new Map<string, number>();
@@ -33,11 +27,15 @@ export default function SearchPage() {
     });
 
     const lowercasedQuery = query.toLowerCase();
-    const filteredResults = allProviders.filter(provider => 
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery) ||
-      provider.bio.toLowerCase().includes(lowercasedQuery)
-    );
+    
+    // Filter results if there's a query, otherwise use all providers
+    const filteredResults = query 
+      ? allProviders.filter(provider => 
+          provider.name.toLowerCase().includes(lowercasedQuery) ||
+          provider.service.toLowerCase().includes(lowercasedQuery) ||
+          provider.bio.toLowerCase().includes(lowercasedQuery)
+        )
+      : allProviders;
 
     // Sort results based on the ladder system
     const sortedResults = filteredResults.sort((a, b) => {
@@ -73,14 +71,16 @@ export default function SearchPage() {
   return (
     <div className="py-12 md:py-20">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold">
+          {query ? 'نتایج جستجو' : 'هنرمندان برتر'}
+        </h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
         ) : (
-          <p className="mt-3 text-lg text-muted-foreground">
-            لطفا عبارتی را برای جستجو وارد کنید.
+           <p className="mt-3 text-lg text-muted-foreground">
+            لیست هنرمندان برتر بر اساس فعالیت و امتیاز.
           </p>
         )}
       </div>
