@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -13,7 +13,8 @@ export default function SearchPage() {
   const { providers, isLoading: isAuthLoading } = useAuth();
   
   const searchResults = useMemo(() => {
-    if (isAuthLoading) return undefined;
+    // Ensure providers is an array before filtering and sorting.
+    if (!providers) return []; 
 
     const lowercasedQuery = query.toLowerCase();
     
@@ -25,7 +26,8 @@ export default function SearchPage() {
         )
       : providers;
 
-    return filteredResults.sort((a, b) => {
+    // Return a new sorted array
+    return [...filteredResults].sort((a, b) => {
       if (b.reviewsCount !== a.reviewsCount) {
         return b.reviewsCount - a.reviewsCount;
       }
@@ -34,9 +36,9 @@ export default function SearchPage() {
       }
       return b.rating - a.rating;
     });
-  }, [query, providers, isAuthLoading]);
+  }, [query, providers]);
   
-  const isLoading = isAuthLoading || searchResults === undefined;
+  const isLoading = isAuthLoading;
 
   return (
     <div className="py-12 md:py-20">
@@ -60,7 +62,7 @@ export default function SearchPage() {
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
         </div>
-      ) : searchResults && searchResults.length > 0 ? (
+      ) : searchResults.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {searchResults.map((provider) => (
             <SearchResultCard key={provider.id} provider={provider} />
