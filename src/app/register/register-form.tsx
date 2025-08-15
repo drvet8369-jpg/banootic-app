@@ -23,11 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services, getUsers, saveUsers } from '@/lib/data';
+import { categories, services, getUserByPhone, createUser, createProvider } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
+import type { User } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -83,10 +82,7 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const allUsers = getUsers();
-      const existingUser = allUsers.find(u => u.phone === values.phone);
+      const existingUser = await getUserByPhone(values.phone);
 
       if (existingUser) {
         toast({
@@ -98,23 +94,20 @@ export default function RegisterForm() {
         return;
       }
       
-      const userToLogin: User = {
+      const userToCreate: User = {
         id: values.phone,
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
       };
 
-      // Add the new user to the central users list
-      saveUsers([...allUsers, userToLogin]);
+      await createUser(userToCreate);
 
       if (values.accountType === 'provider') {
-        const allProviders = getProviders();
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
-        const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
+        await createProvider({
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
@@ -127,12 +120,10 @@ export default function RegisterForm() {
           agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
-        };
-        
-        saveProviders([...allProviders, newProvider]);
+        });
       }
       
-      login(userToLogin);
+      login(userToCreate);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from "firebase/firestore";
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -19,40 +21,21 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
       return;
     }
 
-    const checkUnread = () => {
-      try {
-        const allChatsData = JSON.parse(localStorage.getItem('zanmahal-inbox-chats') || '{}');
-        const totalUnread = Object.values(allChatsData)
-          .filter((chat: any) => chat.members?.includes(user.phone))
-          .reduce((acc: number, chat: any) => {
-            const selfInfo = chat.participants?.[user.phone];
-            return acc + (selfInfo?.unreadCount || 0);
-          }, 0);
-        setUnreadCount(totalUnread);
-      } catch (e) {
-        setUnreadCount(0);
-      }
-    };
-
-    checkUnread();
-
-    const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === 'zanmahal-inbox-chats') {
-            checkUnread();
+    const inboxRef = doc(db, "inboxes", user.phone);
+    const unsubscribe = onSnapshot(inboxRef, (doc) => {
+        if (doc.exists()) {
+            const inboxData = doc.data();
+            const totalUnread = Object.values(inboxData).reduce((acc: number, chat: any) => acc + (chat.unreadCount || 0), 0);
+            setUnreadCount(totalUnread);
+        } else {
+            setUnreadCount(0);
         }
-    };
+    }, (error) => {
+        console.error("Error listening to inbox:", error);
+        setUnreadCount(0);
+    });
 
-    window.addEventListener('storage', handleStorageChange);
-    // Also check on focus for changes within the same tab
-    window.addEventListener('focus', checkUnread);
-
-    const intervalId = setInterval(checkUnread, 5000); 
-
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', checkUnread);
-    };
+    return () => unsubscribe();
   }, [user?.phone]);
 
   if (unreadCount === 0) {

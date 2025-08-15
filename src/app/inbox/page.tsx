@@ -24,7 +24,7 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getInboxForUser } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,14 +41,12 @@ export default function InboxPage() {
       return;
     }
 
-    const loadChats = () => {
+    const loadChats = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const allChatsData = JSON.parse(localStorage.getItem('zanmahal-inbox-chats') || '{}');
-            
-            const userChats = Object.values(allChatsData)
-                .filter((chat: any) => chat.members?.includes(user.phone))
+            const inboxData = await getInboxForUser(user.phone);
+            const userChats = Object.values(inboxData)
                 .map((chat: any): Chat | null => {
                     if (!chat.participants || !chat.members) return null;
 
@@ -75,18 +73,15 @@ export default function InboxPage() {
                 
             setChats(userChats);
         } catch (e) {
-            console.error("Failed to load chats from localStorage", e);
-            setError('خطا در بارگذاری گفتگوهای موقت.');
+            console.error("Failed to load chats from Firestore", e);
+            setError('خطا در بارگذاری گفتگوها.');
         } finally {
             setIsLoading(false);
         }
     };
     
     loadChats();
-    // Listen for storage changes to update the inbox in real-time
-    window.addEventListener('storage', loadChats);
-    return () => window.removeEventListener('storage', loadChats);
-  }, [user?.phone]);
+  }, [user?.phone, getInboxForUser]);
 
 
   if (isLoading) {
@@ -143,7 +138,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (

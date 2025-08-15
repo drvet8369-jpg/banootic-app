@@ -1,6 +1,5 @@
-
 export interface User {
-  id: string; // phone number or a generated ID
+  id: string; // phone number is the ID
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
@@ -25,7 +24,7 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number; // A unique ID for the provider
+  id: string; // Firestore document ID
   name: string;
   service: string; 
   location: string;
@@ -35,23 +34,24 @@ export interface Provider {
   serviceSlug: Service['slug'];
   rating: number;
   reviewsCount: number;
+  agreementsCount: number;
   profileImage: PortfolioItem; 
   portfolio: PortfolioItem[];
 }
 
 export interface Review {
-  id: string; 
-  providerId: number; // Corresponds to Provider's id
+  id: string; // Firestore document ID
+  providerId: string; // Corresponds to Provider's id
   authorName: string;
   rating: number;
   comment: string;
-  createdAt: string; // ISO String format
+  createdAt: string; // ISO String format for client
 }
 
 export interface Message {
   id: string;
   text: string;
-  senderId: string;
+  senderId: string; // phone number of the sender
   createdAt: string; // ISO string
   isEdited?: boolean;
 }
@@ -67,10 +67,13 @@ export interface Chat {
     };
     lastMessage: string;
     updatedAt: string; // ISO String
+    otherMemberId: string;
+    otherMemberName: string;
+    unreadCount: number;
 }
 
 export interface Agreement {
-  id: string;
+  id: string; // Firestore document ID
   providerPhone: string;
   customerPhone: string;
   customerName: string;

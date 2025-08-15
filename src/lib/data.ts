@@ -1,10 +1,23 @@
-import type { Category, Provider, Service, Review, Agreement, User } from './types';
-
-const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
-const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
-const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
-const USERS_STORAGE_KEY = 'honarbanoo-users';
-
+import { db } from './firebase';
+import { 
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    writeBatch,
+    Timestamp,
+    serverTimestamp,
+    orderBy,
+    limit,
+    increment,
+} from 'firebase/firestore';
+import type { Category, Provider, Service, Review, Agreement, User, Message, Chat } from './types';
 
 // --- Static Data ---
 export const categories: Category[] = [
@@ -35,23 +48,19 @@ export const categories: Category[] = [
 ];
 
 export const services: Service[] = [
-  // Beauty
   { name: 'خدمات ناخن', slug: 'manicure-pedicure', categorySlug: 'beauty' },
   { name: 'خدمات مو', slug: 'haircut-coloring', categorySlug: 'beauty' },
   { name: 'پاکسازی پوست', slug: 'facial-treatment', categorySlug: 'beauty' },
   { name: 'آرایش صورت', slug: 'makeup', categorySlug: 'beauty' },
   { name: 'اپیلاسیون', slug: 'waxing', categorySlug: 'beauty' },
-  // Cooking
   { name: 'غذای سنتی', slug: 'traditional-food', categorySlug: 'cooking' },
   { name: 'کیک و شیرینی', slug: 'cakes-sweets', categorySlug: 'cooking' },
   { name: 'غذای گیاهی', slug: 'vegetarian-vegan', categorySlug: 'cooking' },
   { name: 'فینگرفود', slug: 'finger-food', categorySlug: 'cooking' },
   { name: 'نان خانگی', slug: 'homemade-bread', categorySlug: 'cooking' },
-  // Tailoring
   { name: 'دوخت سفارشی لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
   { name: 'مزون، لباس عروس و مجلسی', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
   { name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
-  // Handicrafts
   { name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
   { name: 'سفال تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
   { name: 'بافتنی‌ها', slug: 'termeh-kilim', categorySlug: 'handicrafts' },
@@ -59,86 +68,209 @@ export const services: Service[] = [
   { name: 'شمع‌سازی', slug: 'candles-soaps', categorySlug: 'handicrafts' },
 ];
 
+// --- Firestore Collection References ---
+const usersCollection = collection(db, 'users');
+const providersCollection = collection(db, 'providers');
+const reviewsCollection = collection(db, 'reviews');
+const agreementsCollection = collection(db, 'agreements');
+const inboxesCollection = collection(db, 'inboxes');
 
-// --- Helper Functions for localStorage ---
-const getFromStorage = <T>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') {
-    return defaultValue;
-  }
-  try {
-    const storedValue = localStorage.getItem(key);
-    if (storedValue) {
-      return JSON.parse(storedValue);
-    }
-  } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
-  }
-  return defaultValue;
+// --- User Management ---
+export const createUser = async (user: User): Promise<void> => {
+  await setDoc(doc(usersCollection, user.id), user);
 };
 
-const saveToStorage = <T>(key: string, value: T) => {
-  if (typeof window === 'undefined') {
-    return;
+export const getUserByPhone = async (phone: string): Promise<User | null> => {
+  const userDocRef = doc(usersCollection, phone);
+  const userDoc = await getDoc(userDocRef);
+  return userDoc.exists() ? userDoc.data() as User : null;
+};
+
+// --- Provider Management ---
+export const createProvider = async (providerData: Omit<Provider, 'id'>): Promise<string> => {
+    const docRef = await addDoc(providersCollection, providerData);
+    await updateDoc(docRef, { id: docRef.id });
+    return docRef.id;
+}
+
+export const getProviders = async (): Promise<Provider[]> => {
+  const snapshot = await getDocs(providersCollection);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Provider));
+};
+
+export const getProviderByPhone = async (phone: string): Promise<Provider | null> => {
+    const q = query(providersCollection, where("phone", "==", phone), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+        return null;
+    }
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as Provider;
+}
+
+export const updateProvider = async (providerId: string, data: Partial<Provider>) => {
+    const providerRef = doc(db, 'providers', providerId);
+    await updateDoc(providerRef, data);
+}
+
+export const addPortfolioItemToProvider = async (providerId: string, item: { src: string, aiHint: string }) => {
+    const providerRef = doc(db, 'providers', providerId);
+    const providerDoc = await getDoc(providerRef);
+    if (providerDoc.exists()) {
+        const providerData = providerDoc.data() as Provider;
+        const portfolio = providerData.portfolio || [];
+        await updateDoc(providerRef, { portfolio: [...portfolio, item] });
+    }
+}
+
+export const deletePortfolioItemFromProvider = async (providerId: string, itemSrc: string) => {
+    const providerRef = doc(db, 'providers', providerId);
+    const providerDoc = await getDoc(providerRef);
+    if (providerDoc.exists()) {
+        const providerData = providerDoc.data() as Provider;
+        const updatedPortfolio = providerData.portfolio.filter(item => item.src !== itemSrc);
+        await updateDoc(providerRef, { portfolio: updatedPortfolio });
+    }
+}
+
+export const updateProviderProfileImage = async (providerId: string, src: string) => {
+    const providerRef = doc(db, 'providers', providerId);
+    await updateDoc(providerRef, { 'profileImage.src': src });
+}
+
+export const deleteProviderProfileImage = async (providerId: string) => {
+    const providerRef = doc(db, 'providers', providerId);
+    await updateDoc(providerRef, { 'profileImage.src': '' });
+}
+
+
+// --- Review Management ---
+export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Promise<string> => {
+  const reviewData = { ...review, createdAt: serverTimestamp() };
+  const docRef = await addDoc(reviewsCollection, reviewData);
+  // Also, update provider's rating
+  const providerRef = doc(db, 'providers', review.providerId);
+  const providerDoc = await getDoc(providerRef);
+  if (providerDoc.exists()) {
+      const providerData = providerDoc.data();
+      const newReviewsCount = (providerData.reviewsCount || 0) + 1;
+      const newRating = ((providerData.rating || 0) * (providerData.reviewsCount || 0) + review.rating) / newReviewsCount;
+      await updateDoc(providerRef, {
+          reviewsCount: newReviewsCount,
+          rating: parseFloat(newRating.toFixed(1)),
+      });
   }
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error saving to localStorage key “${key}”:`, error);
-  }
+  return docRef.id;
+};
+
+export const getReviewsForProvider = async (providerId: string): Promise<Review[]> => {
+    const q = query(reviewsCollection, where("providerId", "==", providerId), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+}
+
+// --- Agreement Management ---
+export const createAgreement = async (providerPhone: string, customerPhone: string, customerName: string): Promise<Agreement> => {
+    const agreementData: Omit<Agreement, 'id'> = {
+        providerPhone,
+        customerPhone,
+        customerName,
+        status: 'pending',
+        requestedAt: new Date().toISOString(),
+    };
+    const docRef = await addDoc(agreementsCollection, agreementData);
+    return { id: docRef.id, ...agreementData };
+};
+
+export const updateAgreement = async (agreementId: string, data: Partial<Agreement>) => {
+    await updateDoc(doc(agreementsCollection, agreementId), data);
+     if (data.status === 'confirmed') {
+        const agreementDoc = await getDoc(doc(agreementsCollection, agreementId));
+        if (agreementDoc.exists()) {
+            const providerPhone = agreementDoc.data().providerPhone;
+            const provider = await getProviderByPhone(providerPhone);
+            if(provider) {
+                const providerRef = doc(db, 'providers', provider.id);
+                await updateDoc(providerRef, { agreementsCount: increment(1) });
+            }
+        }
+    }
+};
+
+export const getAgreementsForProvider = async (providerPhone: string): Promise<Agreement[]> => {
+    const q = query(agreementsCollection, where("providerPhone", "==", providerPhone));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Agreement));
+}
+
+export const getAgreementsForCustomer = async (customerPhone: string): Promise<Agreement[]> => {
+    const q = query(agreementsCollection, where("customerPhone", "==", customerPhone));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Agreement));
+}
+
+// --- Chat & Inbox Management ---
+
+export const getInboxForUser = async (userPhone: string): Promise<any> => {
+    const inboxRef = doc(db, 'inboxes', userPhone);
+    const docSnap = await getDoc(inboxRef);
+    return docSnap.exists() ? docSnap.data() : {};
+}
+
+export const createChatMessage = async (chatId: string, message: Omit<Message, 'id'>, otherUser: {phone: string, name: string}, sender: User) => {
+    const batch = writeBatch(db);
+    const messageRef = doc(collection(db, "chats", chatId, "messages"));
+    batch.set(messageRef, message);
+    
+    // Update sender's inbox
+    const senderInboxRef = doc(db, 'inboxes', sender.phone);
+    batch.set(senderInboxRef, {
+        [chatId]: {
+            id: chatId,
+            members: [sender.phone, otherUser.phone],
+            participants: {
+                [sender.phone]: { name: sender.name, unreadCount: 0 },
+                [otherUser.phone]: { name: otherUser.name, unreadCount: 0 }
+            },
+            lastMessage: message.text,
+            updatedAt: message.createdAt
+        }
+    }, { merge: true });
+
+    // Update receiver's inbox
+    const receiverInboxRef = doc(db, 'inboxes', otherUser.phone);
+    const receiverFieldPath = `${chatId}.participants.${otherUser.phone}.unreadCount`;
+    batch.set(receiverInboxRef, {
+        [chatId]: {
+             id: chatId,
+            members: [sender.phone, otherUser.phone],
+            participants: {
+                [sender.phone]: { name: sender.name, unreadCount: 0 },
+                [otherUser.phone]: { name: otherUser.name, unreadCount: 0 }
+            },
+            lastMessage: message.text,
+            updatedAt: message.createdAt
+        },
+        [receiverFieldPath]: increment(1)
+    }, { merge: true });
+
+
+    await batch.commit();
 };
 
 
-// --- Default Data for Initialization ---
-const defaultProviders: Provider[] = [
-  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [{src: "https://placehold.co/600x400.png", aiHint: "nail art"}], agreementsCount: 5 },
-  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [], agreementsCount: 10 },
-  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [], agreementsCount: 2 },
-  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman cooking' }, portfolio: [], agreementsCount: 25 },
-  { id: 5, name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', rating: 4.8, reviewsCount: 88, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'pastry chef' }, portfolio: [], agreementsCount: 15 },
-  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'tailor woman' }, portfolio: [], agreementsCount: 8 },
-  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://placehold.co/400x400.png', aiHint: 'jewelry maker' }, portfolio: [], agreementsCount: 12 },
-];
+export const updateChatMessage = async (chatId: string, messageId: string, newText: string) => {
+    const messageRef = doc(db, "chats", chatId, "messages", messageId);
+    await updateDoc(messageRef, {
+        text: newText,
+        isEdited: true
+    });
+}
 
-const defaultReviews: Review[] = [
-    { id: '1', providerId: 1, authorName: 'نگار', rating: 5, comment: 'کارشون عالی و بسیار تمیز بود. خیلی راضی بودم!', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: '2', providerId: 4, authorName: 'فاطمه', rating: 5, comment: 'قورمه‌سبزی به این خوشمزگی نخورده بودم! کاملا طعم غذای خانگی اصیل رو داشت.', createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: '3', providerId: 1, authorName: 'زهرا', rating: 4, comment: 'طراحی خوبی داشتند ولی کمی زمان انتظارم طولانی شد.', createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
-];
-
-const defaultAgreements: Agreement[] = [];
-
-// --- Data Access Functions ---
-export const getProviders = (): Provider[] => getFromStorage(PROVIDERS_STORAGE_KEY, defaultProviders);
-export const saveProviders = (providers: Provider[]) => saveToStorage(PROVIDERS_STORAGE_KEY, providers);
-
-export const getUsers = (): User[] => getFromStorage(USERS_STORAGE_KEY, []);
-export const saveUsers = (users: User[]) => saveToStorage(USERS_STORAGE_KEY, users);
-
-export const getReviews = (): Review[] => getFromStorage(REVIEWS_STORAGE_KEY, defaultReviews);
-export const saveReviews = (reviews: Review[]) => saveToStorage(REVIEWS_STORAGE_KEY, reviews);
-
-export const getAgreements = (): Agreement[] => getFromStorage(AGREEMENTS_STORAGE_KEY, defaultAgreements);
-export const saveAgreements = (agreements: Agreement[]) => saveToStorage(AGREEMENTS_STORAGE_KEY, agreements);
-
-// Initialize default data if it doesn't exist
-if (typeof window !== 'undefined') {
-    if (!localStorage.getItem(PROVIDERS_STORAGE_KEY)) {
-      saveProviders(defaultProviders);
-    }
-    if (!localStorage.getItem(REVIEWS_STORAGE_KEY)) {
-      saveReviews(defaultReviews);
-    }
-    if (!localStorage.getItem(AGREEMENTS_STORAGE_KEY)) {
-      saveAgreements(defaultAgreements);
-    }
-    // Initialize users from providers list if users list is empty
-    if (!localStorage.getItem(USERS_STORAGE_KEY) || getFromStorage(USERS_STORAGE_KEY, []).length === 0) {
-        const providerUsers: User[] = defaultProviders.map(p => ({
-            id: p.phone,
-            name: p.name,
-            phone: p.phone,
-            accountType: 'provider'
-        }));
-        saveUsers(providerUsers);
-    }
+export const setChatRead = async (chatId: string, userPhone: string) => {
+    const inboxRef = doc(db, "inboxes", userPhone);
+    const fieldPath = `${chatId}.participants.${userPhone}.unreadCount`;
+    await updateDoc(inboxRef, {
+        [fieldPath]: 0
+    });
 }

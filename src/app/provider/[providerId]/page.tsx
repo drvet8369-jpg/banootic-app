@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
+import { getProviderByPhone, getReviewsForProvider, createReview, getProviders } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 // Review Form Component
-const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
+const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -69,7 +70,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     return null;
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
@@ -77,40 +78,24 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     }
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-        const allReviews = getReviews();
-        const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
-        };
-
-        const updatedReviews = [...allReviews, newReview];
-        saveReviews(updatedReviews);
-
-        // Recalculate provider's average rating
-        const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.id === providerId);
-        if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
-            
-            allProviders[providerIndex].rating = newAverageRating;
-            allProviders[providerIndex].reviewsCount = providerReviews.length;
-            saveProviders(allProviders);
-        }
+    try {
+        await createReview({
+            providerId,
+            authorName: user.name,
+            rating,
+            comment,
+        });
 
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
-        setIsSubmitting(false);
         onSubmit(); // Callback to trigger data refresh in parent
-    }, 1000);
+    } catch(error) {
+        console.error("Failed to submit review", error);
+        toast({ title: "خطا", description: "مشکلی در ثبت نظر پیش آمد.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
@@ -159,23 +144,20 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, agreements, addAgreement } = useAuth();
+  const { user, agreements, addAgreement, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
 
-  const loadData = useCallback(() => {
-    const allProviders = getProviders();
-    const foundProvider = allProviders.find(p => p.phone === providerPhone);
+  const loadData = useCallback(async () => {
+    const foundProvider = await getProviderByPhone(providerPhone);
     
     if (foundProvider) {
       setProvider(foundProvider);
-      const allReviews = getReviews();
-      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setReviews(providerReviews);
+      const providerReviews = await getReviewsForProvider(foundProvider.id);
+      setReviews(providerReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } else {
       setProvider(null);
     }
@@ -186,15 +168,13 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
   const isCustomerViewing = user && user.accountType === 'customer';
   
   const handleRequestAgreement = () => {
-    if (!provider) return;
+    if (!provider || !user) return;
     addAgreement(provider.phone);
     toast({
       title: "درخواست شما ارسال شد",
@@ -204,7 +184,9 @@ export default function ProviderProfilePage() {
 
   const hasPendingAgreement = isCustomerViewing && agreements.some(a => a.providerPhone === provider?.phone && a.customerPhone === user.phone);
 
-  if (isLoading) {
+  const pageIsLoading = isLoading || isAuthLoading;
+
+  if (pageIsLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -338,3 +320,5 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
+
+    

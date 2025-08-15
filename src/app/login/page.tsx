@@ -27,9 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders, getUsers } from '@/lib/data';
-import type { User } from '@/lib/types';
-
+import { getUserByPhone } from '@/lib/data';
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
@@ -53,10 +51,7 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const allUsers = getUsers();
-        const existingUser = allUsers.find(u => u.phone === values.phone);
+        const existingUser = await getUserByPhone(values.phone);
 
         if (!existingUser) {
            toast({

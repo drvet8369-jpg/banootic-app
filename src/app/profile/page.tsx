@@ -11,13 +11,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviders, saveProviders } from '@/lib/data';
+import { getProviderByPhone, updateProvider, addPortfolioItemToProvider, deletePortfolioItemFromProvider, updateProviderProfileImage, deleteProviderProfileImage } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, login } = useAuth();
+  const { user, isLoggedIn, login, isLoading: isAuthLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -27,12 +27,12 @@ export default function ProfilePage() {
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
-  const loadProviderData = useCallback(() => {
+  const loadProviderData = useCallback(async () => {
     if (user && user.accountType === 'provider') {
-        const allProviders = getProviders();
-        let currentProvider = allProviders.find(p => p.phone === user.phone);
-        
+        setIsDataLoading(true);
+        const currentProvider = await getProviderByPhone(user.phone);
         if (currentProvider) {
             setProvider(currentProvider);
             setEditedData({
@@ -41,12 +41,15 @@ export default function ProfilePage() {
                 bio: currentProvider.bio,
             });
         }
+        setIsDataLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    loadProviderData();
-  }, [loadProviderData]);
+    if (!isAuthLoading) {
+      loadProviderData();
+    }
+  }, [isAuthLoading, loadProviderData]);
 
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -54,45 +57,28 @@ export default function ProfilePage() {
     setEditedData(prev => ({...prev, [name]: value}));
   }
 
-  const updateProviderData = (updateFn: (provider: Provider) => void) => {
-    if (!user) return false;
-    const allProviders = getProviders();
-    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
-    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
-
-    if (providerIndex > -1) {
-      updateFn(updatedProvidersList[providerIndex]);
-      saveProviders(updatedProvidersList);
-      loadProviderData();
-      return true;
-    }
-    return false;
-  }
-
-  const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+  const handleSaveChanges = async () => {
+    if(!provider || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
+    
+    try {
+        const updatedFields = {
+            name: editedData.name,
+            service: editedData.service,
+            bio: editedData.bio,
+        };
+        await updateProvider(provider.id, updatedFields);
 
-    let userWasUpdated = false;
-    const success = updateProviderData((p) => {
         if(user && user.name !== editedData.name){
-            userWasUpdated = true;
-        }
-        p.name = editedData.name;
-        p.service = editedData.service;
-        p.bio = editedData.bio;
-    });
-
-    if(success) {
-        if (userWasUpdated && user) {
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
-    } else {
+        loadProviderData(); // Refresh data
+    } catch (error) {
         toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   }
@@ -149,50 +135,48 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
-  const addPortfolioItem = (imageSrc: string) => {
-    const success = updateProviderData((p) => {
-      if (!p.portfolio) p.portfolio = [];
-      p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
-    });
-    if (success) {
-      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+  const addPortfolioItem = async (imageSrc: string) => {
+    if(!provider) return;
+    try {
+        await addPortfolioItemToProvider(provider.id, { src: imageSrc, aiHint: 'new work' });
+        toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+        loadProviderData();
+    } catch(e) {
+        toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
     }
   };
   
-  const handleProfilePictureChange = (newImageSrc: string) => {
-      const success = updateProviderData((p) => {
-        if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
-        p.profileImage.src = newImageSrc;
-      });
-      if (success) {
+  const handleProfilePictureChange = async (newImageSrc: string) => {
+      if(!provider) return;
+      try {
+        await updateProviderProfileImage(provider.id, newImageSrc);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-      } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+        loadProviderData();
+      } catch (e) {
+        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
       }
   }
 
-  const handleDeleteProfilePicture = () => {
-    const success = updateProviderData((p) => {
-      if (p.profileImage) p.profileImage.src = '';
-    });
-    if (success) {
-      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+  const handleDeleteProfilePicture = async () => {
+    if(!provider) return;
+    try {
+        await deleteProviderProfileImage(provider.id);
+        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+        loadProviderData();
+    } catch (e) {
+         toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });
     }
   };
 
-  const deletePortfolioItem = (itemSrc: string) => {
-    const success = updateProviderData((p) => {
-        p.portfolio = p.portfolio.filter((item) => item.src !== itemSrc);
-    });
-    if (success) {
+  const deletePortfolioItem = async (itemSrc: string) => {
+    if (!provider) return;
+    try {
+        await deletePortfolioItemFromProvider(provider.id, itemSrc);
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
         setSelectedImageSrc(null); // Close the dialog
-    } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+        loadProviderData();
+    } catch (e) {
+        toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
     }
   };
 
@@ -211,6 +195,10 @@ export default function ProfilePage() {
       event.target.value = '';
     }
   };
+  
+  if (isAuthLoading) {
+    return <div>در حال بارگذاری...</div>;
+  }
   
   if (!isLoggedIn) {
      return (
@@ -233,17 +221,26 @@ export default function ProfilePage() {
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
-                این صفحه فقط برای ارائه‌دهندگان خدمات است. برای ثبت نام به عنوان هنرمند، به صفحه ثبت‌نام بروید.
+                این صفحه فقط برای ارائه‌دهندگان خدمات است.
             </p>
-            <Button asChild size="lg" className="mt-8">
-                <Link href="/register">ثبت‌نام به عنوان هنرمند</Link>
-            </Button>
         </div>
      )
   }
   
-  if (!provider) {
+  if (isDataLoading) {
     return <div>در حال بارگذاری پروفایل...</div>;
+  }
+  
+  if (!provider) {
+      return (
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+            <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
+            <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل یافت نشد</h1>
+            <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
+               مشکلی در بارگذاری پروفایل شما پیش آمده است.
+            </p>
+        </div>
+      )
   }
 
   return (

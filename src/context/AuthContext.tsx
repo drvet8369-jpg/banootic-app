@@ -2,8 +2,21 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User, Agreement, Provider } from '@/lib/types';
-import { getAgreements, saveAgreements, getProviders } from '@/lib/data';
+import type { User, Agreement, Provider, Chat, Message } from '@/lib/types';
+import { 
+    getProviders, 
+    getProviderByPhone,
+    getAgreementsForProvider, 
+    getAgreementsForCustomer,
+    updateAgreement,
+    createAgreement,
+    getInboxForUser,
+    createChatMessage,
+    updateChatMessage,
+    setChatRead
+} from '@/lib/data';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 
 export interface AuthContextType {
@@ -16,6 +29,10 @@ export interface AuthContextType {
   providers: Provider[];
   addAgreement: (providerPhone: string) => void;
   updateAgreementStatus: (agreementId: string, status: 'confirmed') => void;
+  getInboxForUser: (userPhone: string) => Promise<any>;
+  sendChatMessage: (chatId: string, message: Message, otherUser: {phone: string, name: string}, sender: User) => Promise<void>;
+  editChatMessage: (chatId: string, messageId: string, newText: string) => Promise<void>;
+  markChatAsRead: (chatId: string, userPhone: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,41 +44,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const router = useRouter();
 
-  const fetchAppData = useCallback(() => {
+  const fetchAppData = useCallback(async (currentUser: User | null) => {
     try {
-      const storedUser = localStorage.getItem('honarbanoo-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-      const storedAgreements = getAgreements();
-      setAgreements(storedAgreements);
-      const allProviders = getProviders();
-      setProviders(allProviders);
+        const allProviders = await getProviders();
+        setProviders(allProviders);
+
+        if (currentUser) {
+            let userAgreements: Agreement[] = [];
+            if (currentUser.accountType === 'provider') {
+                userAgreements = await getAgreementsForProvider(currentUser.phone);
+            } else {
+                userAgreements = await getAgreementsForCustomer(currentUser.phone);
+            }
+            setAgreements(userAgreements);
+        }
     } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-      localStorage.removeItem('honarbanoo-user');
-      localStorage.removeItem('honarbanoo-agreements');
+      console.error("Failed to fetch app data from Firestore", error);
     } finally {
         setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchAppData();
-    
-    // Listen for storage changes from other tabs
-    window.addEventListener('storage', fetchAppData);
-    return () => {
-      window.removeEventListener('storage', fetchAppData);
-    };
+    let storedUser = null;
+    try {
+      const storedUserJSON = localStorage.getItem('banoutique-user');
+      if (storedUserJSON) {
+        storedUser = JSON.parse(storedUserJSON);
+        setUser(storedUser);
+      }
+    } catch (e) {
+        console.error("Could not parse user from localStorage", e);
+        localStorage.removeItem('banoutique-user');
+    }
+    fetchAppData(storedUser);
   }, [fetchAppData]);
 
 
   const login = (userData: User) => {
     try {
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
+      localStorage.setItem('banoutique-user', JSON.stringify(userData));
       setUser(userData);
-      fetchAppData(); // Re-fetch all data on login
+      fetchAppData(userData); 
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
     }
@@ -69,39 +93,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banoutique-user');
       setUser(null);
+      setAgreements([]);
       router.push('/');
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
     }
   };
 
-  const addAgreement = (providerPhone: string) => {
+  const addAgreement = async (providerPhone: string) => {
     if (!user || user.accountType !== 'customer') return;
     
     const existingAgreement = agreements.find(a => a.providerPhone === providerPhone && a.customerPhone === user.phone);
-    if(existingAgreement) return; // Don't add duplicates
+    if(existingAgreement) return;
 
-    const newAgreement: Agreement = {
-      id: `${Date.now()}-${user.phone}`,
-      providerPhone,
-      customerPhone: user.phone,
-      customerName: user.name,
-      status: 'pending',
-      requestedAt: new Date().toISOString(),
-    };
-    const updatedAgreements = [...agreements, newAgreement];
-    saveAgreements(updatedAgreements);
-    setAgreements(updatedAgreements);
+    try {
+        const newAgreement = await createAgreement(providerPhone, user.phone, user.name);
+        setAgreements(prev => [...prev, newAgreement]);
+    } catch (error) {
+        console.error("Failed to create agreement", error);
+    }
   };
   
-  const updateAgreementStatus = (agreementId: string, status: 'confirmed') => {
-    const updatedAgreements = agreements.map(a => 
-      a.id === agreementId ? { ...a, status, confirmedAt: new Date().toISOString() } : a
-    );
-    saveAgreements(updatedAgreements);
-    setAgreements(updatedAgreements);
+  const updateAgreementStatus = async (agreementId: string, status: 'confirmed') => {
+    try {
+      const confirmedAt = new Date().toISOString();
+      await updateAgreement(agreementId, { status, confirmedAt });
+      setAgreements(prev => prev.map(a => 
+        a.id === agreementId ? { ...a, status, confirmedAt } : a
+      ));
+    } catch(e) {
+      console.error("Failed to update agreement", e);
+    }
   };
 
 
@@ -115,7 +139,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         agreements, 
         providers,
         addAgreement, 
-        updateAgreementStatus 
+        updateAgreementStatus,
+        getInboxForUser,
+        sendChatMessage: createChatMessage,
+        editChatMessage: updateChatMessage,
+        markChatAsRead: setChatRead,
     }}>
       {children}
     </AuthContext.Provider>
