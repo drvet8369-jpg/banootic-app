@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Eye, X } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +14,7 @@ import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
 
   const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
@@ -61,7 +63,6 @@ export default function ProfilePage() {
     if (providerIndex > -1) {
       updateFn(updatedProvidersList[providerIndex]);
       saveProviders(updatedProvidersList);
-      // After saving, reload data into state
       loadProviderData();
       return true;
     }
@@ -183,12 +184,13 @@ export default function ProfilePage() {
     }
   };
 
-  const deletePortfolioItem = (itemIndex: number) => {
+  const deletePortfolioItem = (itemSrc: string) => {
     const success = updateProviderData((p) => {
-        p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
+        p.portfolio = p.portfolio.filter((item) => item.src !== itemSrc);
     });
     if (success) {
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+        setSelectedImageSrc(null); // Close the dialog
     } else {
         toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
@@ -314,36 +316,63 @@ export default function ProfilePage() {
                             افزودن نمونه کار جدید
                       </Button>
                       
-                      {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {provider.portfolio.map((item, index) => (
-                                <div key={`${provider.id}-portfolio-${index}`} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
-                                    <Image
-                                        src={item.src}
-                                        alt={`نمونه کار ${index + 1}`}
-                                        fill
-                                        className="object-cover"
-                                        data-ai-hint={item.aiHint}
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                      <Button
-                                          variant="destructive"
-                                          size="icon"
-                                          className="h-10 w-10"
-                                          onClick={() => deletePortfolioItem(index)}
-                                          aria-label={`حذف نمونه کار ${index + 1}`}
+                      <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImageSrc(null)}>
+                         {provider.portfolio && provider.portfolio.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {provider.portfolio.map((item, index) => (
+                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                      <div 
+                                          className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                          onClick={() => setSelectedImageSrc(item.src)}
                                       >
-                                          <Trash2 className="w-5 h-5" />
-                                      </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                            <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
-                        </div>
-                      )}
+                                          <Image
+                                              src={item.src}
+                                              alt={`نمونه کار ${index + 1}`}
+                                              fill
+                                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                              data-ai-hint={item.aiHint}
+                                          />
+                                      </div>
+                                    </DialogTrigger>
+                                ))}
+                            </div>
+                         ) : (
+                            <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                                <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                            </div>
+                         )}
+
+                         <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                              <DialogHeader className="sr-only">
+                                <DialogTitle>نمایش نمونه کار</DialogTitle>
+                              </DialogHeader>
+                              <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                <X className="h-6 w-6" />
+                                <span className="sr-only">بستن</span>
+                              </DialogClose>
+                              {selectedImageSrc && (
+                                <>
+                                  <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="absolute left-4 top-4 h-10 w-10 z-50"
+                                      onClick={() => deletePortfolioItem(selectedImageSrc)}
+                                      aria-label={`حذف نمونه کار`}
+                                  >
+                                      <Trash2 className="w-5 h-5" />
+                                  </Button>
+                                  <div className="relative w-full h-full">
+                                      <Image
+                                          src={selectedImageSrc}
+                                          alt="نمونه کار تمام صفحه"
+                                          fill
+                                          className="object-contain"
+                                      />
+                                  </div>
+                                </>
+                              )}
+                          </DialogContent>
+                      </Dialog>
                   </div>
                 </div>
             </CardContent>
@@ -381,7 +410,7 @@ export default function ProfilePage() {
                         </Button>
                         <Button asChild className="w-full flex-1" variant="secondary">
                             <Link href={`/provider/${provider.phone}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <Eye className="w-4 h-4 ml-2" />
                                 مشاهده پروفایل عمومی
                             </Link>
                         </Button>
@@ -394,5 +423,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
