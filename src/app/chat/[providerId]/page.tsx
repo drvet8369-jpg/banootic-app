@@ -1,6 +1,6 @@
 'use client';
 
-import { getProviders } from '@/lib/data';
+import { getProviders, getUsers } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,10 +70,14 @@ export default function ChatPage() {
     if (provider) {
       details = provider;
     } else {
-      // If the user is a provider, the other person must be a customer.
-      // We create a temporary representation of the customer.
-      const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
+      const allUsers = getUsers();
+      const customer = allUsers.find(u => u.phone === otherPersonIdOrProviderId);
+      if(customer){
+         details = { id: customer.id, name: customer.name, phone: customer.phone };
+      } else {
+        const customerPhone = otherPersonIdOrProviderId;
+        details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
+      }
     }
     
     if (!details) {
@@ -155,6 +159,7 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
 
+    // Also update the last message in the inbox if this was the last message
     const lastMessage = updatedMessages[updatedMessages.length - 1];
     if (lastMessage.id === editingMessageId) {
         const allChats = JSON.parse(localStorage.getItem('zanmahal-inbox-chats') || '{}');
@@ -200,18 +205,26 @@ export default function ChatPage() {
                 }
             };
             
+            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
+            // Increment unread count for the receiver
             const receiverPhone = otherPersonDetails.phone;
             if (currentChat.participants[receiverPhone]) {
                 currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
             } else {
                  currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
+
+            // Ensure sender's participant data exists
             if (!currentChat.participants[user.phone]) {
                 currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
             }
+            // Ensure receiver's name is up-to-date
+            currentChat.participants[receiverPhone].name = otherPersonDetails.name;
+
+
             allChats[chatId] = currentChat;
             
             localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
@@ -229,6 +242,7 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
+    // For customers, check if they have any chats, if so link to inbox, otherwise home.
     try {
       const allChatsData = JSON.parse(localStorage.getItem('zanmahal-inbox-chats') || '{}');
       const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
@@ -236,6 +250,7 @@ export default function ChatPage() {
     } catch (e) { /* ignore */ }
     return '/'; 
   }
+
 
   return (
     <div className="flex flex-col h-full py-4">
