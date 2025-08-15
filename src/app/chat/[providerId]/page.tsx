@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Message as MessageType, Provider } from '@/lib/types';
 import { onSnapshot, collection, query, orderBy, doc, updateDoc, serverTimestamp, writeBatch, getDoc, setDoc, increment } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getDb } from '@/lib/firebase';
 import { getProviderByPhone } from '@/lib/data';
 
 interface OtherPersonDetails {
@@ -61,6 +61,7 @@ export default function ChatPage() {
 
   const markChatAsRead = useCallback(async () => {
     if (!chatId || !user?.phone) return;
+    const db = await getDb();
     const inboxRef = doc(db, "inboxes", user.phone);
     const fieldPath = `${chatId}.unreadCount`;
     const docSnap = await getDoc(inboxRef);
@@ -75,30 +76,40 @@ export default function ChatPage() {
         return;
     }
 
-    setIsLoadingChat(true);
-    const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+    let unsubscribe: () => void;
+    const setupListener = async () => {
+        setIsLoadingChat(true);
+        const db = await getDb();
+        const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+        
+        unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const msgs: MessageType[] = querySnapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                  id: doc.id,
+                  text: data.text,
+                  senderId: data.senderId,
+                  isEdited: data.isEdited,
+                  createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+              } as MessageType
+          });
+          setMessages(msgs);
+          setIsLoadingChat(false);
+          markChatAsRead();
+        }, (error) => {
+            console.error("Error listening to chat messages:", error);
+            toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
+            setIsLoadingChat(false);
+        });
+    };
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs: MessageType[] = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-              id: doc.id,
-              text: data.text,
-              senderId: data.senderId,
-              isEdited: data.isEdited,
-              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-          } as MessageType
-      });
-      setMessages(msgs);
-      setIsLoadingChat(false);
-      markChatAsRead();
-    }, (error) => {
-        console.error("Error listening to chat messages:", error);
-        toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
-        setIsLoadingChat(false);
-    });
+    setupListener();
 
-    return () => unsubscribe();
+    return () => {
+        if(unsubscribe) {
+            unsubscribe();
+        }
+    };
   }, [chatId, user?.phone, toast, markChatAsRead]);
 
 
@@ -152,6 +163,7 @@ export default function ChatPage() {
     if (!editingMessageId || !editingText.trim() || !chatId) return;
     setIsSending(true);
     try {
+      const db = await getDb();
       const messageRef = doc(db, "chats", chatId, "messages", editingMessageId);
       await updateDoc(messageRef, { text: editingText.trim(), isEdited: true });
       handleCancelEdit();
@@ -174,6 +186,7 @@ export default function ChatPage() {
     setNewMessage('');
     
     try {
+       const db = await getDb();
        const batch = writeBatch(db);
     
         const messageRef = doc(collection(db, "chats", chatId, "messages"));

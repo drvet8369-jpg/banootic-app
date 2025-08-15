@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
+import { getDb } from '@/lib/firebase';
 import { doc, onSnapshot } from "firebase/firestore";
 
 interface InboxBadgeProps {
@@ -21,21 +20,32 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
       return;
     }
 
-    const inboxRef = doc(db, "inboxes", user.phone);
-    const unsubscribe = onSnapshot(inboxRef, (doc) => {
-        if (doc.exists()) {
-            const inboxData = doc.data();
-            const totalUnread = Object.values(inboxData).reduce((acc: number, chat: any) => acc + (chat.unreadCount || 0), 0);
-            setUnreadCount(totalUnread);
-        } else {
+    let unsubscribe: () => void;
+    
+    const setupListener = async () => {
+        const db = await getDb();
+        const inboxRef = doc(db, "inboxes", user.phone);
+        unsubscribe = onSnapshot(inboxRef, (doc) => {
+            if (doc.exists()) {
+                const inboxData = doc.data();
+                const totalUnread = Object.values(inboxData).reduce((acc: number, chat: any) => acc + (chat.unreadCount || 0), 0);
+                setUnreadCount(totalUnread);
+            } else {
+                setUnreadCount(0);
+            }
+        }, (error) => {
+            console.error("Error listening to inbox:", error);
             setUnreadCount(0);
-        }
-    }, (error) => {
-        console.error("Error listening to inbox:", error);
-        setUnreadCount(0);
-    });
+        });
+    };
 
-    return () => unsubscribe();
+    setupListener();
+
+    return () => {
+        if (unsubscribe) {
+            unsubscribe();
+        }
+    };
   }, [user?.phone]);
 
   if (unreadCount === 0) {

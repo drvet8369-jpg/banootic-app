@@ -10,12 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import type { InboxChatView } from '@/lib/types';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import type { InboxChatView, Provider } from '@/lib/types';
+import { getDb } from '@/lib/firebase';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { getProviders } from '@/lib/data';
-import type { Provider } from '@/lib/types';
-
 
 const getInitials = (name: string) => {
   if (!name) return '?';
@@ -54,39 +52,49 @@ export default function InboxPage() {
       return;
     }
 
-    setIsLoading(true);
-    
-    const q = query(collection(db, "chats"), where("members", "array-contains", user.phone));
+    let unsubscribe: () => void;
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const userChats: InboxChatView[] = querySnapshot.docs.map(doc => {
-            const chatData = doc.data();
-            const otherMemberId = chatData.members.find((id: string) => id !== user.phone);
-            const selfInfo = chatData.participants?.[user.phone];
-            const otherMemberInfo = chatData.participants?.[otherMemberId];
+    const setupListener = async () => {
+        setIsLoading(true);
+        const db = await getDb();
+        const q = query(collection(db, "chats"), where("members", "array-contains", user.phone));
+
+        unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const userChats: InboxChatView[] = querySnapshot.docs.map(doc => {
+                const chatData = doc.data();
+                const otherMemberId = chatData.members.find((id: string) => id !== user.phone);
+                const selfInfo = chatData.participants?.[user.phone];
+                const otherMemberInfo = chatData.participants?.[otherMemberId];
+                
+                return {
+                    id: doc.id,
+                    members: chatData.members,
+                    participants: chatData.participants,
+                    lastMessage: chatData.lastMessage || '',
+                    updatedAt: chatData.updatedAt?.toDate ? chatData.updatedAt.toDate().toISOString() : new Date(0).toISOString(),
+                    otherMemberId: otherMemberId,
+                    otherMemberName: otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`,
+                    unreadCount: selfInfo?.unreadCount || 0,
+                };
+            }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
             
-            return {
-                id: doc.id,
-                members: chatData.members,
-                participants: chatData.participants,
-                lastMessage: chatData.lastMessage || '',
-                updatedAt: chatData.updatedAt?.toDate ? chatData.updatedAt.toDate().toISOString() : new Date(0).toISOString(),
-                otherMemberId: otherMemberId,
-                otherMemberName: otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`,
-                unreadCount: selfInfo?.unreadCount || 0,
-            };
-        }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        
-        setChats(userChats);
-        setError(null);
-        setIsLoading(false);
-    }, (err) => {
-        console.error("Error fetching chats:", err);
-        setError('خطا در بارگذاری گفتگوها.');
-        setIsLoading(false);
-    });
+            setChats(userChats);
+            setError(null);
+            setIsLoading(false);
+        }, (err) => {
+            console.error("Error fetching chats:", err);
+            setError('خطا در بارگذاری گفتگوها.');
+            setIsLoading(false);
+        });
+    }
 
-    return () => unsubscribe();
+    setupListener();
+
+    return () => {
+        if(unsubscribe) {
+            unsubscribe();
+        }
+    };
   }, [user?.phone, isAuthLoading]);
 
   const getOtherMemberProfileImage = (phone: string) => {
