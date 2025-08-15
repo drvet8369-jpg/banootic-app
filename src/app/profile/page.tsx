@@ -294,7 +294,26 @@ export default function ProfilePage() {
                <Separator className="my-6" />
                 <div className="space-y-6">
                   <div>
-                      <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                    <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
+                      <input 
+                        type="file" 
+                        ref={portfolioFileInputRef} 
+                        onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                        className="hidden"
+                        accept="image/*"
+                      />
+                      <input
+                        type="file"
+                        ref={profilePicInputRef}
+                        onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                        className="hidden"
+                        accept="image/*"
+                      />
+                      <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                            <PlusCircle className="w-5 h-5 ml-2" />
+                            افزودن نمونه کار جدید
+                      </Button>
+                      
                       {provider.portfolio && provider.portfolio.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {provider.portfolio.map((item, index) => (
@@ -325,26 +344,6 @@ export default function ProfilePage() {
                             <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
                         </div>
                       )}
-                  </div>
-                  <div>
-                    <input 
-                      type="file" 
-                      ref={portfolioFileInputRef} 
-                      onChange={(e) => handleFileChange(e, addPortfolioItem)}
-                      className="hidden"
-                      accept="image/*"
-                    />
-                    <input
-                      type="file"
-                      ref={profilePicInputRef}
-                      onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
-                      className="hidden"
-                      accept="image/*"
-                    />
-                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold">
-                          <PlusCircle className="w-5 h-5 ml-2" />
-                          افزودن نمونه کار جدید
-                    </Button>
                   </div>
                 </div>
             </CardContent>
