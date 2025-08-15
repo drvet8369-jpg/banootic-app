@@ -2,8 +2,8 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User, Agreement } from '@/lib/types';
-import { getAgreements, saveAgreements } from '@/lib/data';
+import type { User, Agreement, Provider } from '@/lib/types';
+import { getAgreements, saveAgreements, getProviders } from '@/lib/data';
 
 
 export interface AuthContextType {
@@ -13,6 +13,7 @@ export interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   agreements: Agreement[];
+  providers: Provider[];
   addAgreement: (providerPhone: string) => void;
   updateAgreementStatus: (agreementId: string, status: 'confirmed') => void;
 }
@@ -23,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const router = useRouter();
 
   const fetchAppData = useCallback(() => {
@@ -33,6 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const storedAgreements = getAgreements();
       setAgreements(storedAgreements);
+      const allProviders = getProviders();
+      setProviders(allProviders);
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
       localStorage.removeItem('honarbanoo-user');
@@ -57,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
       setUser(userData);
+      fetchAppData(); // Re-fetch all data on login
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
     }
@@ -108,6 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout, 
         isLoading, 
         agreements, 
+        providers,
         addAgreement, 
         updateAgreementStatus 
     }}>
