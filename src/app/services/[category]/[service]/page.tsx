@@ -1,6 +1,6 @@
 'use client';
 
-import { services, categories, getProviders, getAgreements } from '@/lib/data';
+import { services, categories, getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -19,35 +19,23 @@ export default function ServiceProvidersPage() {
   const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
   const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
 
     if (category && service) {
-      const allProviders = getProviders();
-      const allAgreements = getAgreements();
-
-      // Create a map of provider phone to confirmed agreements count
-      const agreementsCountMap = new Map<string, number>();
-      allAgreements.forEach(agreement => {
-          if (agreement.status === 'confirmed') {
-              agreementsCountMap.set(agreement.providerPhone, (agreementsCountMap.get(agreement.providerPhone) || 0) + 1);
-          }
-      });
+      const allProviders = await getProviders();
       
       const filteredProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
 
       // Sort providers based on the ladder system
       const sortedProviders = filteredProviders.sort((a, b) => {
-        const agreementsA = agreementsCountMap.get(a.phone) || 0;
-        const agreementsB = agreementsCountMap.get(b.phone) || 0;
-
         // 1. Sort by reviewsCount (descending)
         if (b.reviewsCount !== a.reviewsCount) {
           return b.reviewsCount - a.reviewsCount;
         }
         // 2. Sort by agreementsCount (descending)
-        if (agreementsB !== agreementsA) {
-          return agreementsB - agreementsA;
+        if (b.agreementsCount !== a.agreementsCount) {
+          return b.agreementsCount - a.agreementsCount;
         }
         // 3. Sort by rating (descending)
         return b.rating - a.rating;
@@ -61,15 +49,8 @@ export default function ServiceProvidersPage() {
     setIsLoading(false);
   }, [category, service, serviceSlug]);
 
-  // useEffect now has a stable dependency and will re-run correctly
-  // every time the user navigates to a new service page or revisits the tab.
   useEffect(() => {
     loadData();
-
-    window.addEventListener('focus', loadData);
-    return () => {
-      window.removeEventListener('focus', loadData);
-    };
   }, [loadData]);
 
   if (isLoading) {
