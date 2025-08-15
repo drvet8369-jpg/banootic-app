@@ -1,5 +1,3 @@
-'use server';
-
 import admin from 'firebase-admin';
 
 // This file is for server-side (Next.js Server Actions) Firebase access ONLY.
