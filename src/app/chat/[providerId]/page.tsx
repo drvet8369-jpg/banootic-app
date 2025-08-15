@@ -61,12 +61,16 @@ export default function ChatPage() {
 
   const markChatAsRead = useCallback(async () => {
     if (!chatId || !user?.phone) return;
-    const db = await getDb();
-    const inboxRef = doc(db, "inboxes", user.phone);
-    const fieldPath = `${chatId}.unreadCount`;
-    const docSnap = await getDoc(inboxRef);
-    if(docSnap.exists() && docSnap.data()[chatId]?.unreadCount > 0){
-        await updateDoc(inboxRef, { [fieldPath]: 0 });
+    try {
+      const db = await getDb();
+      const inboxRef = doc(db, "inboxes", user.phone);
+      const fieldPath = `${chatId}.unreadCount`;
+      const docSnap = await getDoc(inboxRef);
+      if(docSnap.exists() && docSnap.data()[chatId]?.unreadCount > 0){
+          await updateDoc(inboxRef, { [fieldPath]: 0 });
+      }
+    } catch (e) {
+      console.error("Failed to mark chat as read", e);
     }
   }, [chatId, user?.phone]);
 
@@ -78,29 +82,35 @@ export default function ChatPage() {
 
     let unsubscribe: () => void;
     const setupListener = async () => {
-        setIsLoadingChat(true);
-        const db = await getDb();
-        const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
-        
-        unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const msgs: MessageType[] = querySnapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                  id: doc.id,
-                  text: data.text,
-                  senderId: data.senderId,
-                  isEdited: data.isEdited,
-                  createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-              } as MessageType
-          });
-          setMessages(msgs);
-          setIsLoadingChat(false);
-          markChatAsRead();
-        }, (error) => {
-            console.error("Error listening to chat messages:", error);
-            toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
+        try {
+            setIsLoadingChat(true);
+            const db = await getDb();
+            const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+            
+            unsubscribe = onSnapshot(q, (querySnapshot) => {
+              const msgs: MessageType[] = querySnapshot.docs.map(doc => {
+                  const data = doc.data();
+                  return {
+                      id: doc.id,
+                      text: data.text,
+                      senderId: data.senderId,
+                      isEdited: data.isEdited,
+                      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                  } as MessageType
+              });
+              setMessages(msgs);
+              setIsLoadingChat(false);
+              markChatAsRead();
+            }, (error) => {
+                console.error("Error listening to chat messages:", error);
+                toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
+                setIsLoadingChat(false);
+            });
+        } catch(e) {
+            console.error("Failed to setup chat listener", e);
+            toast({ title: "خطای اتصال", description: "امکان برقراری ارتباط با سرور چت وجود ندارد.", variant: "destructive" });
             setIsLoadingChat(false);
-        });
+        }
     };
     
     setupListener();
