@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getUsers } from '@/lib/data';
+import { getProviders, getUsers } from '@/lib/data';
 import type { User } from '@/lib/types';
 
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                      <Input placeholder="" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
