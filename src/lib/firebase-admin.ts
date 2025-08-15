@@ -1,27 +1,25 @@
 import admin from 'firebase-admin';
 
-let adminDb: admin.firestore.Firestore | undefined;
-
+/**
+ * Initializes the Firebase Admin SDK if it hasn't been initialized yet.
+ * This is safe to call multiple times.
+ */
 function initializeAdminApp() {
-  // Check if the app is already initialized to prevent errors.
-  if (admin.apps.length > 0) {
-    return admin.app();
+  if (admin.apps.length === 0) {
+    // When deployed to App Hosting, service account credentials are automatically
+    // configured. For local development, set up Application Default Credentials.
+    // https://firebase.google.com/docs/hosting/server-side-rendering-frameworks#admin-sdk
+    admin.initializeApp();
   }
-
-  // When deployed to App Hosting, service account credentials are automatically
-  // configured. For local development, set up Application Default Credentials.
-  // https://firebase.google.com/docs/hosting/server-side-rendering-frameworks#admin-sdk
-  return admin.initializeApp();
 }
 
 /**
  * Gets the server-side Firestore database instance.
- * Initializes the Firebase Admin SDK if not already done.
+ * Ensures the Firebase Admin SDK is initialized before returning the database instance.
+ *
+ * @returns {admin.firestore.Firestore} The Firestore database instance.
  */
 export function getAdminDb(): admin.firestore.Firestore {
-  if (!adminDb) {
-    const app = initializeAdminApp();
-    adminDb = admin.firestore(app);
-  }
-  return adminDb;
+  initializeAdminApp();
+  return admin.firestore();
 }
