@@ -12,8 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import type { InboxChatView, Provider } from '@/lib/types';
 import { getDb } from '@/lib/firebase';
-import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
-import { getProviders } from '@/lib/data';
+import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 
 const getInitials = (name: string) => {
   if (!name) return '?';
@@ -35,73 +34,67 @@ export default function InboxPage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Fetch all providers once to get their profile images
+    // Fetch all providers once to get their profile images for avatars
     const fetchProviders = async () => {
-      const allProviders = await getProviders();
-      const providerMap = new Map(allProviders.map(p => [p.phone, p]));
+      const db = getDb();
+      const providersCollection = collection(db, 'providers');
+      const snapshot = await getDocs(providersCollection);
+      const providerMap = new Map(snapshot.docs.map(doc => {
+          const p = doc.data() as Provider
+          return [p.phone, p]
+      }));
       setProviderProfiles(providerMap);
     };
     fetchProviders();
   }, []);
 
   useEffect(() => {
-    if (isAuthLoading) return;
-    if (!user?.phone) {
-      setChats([]);
-      setIsLoading(false);
+    if (isAuthLoading || !isLoggedIn || !user?.phone) {
+      if (!isAuthLoading) setIsLoading(false);
       return;
     }
 
-    let unsubscribe: () => void;
+    const db = getDb();
+    const q = query(collection(db, "chats"), where("members", "array-contains", user.phone));
 
-    const setupListener = async () => {
-        setIsLoading(true);
-        const db = await getDb();
-        const q = query(collection(db, "chats"), where("members", "array-contains", user.phone));
-
-        unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const userChats: InboxChatView[] = querySnapshot.docs.map(doc => {
-                const chatData = doc.data();
-                const otherMemberId = chatData.members.find((id: string) => id !== user.phone);
-                const selfInfo = chatData.participants?.[user.phone];
-                const otherMemberInfo = chatData.participants?.[otherMemberId];
-                
-                return {
-                    id: doc.id,
-                    members: chatData.members,
-                    participants: chatData.participants,
-                    lastMessage: chatData.lastMessage || '',
-                    updatedAt: chatData.updatedAt?.toDate ? chatData.updatedAt.toDate().toISOString() : new Date(0).toISOString(),
-                    otherMemberId: otherMemberId,
-                    otherMemberName: otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`,
-                    unreadCount: selfInfo?.unreadCount || 0,
-                };
-            }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userChats: InboxChatView[] = querySnapshot.docs.map(doc => {
+            const chatData = doc.data();
+            const otherMemberId = chatData.members.find((id: string) => id !== user.phone);
+            const selfInfo = chatData.participants?.[user.phone];
+            const otherMemberInfo = chatData.participants?.[otherMemberId];
             
-            setChats(userChats);
-            setError(null);
-            setIsLoading(false);
-        }, (err) => {
-            console.error("Error fetching chats:", err);
-            setError('خطا در بارگذاری گفتگوها.');
-            setIsLoading(false);
-        });
-    }
+            return {
+                id: doc.id,
+                members: chatData.members,
+                participants: chatData.participants,
+                lastMessage: chatData.lastMessage || '',
+                updatedAt: chatData.updatedAt?.toDate ? chatData.updatedAt.toDate().toISOString() : new Date(0).toISOString(),
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`,
+                unreadCount: selfInfo?.unreadCount || 0,
+            };
+        }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        
+        setChats(userChats);
+        setError(null);
+        setIsLoading(false);
+    }, (err) => {
+        console.error("Error fetching chats:", err);
+        setError('خطا در بارگذاری گفتگوها.');
+        setIsLoading(false);
+    });
 
-    setupListener();
-
-    return () => {
-        if(unsubscribe) {
-            unsubscribe();
-        }
-    };
-  }, [user?.phone, isAuthLoading]);
+    return () => unsubscribe();
+  }, [user?.phone, isAuthLoading, isLoggedIn]);
 
   const getOtherMemberProfileImage = (phone: string) => {
     return providerProfiles.get(phone)?.profileImage?.src;
   }
 
-  if (isLoading || isAuthLoading) {
+  const isLoadingPage = isLoading || isAuthLoading;
+
+  if (isLoadingPage) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

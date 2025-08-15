@@ -1,11 +1,10 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
 
 // This context will now ONLY handle user authentication state.
-// Data fetching will be moved to the components that need it to avoid race conditions.
 export interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
@@ -25,13 +24,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // This effect runs once on mount to hydrate the user state from localStorage.
     setIsLoading(true);
     try {
-      const storedUserJSON = localStorage.getItem('honarbanoo-user');
+      const storedUserJSON = localStorage.getItem('banootik-user');
       if (storedUserJSON) {
         setUser(JSON.parse(storedUserJSON));
       }
     } catch (e) {
       console.error("Could not parse user from localStorage", e);
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banootik-user');
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: User) => {
     try {
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userData));
+      localStorage.setItem('banootik-user', JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
       console.error("Failed to save user to localStorage", error);
@@ -48,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banootik-user');
       setUser(null);
       router.push('/');
     } catch (error) {

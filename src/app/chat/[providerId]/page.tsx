@@ -62,12 +62,15 @@ export default function ChatPage() {
   const markChatAsRead = useCallback(async () => {
     if (!chatId || !user?.phone) return;
     try {
-      const db = await getDb();
-      const inboxRef = doc(db, "inboxes", user.phone);
-      const fieldPath = `${chatId}.unreadCount`;
-      const docSnap = await getDoc(inboxRef);
-      if(docSnap.exists() && docSnap.data()[chatId]?.unreadCount > 0){
-          await updateDoc(inboxRef, { [fieldPath]: 0 });
+      const db = getDb();
+      const chatDocRef = doc(db, "chats", chatId);
+      const chatDocSnap = await getDoc(chatDocRef);
+      if (chatDocSnap.exists()) {
+        const selfPath = `participants.${user.phone}.unreadCount`;
+        const currentUnread = chatDocSnap.data().participants?.[user.phone]?.unreadCount;
+        if (currentUnread > 0) {
+           await updateDoc(chatDocRef, { [selfPath]: 0 });
+        }
       }
     } catch (e) {
       console.error("Failed to mark chat as read", e);
@@ -84,7 +87,7 @@ export default function ChatPage() {
     const setupListener = async () => {
         try {
             setIsLoadingChat(true);
-            const db = await getDb();
+            const db = getDb();
             const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
             
             unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -173,9 +176,16 @@ export default function ChatPage() {
     if (!editingMessageId || !editingText.trim() || !chatId) return;
     setIsSending(true);
     try {
-      const db = await getDb();
+      const db = getDb();
       const messageRef = doc(db, "chats", chatId, "messages", editingMessageId);
       await updateDoc(messageRef, { text: editingText.trim(), isEdited: true });
+      
+      const chatRef = doc(db, "chats", chatId);
+      const lastMessage = messages[messages.length - 1];
+      if(lastMessage.id === editingMessageId) {
+          await updateDoc(chatRef, { lastMessage: editingText.trim() });
+      }
+
       handleCancelEdit();
       toast({ title: 'پیام ویرایش شد.' });
     } catch (e) {
@@ -196,7 +206,7 @@ export default function ChatPage() {
     setNewMessage('');
     
     try {
-       const db = await getDb();
+       const db = getDb();
        const batch = writeBatch(db);
     
         const messageRef = doc(collection(db, "chats", chatId, "messages"));
@@ -208,24 +218,15 @@ export default function ChatPage() {
         });
 
         const chatRef = doc(db, "chats", chatId);
+        const receiverPath = `participants.${otherPersonDetails.phone}.unreadCount`;
+
         batch.set(chatRef, {
             lastMessage: text,
             updatedAt: serverTimestamp(),
             members: [user.phone, otherPersonDetails.phone].sort(),
             participants: {
-                [user.phone]: { name: user.name },
-                [otherPersonDetails.phone]: { name: otherPersonDetails.name }
-            }
-        }, { merge: true });
-
-        // Increment unread count for receiver
-        const receiverInboxRef = doc(db, "inboxes", otherPersonDetails.phone);
-        const receiverUnreadPath = `${chatId}.unreadCount`;
-        batch.set(receiverInboxRef, {
-            [chatId]: {
-                id: chatId,
-                updatedAt: serverTimestamp(),
-                unreadCount: increment(1)
+                [user.phone]: { name: user.name, unreadCount: 0 },
+                [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: increment(1) }
             }
         }, { merge: true });
         
@@ -306,7 +307,7 @@ export default function ChatPage() {
                     ) : (
                          <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
                              <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                <p className="text-sm font-semibold">
+                                <p className="text-sm font-semibold break-words">
                                   {message.text}
                                   {message.isEdited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
                                 </p>

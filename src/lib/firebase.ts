@@ -1,7 +1,7 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence, connectFirestoreEmulator, Firestore } from "firebase/firestore";
+import { getFirestore, Firestore }from "firebase/firestore";
 import { getAuth, Auth } from "firebase/auth";
 
 // THIS FILE IS FOR CLIENT-SIDE FIREBASE ONLY
@@ -15,70 +15,36 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-interface FirebaseInstances {
-    app: FirebaseApp;
-    db: Firestore;
-    auth: Auth;
+// Singleton pattern to ensure only one instance of Firebase is initialized.
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
+
+if (typeof window !== 'undefined' && !getApps().length) {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+} else if (getApps().length) {
+  app = getApp();
+  db = getFirestore(app);
+  auth = getAuth(app);
 }
 
-// A promise that resolves with the Firebase instances.
-// This prevents race conditions by ensuring that Firebase is fully initialized
-// before any other part of the app tries to use it.
-let firebaseApp$: Promise<FirebaseInstances>;
+// @ts-ignore
+export { app, db, auth };
 
-function initializeFirebase(): Promise<FirebaseInstances> {
-    return new Promise((resolve, reject) => {
-        try {
-            const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-
-            // This function should only be called on the client side.
-            if (typeof window !== 'undefined') {
-                // Connect to emulators if on localhost. This must be done BEFORE any other Firestore operations.
-                if (window.location.hostname === "localhost") {
-                    // Use a flag on the db object to prevent multiple connections in React's strict mode.
-                    if (!(db as any)._settings.host || !((db as any)._settings.host as string).includes('localhost')) {
-                         console.log("Firebase Provider: Connecting to local Firebase emulators.");
-                         connectFirestoreEmulator(db, 'localhost', 8080);
-                    }
-                }
-
-                // Enable offline persistence. This must be done on the client side.
-                enableIndexedDbPersistence(db)
-                    .then(() => {
-                        console.log("Firebase offline persistence enabled.");
-                        resolve({ app, db, auth });
-                    })
-                    .catch((err) => {
-                        if (err.code === 'failed-precondition') {
-                            console.warn("Firebase persistence failed: Can only be enabled in one tab at a time.");
-                        } else if (err.code === 'unimplemented') {
-                            console.warn("Firebase persistence is not supported in this browser.");
-                        }
-                        // Still resolve, as the app can function without persistence.
-                        resolve({ app, db, auth });
-                    });
-            } else {
-                 // If not on client, resolve immediately without persistence.
-                 resolve({ app, db, auth });
-            }
-        } catch (error) {
-            console.error("CRITICAL: Firebase initialization failed.", error);
-            reject(error);
-        }
-    });
-}
-
-// Initialize the promise. It will be resolved only once.
-if (typeof window !== 'undefined') {
-    firebaseApp$ = initializeFirebase();
-}
-
-// Export the promise and a function to get the instances.
-// Other parts of the app will await this promise.
-export { firebaseApp$ };
-
-// Also export getter functions for convenience, though they should be used carefully.
-export const getDb = async () => (await firebaseApp$).db;
-export const getAuthInstance = async () => (await firebaseApp$).auth;
+// A simple getter function to ensure db is initialized before use.
+// Components should use this to avoid race conditions.
+export const getDb = (): Firestore => {
+  if (!db) {
+    // This case should ideally not happen in the client-side context
+    // if the singleton pattern above works correctly.
+    if (!getApps().length) {
+        const newApp = initializeApp(firebaseConfig);
+        db = getFirestore(newApp);
+    } else {
+        db = getFirestore(getApp());
+    }
+  }
+  return db;
+};

@@ -9,7 +9,6 @@ import {
     where,
     writeBatch,
     increment,
-    deleteDoc,
 } from 'firebase/firestore';
 import { getDb } from './firebase';
 import type { Category, Provider, Service, Review, User } from './types';
@@ -66,13 +65,13 @@ export const services: Service[] = [
 
 // --- User Management ---
 export const createUser = async (user: User): Promise<void> => {
-    const db = await getDb();
+    const db = getDb();
     const userRef = doc(db, 'users', user.phone);
     await setDoc(userRef, user);
 };
 
 export const getUserByPhone = async (phone: string): Promise<User | null> => {
-  const db = await getDb();
+  const db = getDb();
   const userDocRef = doc(db, 'users', phone);
   const userDoc = await getDoc(userDocRef);
   return userDoc.exists() ? userDoc.data() as User : null;
@@ -80,21 +79,21 @@ export const getUserByPhone = async (phone: string): Promise<User | null> => {
 
 // --- Provider Management ---
 export const createProvider = async (providerData: Omit<Provider, 'id'>): Promise<string> => {
-    const db = await getDb();
+    const db = getDb();
     const docRef = doc(collection(db, 'providers'));
     await setDoc(docRef, { ...providerData, id: docRef.id });
     return docRef.id;
 }
 
 export const getProviders = async (): Promise<Provider[]> => {
-  const db = await getDb();
+  const db = getDb();
   const providersCollection = collection(db, 'providers');
   const snapshot = await getDocs(providersCollection);
   return snapshot.docs.map(doc => doc.data() as Provider);
 };
 
 export const getProviderByPhone = async (phone: string): Promise<Provider | null> => {
-    const db = await getDb();
+    const db = getDb();
     const q = query(collection(db, "providers"), where("phone", "==", phone));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
@@ -104,13 +103,13 @@ export const getProviderByPhone = async (phone: string): Promise<Provider | null
 }
 
 export const updateProvider = async (providerId: string, data: Partial<Provider>) => {
-    const db = await getDb();
+    const db = getDb();
     const providerRef = doc(db, 'providers', providerId);
     await updateDoc(providerRef, data);
 }
 
 export const addPortfolioItemToProvider = async (providerId: string, item: { src: string, aiHint: string }) => {
-    const db = await getDb();
+    const db = getDb();
     const providerRef = doc(db, 'providers', providerId);
     const providerDoc = await getDoc(providerRef);
     if (providerDoc.exists()) {
@@ -121,7 +120,7 @@ export const addPortfolioItemToProvider = async (providerId: string, item: { src
 }
 
 export const deletePortfolioItemFromProvider = async (providerId: string, itemSrc: string) => {
-    const db = await getDb();
+    const db = getDb();
     const providerRef = doc(db, 'providers', providerId);
     const providerDoc = await getDoc(providerRef);
     if (providerDoc.exists()) {
@@ -132,13 +131,13 @@ export const deletePortfolioItemFromProvider = async (providerId: string, itemSr
 }
 
 export const updateProviderProfileImage = async (providerId: string, src: string) => {
-    const db = await getDb();
+    const db = getDb();
     const providerRef = doc(db, 'providers', providerId);
     await updateDoc(providerRef, { 'profileImage.src': src });
 }
 
 export const deleteProviderProfileImage = async (providerId: string) => {
-    const db = await getDb();
+    const db = getDb();
     const providerRef = doc(db, 'providers', providerId);
     await updateDoc(providerRef, { 'profileImage.src': '' });
 }
@@ -146,7 +145,7 @@ export const deleteProviderProfileImage = async (providerId: string) => {
 
 // --- Review Management ---
 export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Promise<string> => {
-  const db = await getDb();
+  const db = getDb();
   const providerRef = doc(db, 'providers', review.providerId);
   const reviewData = { 
       ...review, 
@@ -179,7 +178,7 @@ export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Pr
 };
 
 export const getReviewsForProvider = async (providerId: string): Promise<Review[]> => {
-    const db = await getDb();
+    const db = getDb();
     const q = query(collection(db, "reviews"), where("providerId", "==", providerId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {

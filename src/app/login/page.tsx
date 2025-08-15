@@ -76,7 +76,7 @@ export default function LoginPage() {
         console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی در اتصال به سرور پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
