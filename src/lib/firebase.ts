@@ -22,6 +22,14 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 
+// On localhost, connect to the local emulators
+if (typeof window !== 'undefined' && window.location.hostname === "localhost") {
+  console.log("Connecting to local Firebase emulators.");
+  connectFirestoreEmulator(db, 'localhost', 8080);
+  // You can connect other emulators here if needed (e.g., for auth, functions)
+}
+
+
 // Enable offline persistence
 // This must be done on the client side
 if (typeof window !== 'undefined') {
