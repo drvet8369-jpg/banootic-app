@@ -9,29 +9,51 @@ import { Loader2, User, FileText, CheckCircle, Hourglass, Eye } from 'lucide-rea
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
+import { getAgreementsForUser, getProviders } from '@/lib/actions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerRequestsPage() {
-  const { user, isLoggedIn, isLoading, agreements, providers } = useAuth();
-  const [myRequests, setMyRequests] = useState<Agreement[]>([]);
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
+  const { toast } = useToast();
+
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (isLoading || !user || user.accountType !== 'customer') return;
-    if (agreements) {
-      setMyRequests(agreements.filter(a => a.customerPhone === user.phone)
-        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
+  const fetchData = async () => {
+    if (!user) return;
+    setIsDataLoading(true);
+    try {
+        const [userAgreements, allProviders] = await Promise.all([
+            getAgreementsForUser(user.phone),
+            getProviders()
+        ]);
+        setAgreements(userAgreements.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
+        setProviders(allProviders);
+    } catch(e){
+        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها.', variant: 'destructive'})
+    } finally {
+        setIsDataLoading(false);
     }
-  }, [isLoading, user, agreements]);
+  }
+
+  useEffect(() => {
+    if (user && user.accountType === 'customer') {
+      fetchData();
+    }
+  }, [user]);
   
   const getProviderName = (phone: string) => {
       const provider = providers.find(p => p.phone === phone);
       return provider?.name || `هنرمند ${phone.slice(-4)}`;
   }
 
+  const isLoading = isAuthLoading || isDataLoading;
 
   if (isLoading) {
     return (
@@ -66,6 +88,8 @@ export default function CustomerRequestsPage() {
       </div>
     );
   }
+
+  const myRequests = agreements.filter(a => a.customerPhone === user.phone);
 
   return (
     <div className="max-w-4xl mx-auto py-12">

@@ -27,7 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getUserByPhone } from '@/lib/actions';
+import { getProviders } from '@/lib/data';
+import type { User } from '@/context/AuthContext';
+
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
@@ -51,24 +53,34 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        // This is now a Server Action call
-        const existingUser = await getUserByPhone(values.phone);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
 
-        if (!existingUser) {
-           toast({
-              title: 'کاربر یافت نشد',
-              description: 'این شماره تلفن ثبت‌نام نکرده است. لطفاً ابتدا ثبت‌نام کنید.',
-              variant: 'destructive'
-          });
-           setIsLoading(false);
-           return;
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
         }
         
-        login(existingUser);
+        login(userToLogin);
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${existingUser.name}!`,
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
         
         router.push('/');
@@ -77,7 +89,7 @@ export default function LoginPage() {
         console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی در اتصال به سرور پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -86,12 +98,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود به حساب کاربری خود، شماره تلفن را وارد کنید.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,7 +116,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="" {...field} disabled={isLoading} />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -117,9 +129,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            حساب کاربری ندارید؟{" "}
+            هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              ایجاد حساب کاربری
+              از اینجا ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
@@ -127,3 +139,4 @@ export default function LoginPage() {
     </div>
   );
 }
+    

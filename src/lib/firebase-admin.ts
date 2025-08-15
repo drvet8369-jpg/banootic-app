@@ -1,20 +1,27 @@
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 
-// This function initializes the Firebase Admin SDK if it hasn't been initialized yet.
-// It's safe to call this function multiple times.
+// This file is for server-side (Admin SDK) Firebase access ONLY.
+
+let app: admin.app.App;
+
+/**
+ * Initializes the Firebase Admin SDK if not already initialized.
+ * This function is safe to call multiple times.
+ */
 function initializeAdminApp() {
-  if (admin.apps.length === 0) {
+  if (!admin.apps.length) {
     try {
       // When deployed to App Hosting, service account credentials are automatically
       // configured. For local development, set up Application Default Credentials.
       // https://firebase.google.com/docs/hosting/server-side-rendering-frameworks#admin-sdk
-      admin.initializeApp();
+      app = admin.initializeApp();
       console.log("Firebase Admin SDK initialized successfully.");
     } catch (error: any) {
-      console.error("CRITICAL: Firebase admin initialization failed.", error);
-      // Re-throw a more specific error to be caught by callers.
+      console.error("CRITICAL: Firebase Admin SDK initialization failed.", error);
       throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
     }
+  } else {
+    app = admin.app();
   }
 }
 
@@ -28,5 +35,5 @@ function initializeAdminApp() {
 export function getAdminDb(): admin.firestore.Firestore {
   initializeAdminApp();
   // This will only be reached if initializeApp() was successful.
-  return admin.firestore();
+  return admin.firestore(app);
 }

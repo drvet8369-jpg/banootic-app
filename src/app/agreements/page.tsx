@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,29 +10,53 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { getAgreementsForUser, updateAgreementStatusAction } from '@/lib/actions';
 
 export default function AgreementsPage() {
-  const { user, isLoggedIn, isLoading, agreements, updateAgreementStatus } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
-  const [providerAgreements, setProviderAgreements] = useState<Agreement[]>([]);
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (isLoading || !user || user.accountType !== 'provider') return;
-    if (agreements) {
-      setProviderAgreements(agreements.filter(a => a.providerPhone === user.phone));
+  const fetchAgreements = async () => {
+    if (!user) return;
+    setIsDataLoading(true);
+    try {
+        const userAgreements = await getAgreementsForUser(user.phone);
+        setAgreements(userAgreements);
+    } catch(e){
+        toast({ title: 'خطا', description: 'خطا در بارگذاری توافق‌ها.', variant: 'destructive'})
+    } finally {
+        setIsDataLoading(false);
     }
-  }, [isLoading, user, agreements]);
+  }
+
+  useEffect(() => {
+    if (user && user.accountType === 'provider') {
+      fetchAgreements();
+    }
+  }, [user]);
 
   const handleConfirmAgreement = (agreementId: string) => {
-    updateAgreementStatus(agreementId, 'confirmed');
-    toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
+    startTransition(async () => {
+        try {
+            await updateAgreementStatusAction(agreementId, 'confirmed');
+            toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
+            await fetchAgreements(); // Re-fetch to update the list
+        } catch (e) {
+            toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
+        }
+    });
   };
   
+  const isLoading = isAuthLoading || isDataLoading;
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
@@ -67,6 +91,7 @@ export default function AgreementsPage() {
     );
   }
 
+  const providerAgreements = agreements.filter(a => a.providerPhone === user.phone);
   const pendingAgreements = providerAgreements.filter(a => a.status === 'pending');
   const confirmedAgreements = providerAgreements.filter(a => a.status === 'confirmed');
 
@@ -106,7 +131,7 @@ export default function AgreementsPage() {
                                         )}
                                     </div>
                                     <div className="flex gap-2 mt-4 sm:mt-0">
-                                      <Button onClick={() => handleConfirmAgreement(agreement.id)}>
+                                      <Button onClick={() => handleConfirmAgreement(agreement.id)} disabled={isPending}>
                                         <Check className="w-4 h-4 ml-2" />
                                         تایید
                                       </Button>

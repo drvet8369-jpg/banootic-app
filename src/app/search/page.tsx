@@ -1,58 +1,61 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { providers, isLoading: isAuthLoading } = useAuth();
-  
-  const searchResults = useMemo(() => {
-    // Ensure providers is an array before filtering and sorting.
-    if (!providers) return []; 
+  const [searchResults, setSearchResults] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // This function now correctly re-fetches and filters data whenever the query changes.
+  const performSearch = useCallback(() => {
+    setIsLoading(true);
+    // Always get the latest providers from localStorage at the moment of searching.
+    const allProviders = getProviders();
+    if (!query) {
+      setSearchResults([]);
+      setIsLoading(false);
+      return;
+    }
     const lowercasedQuery = query.toLowerCase();
-    
-    const filteredResults = query 
-      ? providers.filter(provider => 
-          provider.name.toLowerCase().includes(lowercasedQuery) ||
-          provider.service.toLowerCase().includes(lowercasedQuery) ||
-          provider.bio.toLowerCase().includes(lowercasedQuery)
-        )
-      : providers;
+    const results = allProviders.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      provider.bio.toLowerCase().includes(lowercasedQuery)
+    );
+    setSearchResults(results);
+    setIsLoading(false);
+  }, [query]);
 
-    // Return a new sorted array
-    return [...filteredResults].sort((a, b) => {
-      if (b.reviewsCount !== a.reviewsCount) {
-        return b.reviewsCount - a.reviewsCount;
-      }
-      if (b.agreementsCount !== a.agreementsCount) {
-        return b.agreementsCount - a.agreementsCount;
-      }
-      return b.rating - a.rating;
-    });
-  }, [query, providers]);
-  
-  const isLoading = isAuthLoading;
+  // useEffect now correctly depends on performSearch.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
+  useEffect(() => {
+    performSearch();
+
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
+  }, [performSearch]);
+
 
   return (
     <div className="py-12 md:py-20">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">
-          {query ? 'نتایج جستجو' : 'هنرمندان برتر'}
-        </h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
         ) : (
-           <p className="mt-3 text-lg text-muted-foreground">
-            لیست هنرمندان برتر بر اساس فعالیت و امتیاز.
+          <p className="mt-3 text-lg text-muted-foreground">
+            لطفا عبارتی را برای جستجو وارد کنید.
           </p>
         )}
       </div>
@@ -82,3 +85,4 @@ export default function SearchPage() {
     </div>
   );
 }
+    

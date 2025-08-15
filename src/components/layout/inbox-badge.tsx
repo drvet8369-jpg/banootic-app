@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { clientDb } from '@/lib/firebase';
-import { doc, onSnapshot } from "firebase/firestore";
+import { cn } from '@/lib/utils';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -20,23 +19,43 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
       return;
     }
 
-    const inboxRef = doc(clientDb, "inboxes", user.phone);
-    const unsubscribe = onSnapshot(inboxRef, (doc) => {
-        if (doc.exists()) {
-            const inboxData = doc.data();
-            // This assumes the inbox document has chat entries where each entry might have an unreadCount
-            const totalUnread = Object.values(inboxData).reduce((acc: number, chat: any) => acc + (chat.unreadCount || 0), 0);
-            setUnreadCount(totalUnread);
-        } else {
-            setUnreadCount(0);
-        }
-    }, (error) => {
-        console.error("Error listening to inbox:", error);
+    const checkUnread = () => {
+      try {
+        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const totalUnread = Object.values(allChatsData)
+          .filter((chat: any) => chat.members?.includes(user.phone))
+          .reduce((acc: number, chat: any) => {
+            const selfInfo = chat.participants?.[user.phone];
+            return acc + (selfInfo?.unreadCount || 0);
+          }, 0);
+        setUnreadCount(totalUnread);
+      } catch (e) {
+        // Silently fail if localStorage is not available or corrupted
         setUnreadCount(0);
-    });
+      }
+    };
+
+    // Initial check
+    checkUnread();
+
+    // Listen for storage changes from other tabs
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'inbox_chats') {
+            checkUnread();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check on focus for changes within the same tab
+    window.addEventListener('focus', checkUnread);
+
+    // Set up an interval as a fallback
+    const intervalId = setInterval(checkUnread, 5000); 
 
     return () => {
-        unsubscribe();
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', checkUnread);
     };
   }, [user?.phone]);
 
@@ -50,3 +69,5 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
 
   return <Badge variant="destructive">{unreadCount}</Badge>;
 }
+
+    

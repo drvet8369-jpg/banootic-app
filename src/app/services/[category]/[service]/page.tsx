@@ -1,62 +1,61 @@
 'use client';
 
-import { services, categories } from '@/lib/data';
-import { getProviders } from '@/lib/actions';
+import { services, categories, getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import SearchResultCard from '@/components/search-result-card';
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
 
+  const [service, setService] = useState<Service | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const category = useMemo(() => categories.find((c) => c.slug === categorySlug), [categorySlug]);
-  const service = useMemo(() => services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug), [serviceSlug, categorySlug]);
-
-  const loadData = useCallback(async () => {
+  // This logic is now wrapped in a useCallback to ensure it's stable
+  // and correctly re-fetches data whenever the URL slugs change.
+  const loadData = useCallback(() => {
     setIsLoading(true);
 
-    if (category && service) {
-      const allProviders = await getProviders();
+    const foundCategory = categories.find((c) => c.slug === categorySlug);
+    const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
+    
+    setCategory(foundCategory || null);
+    setService(foundService || null);
       
-      const filteredProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-
-      // Sort providers based on the ladder system
-      const sortedProviders = filteredProviders.sort((a, b) => {
-        // 1. Sort by reviewsCount (descending)
-        if (b.reviewsCount !== a.reviewsCount) {
-          return b.reviewsCount - a.reviewsCount;
-        }
-        // 2. Sort by agreementsCount (descending)
-        if (b.agreementsCount !== a.agreementsCount) {
-          return b.agreementsCount - a.agreementsCount;
-        }
-        // 3. Sort by rating (descending)
-        return b.rating - a.rating;
-      });
-
-      setServiceProviders(sortedProviders);
+    if (foundCategory && foundService) {
+      // Always get the latest providers from localStorage inside the function
+      const allProviders = getProviders();
+      // Correctly filter providers based on the serviceSlug from the URL.
+      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      setServiceProviders(foundProviders);
     } else {
       setServiceProviders([]);
     }
     
     setIsLoading(false);
-  }, [category, service, serviceSlug]);
+  }, [categorySlug, serviceSlug]);
 
+  // useEffect now has a stable dependency and will re-run correctly
+  // every time the user navigates to a new service page or revisits the tab.
   useEffect(() => {
     loadData();
+
+    window.addEventListener('focus', loadData);
+    return () => {
+      window.removeEventListener('focus', loadData);
+    };
   }, [loadData]);
 
   if (isLoading) {
     return (
-        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
+        <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
         </div>
@@ -96,3 +95,4 @@ export default function ServiceProvidersPage() {
     </div>
   );
 }
+    

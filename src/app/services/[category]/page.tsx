@@ -62,3 +62,4 @@ export default function CategoryPage({ params }: PageProps) {
     </div>
   );
 }
+    

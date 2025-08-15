@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/data';
+import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/lib/types';
-import { getUserByPhone, createUser, createProvider } from '@/lib/actions';
+import type { User } from '@/context/AuthContext';
+import type { Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -83,48 +83,70 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      const existingUser = await getUserByPhone(values.phone);
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      if (existingUser) {
+      const allProviders = getProviders();
+
+      // Universal check for existing phone number among providers
+      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      if (existingProviderByPhone) {
         toast({
           title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
           variant: 'destructive',
         });
         setIsLoading(false);
         return;
       }
-      
-      const userToCreate: User = {
-        id: values.phone,
+
+      // Check for existing provider by business name, only if registering as a provider
+      if (values.accountType === 'provider') {
+        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        if (existingProviderByName) {
+            toast({
+                title: 'خطا در ثبت‌نام',
+                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
+                variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+        }
+      }
+
+
+      // This is the user object for the AuthContext
+      const userToLogin: User = {
         name: values.name,
         phone: values.phone,
         accountType: values.accountType,
+        serviceType: values.serviceType,
+        bio: values.bio,
       };
 
-      await createUser(userToCreate);
-
+      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
-        await createProvider({
+        const newProvider: Provider = {
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه',
+          location: 'ارومیه', // Default location
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
           rating: 0,
           reviewsCount: 0,
-          agreementsCount: 0,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
-        });
+        };
+        
+        saveProviders([...allProviders, newProvider]);
       }
       
-      login(userToCreate);
+      login(userToLogin);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
@@ -208,7 +230,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="" {...field} disabled={isLoading} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -217,23 +239,6 @@ export default function RegisterForm() {
 
             {accountType === 'provider' && (
               <>
-                <FormItem>
-                  <FormLabel>شهر</FormLabel>
-                  <div className="relative">
-                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <FormControl>
-                      <Input
-                        defaultValue="ارومیه"
-                        className="pr-10"
-                        disabled
-                      />
-                    </FormControl>
-                  </div>
-                  <FormDescription>
-                    در حال حاضر، ثبت‌نام فقط برای هنرمندان شهر ارومیه امکان‌پذیر است.
-                  </FormDescription>
-                </FormItem>
-
                 <FormField
                   control={form.control}
                   name="serviceType"
@@ -273,7 +278,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -299,3 +304,4 @@ export default function RegisterForm() {
     </Card>
   );
 }
+    

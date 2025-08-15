@@ -1,9 +1,4 @@
-export interface User {
-  id: string; // phone number is the ID
-  name: string;
-  phone: string; 
-  accountType: 'customer' | 'provider';
-}
+import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
   id: number;
@@ -24,63 +19,34 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: string; // Firestore document ID
+  id: number;
   name: string;
-  service: string; 
+  service: string; // The specific service they provide, e.g., "Manicure"
   location: string;
-  phone: string; 
+  phone: string;
   bio: string;
   categorySlug: Category['slug'];
-  serviceSlug: Service['slug'];
+  serviceSlug: Service['slug']; // Link to the service
   rating: number;
   reviewsCount: number;
-  agreementsCount: number;
-  profileImage: PortfolioItem; 
+  profileImage: PortfolioItem; // Dedicated profile image
   portfolio: PortfolioItem[];
 }
 
 export interface Review {
-  id: string; // Firestore document ID
-  providerId: string; // Corresponds to Provider's id
+  id: string;
+  providerId: number;
   authorName: string;
   rating: number;
   comment: string;
-  createdAt: string; // ISO String format for client
+  createdAt: string; // ISO String format
 }
 
 export interface Message {
-  id: string;
   text: string;
-  senderId: string; // phone number of the sender
-  createdAt: string; // ISO string for client
-  isEdited?: boolean;
+  senderId: string;
+  receiverId?: string;
+  createdAt: Timestamp;
 }
 
-export interface Chat {
-    id: string; // chat ID
-    members: string[]; // array of user phones
-    participants: {
-        [key: string]: { // key is user phone
-            name: string;
-        }
-    };
-    lastMessage: string;
-    updatedAt: string; // ISO String
-}
-
-export interface InboxChatView extends Chat {
-    otherMemberId: string;
-    otherMemberName: string;
-    unreadCount: number;
-}
-
-
-export interface Agreement {
-  id: string; // Firestore document ID
-  providerPhone: string;
-  customerPhone: string;
-  customerName: string;
-  status: 'pending' | 'confirmed';
-  requestedAt: string; // ISO string
-  confirmedAt?: string; // ISO string
-}
+    
