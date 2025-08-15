@@ -21,28 +21,24 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-
-// On localhost, connect to the local emulators
+// On localhost, connect to the local emulators. This should happen BEFORE enabling persistence.
 if (typeof window !== 'undefined' && window.location.hostname === "localhost") {
-  console.log("Connecting to local Firebase emulators.");
-  connectFirestoreEmulator(db, 'localhost', 8080);
-  // You can connect other emulators here if needed (e.g., for auth, functions)
+  console.log("Firebase Provider: Connecting to local Firebase emulators.");
+  // NOTE: This check is to prevent multiple connections in React's strict mode.
+  if (!(db as any)._settings.host) {
+      connectFirestoreEmulator(db, 'localhost', 8080);
+  }
 }
 
-
-// Enable offline persistence
-// This must be done on the client side
+// Enable offline persistence. This must be done on the client side AFTER emulator connection.
 if (typeof window !== 'undefined') {
   try {
     enableIndexedDbPersistence(db)
+      .then(() => console.log("Firebase offline persistence enabled."))
       .catch((err) => {
         if (err.code === 'failed-precondition') {
-          // Multiple tabs open, persistence can only be enabled
-          // in one tab at a time.
           console.warn("Firebase persistence failed: Multiple tabs open.");
         } else if (err.code === 'unimplemented') {
-          // The current browser does not support all of the
-          // features required to enable persistence
           console.warn("Firebase persistence is not supported in this browser.");
         }
       });
