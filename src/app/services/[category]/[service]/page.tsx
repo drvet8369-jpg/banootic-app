@@ -1,6 +1,7 @@
 'use client';
 
-import { services, categories, getProviders } from '@/lib/data';
+import { services, categories } from '@/lib/data';
+import { getProviders } from '@/lib/actions';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
