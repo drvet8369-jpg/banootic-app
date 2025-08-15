@@ -71,8 +71,8 @@ export const services: Service[] = [
 
 // --- User Management ---
 export const createUser = async (user: User): Promise<void> => {
-  const usersCollection = collection(db, 'users');
-  await setDoc(doc(usersCollection, user.id), user);
+    const userRef = doc(db, 'users', user.phone);
+    await setDoc(userRef, user);
 };
 
 export const getUserByPhone = async (phone: string): Promise<User | null> => {
@@ -83,27 +83,24 @@ export const getUserByPhone = async (phone: string): Promise<User | null> => {
 
 // --- Provider Management ---
 export const createProvider = async (providerData: Omit<Provider, 'id'>): Promise<string> => {
-    const providersCollection = collection(db, 'providers');
-    const docRef = await addDoc(providersCollection, providerData);
-    await updateDoc(docRef, { id: docRef.id });
+    const docRef = doc(collection(db, 'providers'));
+    await setDoc(docRef, { ...providerData, id: docRef.id });
     return docRef.id;
 }
 
 export const getProviders = async (): Promise<Provider[]> => {
   const providersCollection = collection(db, 'providers');
   const snapshot = await getDocs(providersCollection);
-  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Provider));
+  return snapshot.docs.map(doc => doc.data() as Provider);
 };
 
 export const getProviderByPhone = async (phone: string): Promise<Provider | null> => {
-    const providersCollection = collection(db, 'providers');
-    const q = query(providersCollection, where("phone", "==", phone), limit(1));
+    const q = query(collection(db, "providers"), where("phone", "==", phone), limit(1));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
         return null;
     }
-    const doc = snapshot.docs[0];
-    return { ...doc.data(), id: doc.id } as Provider;
+    return snapshot.docs[0].data() as Provider;
 }
 
 export const updateProvider = async (providerId: string, data: Partial<Provider>) => {
@@ -176,127 +173,13 @@ export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Pr
 };
 
 export const getReviewsForProvider = async (providerId: string): Promise<Review[]> => {
-    const reviewsCollection = collection(db, 'reviews');
-    const q = query(reviewsCollection, where("providerId", "==", providerId), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "reviews"), where("providerId", "==", providerId), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
             ...data,
             id: doc.id,
-            createdAt: (data.createdAt as any)
         } as Review;
     });
-}
-
-// --- Agreement Management ---
-export const createAgreement = async (providerPhone: string, customerPhone: string, customerName: string): Promise<Agreement> => {
-    const agreementsCollection = collection(db, 'agreements');
-    const agreementData: Omit<Agreement, 'id'> = {
-        providerPhone,
-        customerPhone,
-        customerName,
-        status: 'pending',
-        requestedAt: new Date().toISOString(),
-    };
-    const docRef = await addDoc(agreementsCollection, agreementData);
-    return { ...agreementData, id: docRef.id };
-};
-
-export const updateAgreement = async (agreementId: string, data: Partial<Agreement>) => {
-    const agreementRef = doc(db, 'agreements', agreementId);
-    await updateDoc(agreementRef, data);
-
-     if (data.status === 'confirmed') {
-        const agreementDoc = await getDoc(agreementRef);
-        if (agreementDoc.exists()) {
-            const providerPhone = agreementDoc.data().providerPhone;
-            const provider = await getProviderByPhone(providerPhone);
-            if(provider) {
-                const providerRef = doc(db, 'providers', provider.id);
-                await updateDoc(providerRef, { agreementsCount: increment(1) });
-            }
-        }
-    }
-};
-
-export const getAgreementsForProvider = async (providerPhone: string): Promise<Agreement[]> => {
-    const agreementsCollection = collection(db, 'agreements');
-    const q = query(agreementsCollection, where("providerPhone", "==", providerPhone));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Agreement));
-}
-
-export const getAgreementsForCustomer = async (customerPhone: string): Promise<Agreement[]> => {
-    const agreementsCollection = collection(db, 'agreements');
-    const q = query(agreementsCollection, where("customerPhone", "==", customerPhone));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Agreement));
-}
-
-// --- Chat & Inbox Management ---
-
-export const getInboxForUser = async (userPhone: string): Promise<any> => {
-    const inboxRef = doc(db, 'inboxes', userPhone);
-    const docSnap = await getDoc(inboxRef);
-    return docSnap.exists() ? docSnap.data() : {};
-}
-
-export const createChatMessage = async (chatId: string, message: Omit<Message, 'id' | 'createdAt'>, otherUser: {phone: string, name: string}, sender: User) => {
-    const batch = writeBatch(db);
-    
-    const finalMessage = { ...message, createdAt: serverTimestamp() };
-    
-    const messageRef = doc(collection(db, "chats", chatId, "messages"));
-    batch.set(messageRef, finalMessage);
-    
-    // Update sender's inbox
-    const senderInboxRef = doc(db, 'inboxes', sender.phone);
-    const senderChatInfo = {
-        id: chatId,
-        members: [sender.phone, otherUser.phone].sort(),
-        participants: {
-            [sender.phone]: { name: sender.name, unreadCount: 0 },
-            [otherUser.phone]: { name: otherUser.name }
-        },
-        lastMessage: message.text,
-        updatedAt: serverTimestamp()
-    };
-    batch.set(senderInboxRef, { [chatId]: senderChatInfo }, { merge: true });
-
-    // Update receiver's inbox
-    const receiverInboxRef = doc(db, 'inboxes', otherUser.phone);
-    const receiverChatInfo = {
-        id: chatId,
-        members: [sender.phone, otherUser.phone].sort(),
-        participants: {
-            [sender.phone]: { name: sender.name },
-            [otherUser.phone]: { name: otherUser.name, unreadCount: increment(1) }
-        },
-        lastMessage: message.text,
-        updatedAt: serverTimestamp(),
-    };
-    batch.set(receiverInboxRef, { [chatId]: receiverChatInfo }, { merge: true });
-
-    await batch.commit();
-};
-
-export const updateChatMessage = async (chatId: string, messageId: string, newText: string) => {
-    const messageRef = doc(db, "chats", chatId, "messages", messageId);
-    await updateDoc(messageRef, {
-        text: newText,
-        isEdited: true
-    });
-}
-
-export const setChatRead = async (chatId: string, userPhone: string) => {
-    const inboxRef = doc(db, "inboxes", userPhone);
-    const docSnap = await getDoc(inboxRef);
-    if(docSnap.exists()){
-        const inboxData = docSnap.data();
-        if(inboxData[chatId]?.participants?.[userPhone]?.unreadCount > 0) {
-            const fieldPath = `${chatId}.participants.${userPhone}.unreadCount`;
-            await updateDoc(inboxRef, { [fieldPath]: 0 });
-        }
-    }
 }

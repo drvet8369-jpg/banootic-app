@@ -11,8 +11,9 @@ import { FormEvent, useState, useRef, useEffect, useCallback, useMemo } from 're
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Message as MessageType, Provider } from '@/lib/types';
-import { onSnapshot, collection, query, orderBy } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, updateDoc, serverTimestamp, writeBatch, getDoc, setDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getProviderByPhone } from '@/lib/data';
 
 interface OtherPersonDetails {
     id: string;
@@ -24,27 +25,17 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonPhone = params.providerId as string;
-  const { user, isLoggedIn, isLoading: isAuthLoading, providers, sendChatMessage, editChatMessage, markChatAsRead, getInboxForUser } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
 
   const [messages, setMessages] = useState<MessageType[]>([]);
+  const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-
-  const otherPersonDetails = useMemo<OtherPersonDetails | null>(() => {
-    const provider = providers.find(p => p.phone === otherPersonPhone);
-    if (provider) {
-        return provider;
-    }
-    // If the other person is not a known provider, it must be a customer.
-    // We might not have their full details if they haven't been in a chat before,
-    // so create a placeholder. The name will be updated once the chat logic runs.
-    return { id: otherPersonPhone, name: `مشتری ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone };
-  }, [providers, otherPersonPhone]);
 
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
@@ -53,6 +44,31 @@ export default function ChatPage() {
 
   const chatId = useMemo(() => getChatId(user?.phone, otherPersonPhone), [user?.phone, otherPersonPhone, getChatId]);
   
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const fetchOtherPersonDetails = async () => {
+        const provider = await getProviderByPhone(otherPersonPhone);
+        if (provider) {
+            setOtherPersonDetails(provider);
+        } else {
+            // This is a chat with a customer. We'll get their name from the chat document later.
+            setOtherPersonDetails({ id: otherPersonPhone, name: `مشتری ${otherPersonPhone.slice(-4)}`, phone: otherPersonPhone });
+        }
+    };
+    fetchOtherPersonDetails();
+  }, [otherPersonPhone, isLoggedIn]);
+
+  const markChatAsRead = useCallback(async () => {
+    if (!chatId || !user?.phone) return;
+    const inboxRef = doc(db, "inboxes", user.phone);
+    const fieldPath = `${chatId}.unreadCount`;
+    const docSnap = await getDoc(inboxRef);
+    if(docSnap.exists() && docSnap.data()[chatId]?.unreadCount > 0){
+        await updateDoc(inboxRef, { [fieldPath]: 0 });
+    }
+  }, [chatId, user?.phone]);
+
   useEffect(() => {
     if (!chatId || !user?.phone) {
         setIsLoadingChat(false);
@@ -65,17 +81,17 @@ export default function ChatPage() {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const msgs: MessageType[] = querySnapshot.docs.map(doc => {
           const data = doc.data();
-          // Convert Firestore Timestamp to ISO string for consistency
-          const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
           return {
-              ...data,
               id: doc.id,
-              createdAt,
+              text: data.text,
+              senderId: data.senderId,
+              isEdited: data.isEdited,
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
           } as MessageType
       });
       setMessages(msgs);
       setIsLoadingChat(false);
-      markChatAsRead(chatId, user.phone);
+      markChatAsRead();
     }, (error) => {
         console.error("Error listening to chat messages:", error);
         toast({ title: "خطا", description: "امکان بارگذاری پیام‌ها وجود ندارد.", variant: "destructive" });
@@ -83,7 +99,7 @@ export default function ChatPage() {
     });
 
     return () => unsubscribe();
-  }, [chatId, user?.phone, markChatAsRead, toast]);
+  }, [chatId, user?.phone, toast, markChatAsRead]);
 
 
   const getInitials = (name: string) => {
@@ -99,32 +115,8 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const [headerLink, setHeaderLink] = useState('/');
-  useEffect(() => {
-    const checkInbox = async () => {
-        if (!user) return;
-        if (user.accountType === 'provider') {
-            setHeaderLink('/inbox');
-            return;
-        }
-        try {
-            const inbox = await getInboxForUser(user.phone);
-            if (Object.keys(inbox).length > 0) {
-                setHeaderLink('/inbox');
-            } else {
-                setHeaderLink('/');
-            }
-        } catch (e) {
-            setHeaderLink('/');
-        }
-    }
-    if(user){
-        checkInbox();
-    }
-  }, [user, getInboxForUser]);
+  const headerLink = user?.accountType === 'provider' ? '/inbox' : '/';
   
-  const isLoading = isAuthLoading || isLoadingChat;
-
   if (isAuthLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
@@ -160,7 +152,8 @@ export default function ChatPage() {
     if (!editingMessageId || !editingText.trim() || !chatId) return;
     setIsSending(true);
     try {
-      await editChatMessage(chatId, editingMessageId, editingText.trim());
+      const messageRef = doc(db, "chats", chatId, "messages", editingMessageId);
+      await updateDoc(messageRef, { text: editingText.trim(), isEdited: true });
       handleCancelEdit();
       toast({ title: 'پیام ویرایش شد.' });
     } catch (e) {
@@ -178,17 +171,42 @@ export default function ChatPage() {
     if (!text || isSending || !otherPersonDetails || !user || !chatId) return;
     
     setIsSending(true);
-    
-    const messageToSend: Omit<MessageType, 'id'> = {
-      text: text,
-      senderId: user.phone,
-      createdAt: new Date().toISOString(),
-    };
-    
     setNewMessage('');
     
     try {
-       await sendChatMessage(chatId, messageToSend, { phone: otherPersonDetails.phone, name: otherPersonDetails.name }, user);
+       const batch = writeBatch(db);
+    
+        const messageRef = doc(collection(db, "chats", chatId, "messages"));
+        batch.set(messageRef, {
+            text: text,
+            senderId: user.phone,
+            createdAt: serverTimestamp(),
+            isEdited: false
+        });
+
+        const chatRef = doc(db, "chats", chatId);
+        batch.set(chatRef, {
+            lastMessage: text,
+            updatedAt: serverTimestamp(),
+            members: [user.phone, otherPersonDetails.phone].sort(),
+            participants: {
+                [user.phone]: { name: user.name },
+                [otherPersonDetails.phone]: { name: otherPersonDetails.name }
+            }
+        }, { merge: true });
+
+        // Increment unread count for receiver
+        const receiverInboxRef = doc(db, "inboxes", otherPersonDetails.phone);
+        const receiverUnreadPath = `${chatId}.unreadCount`;
+        batch.set(receiverInboxRef, {
+            [chatId]: {
+                id: chatId,
+                updatedAt: serverTimestamp(),
+                unreadCount: increment(1)
+            }
+        }, { merge: true });
+        
+        await batch.commit();
     } catch(e) {
         console.error("Failed to send message", e);
         toast({ title: "خطا", description: "پیام شما ارسال نشد.", variant: "destructive" });
@@ -197,6 +215,8 @@ export default function ChatPage() {
         setIsSending(false);
     }
   };
+  
+  const isLoadingPage = isAuthLoading || isLoadingChat || !otherPersonDetails;
 
   return (
     <div className="flex flex-col h-full py-4">
@@ -219,17 +239,17 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {isLoadingChat && (
+            {isLoadingPage && (
               <div className="flex justify-center items-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
             )}
-            {!isLoadingChat && messages.length === 0 && (
+            {!isLoadingPage && messages.length === 0 && (
               <div className="text-center text-muted-foreground p-8">
                 <p>شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
-            {messages.map((message) => {
+            {!isLoadingPage && messages.map((message) => {
                 const senderIsUser = message.senderId === user?.phone;
                 const isEditing = editingMessageId === message.id;
 
@@ -299,9 +319,9 @@ export default function ChatPage() {
                 className="flex-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || isLoading || !!editingMessageId}
+                disabled={isSending || isLoadingPage || !!editingMessageId}
               />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !!editingMessageId}>
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoadingPage || !!editingMessageId}>
                   {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
               </Button>
           </form>

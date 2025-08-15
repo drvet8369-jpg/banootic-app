@@ -6,11 +6,15 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Inbox, User } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import type { Chat } from '@/lib/types';
+import type { InboxChatView } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { getProviders } from '@/lib/data';
+import type { Provider } from '@/lib/types';
 
 
 const getInitials = (name: string) => {
@@ -24,67 +28,72 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn, getInboxForUser } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const [chats, setChats] = useState<InboxChatView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [providerProfiles, setProviderProfiles] = useState<Map<string, Provider>>(new Map());
 
   useEffect(() => {
     setIsClient(true);
+    // Fetch all providers once to get their profile images
+    const fetchProviders = async () => {
+      const allProviders = await getProviders();
+      const providerMap = new Map(allProviders.map(p => [p.phone, p]));
+      setProviderProfiles(providerMap);
+    };
+    fetchProviders();
   }, []);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
       return;
     }
 
-    const loadChats = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const inboxData = await getInboxForUser(user.phone);
-            const userChats = Object.values(inboxData)
-                .map((chat: any): Chat | null => {
-                    if (!chat.participants || !chat.members) return null;
-
-                    const otherMemberId = chat.members.find((id: string) => id !== user.phone);
-                    if (!otherMemberId) return null;
-                    
-                    const otherMemberInfo = chat.participants[otherMemberId];
-                    const selfInfo = chat.participants[user.phone];
-                    const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
-
-                    return {
-                        id: chat.id,
-                        members: chat.members,
-                        participants: chat.participants,
-                        otherMemberId: otherMemberId,
-                        otherMemberName: otherMemberName,
-                        lastMessage: chat.lastMessage || '',
-                        updatedAt: chat.updatedAt,
-                        unreadCount: selfInfo?.unreadCount || 0,
-                    };
-                })
-                .filter((chat): chat is Chat => chat !== null)
-                .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-                
-            setChats(userChats);
-        } catch (e) {
-            console.error("Failed to load chats from Firestore", e);
-            setError('خطا در بارگذاری گفتگوها.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    setIsLoading(true);
     
-    loadChats();
-  }, [user?.phone, getInboxForUser]);
+    const q = query(collection(db, "chats"), where("members", "array-contains", user.phone));
 
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userChats: InboxChatView[] = querySnapshot.docs.map(doc => {
+            const chatData = doc.data();
+            const otherMemberId = chatData.members.find((id: string) => id !== user.phone);
+            const selfInfo = chatData.participants?.[user.phone];
+            const otherMemberInfo = chatData.participants?.[otherMemberId];
+            
+            return {
+                id: doc.id,
+                members: chatData.members,
+                participants: chatData.participants,
+                lastMessage: chatData.lastMessage || '',
+                updatedAt: chatData.updatedAt?.toDate ? chatData.updatedAt.toDate().toISOString() : new Date(0).toISOString(),
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`,
+                unreadCount: selfInfo?.unreadCount || 0,
+            };
+        }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        
+        setChats(userChats);
+        setError(null);
+        setIsLoading(false);
+    }, (err) => {
+        console.error("Error fetching chats:", err);
+        setError('خطا در بارگذاری گفتگوها.');
+        setIsLoading(false);
+    });
 
-  if (isLoading) {
+    return () => unsubscribe();
+  }, [user?.phone, isAuthLoading]);
+
+  const getOtherMemberProfileImage = (phone: string) => {
+    return providerProfiles.get(phone)?.profileImage?.src;
+  }
+
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -105,7 +114,7 @@ export default function InboxPage() {
     );
   }
   
-  if (chats.length === 0 && !isLoading && !error) {
+  if (chats.length === 0 && !isLoading) {
      return (
        <div className="max-w-4xl mx-auto py-12">
         <Card>
@@ -126,6 +135,11 @@ export default function InboxPage() {
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
+                     {user.accountType === 'customer' && (
+                        <Button asChild className="mt-6">
+                            <Link href="/">مشاهده هنرمندان</Link>
+                        </Button>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -152,6 +166,7 @@ export default function InboxPage() {
                 <Link href={`/chat/${chat.otherMemberId}`} key={chat.id}>
                     <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                         <Avatar className="h-12 w-12 ml-4">
+                            <AvatarImage src={getOtherMemberProfileImage(chat.otherMemberId)} alt={chat.otherMemberName} />
                             <AvatarFallback>{getInitials(chat.otherMemberName)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-grow overflow-hidden">

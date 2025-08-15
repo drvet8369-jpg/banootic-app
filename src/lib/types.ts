@@ -52,25 +52,28 @@ export interface Message {
   id: string;
   text: string;
   senderId: string; // phone number of the sender
-  createdAt: string; // ISO string
+  createdAt: string; // ISO string for client
   isEdited?: boolean;
 }
 
 export interface Chat {
-    id: string;
+    id: string; // chat ID
     members: string[]; // array of user phones
     participants: {
         [key: string]: { // key is user phone
             name: string;
-            unreadCount: number;
         }
     };
     lastMessage: string;
     updatedAt: string; // ISO String
+}
+
+export interface InboxChatView extends Chat {
     otherMemberId: string;
     otherMemberName: string;
     unreadCount: number;
 }
+
 
 export interface Agreement {
   id: string; // Firestore document ID
