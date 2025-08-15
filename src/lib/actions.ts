@@ -7,12 +7,12 @@ import { revalidatePath } from 'next/cache';
 
 // --- User Management ---
 export const createUser = async (user: User): Promise<void> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   await setDoc(doc(db, 'users', user.phone), user);
 };
 
 export const getUserByPhone = async (phone: string): Promise<User | null> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const userDocRef = doc(db, 'users', phone);
   const userDoc = await getDoc(userDocRef);
   return userDoc.exists() ? (userDoc.data() as User) : null;
@@ -20,7 +20,7 @@ export const getUserByPhone = async (phone: string): Promise<User | null> => {
 
 // --- Provider Management ---
 export const createProvider = async (providerData: Omit<Provider, 'id'>): Promise<string> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const docRef = doc(collection(db, 'providers'));
   await setDoc(docRef, { ...providerData, id: docRef.id });
   revalidatePath('/');
@@ -30,14 +30,14 @@ export const createProvider = async (providerData: Omit<Provider, 'id'>): Promis
 };
 
 export const getProviders = async (): Promise<Provider[]> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const providersCollection = collection(db, 'providers');
   const snapshot = await getDocs(providersCollection);
   return snapshot.docs.map(doc => doc.data() as Provider);
 };
 
 export const getProviderByPhone = async (phone: string): Promise<Provider | null> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const q = query(collection(db, "providers"), where("phone", "==", phone));
   const snapshot = await getDocs(q);
   if (snapshot.empty) {
@@ -47,7 +47,7 @@ export const getProviderByPhone = async (phone: string): Promise<Provider | null
 };
 
 export const updateProvider = async (providerId: string, data: Partial<Provider>) => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const providerRef = doc(db, 'providers', providerId);
   await updateDoc(providerRef, data);
   
@@ -60,14 +60,14 @@ export const updateProvider = async (providerId: string, data: Partial<Provider>
 };
 
 export const addPortfolioItemToProvider = async (providerId: string, item: { src: string, aiHint: string }) => {
-    const db = await getAdminDb();
+    const db = getAdminDb();
     const providerRef = doc(db, 'providers', providerId);
     await updateDoc(providerRef, { portfolio: arrayUnion(item) });
     revalidatePath(`/profile`);
 };
 
 export const deletePortfolioItemFromProvider = async (providerId: string, itemSrc: string) => {
-    const db = await getAdminDb();
+    const db = getAdminDb();
     const providerRef = doc(db, 'providers', providerId);
     const providerDoc = await getDoc(providerRef);
     if (providerDoc.exists()) {
@@ -81,14 +81,14 @@ export const deletePortfolioItemFromProvider = async (providerId: string, itemSr
 };
 
 export const updateProviderProfileImage = async (providerId: string, src: string) => {
-    const db = await getAdminDb();
+    const db = getAdminDb();
     const providerRef = doc(db, 'providers', providerId);
     await updateDoc(providerRef, { 'profileImage.src': src });
     revalidatePath(`/profile`);
 };
 
 export const deleteProviderProfileImage = async (providerId: string) => {
-    const db = await getAdminDb();
+    const db = getAdminDb();
     const providerRef = doc(db, 'providers', providerId);
     await updateDoc(providerRef, { 'profileImage.src': '' });
     revalidatePath(`/profile`);
@@ -97,7 +97,7 @@ export const deleteProviderProfileImage = async (providerId: string) => {
 
 // --- Review Management ---
 export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Promise<string> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const providerRef = doc(db, 'providers', review.providerId);
   const reviewData = { 
       ...review, 
@@ -134,7 +134,7 @@ export const createReview = async (review: Omit<Review, 'id' | 'createdAt'>): Pr
 };
 
 export const getReviewsForProvider = async (providerId: string): Promise<Review[]> => {
-    const db = await getAdminDb();
+    const db = getAdminDb();
     const q = query(collection(db, "reviews"), where("providerId", "==", providerId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -149,7 +149,7 @@ export const getReviewsForProvider = async (providerId: string): Promise<Review[
 
 // --- Agreement Management ---
 export const addAgreementAction = async (providerPhone: string, customerPhone: string, customerName: string): Promise<Agreement> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const existingQuery = query(collection(db, 'agreements'), where('providerPhone', '==', providerPhone), where('customerPhone', '==', customerPhone));
   const existingSnapshot = await getDocs(existingQuery);
   if (!existingSnapshot.empty) {
@@ -171,7 +171,7 @@ export const addAgreementAction = async (providerPhone: string, customerPhone: s
 }
 
 export const getAgreementsForUser = async (phone: string): Promise<Agreement[]> => {
-    const db = await getAdminDb();
+    const db = getAdminDb();
     const q = query(collection(db, "agreements"), where("customerPhone", "==", phone));
     const q2 = query(collection(db, "agreements"), where("providerPhone", "==", phone));
 
@@ -185,7 +185,7 @@ export const getAgreementsForUser = async (phone: string): Promise<Agreement[]> 
 }
 
 export const updateAgreementStatusAction = async (agreementId: string, status: 'confirmed'): Promise<void> => {
-  const db = await getAdminDb();
+  const db = getAdminDb();
   const agreementRef = doc(db, 'agreements', agreementId);
   const data: Partial<Agreement> = { status };
 
