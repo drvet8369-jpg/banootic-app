@@ -9,14 +9,14 @@ import { Loader2, User, FileText, CheckCircle, Hourglass, Eye } from 'lucide-rea
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
-import { getAgreementsForUser, getProviders } from '@/lib/actions';
+import { getAgreements, getProviders } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerRequestsPage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
@@ -25,26 +25,28 @@ export default function CustomerRequestsPage() {
     setIsClient(true);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = () => {
     if (!user) return;
-    setIsDataLoading(true);
+    setIsLoading(true);
     try {
-        const [userAgreements, allProviders] = await Promise.all([
-            getAgreementsForUser(user.phone),
-            getProviders()
-        ]);
+        const allAgreements = getAgreements();
+        const userAgreements = allAgreements.filter(a => a.customerPhone === user.phone);
+        const allProviders = getProviders();
+        
         setAgreements(userAgreements.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
         setProviders(allProviders);
     } catch(e){
-        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها.', variant: 'destructive'})
+        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها از حافظه محلی.', variant: 'destructive'})
     } finally {
-        setIsDataLoading(false);
+        setIsLoading(false);
     }
   }
 
   useEffect(() => {
     if (user && user.accountType === 'customer') {
       fetchData();
+    } else {
+        setIsLoading(false);
     }
   }, [user]);
   
@@ -52,8 +54,6 @@ export default function CustomerRequestsPage() {
       const provider = providers.find(p => p.phone === phone);
       return provider?.name || `هنرمند ${phone.slice(-4)}`;
   }
-
-  const isLoading = isAuthLoading || isDataLoading;
 
   if (isLoading) {
     return (

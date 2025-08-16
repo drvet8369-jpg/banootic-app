@@ -1,4 +1,4 @@
-import type { Category, Provider, Service, Review } from './types';
+import type { Category, Provider, Service, Review, Agreement } from './types';
 
 export const categories: Category[] = [
   {
@@ -96,6 +96,8 @@ const defaultProviders: Provider[] = [
 
 const PROVIDERS_STORAGE_KEY = 'honarbanoo-providers';
 const REVIEWS_STORAGE_KEY = 'honarbanoo-reviews';
+const AGREEMENTS_STORAGE_KEY = 'honarbanoo-agreements';
+
 
 // Function to get providers from localStorage or return default
 export const getProviders = (): Provider[] => {
@@ -164,4 +166,30 @@ export const saveReviews = (updatedReviews: Review[]) => {
   }
 };
 
-    
+// --- Agreements ---
+const defaultAgreements: Agreement[] = [];
+
+export const getAgreements = (): Agreement[] => {
+    if (typeof window === 'undefined') return defaultAgreements;
+    try {
+        const stored = localStorage.getItem(AGREEMENTS_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        } else {
+            localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(defaultAgreements));
+            return defaultAgreements;
+        }
+    } catch (e) {
+        console.error("Failed to access localStorage for agreements", e);
+        return defaultAgreements;
+    }
+}
+
+export const saveAgreements = (updatedAgreements: Agreement[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(updatedAgreements));
+    } catch (e) {
+        console.error("Failed to save agreements to localStorage", e);
+    }
+}
