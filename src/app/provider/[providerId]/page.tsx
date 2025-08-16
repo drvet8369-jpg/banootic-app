@@ -2,15 +2,15 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
-import type { Provider, Review } from '@/lib/types';
+import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/data';
+import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -159,12 +159,13 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [hasRequested, setHasRequested] = useState(false);
 
   const loadData = useCallback(() => {
     const allProviders = getProviders();
@@ -176,18 +177,23 @@ export default function ProviderProfilePage() {
       const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
                                         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReviews(providerReviews);
+      
+       if (user && user.accountType === 'customer') {
+            const allAgreements = getAgreements();
+            const existingRequest = allAgreements.find(a => a.providerPhone === foundProvider.phone && a.customerPhone === user.phone);
+            setHasRequested(!!existingRequest);
+       }
+
     } else {
       setProvider(null);
     }
     
     setIsLoading(false);
-  }, [providerPhone]);
+  }, [providerPhone, user]);
 
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
@@ -204,6 +210,44 @@ export default function ProviderProfilePage() {
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } else {
         toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+    }
+  };
+  
+  const handleRequestAgreement = () => {
+    if (!isLoggedIn || !user || !provider) {
+        toast({ title: "خطا", description: "برای ارسال درخواست باید وارد حساب کاربری خود شوید.", variant: "destructive" });
+        return;
+    }
+    if (user.accountType !== 'customer') {
+        toast({ title: "خطا", description: "فقط مشتریان می‌توانند درخواست توافق ارسال کنند.", variant: "destructive" });
+        return;
+    }
+
+    try {
+        const allAgreements = getAgreements();
+        const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone);
+        if (existingRequest) {
+            toast({ title: "درخواست تکراری", description: "شما قبلاً برای این هنرمند درخواست ارسال کرده‌اید.", variant: "default" });
+            setHasRequested(true);
+            return;
+        }
+
+        const newAgreement: Agreement = {
+            id: Date.now().toString(),
+            providerPhone: provider.phone,
+            customerPhone: user.phone,
+            customerName: user.name,
+            status: 'pending',
+            requestedAt: new Date().toISOString(),
+        };
+
+        const updatedAgreements = [...allAgreements, newAgreement];
+        saveAgreements(updatedAgreements);
+        setHasRequested(true);
+        toast({ title: 'درخواست ارسال شد', description: 'درخواست توافق شما با موفقیت برای هنرمند ارسال شد.' });
+
+    } catch (e) {
+        toast({ title: "خطا", description: "خطا در ذخیره‌سازی درخواست شما.", variant: "destructive" });
     }
   };
 
@@ -312,17 +356,17 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button asChild className="w-full">
+                    {user?.accountType === 'customer' && (
+                        <Button onClick={handleRequestAgreement} className="w-full" disabled={hasRequested}>
+                            <Handshake className="w-4 h-4 ml-2" />
+                            {hasRequested ? 'درخواست ارسال شد' : 'درخواست توافق'}
+                        </Button>
+                    )}
+                    <Button asChild className="w-full" variant="secondary">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
-                    </Button>
-                    <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
                     </Button>
                 </CardFooter>
                 )}
@@ -347,4 +391,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-    

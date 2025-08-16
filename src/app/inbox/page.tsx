@@ -130,7 +130,7 @@ export default function InboxPage() {
                     <p className="text-muted-foreground mt-2">
                         {user.accountType === 'provider'
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
-                            : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
+                            : 'وقتی به یک هنرمند پیام دهید، گفتگوی شما اینجا نمایش داده می‌شود.'}
                     </p>
                 </div>
             </CardContent>
