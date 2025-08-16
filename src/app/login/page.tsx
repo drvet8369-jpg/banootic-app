@@ -37,6 +37,18 @@ const formSchema = z.object({
   }),
 });
 
+// Helper to get stored customers, returns an empty array if none exist.
+const getCustomers = (): User[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem('banotic-customers');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -68,12 +80,20 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          // User is a customer
-          userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
+          // Check if the user is a known customer
+          const allCustomers = getCustomers();
+          const existingCustomer = allCustomers.find(c => c.phone === values.phone);
+          
+          if (existingCustomer) {
+             userToLogin = existingCustomer;
+          } else {
+             // User is a completely new customer
+            userToLogin = {
+                name: `کاربر ${values.phone.slice(-4)}`,
+                phone: values.phone,
+                accountType: 'customer',
+            };
+          }
         }
         
         login(userToLogin);
@@ -139,4 +159,3 @@ export default function LoginPage() {
     </div>
   );
 }
-    

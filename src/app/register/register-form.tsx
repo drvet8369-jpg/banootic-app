@@ -62,6 +62,26 @@ const formSchema = z.object({
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
 
+// Helper to get/save customers.
+const getCustomers = (): User[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem('banotic-customers');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+}
+const saveCustomers = (customers: User[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem('banotic-customers', JSON.stringify(customers));
+    } catch (e) {
+        console.error("Failed to save customers to localStorage", e);
+    }
+}
+
+
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
@@ -86,10 +106,10 @@ export default function RegisterForm() {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       const allProviders = getProviders();
+      const allCustomers = getCustomers();
 
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
+      // Check for existing phone number among providers
+      if (allProviders.some(p => p.phone === values.phone)) {
         toast({
           title: 'خطا در ثبت‌نام',
           description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
@@ -98,11 +118,21 @@ export default function RegisterForm() {
         setIsLoading(false);
         return;
       }
+      
+       // Check for existing phone number among customers
+      if (allCustomers.some(c => c.phone === values.phone)) {
+        toast({
+          title: 'خطا در ثبت‌نام',
+          description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است. لطفاً وارد شوید.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
 
       // Check for existing provider by business name, only if registering as a provider
       if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
+        if (allProviders.some(p => p.name.toLowerCase() === values.name.toLowerCase())) {
             toast({
                 title: 'خطا در ثبت‌نام',
                 description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
@@ -113,8 +143,6 @@ export default function RegisterForm() {
         }
       }
 
-
-      // This is the user object for the AuthContext
       const userToLogin: User = {
         name: values.name,
         phone: values.phone,
@@ -123,7 +151,6 @@ export default function RegisterForm() {
         bio: values.bio,
       };
 
-      // Only create a new provider if the account type is 'provider'
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
         const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
@@ -142,8 +169,10 @@ export default function RegisterForm() {
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
-        
         saveProviders([...allProviders, newProvider]);
+      } else {
+        // Save the new customer to localStorage
+        saveCustomers([...allCustomers, userToLogin]);
       }
       
       login(userToLogin);
@@ -304,4 +333,3 @@ export default function RegisterForm() {
     </Card>
   );
 }
-    
