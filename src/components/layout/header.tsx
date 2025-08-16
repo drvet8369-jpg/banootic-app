@@ -20,6 +20,8 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
+const AgreementBadge = dynamic(() => import('@/components/layout/agreement-badge').then(mod => mod.AgreementBadge), { ssr: false });
+
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
@@ -71,9 +73,12 @@ export default function Header() {
                       </Link>
                     </SheetClose>
                     <SheetClose asChild>
-                        <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                            <Handshake className="h-5 w-5" />
-                            مدیریت توافق‌ها
+                        <Link href="/agreements" className="flex items-center justify-between rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                           <div className="flex items-center gap-3">
+                             <Handshake className="h-5 w-5" />
+                             <span>مدیریت توافق‌ها</span>
+                           </div>
+                           <AgreementBadge />
                         </Link>
                     </SheetClose>
                 </>
@@ -86,9 +91,11 @@ export default function Header() {
                 </SheetClose>
              )}
             <SheetClose asChild>
-              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                 <span>صندوق ورودی</span>
+              <Link href="/inbox" className="flex items-center justify-between rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
+                 <div className="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                    <span>صندوق ورودی</span>
+                 </div>
                  <InboxBadge />
               </Link>
             </SheetClose>
@@ -166,9 +173,12 @@ export default function Header() {
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                                <Link href="/agreements" className="flex justify-end">
-                                    <span>مدیریت توافق‌ها</span>
-                                    <Handshake className="mr-2 h-4 w-4" />
+                                <Link href="/agreements" className="flex justify-between items-center w-full">
+                                    <AgreementBadge />
+                                    <div className="flex items-center justify-end">
+                                        <span>مدیریت توافق‌ها</span>
+                                        <Handshake className="mr-2 h-4 w-4" />
+                                    </div>
                                 </Link>
                             </DropdownMenuItem>
                         </>
@@ -181,10 +191,12 @@ export default function Header() {
                         </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                        <Link href="/inbox" className="relative flex justify-end">
-                            <span>صندوق ورودی</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                        <Link href="/inbox" className="relative flex justify-between items-center w-full">
                             <InboxBadge />
+                            <div className="flex items-center justify-end">
+                                <span>صندوق ورودی</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                            </div>
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
