@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,53 +10,60 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { getAgreementsForUser, updateAgreementStatusAction } from '@/lib/actions';
+import { getAgreements, saveAgreements } from '@/lib/data';
 
 export default function AgreementsPage() {
-  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const fetchAgreements = async () => {
+  const fetchAgreements = () => {
     if (!user) return;
-    setIsDataLoading(true);
+    setIsLoading(true);
     try {
-        const userAgreements = await getAgreementsForUser(user.phone);
+        const allAgreements = getAgreements();
+        const userAgreements = allAgreements.filter(a => a.providerPhone === user.phone);
         setAgreements(userAgreements);
     } catch(e){
         toast({ title: 'خطا', description: 'خطا در بارگذاری توافق‌ها.', variant: 'destructive'})
     } finally {
-        setIsDataLoading(false);
+        setIsLoading(false);
     }
   }
 
   useEffect(() => {
     if (user && user.accountType === 'provider') {
       fetchAgreements();
+    } else {
+      setIsLoading(false);
     }
   }, [user]);
 
   const handleConfirmAgreement = (agreementId: string) => {
-    startTransition(async () => {
-        try {
-            await updateAgreementStatusAction(agreementId, 'confirmed');
+    try {
+        const allAgreements = getAgreements();
+        const agreementIndex = allAgreements.findIndex(a => a.id === agreementId);
+
+        if (agreementIndex > -1) {
+            allAgreements[agreementIndex].status = 'confirmed';
+            allAgreements[agreementIndex].confirmedAt = new Date().toISOString();
+            saveAgreements(allAgreements);
             toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
-            await fetchAgreements(); // Re-fetch to update the list
-        } catch (e) {
-            toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
+            fetchAgreements(); // Re-fetch to update the list
+        } else {
+            throw new Error("Agreement not found");
         }
-    });
+    } catch (e) {
+        toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
+    }
   };
   
-  const isLoading = isAuthLoading || isDataLoading;
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
@@ -131,7 +138,7 @@ export default function AgreementsPage() {
                                         )}
                                     </div>
                                     <div className="flex gap-2 mt-4 sm:mt-0">
-                                      <Button onClick={() => handleConfirmAgreement(agreement.id)} disabled={isPending}>
+                                      <Button onClick={() => handleConfirmAgreement(agreement.id)}>
                                         <Check className="w-4 h-4 ml-2" />
                                         تایید
                                       </Button>
