@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound, Handshake, FileText } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, Handshake, FileText, Home } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -54,6 +54,12 @@ export default function Header() {
          </SheetClose>
       </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
+        <SheetClose asChild>
+            <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <Home className="h-5 w-5" />
+                صفحه اصلی
+            </Link>
+        </SheetClose>
         {isLoggedIn && user ? (
            <>
              {user?.accountType === 'provider' ? (
