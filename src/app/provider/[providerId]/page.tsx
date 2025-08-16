@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
-import { useParams, notFound } from 'next/navigation';
+import { useParams, notFound, useRouter } from 'next/navigation';
 import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/data';
 import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
@@ -158,6 +158,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 
 export default function ProviderProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const providerPhone = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
@@ -213,42 +214,51 @@ export default function ProviderProfilePage() {
     }
   };
   
-  const handleRequestAgreement = () => {
-    if (!isLoggedIn || !user || !provider) {
-        toast({ title: "خطا", description: "برای ارسال درخواست باید وارد حساب کاربری خود شوید.", variant: "destructive" });
+  const handleProtectedAction = (action: () => void) => {
+     if (!isLoggedIn) {
+        toast({ title: "نیاز به ورود", description: "برای استفاده از این قابلیت، لطفاً ابتدا وارد شوید یا ثبت‌نام کنید." });
+        router.push('/login');
         return;
-    }
-    if (user.accountType !== 'customer') {
-        toast({ title: "خطا", description: "فقط مشتریان می‌توانند درخواست توافق ارسال کنند.", variant: "destructive" });
-        return;
-    }
+     }
+     action();
+  };
 
-    try {
-        const allAgreements = getAgreements();
-        const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone);
-        if (existingRequest) {
-            toast({ title: "درخواست تکراری", description: "شما قبلاً برای این هنرمند درخواست ارسال کرده‌اید.", variant: "default" });
-            setHasRequested(true);
+
+  const handleRequestAgreement = () => {
+    handleProtectedAction(() => {
+        if (!user || !provider) return;
+        if (user.accountType !== 'customer') {
+            toast({ title: "خطا", description: "فقط مشتریان می‌توانند درخواست توافق ارسال کنند.", variant: "destructive" });
             return;
         }
 
-        const newAgreement: Agreement = {
-            id: Date.now().toString(),
-            providerPhone: provider.phone,
-            customerPhone: user.phone,
-            customerName: user.name,
-            status: 'pending',
-            requestedAt: new Date().toISOString(),
-        };
+        try {
+            const allAgreements = getAgreements();
+            const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone);
+            if (existingRequest) {
+                toast({ title: "درخواست تکراری", description: "شما قبلاً برای این هنرمند درخواست ارسال کرده‌اید.", variant: "default" });
+                setHasRequested(true);
+                return;
+            }
 
-        const updatedAgreements = [...allAgreements, newAgreement];
-        saveAgreements(updatedAgreements);
-        setHasRequested(true);
-        toast({ title: 'درخواست ارسال شد', description: 'درخواست توافق شما با موفقیت برای هنرمند ارسال شد.' });
+            const newAgreement: Agreement = {
+                id: Date.now().toString(),
+                providerPhone: provider.phone,
+                customerPhone: user.phone,
+                customerName: user.name,
+                status: 'pending',
+                requestedAt: new Date().toISOString(),
+            };
 
-    } catch (e) {
-        toast({ title: "خطا", description: "خطا در ذخیره‌سازی درخواست شما.", variant: "destructive" });
-    }
+            const updatedAgreements = [...allAgreements, newAgreement];
+            saveAgreements(updatedAgreements);
+            setHasRequested(true);
+            toast({ title: 'درخواست ارسال شد', description: 'درخواست توافق شما با موفقیت برای هنرمند ارسال شد.' });
+
+        } catch (e) {
+            toast({ title: "خطا", description: "خطا در ذخیره‌سازی درخواست شما.", variant: "destructive" });
+        }
+    });
   };
 
 
@@ -356,24 +366,18 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                     <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
+                     <Button className="w-full" variant="secondary" onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}>
+                        <Phone className="w-4 h-4 ml-2" />
+                        تماس
                     </Button>
-                    <Button asChild className="w-full">
-                        <Link href={`/chat/${provider.phone}`}>
-                            <MessageSquare className="w-4 h-4 ml-2" />
-                            ارسال پیام
-                        </Link>
+                    <Button className="w-full" onClick={() => handleProtectedAction(() => router.push(`/chat/${provider.phone}`))}>
+                        <MessageSquare className="w-4 h-4 ml-2" />
+                        ارسال پیام
                     </Button>
-                    {user?.accountType === 'customer' && (
-                        <Button onClick={handleRequestAgreement} className="w-full" variant="outline" disabled={hasRequested}>
-                            <Handshake className="w-4 h-4 ml-2" />
-                            {hasRequested ? 'درخواست ارسال شد' : 'درخواست توافق'}
-                        </Button>
-                    )}
+                    <Button onClick={handleRequestAgreement} className="w-full" variant="outline" disabled={isLoggedIn && hasRequested}>
+                        <Handshake className="w-4 h-4 ml-2" />
+                        {isLoggedIn && hasRequested ? 'درخواست ارسال شد' : 'درخواست توافق'}
+                    </Button>
                 </CardFooter>
                 )}
 
