@@ -40,8 +40,17 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
+  location: z.string().optional(),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.location;
+    }
+    return true;
+}, {
+    message: 'لطفاً موقعیت مکانی را وارد کنید.',
+    path: ['location'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -94,6 +103,7 @@ export default function RegisterForm() {
       name: '',
       phone: '',
       accountType: 'customer',
+      location: 'ارومیه',
       bio: '',
     },
   });
@@ -160,7 +170,7 @@ export default function RegisterForm() {
           name: values.name,
           phone: values.phone,
           service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
+          location: values.location || 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
           serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
@@ -210,7 +220,12 @@ export default function RegisterForm() {
                   <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        if (value === 'provider') {
+                            form.setValue('location', 'ارومیه');
+                        }
+                      }}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
                       disabled={isLoading}
@@ -268,6 +283,22 @@ export default function RegisterForm() {
 
             {accountType === 'provider' && (
               <>
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>موقعیت مکانی</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled />
+                      </FormControl>
+                       <FormDescription>
+                        در حال حاضر، ثبت‌نام فقط برای شهر ارومیه امکان‌پذیر است.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="serviceType"
