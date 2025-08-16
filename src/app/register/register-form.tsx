@@ -274,7 +274,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    <Input placeholder="09..." {...field} disabled={isLoading} className="text-left dir-ltr placeholder:text-foreground/80" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
