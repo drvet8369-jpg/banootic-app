@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/data';
+import { getProviders, getAgreements, calculateProviderScore } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -16,12 +16,18 @@ export default function SearchPage() {
   // This function now correctly re-fetches and filters data whenever the query changes.
   const performSearch = useCallback(() => {
     setIsLoading(true);
-    // Always get the latest providers from localStorage at the moment of searching.
+    // Always get the latest providers and agreements from localStorage at the moment of searching.
     const allProviders = getProviders();
+    const allAgreements = getAgreements();
+
+    const getScore = (provider: Provider) => {
+        const confirmedCount = allAgreements.filter(a => a.providerPhone === provider.phone && a.status === 'confirmed').length;
+        return calculateProviderScore(provider, confirmedCount);
+    }
 
     if (!query) {
-      // If query is empty, show all providers, sorted by rating
-      const sortedProviders = allProviders.sort((a, b) => b.rating - a.rating);
+      // If query is empty, show all providers, sorted by the new ladder score
+      const sortedProviders = allProviders.sort((a, b) => getScore(b) - getScore(a));
       setSearchResults(sortedProviders);
     } else {
       // If there is a query, filter and then sort the results
@@ -31,7 +37,7 @@ export default function SearchPage() {
         provider.service.toLowerCase().includes(lowercasedQuery) ||
         provider.bio.toLowerCase().includes(lowercasedQuery)
       );
-      const sortedResults = results.sort((a, b) => b.rating - a.rating);
+      const sortedResults = results.sort((a, b) => getScore(b) - getScore(a));
       setSearchResults(sortedResults);
     }
     

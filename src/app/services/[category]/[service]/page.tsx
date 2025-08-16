@@ -1,6 +1,6 @@
 'use client';
 
-import { services, categories, getProviders } from '@/lib/data';
+import { services, categories, getProviders, getAgreements, calculateProviderScore } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -30,12 +30,19 @@ export default function ServiceProvidersPage() {
     setService(foundService || null);
       
     if (foundCategory && foundService) {
-      // Always get the latest providers from localStorage inside the function
+      // Always get the latest providers and agreements from localStorage
       const allProviders = getProviders();
+      const allAgreements = getAgreements();
+      
+      const getScore = (provider: Provider) => {
+          const confirmedCount = allAgreements.filter(a => a.providerPhone === provider.phone && a.status === 'confirmed').length;
+          return calculateProviderScore(provider, confirmedCount);
+      }
+
       // Correctly filter providers based on the serviceSlug from the URL.
       const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-      // Sort the found providers by rating (ladder system)
-      const sortedProviders = foundProviders.sort((a,b) => b.rating - a.rating);
+      // Sort the found providers by the new ladder score
+      const sortedProviders = foundProviders.sort((a,b) => getScore(b) - getScore(a));
       setServiceProviders(sortedProviders);
     } else {
       setServiceProviders([]);
