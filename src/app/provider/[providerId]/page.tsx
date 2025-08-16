@@ -356,18 +356,24 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    {user?.accountType === 'customer' && (
-                        <Button onClick={handleRequestAgreement} className="w-full" disabled={hasRequested}>
-                            <Handshake className="w-4 h-4 ml-2" />
-                            {hasRequested ? 'درخواست ارسال شد' : 'درخواست توافق'}
-                        </Button>
-                    )}
-                    <Button asChild className="w-full" variant="secondary">
+                     <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
+                    <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
                     </Button>
+                    {user?.accountType === 'customer' && (
+                        <Button onClick={handleRequestAgreement} className="w-full" variant="outline" disabled={hasRequested}>
+                            <Handshake className="w-4 h-4 ml-2" />
+                            {hasRequested ? 'درخواست ارسال شد' : 'درخواست توافق'}
+                        </Button>
+                    )}
                 </CardFooter>
                 )}
 
