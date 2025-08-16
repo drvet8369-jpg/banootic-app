@@ -26,10 +26,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // A one-time check to see if we need to clean up localStorage
 const performCleanup = () => {
     if (typeof window !== 'undefined') {
-        const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix'; // Use a new flag to re-run if needed
+        const cleanupFlag = 'banotic-cleanup-v1'; // Use a new flag to re-run if needed
         if (!localStorage.getItem(cleanupFlag)) {
             console.log("Performing one-time cleanup of localStorage for portfolio reset...");
-            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
+            localStorage.removeItem('banotic-providers'); // This will force a reset to default data
             localStorage.setItem(cleanupFlag, 'true');
         }
     }
@@ -46,14 +46,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('honarbanoo-user');
+      const storedUser = localStorage.getItem('banotic-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
       // Clean up corrupted data
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banotic-user');
     }
   }, []);
 
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Ensure accountType is always set
       const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      localStorage.setItem('banotic-user', JSON.stringify(userToSave));
       setUser(userToSave);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banotic-user');
       setUser(null);
       // Redirect to home page for a better user experience
       router.push('/');
@@ -93,5 +93,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

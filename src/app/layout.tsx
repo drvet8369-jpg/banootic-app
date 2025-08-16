@@ -23,8 +23,8 @@ const vazirmatn = Vazirmatn({
 // This can't be a dynamic export in a client component, 
 // so we define it statically here.
 // export const metadata: Metadata = {
-//   title: 'هنربانو',
-//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   title: 'بانوتیک',
+//   description: 'بازاری برای خدمات و محصولات بانوان هنرمند',
 //   manifest: '/manifest.json',
 // };
 
@@ -45,8 +45,8 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>هنربانو</title>
-          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
+          <title>بانوتیک</title>
+          <meta name="description" content="بازاری برای خدمات و محصولات بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
       </head>
@@ -71,5 +71,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

@@ -45,11 +45,11 @@ export default function Header() {
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
       <SheetHeader className="p-4 border-b text-right">
-        <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
+         <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-primary-foreground" />
-              <span className="font-display text-2xl font-bold">هنربانو</span>
+              <span className="font-display text-2xl font-bold">بانوتیک</span>
             </Link>
          </SheetClose>
       </SheetHeader>
@@ -217,7 +217,7 @@ export default function Header() {
 
         {/* Right Side: Branding */}
         <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
             <Logo className="h-10 w-10 text-primary-foreground" />
         </Link>
       </div>
