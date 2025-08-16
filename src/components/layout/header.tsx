@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, Handshake, FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -33,31 +33,50 @@ export default function Header() {
   const getInitials = (name: string) => {
     if (!name) return '..';
     const names = name.split(' ');
-    if (names.length > 1 && names[1]) {
-      return `${names[0][0]}${names[1][0]}`;
+    if (names.length > 1 && names[1] && !isNaN(parseInt(names[1]))) {
+        return `${names[0][0]}${names[1][0]}`;
+    }
+    if(names.length > 1 && names[1]) {
+        return `${names[0][0]}${names[1][0]}`;
     }
     return name.substring(0, 2);
   }
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <SheetHeader className="p-4 border-b text-right">
+        <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-primary-foreground" />
               <span className="font-display text-2xl font-bold">هنربانو</span>
             </Link>
          </SheetClose>
-      </div>
+      </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' && (
+             {user?.accountType === 'provider' ? (
+                <>
+                    <SheetClose asChild>
+                      <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                        <UserRound className="h-5 w-5" />
+                        پروفایل من
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                        <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                            <Handshake className="h-5 w-5" />
+                            مدیریت توافق‌ها
+                        </Link>
+                    </SheetClose>
+                </>
+             ) : (
                 <SheetClose asChild>
-                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                    <UserRound className="h-5 w-5" />
-                    پروفایل من
-                  </Link>
+                    <Link href="/requests" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                        <FileText className="h-5 w-5" />
+                        درخواست‌های من
+                    </Link>
                 </SheetClose>
              )}
             <SheetClose asChild>
@@ -91,7 +110,7 @@ export default function Header() {
               <Avatar>
                 <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
               </Avatar>
-              <div className="flex flex-col">
+              <div className="flex flex-col text-right">
                   <span className="font-medium">{user.name}</span>
                   <span className="text-xs text-muted-foreground">{user.phone}</span>
               </div>
@@ -125,32 +144,47 @@ export default function Header() {
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start" forceMount>
-                    <DropdownMenuLabel className="font-normal">
+                    <DropdownMenuLabel className="font-normal text-right">
                         <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user.name}</p>
                         <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
+                     {user.accountType === 'provider' ? (
+                        <>
+                            <DropdownMenuItem asChild>
+                                <Link href="/profile" className="flex justify-end">
+                                    <span>پروفایل من</span>
+                                    <UserRound className="mr-2 h-4 w-4" />
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/agreements" className="flex justify-end">
+                                    <span>مدیریت توافق‌ها</span>
+                                    <Handshake className="mr-2 h-4 w-4" />
+                                </Link>
+                            </DropdownMenuItem>
+                        </>
+                    ) : (
                         <DropdownMenuItem asChild>
-                        <Link href="/profile">
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
-                        </Link>
+                            <Link href="/requests" className="flex justify-end">
+                                <span>درخواست‌های من</span>
+                                <FileText className="mr-2 h-4 w-4" />
+                            </Link>
                         </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                        <Link href="/inbox" className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                        <Link href="/inbox" className="relative flex justify-end">
                             <span>صندوق ورودی</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                             <InboxBadge />
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
-                        <LogOut className="ml-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={logout} className="flex justify-end">
                         <span>خروج</span>
+                        <LogOut className="mr-2 h-4 w-4" />
                     </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -190,5 +224,3 @@ export default function Header() {
     </header>
   );
 }
-
-    
