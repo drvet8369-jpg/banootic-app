@@ -195,24 +195,14 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setIsLoading(true);
     loadData();
+    // Add a focus listener to reload data when the user returns to the tab.
+    window.addEventListener('focus', loadData);
+    return () => {
+      window.removeEventListener('focus', loadData);
+    };
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
-
-  const deletePortfolioItem = (itemIndex: number) => {
-    if (!provider) return;
-
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-        saveProviders(allProviders);
-        loadData(); // Refresh data
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
-    }
-  };
   
   const handleProtectedAction = (action: () => void) => {
      if (!isLoggedIn) {
@@ -321,17 +311,6 @@ export default function ProviderProfilePage() {
                                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                                                 data-ai-hint={item.aiHint}
                                             />
-                                            {isOwnerViewing && (
-                                            <Button
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
-                                                aria-label={`حذف نمونه کار ${index + 1}`}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                            )}
                                         </div>
                                     </DialogTrigger>
                                 ))}

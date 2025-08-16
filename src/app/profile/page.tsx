@@ -160,6 +160,19 @@ export default function ProfilePage() {
     }
   };
   
+    const deletePortfolioItem = (itemIndex: number) => {
+        if (!provider) return;
+        const success = updateProviderData((p) => {
+             p.portfolio = p.portfolio.filter((_, index) => index !== itemIndex);
+        });
+
+        if (success) {
+            toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+        } else {
+            toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
+        }
+    };
+  
   const handleProfilePictureChange = (newImageSrc: string) => {
       const success = updateProviderData((p) => {
         if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
@@ -283,8 +296,11 @@ export default function ProfilePage() {
                <Separator className="my-6" />
                 <div className="mb-4">
                   <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                  
-                  <input 
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                        <PlusCircle className="w-5 h-5 ml-2" />
+                        افزودن نمونه کار جدید
+                   </Button>
+                   <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
                     onChange={(e) => handleFileChange(e, addPortfolioItem)}
@@ -298,11 +314,33 @@ export default function ProfilePage() {
                     className="hidden"
                     accept="image/*"
                   />
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
-                        <PlusCircle className="w-5 h-5 ml-2" />
-                        افزودن نمونه کار جدید
-                   </Button>
-                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+                   
+                   {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {provider.portfolio.map((item, index) => (
+                                <div className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md" key={index}>
+                                    <Image
+                                        src={item.src}
+                                        alt={`نمونه کار ${index + 1}`}
+                                        fill
+                                        className="object-cover"
+                                        data-ai-hint={item.aiHint}
+                                    />
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                        onClick={() => deletePortfolioItem(index)}
+                                        aria-label={`حذف نمونه کار ${index + 1}`}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-center text-muted-foreground mt-4">هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                    )}
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
@@ -352,5 +390,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
