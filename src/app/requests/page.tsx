@@ -108,9 +108,6 @@ export default function CustomerRequestsPage() {
                 <p className="text-muted-foreground mt-2">
                    برای ثبت درخواست، به پروفایل یک هنرمند مراجعه کرده و روی دکمه "درخواست توافق" کلیک کنید.
                 </p>
-                <Button asChild className="mt-6">
-                  <Link href="/">مشاهده هنرمندان</Link>
-                </Button>
             </div>
           ) : (
             <div className="space-y-4">
