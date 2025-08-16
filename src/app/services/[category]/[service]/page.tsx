@@ -34,7 +34,9 @@ export default function ServiceProvidersPage() {
       const allProviders = getProviders();
       // Correctly filter providers based on the serviceSlug from the URL.
       const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-      setServiceProviders(foundProviders);
+      // Sort the found providers by rating (ladder system)
+      const sortedProviders = foundProviders.sort((a,b) => b.rating - a.rating);
+      setServiceProviders(sortedProviders);
     } else {
       setServiceProviders([]);
     }
@@ -95,4 +97,3 @@ export default function ServiceProvidersPage() {
     </div>
   );
 }
-    

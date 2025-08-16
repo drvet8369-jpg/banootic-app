@@ -18,18 +18,23 @@ export default function SearchPage() {
     setIsLoading(true);
     // Always get the latest providers from localStorage at the moment of searching.
     const allProviders = getProviders();
+
     if (!query) {
-      setSearchResults([]);
-      setIsLoading(false);
-      return;
+      // If query is empty, show all providers, sorted by rating
+      const sortedProviders = allProviders.sort((a, b) => b.rating - a.rating);
+      setSearchResults(sortedProviders);
+    } else {
+      // If there is a query, filter and then sort the results
+      const lowercasedQuery = query.toLowerCase();
+      const results = allProviders.filter(provider => 
+        provider.name.toLowerCase().includes(lowercasedQuery) ||
+        provider.service.toLowerCase().includes(lowercasedQuery) ||
+        provider.bio.toLowerCase().includes(lowercasedQuery)
+      );
+      const sortedResults = results.sort((a, b) => b.rating - a.rating);
+      setSearchResults(sortedResults);
     }
-    const lowercasedQuery = query.toLowerCase();
-    const results = allProviders.filter(provider => 
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery) ||
-      provider.bio.toLowerCase().includes(lowercasedQuery)
-    );
-    setSearchResults(results);
+    
     setIsLoading(false);
   }, [query]);
 
@@ -55,7 +60,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            لطفا عبارتی را برای جستجو وارد کنید.
+            نمایش همه هنرمندان بر اساس بالاترین امتیاز.
           </p>
         )}
       </div>
@@ -85,4 +90,3 @@ export default function SearchPage() {
     </div>
   );
 }
-    
