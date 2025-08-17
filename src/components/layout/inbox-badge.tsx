@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { getUnreadCount } from '@/lib/api';
-import { useCrossTabEventListener } from '@/lib/events';
+import { cn } from '@/lib/utils';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -14,35 +13,51 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const checkUnread = useCallback(async () => {
+  useEffect(() => {
     if (!user?.phone) {
       setUnreadCount(0);
       return;
     }
 
-    try {
-      const count = await getUnreadCount(user.phone);
-      setUnreadCount(count);
-    } catch (e) {
-      // Silently fail if API is not available
-      setUnreadCount(0);
-    }
-  }, [user?.phone]);
+    const checkUnread = () => {
+      try {
+        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const totalUnread = Object.values(allChatsData)
+          .filter((chat: any) => chat.members?.includes(user.phone))
+          .reduce((acc: number, chat: any) => {
+            const selfInfo = chat.participants?.[user.phone];
+            return acc + (selfInfo?.unreadCount || 0);
+          }, 0);
+        setUnreadCount(totalUnread);
+      } catch (e) {
+        // Silently fail if localStorage is not available or corrupted
+        setUnreadCount(0);
+      }
+    };
 
-  useEffect(() => {
+    // Initial check
     checkUnread();
-    
-    // Listen for updates from other tabs
-    const cleanup = useCrossTabEventListener('messages-update', checkUnread);
 
-    // Also listen to window focus event as a fallback
+    // Listen for storage changes from other tabs
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'inbox_chats') {
+            checkUnread();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check on focus for changes within the same tab
     window.addEventListener('focus', checkUnread);
 
+    // Set up an interval as a fallback
+    const intervalId = setInterval(checkUnread, 5000); 
+
     return () => {
-      cleanup();
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', checkUnread);
     };
-  }, [checkUnread]);
+  }, [user?.phone]);
 
   if (unreadCount === 0) {
     return null;

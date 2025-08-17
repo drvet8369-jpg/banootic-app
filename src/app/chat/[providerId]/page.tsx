@@ -1,6 +1,6 @@
-
 'use client';
 
+import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,11 +11,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Provider, ChatMessage } from '@/lib/types';
-import { getProviderByPhone, sendMessage, subscribeToMessages, getCustomers } from '@/lib/api';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { dispatchCrossTabEvent } from '@/lib/events';
+import type { Provider } from '@/lib/types';
+import Image from 'next/image';
 
+
+interface Message {
+  id: string;
+  text: string;
+  senderId: string;
+  createdAt: string; // Using ISO string for localStorage
+  isEdited?: boolean;
+}
 
 interface OtherPersonDetails {
     id: string | number;
@@ -27,25 +33,24 @@ interface OtherPersonDetails {
 
 export default function ChatPage() {
   const params = useParams();
-  const otherPersonId = params.providerId as string;
+  const otherPersonIdOrProviderId = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
-  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
-    return [phone1, phone2].sort().join('__');
+    return [phone1, phone2].sort().join('_');
   }, []);
   
   const getInitials = (name: string) => {
@@ -61,65 +66,52 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Effect to load initial chat data and set up real-time subscription
   useEffect(() => {
-    if (!isLoggedIn || !user || !otherPersonId) {
-      setIsLoading(false);
-      return;
-    }
-
-    const chatId = getChatId(user.phone, otherPersonId);
-    if (!chatId) {
+    if (!isLoggedIn || !user) {
         setIsLoading(false);
         return;
     }
 
-    async function setupChat() {
-      // 1. Fetch details of the other person
-      try {
-        const providerDetails = await getProviderByPhone(otherPersonId);
-        if(providerDetails) {
-            setOtherPersonDetails(providerDetails);
-        } else {
-             const customers = await getCustomers();
-             const customerDetails = customers.find(c => c.phone === otherPersonId);
-             if (customerDetails) {
-                setOtherPersonDetails({ id: otherPersonId, name: customerDetails.name, phone: otherPersonId });
-             } else {
-                setOtherPersonDetails({ id: otherPersonId, name: `کاربر ${otherPersonId.slice(-4)}`, phone: otherPersonId });
-             }
-        }
-      } catch (error) {
-        toast({ title: 'خطا', description: 'اطلاعات کاربر مقابل یافت نشد.', variant: 'destructive' });
-      }
-
-      // 2. Subscribe to messages
-      const { initialMessages, channel } = await subscribeToMessages(chatId, user.phone, (newMessage) => {
-        setMessages((prevMessages) => {
-          if (prevMessages.some(m => m.id === newMessage.id)) {
-            return prevMessages;
-          }
-          return [...prevMessages, newMessage];
-        });
-        dispatchCrossTabEvent('messages-update');
-      });
-
-      setMessages(initialMessages);
-      channelRef.current = channel;
-      setIsLoading(false);
-      dispatchCrossTabEvent('messages-update');
+    let details: OtherPersonDetails | null = null;
+    const allProviders = getProviders();
+    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+    
+    if (provider) {
+      details = provider;
+    } else {
+      const customerPhone = otherPersonIdOrProviderId;
+      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
     }
+    
+    if (!details) {
+        toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+    }
+    setOtherPersonDetails(details);
+    
+    const chatId = getChatId(user.phone, details.phone);
+    if (chatId) {
+      try {
+          const storedMessages = localStorage.getItem(`chat_${chatId}`);
+          if (storedMessages) {
+              setMessages(JSON.parse(storedMessages));
+          }
 
-    setupChat();
-
-    // Cleanup subscription on component unmount
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
+          // Mark messages as read when chat is opened
+          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+              allChats[chatId].participants[user.phone].unreadCount = 0;
+              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+          }
+      } catch(e) {
+          console.error("Failed to load/update chat from localStorage", e);
       }
-    };
-  }, [otherPersonId, isLoggedIn, user, getChatId, toast]);
+    }
+    
+    setIsLoading(false);
+
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
 
 
   if (!isLoggedIn || !user) {
@@ -144,8 +136,7 @@ export default function ChatPage() {
     );
   }
   
-  const handleStartEdit = (message: ChatMessage) => {
-    if(!message.id) return;
+  const handleStartEdit = (message: Message) => {
     setEditingMessageId(message.id);
     setEditingText(message.text);
   };
@@ -155,13 +146,34 @@ export default function ChatPage() {
     setEditingText('');
   };
   
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = () => {
     if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
-    setIsSending(true);
-    // This functionality is complex to implement securely and is disabled for now.
-    toast({ title: 'غیرفعال', description: 'ویرایش پیام در حال حاضر پشتیبانی نمی‌شود.', variant: 'destructive'});
+
+    const chatId = getChatId(user.phone, otherPersonDetails.phone);
+    if (!chatId) return;
+
+    const updatedMessages = messages.map(msg => {
+      if (msg.id === editingMessageId) {
+        return { ...msg, text: editingText.trim(), isEdited: true };
+      }
+      return msg;
+    });
+
+    setMessages(updatedMessages);
+    localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
+
+    // Also update the last message in the inbox if this was the last message
+    const lastMessage = updatedMessages[updatedMessages.length - 1];
+    if (lastMessage.id === editingMessageId) {
+        const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        if (allChats[chatId]) {
+            allChats[chatId].lastMessage = editingText.trim();
+            localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+        }
+    }
+
     handleCancelEdit();
-    setIsSending(false);
+    toast({ title: 'پیام ویرایش شد.' });
   };
 
 
@@ -172,32 +184,73 @@ export default function ChatPage() {
     
     setIsSending(true);
     
-    const chatId = getChatId(user.phone, otherPersonDetails.phone);
-    if (!chatId) {
-        setIsSending(false);
-        toast({ title: 'خطا', description: 'شناسه گفتگو نامعتبر است.', variant: 'destructive'});
-        return;
-    }
+    const tempUiMessage: Message = {
+      id: Date.now().toString(),
+      text: text,
+      senderId: user.phone,
+      createdAt: new Date().toISOString(),
+    };
+    
+    const updatedMessages = [...messages, tempUiMessage];
+    setMessages(updatedMessages);
+    setNewMessage('');
 
-    try {
-        await sendMessage({
-            chat_id: chatId,
-            sender_id: user.phone,
-            text: text,
-        });
-        setNewMessage('');
-        // No need to manually update UI or dispatch event, subscription handler does it.
-    } catch (error) {
-        toast({ title: 'خطا', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
-    } finally {
-        setIsSending(false);
+    const chatId = getChatId(user.phone, otherPersonDetails.phone);
+    if (chatId) {
+        try {
+            const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+            const currentChat = allChats[chatId] || {
+                id: chatId,
+                members: [user.phone, otherPersonDetails.phone],
+                participants: {
+                    [user.phone]: { name: user.name, unreadCount: 0 },
+                    [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
+                }
+            };
+            
+            // Update last message and timestamp
+            currentChat.lastMessage = text;
+            currentChat.updatedAt = new Date().toISOString();
+
+            // Increment unread count for the receiver
+            const receiverPhone = otherPersonDetails.phone;
+            if (currentChat.participants[receiverPhone]) {
+                currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
+            } else {
+                 currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
+            }
+
+            // Ensure sender's participant data exists
+            if (!currentChat.participants[user.phone]) {
+                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
+            }
+
+            allChats[chatId] = currentChat;
+            
+            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
+            localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+        } catch(e) {
+            console.error("Failed to save to localStorage", e);
+            toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
+        }
     }
+   
+    setTimeout(() => {
+        setIsSending(false);
+    }, 500);
   };
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
+    // For customers, check if they have any chats, if so link to inbox, otherwise home.
+    try {
+      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
+      if (userChats.length > 0) return '/inbox';
+    } catch (e) { /* ignore */ }
     return '/'; 
   }
+
 
   return (
     <div className="flex flex-col h-full py-4">
@@ -216,17 +269,18 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription className="text-sm">گفتگوی مستقیم</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
-                <p>این یک گفتگوی جدید است. اولین پیام را ارسال کنید.</p>
+                <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
+                <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
               </div>
             )}
             {messages.map((message) => {
-                const senderIsUser = message.sender_id === user?.phone;
+                const senderIsUser = message.senderId === user?.phone;
                 const isEditing = editingMessageId === message.id;
 
                 return (
@@ -253,17 +307,27 @@ export default function ChatPage() {
                                 onKeyDown={(e) => { if(e.key === 'Enter') { handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
                                 autoFocus
                             />
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit} disabled={isSending}><Save className="w-4 h-4" /></Button>
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit} disabled={isSending}><XCircle className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
                         </div>
                     ) : (
                          <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
                              <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                                 <p className="text-sm font-semibold">
                                   {message.text}
-                                  {message.is_edited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
+                                  {message.isEdited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
                                 </p>
                             </div>
+                            {senderIsUser && (
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleStartEdit(message)}
+                                >
+                                    <Edit className="w-4 h-4"/>
+                                </Button>
+                            )}
                         </div>
                     )}
 
@@ -285,9 +349,9 @@ export default function ChatPage() {
                 className="flex-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || isLoading}
+                disabled={isSending || isLoading || !!editingMessageId}
               />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading}>
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !!editingMessageId}>
                   {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
               </Button>
           </form>
