@@ -6,7 +6,7 @@
 // interacting with Supabase. This makes the code cleaner, more testable,
 // and easier to maintain or switch data sources in the future.
 
-import { createClient, RealtimeChannel } from '@supabase/supabase-js';
+import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem, ChatMessage } from './types';
 import type { User } from '@/context/AuthContext';
 
@@ -534,7 +534,7 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
  * @param {(message: ChatMessage) => void} onNewMessage A callback function to handle new messages.
  * @returns {Promise<{initialMessages: ChatMessage[], channel: RealtimeChannel}>} An object containing the initial messages and the Supabase channel for cleanup.
  */
-export async function subscribeToMessages(chatId: string, currentUserPhone: string, onNewMessage: (message: ChatMessage) => void) {
+export async function subscribeToMessages(chatId: string, currentUserPhone: string, onNewMessage: (message: ChatMessage) => void): Promise<{initialMessages: ChatMessage[], channel: RealtimeChannel}> {
   // Mark messages as read upon opening the chat
   const { error: updateError } = await supabase
     .from('messages')
