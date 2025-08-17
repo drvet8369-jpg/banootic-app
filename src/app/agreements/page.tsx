@@ -11,6 +11,8 @@ import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { getAgreementsByProvider, confirmAgreement } from '@/lib/api';
+import { dispatchCrossTabEvent } from '@/lib/events';
+
 
 export default function AgreementsPage() {
   const { user, isLoggedIn } = useAuth();
@@ -48,6 +50,7 @@ export default function AgreementsPage() {
     try {
         await confirmAgreement(agreementId);
         toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
+        dispatchCrossTabEvent('agreements-update'); // Notify other tabs
         fetchAgreements(); // Re-fetch to update the list
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})

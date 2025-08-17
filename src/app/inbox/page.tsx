@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,6 +10,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
+import { getInboxList } from '@/lib/api';
+import { useCrossTabEventListener } from '@/lib/events';
+
 
 interface Chat {
   id: string;
@@ -40,12 +43,7 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    // This effect runs only on the client, preventing hydration mismatch for date formatting.
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
+  const fetchInbox = useCallback(async () => {
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -56,41 +54,33 @@ export default function InboxPage() {
     setError(null);
     
     try {
-      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      
-      const userChats = Object.values(allChatsData)
-        .filter((chat: any) => chat.members?.includes(user.phone))
-        .map((chat: any): Chat | null => {
-            if (!chat.participants || !chat.members) return null;
-
-            const otherMemberId = chat.members.find((id: string) => id !== user.phone);
-            if (!otherMemberId) return null;
-            
-            const otherMemberInfo = chat.participants[otherMemberId];
-            const selfInfo = chat.participants[user.phone];
-
-            const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
-
-            return {
-                id: chat.id,
-                otherMemberId: otherMemberId,
-                otherMemberName: otherMemberName,
-                lastMessage: chat.lastMessage || '',
-                updatedAt: chat.updatedAt,
-                unreadCount: selfInfo?.unreadCount || 0,
-            };
-        })
-        .filter((chat): chat is Chat => chat !== null)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        
-      setChats(userChats);
+      const inboxChats = await getInboxList(user.phone);
+      setChats(inboxChats);
     } catch (e) {
-      console.error("Failed to load chats from localStorage", e);
-      setError('خطا در بارگذاری گفتگوهای موقت.');
+      console.error("Failed to load inbox from API", e);
+      setError('خطا در بارگذاری صندوق ورودی.');
     } finally {
       setIsLoading(false);
     }
   }, [user?.phone]);
+
+  useEffect(() => {
+    setIsClient(true);
+    fetchInbox();
+  }, [fetchInbox]);
+
+  // Listen for updates from other tabs
+  useEffect(() => {
+    const cleanup = useCrossTabEventListener('messages-update', fetchInbox);
+    return cleanup;
+  }, [fetchInbox]);
+
+  // Also refetch on window focus
+  useEffect(() => {
+    const handleFocus = () => fetchInbox();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchInbox]);
 
 
   if (isLoading) {
@@ -152,7 +142,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (

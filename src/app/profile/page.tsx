@@ -14,6 +14,7 @@ import type { Provider } from '@/lib/types';
 import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { dispatchCrossTabEvent } from '@/lib/events';
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
@@ -83,7 +84,7 @@ export default function ProfilePage() {
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
-
+        dispatchCrossTabEvent('profile-update'); // Notify other tabs
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } catch (e) {
@@ -151,6 +152,7 @@ export default function ProfilePage() {
     try {
         const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
         setProvider(updatedProvider);
+        dispatchCrossTabEvent('profile-update'); // Notify other tabs
         toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
@@ -163,6 +165,7 @@ export default function ProfilePage() {
     try {
         const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
         setProvider(updatedProvider);
+        dispatchCrossTabEvent('profile-update'); // Notify other tabs
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
@@ -174,6 +177,7 @@ export default function ProfilePage() {
       try {
         const updatedProvider = await updateProviderProfileImage(user.phone, { src: newImageSrc, aiHint: 'woman portrait' });
         setProvider(updatedProvider);
+        dispatchCrossTabEvent('profile-update'); // Notify other tabs
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } catch (e) {
         toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
@@ -185,6 +189,7 @@ export default function ProfilePage() {
     try {
         const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', aiHint: 'woman portrait' });
         setProvider(updatedProvider);
+        dispatchCrossTabEvent('profile-update'); // Notify other tabs
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });

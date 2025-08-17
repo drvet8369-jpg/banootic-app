@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import { dispatchCrossTabEvent, useCrossTabEventListener } from '@/lib/events';
 
 import { Loader2, MessageSquare, Phone, User, Send, Star, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,6 +91,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
+        dispatchCrossTabEvent('profile-update'); // Notify other tabs to refresh profile data
         onSubmit(); // Callback to trigger data refresh in parent
     } catch (error) {
         console.error(error);
@@ -155,6 +157,7 @@ export default function ProviderProfilePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    // No need to set loading to true here, to avoid flicker on re-focus
     try {
         const foundProvider = await getProviderByPhone(providerPhone);
         if (foundProvider) {
@@ -174,6 +177,17 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setIsLoading(true);
     loadData();
+
+    // Listen for updates from other tabs
+    const cleanup = useCrossTabEventListener('profile-update', loadData);
+    
+    // Re-fetch on focus
+    window.addEventListener('focus', loadData);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('focus', loadData);
+    };
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
@@ -210,6 +224,7 @@ export default function ProviderProfilePage() {
                 title: "درخواست ارسال شد",
                 description: "درخواست توافق شما برای هنرمند ارسال شد. می‌توانید وضعیت آن را در صفحه درخواست‌ها پیگیری کنید.",
             });
+            dispatchCrossTabEvent('agreements-update'); // Notify provider in other tabs
             router.push('/requests');
         } catch(e) {
             toast({

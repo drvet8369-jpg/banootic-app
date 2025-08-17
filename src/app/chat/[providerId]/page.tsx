@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Provider, ChatMessage } from '@/lib/types';
 import { getProviderByPhone, sendMessage, subscribeToMessages } from '@/lib/api';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { dispatchCrossTabEvent } from '@/lib/events';
+
 
 interface OtherPersonDetails {
     id: string | number;
@@ -94,6 +96,7 @@ export default function ChatPage() {
           }
           return [...prevMessages, newMessage];
         });
+        dispatchCrossTabEvent('messages-update'); // Notify other tabs
       });
 
       setMessages(initialMessages);
@@ -155,6 +158,7 @@ export default function ChatPage() {
       msg.id === editingMessageId ? { ...msg, text: editingText.trim(), is_edited: true } : msg
     ));
     // await updateMessage(editingMessageId, editingText.trim());
+    dispatchCrossTabEvent('messages-update'); // Notify other tabs
     toast({ title: 'پیام ویرایش شد.' });
     handleCancelEdit();
     setIsSending(false);
@@ -182,6 +186,7 @@ export default function ChatPage() {
             text: text,
         });
         setNewMessage('');
+        // No need to dispatch here, the subscription handler will do it.
     } catch (error) {
         toast({ title: 'خطا', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
     } finally {
@@ -211,7 +216,7 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
+            <CardDescription className="text-sm">گفتگوی مستقیم</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">

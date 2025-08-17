@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { dispatchCrossTabEvent, useCrossTabEventListener } from '@/lib/events';
 
 export interface User {
   name: string;
@@ -23,21 +24,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// A one-time check to see if we need to clean up localStorage
-const performCleanup = () => {
-    if (typeof window !== 'undefined') {
-        const cleanupFlag = 'banotic-cleanup-v1'; // Use a new flag to re-run if needed
-        if (!localStorage.getItem(cleanupFlag)) {
-            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
-            localStorage.removeItem('banotic-providers'); // This will force a reset to default data
-            localStorage.setItem(cleanupFlag, 'true');
-        }
-    }
-};
+const USER_STORAGE_KEY = 'banotic-user';
 
-if (typeof window !== 'undefined') {
-    performCleanup();
-}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -46,23 +34,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('banotic-user');
+      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
-      // Clean up corrupted data
-      localStorage.removeItem('banotic-user');
+      localStorage.removeItem(USER_STORAGE_KEY);
     }
   }, []);
 
+  // Listen for auth changes from other tabs
+  useEffect(() => {
+    const cleanup = useCrossTabEventListener('auth-change', () => {
+       try {
+            const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+            setUser(storedUser ? JSON.parse(storedUser) : null);
+        } catch (error) {
+            console.error("Failed to sync user state from other tab", error);
+            setUser(null);
+        }
+    });
+    return cleanup;
+  }, []);
+
+
   const login = (userData: User) => {
     try {
-      // Ensure accountType is always set
       const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
-      localStorage.setItem('banotic-user', JSON.stringify(userToSave));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
       setUser(userToSave);
+      dispatchCrossTabEvent('auth-change');
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
     }
@@ -70,8 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('banotic-user');
+      localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
+      dispatchCrossTabEvent('auth-change');
       // Redirect to home page for a better user experience
       router.push('/');
     } catch (error) {

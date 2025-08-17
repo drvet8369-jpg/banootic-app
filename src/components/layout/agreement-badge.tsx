@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { getAgreementsByProvider } from '@/lib/api';
+import { useCrossTabEventListener } from '@/lib/events';
 
 export function AgreementBadge() {
   const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
 
   const checkPendingAgreements = useCallback(async () => {
-    // This badge is only for providers
     if (!user?.phone || user.accountType !== 'provider') {
       setPendingCount(0);
       return;
@@ -21,7 +21,6 @@ export function AgreementBadge() {
       const count = allAgreements.filter(a => a.status === 'pending').length;
       setPendingCount(count);
     } catch (e) {
-      // Silently fail to not interrupt user experience
       setPendingCount(0);
     }
   }, [user?.phone, user?.accountType]);
@@ -29,14 +28,14 @@ export function AgreementBadge() {
   useEffect(() => {
     checkPendingAgreements();
 
-    // Set up an interval to periodically check for new agreements
-    const intervalId = setInterval(checkPendingAgreements, 30000); // Check every 30 seconds
-
-    // Re-check when the window gets focus, as user might have confirmed on another tab
+    // Listen for updates from other tabs
+    const cleanup = useCrossTabEventListener('agreements-update', checkPendingAgreements);
+    
+    // Also listen to window focus event as a fallback
     window.addEventListener('focus', checkPendingAgreements);
 
     return () => {
-      clearInterval(intervalId);
+      cleanup();
       window.removeEventListener('focus', checkPendingAgreements);
     };
   }, [checkPendingAgreements]);

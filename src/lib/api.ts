@@ -1,3 +1,4 @@
+
 'use client';
 // This file will be our Data Access Layer.
 // All functions that interact with Supabase will live here.
@@ -5,7 +6,7 @@
 // interacting with Supabase. This makes the code cleaner, more testable,
 // and easier to maintain or switch data sources in the future.
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem, ChatMessage } from './types';
 import type { User } from '@/context/AuthContext';
 
@@ -488,13 +489,64 @@ export async function sendMessage(message: NewMessagePayload) {
 }
 
 /**
+ * Gets the total number of unread messages for a user.
+ * @param {string} userPhone The phone number of the user.
+ * @returns {Promise<number>} The total count of unread messages.
+ */
+export async function getUnreadCount(userPhone: string): Promise<number> {
+    const { data, error } = await supabase.rpc('get_unread_message_counts', {
+        user_phone: userPhone
+    });
+
+    if (error) {
+        console.error('Error getting unread count:', error);
+        return 0; // Return 0 on error
+    }
+    
+    return data?.[0]?.unread_count || 0;
+}
+
+
+/**
+ * Fetches the inbox list for a user.
+ * @param {string} userPhone The phone number of the user.
+ * @returns {Promise<any[]>} A list of chat summaries.
+ */
+export async function getInboxList(userPhone: string): Promise<any[]> {
+    const { data, error } = await supabase.rpc('get_inbox_for_user', {
+        user_phone_param: userPhone
+    });
+
+    if (error) {
+        console.error("Error fetching inbox:", error);
+        throw new Error("Could not fetch inbox list.");
+    }
+    return data || [];
+}
+
+
+/**
  * Subscribes to real-time messages for a given chat ID.
+ * It also marks messages as read when the chat is opened.
  * @param {string} chatId The ID of the chat to subscribe to.
+ * @param {string} currentUserPhone The phone number of the current user.
  * @param {(message: ChatMessage) => void} onNewMessage A callback function to handle new messages.
  * @returns {Promise<{initialMessages: ChatMessage[], channel: RealtimeChannel}>} An object containing the initial messages and the Supabase channel for cleanup.
  */
-export async function subscribeToMessages(chatId: string, onNewMessage: (message: ChatMessage) => void) {
-  // First, fetch initial messages
+export async function subscribeToMessages(chatId: string, currentUserPhone: string, onNewMessage: (message: ChatMessage) => void) {
+  // Mark messages as read upon opening the chat
+  const { error: updateError } = await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('chat_id', chatId)
+    .neq('sender_id', currentUserPhone)
+    .eq('is_read', false);
+
+  if (updateError) {
+      console.error("Error marking messages as read:", updateError);
+  }
+
+  // Fetch initial messages
   const { data: initialMessagesData, error: initialError } = await supabase
     .from('messages')
     .select('*')
@@ -508,14 +560,22 @@ export async function subscribeToMessages(chatId: string, onNewMessage: (message
   
   const initialMessages: ChatMessage[] = initialMessagesData || [];
   
-  // Then, set up the real-time subscription
+  // Set up the real-time subscription
   const channel = supabase
     .channel(`chat:${chatId}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
-      (payload) => {
-        onNewMessage(payload.new as ChatMessage);
+      async (payload) => {
+        const newMessage = payload.new as ChatMessage;
+        // If the new message is not from the current user, mark it as read immediately
+        if (newMessage.sender_id !== currentUserPhone) {
+            await supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('id', newMessage.id);
+        }
+        onNewMessage(newMessage);
       }
     )
     .subscribe((status, err) => {
