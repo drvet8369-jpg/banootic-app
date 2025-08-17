@@ -125,7 +125,7 @@ export default function AgreementsPage() {
                                         <p className="text-sm text-muted-foreground">شماره تماس: {agreement.customerPhone}</p>
                                         {isClient && (
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                {formatDistanceToNow(new Date(agreement.requestedAt), { addSuffix: true, locale: faIR })}
+                                                {formatDistanceToNow(new Date(agreement.requested_at), { addSuffix: true, locale: faIR })}
                                             </p>
                                         )}
                                     </div>

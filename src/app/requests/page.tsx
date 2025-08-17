@@ -114,7 +114,7 @@ export default function CustomerRequestsPage() {
                     <p>هنرمند: <span className="font-bold">{getProviderName(request.providerPhone)}</span></p>
                     {isClient && (
                       <p className="text-xs text-muted-foreground mt-1">
-                          درخواست شده: {formatDistanceToNow(new Date(request.requestedAt), { addSuffix: true, locale: faIR })}
+                          درخواست شده: {formatDistanceToNow(new Date(request.requested_at), { addSuffix: true, locale: faIR })}
                       </p>
                     )}
                   </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { getAllProviders } from '@/lib/api';

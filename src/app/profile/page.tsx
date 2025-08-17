@@ -249,7 +249,7 @@ export default function ProfilePage() {
     <div className="w-full py-12 md:py-20 space-y-8 flex justify-center">
       <Card className="w-full max-w-4xl">
          {isSaving && (
-            <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+            <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center rounded-lg">
                 <Loader2 className="w-12 h-12 animate-spin text-primary" />
             </div>
          )}

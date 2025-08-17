@@ -221,122 +221,135 @@ export default function ProviderProfilePage() {
   }
 
   return (
-    <div className="w-full py-12 md:py-20 flex flex-col items-center">
-        <Card className="flex flex-col w-full max-w-4xl overflow-hidden h-full">
-            <div className="p-6 flex flex-col items-center text-center bg-muted/30">
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-                {provider.profileImage && provider.profileImage.src ? (
-                    <Image
-                    src={provider.profileImage.src}
-                    alt={provider.name}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={provider.profileImage.aiHint}
-                    />
-                ) : (
-                    <div className="bg-muted w-full h-full flex items-center justify-center">
-                    <User className="w-12 h-12 text-muted-foreground" />
+    <div className="py-12 md:py-20 flex justify-center">
+        <div className="w-full max-w-4xl">
+            <Card className="flex flex-col w-full overflow-hidden h-full">
+                <div className="p-6 flex flex-col items-center text-center bg-muted/30">
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
+                    {provider.profileImage && provider.profileImage.src ? (
+                        <Image
+                        src={provider.profileImage.src}
+                        alt={provider.name}
+                        fill
+                        className="object-cover"
+                        data-ai-hint={provider.profileImage.aiHint}
+                        />
+                    ) : (
+                        <div className="bg-muted w-full h-full flex items-center justify-center">
+                        <User className="w-12 h-12 text-muted-foreground" />
+                        </div>
+                    )}
                     </div>
-                )}
+                    <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
+                    <CardDescription className="text-base">{provider.service}</CardDescription>
+                    <div className="mt-2">
+                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                    </div>
                 </div>
-                <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
-                <CardDescription className="text-base">{provider.service}</CardDescription>
-                <div className="mt-2">
-                    <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
-                </div>
-            </div>
 
-            <CardContent className="p-6 flex-grow flex flex-col">
-                <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
-                <Separator className="my-4" />
-                <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
-                {provider.portfolio && provider.portfolio.length > 0 ? (
-                    <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {provider.portfolio.map((item, index) => (
-                                <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
-                                    <div 
-                                        className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                        onClick={() => setSelectedImage(item.src)}
-                                    >
+                <CardContent className="p-6 flex-grow flex flex-col">
+                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+                    <Separator className="my-4" />
+                    <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
+                    {provider.portfolio && provider.portfolio.length > 0 ? (
+                        <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {provider.portfolio.map((item, index) => (
+                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                        <div 
+                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setSelectedImage(item.src)}
+                                        >
+                                            <Image
+                                                src={item.src}
+                                                alt={`نمونه کار ${index + 1}`}
+                                                fill
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-ai-hint={item.aiHint}
+                                            />
+                                            {isOwnerViewing && (
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                onClick={(e) => { e.stopPropagation(); /* deletePortfolioItem(index); */ }}
+                                                aria-label={`حذف نمونه کار ${index + 1}`}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                            )}
+                                        </div>
+                                    </DialogTrigger>
+                                ))}
+                            </div>
+                           
+                            <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
+                                <DialogHeader className="sr-only">
+                                  <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
+                                </DialogHeader>
+                               <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
+                                  <X className="h-6 w-6" />
+                                  <span className="sr-only">بستن</span>
+                                </DialogClose>
+                                {selectedImage && (
+                                    <div className="relative w-full h-full">
                                         <Image
-                                            src={item.src}
-                                            alt={`نمونه کار ${index + 1}`}
+                                            src={selectedImage}
+                                            alt="نمونه کار تمام صفحه"
                                             fill
-                                            className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                            data-ai-hint={item.aiHint}
+                                            className="object-contain"
                                         />
                                     </div>
-                                </DialogTrigger>
-                            ))}
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نمونه کاری اضافه نشده است.</p>
                         </div>
-                       
-                        <DialogContent className="w-screen h-screen max-w-full max-h-full p-0 flex items-center justify-center bg-black/80 border-0 shadow-none rounded-none">
-                            <DialogHeader className="sr-only">
-                              <DialogTitle>نمونه کار تمام صفحه</DialogTitle>
-                            </DialogHeader>
-                           <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-black/50 text-white opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none z-50">
-                              <X className="h-6 w-6" />
-                              <span className="sr-only">بستن</span>
-                            </DialogClose>
-                            {selectedImage && (
-                                <div className="relative w-full h-full">
-                                    <Image
-                                        src={selectedImage}
-                                        alt="نمونه کار تمام صفحه"
-                                        fill
-                                        className="object-contain"
-                                    />
-                                </div>
-                            )}
-                        </DialogContent>
-                    </Dialog>
-                ) : (
-                    <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                        <p>هنوز نمونه کاری اضافه نشده است.</p>
-                    </div>
-                )}
-            </CardContent>
+                    )}
+                </CardContent>
 
-            {!isOwnerViewing && (
-            <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                {isLoggedIn && user?.accountType === 'customer' && (
-                    <Button onClick={handleCreateAgreement} disabled={isCreatingAgreement} className="w-full">
-                        {isCreatingAgreement ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
-                        درخواست توافق
+                {!isOwnerViewing && (
+                <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
+                    {isLoggedIn && user?.accountType === 'customer' && (
+                        <Button onClick={handleCreateAgreement} disabled={isCreatingAgreement} className="w-full">
+                            {isCreatingAgreement ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
+                            درخواست توافق
+                        </Button>
+                    )}
+                     <Button asChild className="w-full">
+                        <Link href={`/chat/${provider.phone}`}>
+                            <MessageSquare className="w-4 h-4 ml-2" />
+                            ارسال پیام
+                        </Link>
                     </Button>
+                    <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
+                </CardFooter>
                 )}
-                 <Button asChild className="w-full">
-                    <Link href={`/chat/${provider.phone}`}>
-                        <MessageSquare className="w-4 h-4 ml-2" />
-                        ارسال پیام
-                    </Link>
-                </Button>
-                <Button asChild className="w-full" variant="secondary">
-                    <a href={`tel:${provider.phone}`}>
-                        <Phone className="w-4 h-4 ml-2" />
-                        تماس
-                    </a>
-                </Button>
-            </CardFooter>
-            )}
 
-            <Separator />
-            
-            <div id="reviews" className="p-6 scroll-mt-20">
-                <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
-                {reviews.length > 0 ? (
-                    <div className="space-y-4">
-                        {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
-                    </div>
-                ) : (
-                    <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                        <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
-                    </div>
-                )}
-                <ReviewForm providerId={provider.id} onSubmit={loadData} />
-            </div>
-        </Card>
+                <Separator />
+                
+                <div id="reviews" className="p-6 scroll-mt-20">
+                    <h3 className="font-headline text-xl mb-4 text-center">نظرات مشتریان</h3>
+                    {reviews.length > 0 ? (
+                        <div className="space-y-4">
+                            {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+                        </div>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                            <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                        </div>
+                    )}
+                    <ReviewForm providerId={provider.id} onSubmit={loadData} />
+                </div>
+            </Card>
+        </div>
     </div>
   );
 }

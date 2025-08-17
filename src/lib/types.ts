@@ -49,12 +49,3 @@ export interface Agreement {
   requested_at: string; // ISO String, matches DB column name
   confirmedAt?: string | null; // ISO String
 }
-
-export interface ChatMessage {
-  id?: number;
-  chat_id: string;
-  sender_id: string;
-  text: string;
-  created_at?: string;
-  is_edited?: boolean;
-}
