@@ -317,14 +317,13 @@ export default function ProviderProfilePage() {
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button 
-                        onClick={handleRequestAgreement}
-                        className="w-full"
-                        disabled={isSubmittingAgreement}
+                        onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}
+                        className="w-full" 
                     >
-                         {isSubmittingAgreement ? <Loader2 className="animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
-                        درخواست توافق
+                        <Phone className="w-4 h-4 ml-2" />
+                        تماس
                     </Button>
-                     <Button 
+                    <Button 
                         onClick={() => handleProtectedAction(() => router.push(`/chat/${provider.phone}`))}
                         className="w-full"
                         variant="secondary"
@@ -333,12 +332,13 @@ export default function ProviderProfilePage() {
                         ارسال پیام
                     </Button>
                     <Button 
-                        onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}
-                        className="w-full" 
+                        onClick={handleRequestAgreement}
+                        className="w-full"
                         variant="outline"
+                        disabled={isSubmittingAgreement}
                     >
-                        <Phone className="w-4 h-4 ml-2" />
-                        تماس
+                         {isSubmittingAgreement ? <Loader2 className="animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
+                        درخواست توافق
                     </Button>
                 </CardFooter>
                 )}
