@@ -53,7 +53,21 @@ async function seedInitialProviders(): Promise<Provider[]> {
     }
     
     console.log("Seeding successful!");
-    return data as Provider[];
+     const providers = data.map(p => ({
+      id: p.id,
+      name: p.name,
+      service: p.service,
+      location: p.location,
+      phone: p.phone,
+      bio: p.bio,
+      categorySlug: p.category_slug,
+      serviceSlug: p.service_slug,
+      rating: p.rating,
+      reviewsCount: p.reviews_count,
+      profileImage: p.profile_image,
+      portfolio: p.portfolio,
+  }));
+    return providers;
 }
 
 
@@ -66,17 +80,12 @@ export async function getAllProviders(): Promise<Provider[]> {
   console.log("API: Fetching all providers from Supabase...");
 
   // First, check if there are any providers in the table
-  const { data: existingProviders, error: countError } = await supabase
+  let { count } = await supabase
     .from('providers')
     .select('id', { count: 'exact', head: true });
 
-  if (countError) {
-      console.error("Error checking for existing providers:", countError);
-      throw new Error("Could not check for providers.");
-  }
-  
   // If the table is empty, seed it with initial data
-  if (existingProviders?.length === 0) {
+  if (count === 0) {
       console.log("No providers found. Seeding initial data...");
       return await seedInitialProviders();
   }
