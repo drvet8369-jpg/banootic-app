@@ -14,10 +14,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // More robust check for environment variables to prevent runtime errors.
 if (!supabaseUrl || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE') || !supabaseUrl.startsWith('http')) {
-  throw new Error("Supabase URL is not configured correctly in the .env file. Please make sure NEXT_PUBLIC_SUPABASE_URL is a valid URL.");
+  throw new Error("Supabase URL is not configured correctly. Please make sure NEXT_PUBLIC_SUPABASE_URL in your .env file is a valid URL from your Supabase project settings.");
 }
 if (!supabaseAnonKey || supabaseAnonKey.includes('YOUR_SUPABASE_ANON_KEY_HERE')) {
-    throw new Error("Supabase Anon Key is not configured correctly in the .env file. Please check NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    throw new Error("Supabase Anon Key is not configured correctly. Please check NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env file. It should be the 'anon' public key from your Supabase project settings.");
 }
 
 
