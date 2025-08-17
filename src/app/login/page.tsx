@@ -54,29 +54,24 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        // First, check if the phone number belongs to a registered provider in Supabase
         const existingProvider = await getProviderByPhone(values.phone);
-
         let userToLogin: User | null = null;
 
         if (existingProvider) {
-          // User is a known provider
           userToLogin = {
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
           };
         } else {
-          // If not a provider, check if the user is a known customer in localStorage
           const allCustomers = await getCustomers();
           const existingCustomer = allCustomers.find(c => c.phone === values.phone);
           
           if (existingCustomer) {
              userToLogin = existingCustomer;
           } else {
-             // User is a completely new customer
             userToLogin = {
-                name: `مشتری ${values.phone.slice(-4)}`,
+                name: `کاربر ${values.phone.slice(-4)}`,
                 phone: values.phone,
                 accountType: 'customer',
             };

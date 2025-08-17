@@ -1,10 +1,8 @@
-
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement } from './types';
 import type { User } from '@/context/AuthContext';
-import { calculateProviderScore } from './ranking';
 
 // Ensure environment variables are loaded
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
