@@ -56,7 +56,6 @@ export default function LoginPage() {
     try {
         let userToLogin: User | null = null;
 
-        // 1. Check if the user is a provider
         const existingProvider = await getProviderByPhone(values.phone);
         if (existingProvider) {
           userToLogin = {
@@ -65,14 +64,12 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          // 2. If not a provider, check if they are an existing customer
           const existingCustomer = await getCustomerByPhone(values.phone);
           if (existingCustomer) {
              userToLogin = existingCustomer;
           }
         }
         
-        // 3. If user doesn't exist at all, show error and guide to registration
         if (!userToLogin) {
             toast({
                 title: 'کاربر یافت نشد',
@@ -88,7 +85,7 @@ export default function LoginPage() {
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+          description: `خوش آمدید ${userToLogin.name}!`,
         });
         
         router.push('/');

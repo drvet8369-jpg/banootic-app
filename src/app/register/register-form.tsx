@@ -93,7 +93,6 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      // Universal check for existing phone number
       const existingProvider = await getProviderByPhone(values.phone);
       if (existingProvider) {
           toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.', variant: 'destructive'});
@@ -111,7 +110,6 @@ export default function RegisterForm() {
 
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
-        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
         
         const newProviderData = {
           name: values.name,
@@ -120,7 +118,7 @@ export default function RegisterForm() {
           location: values.location || 'ارومیه',
           bio: values.bio || '',
           categorySlug: selectedCategory?.slug || 'beauty',
-          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
+          serviceSlug: services.find(s => s.categorySlug === selectedCategory?.slug)?.slug || 'manicure-pedicure',
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
@@ -134,7 +132,6 @@ export default function RegisterForm() {
         const createdCustomer = await createCustomer({ 
             name: values.name, 
             phone: values.phone, 
-            accountType: 'customer' 
         });
         userToLogin = createdCustomer;
       }

@@ -226,7 +226,7 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const { data, error } = await supabase
         .from('customers')
-        .select('name, phone, accountType')
+        .select('name, phone')
         .eq('phone', phone)
         .single();
     
@@ -234,13 +234,25 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         console.error('Error fetching customer by phone:', error);
         throw new Error('Could not fetch customer.');
     }
-    return data;
+    
+    if (!data) return null;
+
+    return {
+        ...data,
+        accountType: 'customer'
+    };
 }
 
-export async function createCustomer(userData: Omit<User, 'accountType'> & { accountType: 'customer' }): Promise<User> {
+export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
+    const customerData = {
+        name: userData.name,
+        phone: userData.phone,
+        accountType: 'customer'
+    };
+    
     const { data, error } = await supabase
         .from('customers')
-        .insert([userData])
+        .insert([customerData])
         .select('name, phone, accountType')
         .single();
 
