@@ -547,7 +547,7 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                     .limit(1)
                     .single();
 
-                if (lastMessageError) {
+                if (lastMessageError && lastMessageError.code !== 'PGRST116') { // Ignore "No rows found" error
                     console.error(`Error getting last message for chat ${chatId}:`, lastMessageError);
                     return null;
                 }
@@ -581,8 +581,8 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                     id: chatId,
                     otherMemberId: otherMemberId,
                     otherMemberName: otherMemberName,
-                    lastMessage: lastMessageData.text,
-                    updatedAt: lastMessageData.created_at,
+                    lastMessage: lastMessageData?.text || 'هنوز پیامی ارسال نشده',
+                    updatedAt: lastMessageData?.created_at || new Date().toISOString(),
                     unreadCount: unreadCount || 0,
                 };
             })
