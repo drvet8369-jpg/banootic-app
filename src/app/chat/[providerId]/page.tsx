@@ -279,7 +279,7 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
