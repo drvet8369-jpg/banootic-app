@@ -3,16 +3,15 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview, updateProviderPortfolio } from '@/lib/api';
-import { getAgreements, saveAgreements } from '@/lib/data';
-import type { Provider, Review, Agreement } from '@/lib/types';
+import { getProviderByPhone, getReviewsByProviderId, addReview } from '@/lib/api';
+import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -144,15 +143,14 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 
 export default function ProviderProfilePage() {
   const params = useParams();
-  const router = useRouter();
   const providerPhone = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [hasRequested, setHasRequested] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -161,23 +159,15 @@ export default function ProviderProfilePage() {
           setProvider(foundProvider);
           const providerReviews = await getReviewsByProviderId(foundProvider.id);
           setReviews(providerReviews);
-          
-           if (user && user.accountType === 'customer') {
-                const allAgreements = getAgreements();
-                const existingRequest = allAgreements.find(a => a.providerPhone === foundProvider.phone && a.customerPhone === user.phone);
-                setHasRequested(!!existingRequest);
-           }
         } else {
           setProvider(null);
-          notFound(); // Trigger 404 if provider not found
         }
     } catch (error) {
         console.error("Failed to load provider data:", error);
-        toast({ title: 'خطا', description: 'خطا در بارگذاری اطلاعات هنرمند.', variant: 'destructive'});
     } finally {
         setIsLoading(false);
     }
-  }, [providerPhone, user, toast]);
+  }, [providerPhone]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -185,65 +175,30 @@ export default function ProviderProfilePage() {
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
-  
+
   const handleProtectedAction = (action: () => void) => {
-     if (!isLoggedIn) {
-        toast({ title: "نیاز به ورود", description: "برای استفاده از این قابلیت، لطفاً ابتدا وارد شوید یا ثبت‌نام کنید." });
-        router.push('/login');
-        return;
-     }
-     action();
-  };
-
-  const handleRequestAgreement = () => {
-    handleProtectedAction(() => {
-        if (!user || !provider) return;
-        if (user.accountType !== 'customer') {
-            toast({ title: "خطا", description: "فقط مشتریان می‌توانند درخواست توافق ارسال کنند.", variant: "destructive" });
-            return;
-        }
-
-        try {
-            const allAgreements = getAgreements();
-            const existingRequest = allAgreements.find(a => a.providerPhone === provider.phone && a.customerPhone === user.phone);
-            if (existingRequest) {
-                toast({ title: "درخواست تکراری", description: "شما قبلاً برای این هنرمند درخواست ارسال کرده‌اید.", variant: "default" });
-                setHasRequested(true);
-                return;
-            }
-
-            const newAgreement: Agreement = {
-                id: Date.now().toString(),
-                providerPhone: provider.phone,
-                customerPhone: user.phone,
-                customerName: user.name,
-                status: 'pending',
-                requestedAt: new Date().toISOString(),
-            };
-
-            const updatedAgreements = [...allAgreements, newAgreement];
-            saveAgreements(updatedAgreements);
-            setHasRequested(true);
-            toast({ title: 'درخواست ارسال شد', description: 'درخواست توافق شما با موفقیت برای هنرمند ارسال شد.' });
-
-        } catch (e) {
-            toast({ title: "خطا", description: "خطا در ذخیره‌سازی درخواست شما.", variant: "destructive" });
-        }
-    });
+    if (!isLoggedIn) {
+      toast({
+        title: "نیاز به ورود",
+        description: "برای استفاده از این قابلیت، لطفاً ابتدا وارد شوید یا ثبت‌نام کنید.",
+      });
+      router.push('/login');
+      return;
+    }
+    action();
   };
 
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!provider) {
-    // This case should be handled by notFound() in loadData, but as a fallback:
-    return null;
+    notFound();
   }
 
   return (
@@ -327,17 +282,20 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                     <Button className="w-full" variant="secondary" onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}>
-                        <Phone className="w-4 h-4 ml-2" />
-                        تماس
-                    </Button>
-                    <Button className="w-full" onClick={() => handleProtectedAction(() => router.push(`/chat/${provider.phone}`))}>
+                    <Button 
+                        onClick={() => handleProtectedAction(() => router.push(`/chat/${provider.phone}`))}
+                        className="w-full"
+                    >
                         <MessageSquare className="w-4 h-4 ml-2" />
                         ارسال پیام
                     </Button>
-                    <Button onClick={handleRequestAgreement} className="w-full" variant="outline" disabled={isLoggedIn && hasRequested}>
-                        <Handshake className="w-4 h-4 ml-2" />
-                        {isLoggedIn && hasRequested ? 'درخواست ارسال شد' : 'درخواست توافق'}
+                    <Button 
+                        onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}
+                        className="w-full" 
+                        variant="secondary"
+                    >
+                        <Phone className="w-4 h-4 ml-2" />
+                        تماس
                     </Button>
                 </CardFooter>
                 )}
