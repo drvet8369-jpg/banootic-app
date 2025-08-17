@@ -53,58 +53,59 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    let userToLogin: User | null = null;
+
     try {
-        let userToLogin: User | null = null;
-
-        // 1. Check if the user is a provider
-        const existingProvider = await getProviderByPhone(values.phone);
-        if (existingProvider) {
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          // 2. If not a provider, check if they are a customer
-          const existingCustomer = await getCustomerByPhone(values.phone);
-          if (existingCustomer) {
-             userToLogin = existingCustomer;
-          }
+      // Step 1: Check if the user is a provider.
+      const provider = await getProviderByPhone(values.phone);
+      if (provider) {
+        userToLogin = {
+          name: provider.name,
+          phone: provider.phone,
+          accountType: 'provider',
+        };
+      } else {
+        // Step 2: If not a provider, check if they are a customer.
+        const customer = await getCustomerByPhone(values.phone);
+        if (customer) {
+          userToLogin = customer;
         }
-        
-        // 3. If user is neither, they need to register
-        if (!userToLogin) {
-            toast({
-                title: 'کاربر یافت نشد',
-                description: 'این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-                variant: 'destructive'
-            });
-            router.push('/register');
-            setIsLoading(false);
-            return;
-        }
-        
-        // 4. Log the user in
-        login(userToLogin);
+      }
 
+      // Step 3: If user is neither, they need to register.
+      if (!userToLogin) {
         toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}!`,
+          title: 'کاربر یافت نشد',
+          description: 'این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+          variant: 'destructive',
         });
-        
-        router.push('/');
+        router.push('/register');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 4: Log the user in.
+      login(userToLogin);
+
+      toast({
+        title: 'ورود با موفقیت انجام شد!',
+        description: `خوش آمدید ${userToLogin.name}!`,
+      });
+
+      router.push('/');
 
     } catch (error) {
-        console.error("Login failed:", error);
-        toast({
-            title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
-            variant: 'destructive'
-        });
+      console.error("Login process failed:", error);
+      toast({
+        title: 'خطا در ورود',
+        description: 'مشکلی در فرآیند ورود پیش آمده است، لطفاً دوباره تلاش کنید.',
+        variant: 'destructive',
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }
+
 
   return (
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
