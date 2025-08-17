@@ -1,7 +1,8 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders, getAgreements, calculateProviderScore } from '@/lib/data';
+import { getAgreements, calculateProviderScore } from '@/lib/data';
+import { getAllProviders } from '@/lib/api'; // Import from the new api file
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -13,44 +14,42 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const performSearch = useCallback(() => {
+  const performSearch = useCallback(async () => {
     setIsLoading(true);
-    const allProviders = getProviders();
-    const allAgreements = getAgreements();
+    try {
+        const allProviders = await getAllProviders(); // Use the async API call
+        const allAgreements = getAgreements(); // This still comes from localStorage for now
 
-    const getScore = (provider: Provider) => {
-        const confirmedCount = allAgreements.filter(a => a.providerPhone === provider.phone && a.status === 'confirmed').length;
-        return calculateProviderScore(provider, confirmedCount);
-    };
+        const getScore = (provider: Provider) => {
+            const confirmedCount = allAgreements.filter(a => a.providerPhone === provider.phone && a.status === 'confirmed').length;
+            return calculateProviderScore(provider, confirmedCount);
+        };
 
-    let results: Provider[];
+        let results: Provider[];
 
-    if (!query) {
-      // If query is empty, show all providers sorted by ladder score
-      results = [...allProviders].sort((a, b) => getScore(b) - getScore(a));
-    } else {
-      // If there is a query, filter and then sort the results by ladder score
-      const lowercasedQuery = query.toLowerCase();
-      results = allProviders
-        .filter(provider => 
-          provider.name.toLowerCase().includes(lowercasedQuery) ||
-          provider.service.toLowerCase().includes(lowercasedQuery) ||
-          (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-        )
-        .sort((a,b) => getScore(b) - getScore(a));
+        if (!query) {
+            results = [...allProviders].sort((a, b) => getScore(b) - getScore(a));
+        } else {
+            const lowercasedQuery = query.toLowerCase();
+            results = allProviders
+                .filter(provider => 
+                    provider.name.toLowerCase().includes(lowercasedQuery) ||
+                    provider.service.toLowerCase().includes(lowercasedQuery) ||
+                    (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+                )
+                .sort((a,b) => getScore(b) - getScore(a));
+        }
+        setSearchResults(results);
+    } catch (error) {
+        console.error("Failed to fetch providers for search:", error);
+        // Optionally, show a toast or error message to the user
+    } finally {
+        setIsLoading(false);
     }
-
-    setSearchResults(results);
-    setIsLoading(false);
   }, [query]);
 
   useEffect(() => {
     performSearch();
-
-    window.addEventListener('focus', performSearch);
-    return () => {
-      window.removeEventListener('focus', performSearch);
-    };
   }, [performSearch]);
 
 
