@@ -499,12 +499,12 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
-        .neq('sender_id', userPhone) // Don't count our own unread messages
-        .or(`chat_id.like.%${userPhone}%`); // Only count messages in chats we are a part of
+        .neq('sender_id', userPhone) 
+        .like('chat_id', `%${userPhone}%`); 
 
     if (error) {
         console.error('Error getting unread count:', error);
-        return 0; // Return 0 on error
+        return 0;
     }
     
     return count || 0;
@@ -513,19 +513,90 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
 
 /**
  * Fetches the inbox list for a user.
+ * This is a client-side implementation that avoids RPC calls.
  * @param {string} userPhone The phone number of the user.
- * @returns {Promise<any[]>} A list of chat summaries.
+ * @returns {Promise<any[]>} A list of chat summaries for the inbox.
  */
 export async function getInboxList(userPhone: string): Promise<any[]> {
-    const { data, error } = await supabase.rpc('get_inbox_for_user', {
-        user_phone_param: userPhone
-    });
+    try {
+        // 1. Get all distinct chat_ids the user is part of.
+        const { data: messages, error: messagesError } = await supabase
+            .from('messages')
+            .select('chat_id')
+            .like('chat_id', `%${userPhone}%`);
 
-    if (error) {
-        console.error("Error fetching inbox:", error);
+        if (messagesError) throw messagesError;
+        if (!messages) return [];
+
+        const chatIds = [...new Set(messages.map(m => m.chat_id))];
+
+        // 2. For each chat, fetch the last message and other member's details.
+        const chatList = await Promise.all(
+            chatIds.map(async (chatId) => {
+                // Get the other member's phone number from the chat_id
+                const members = chatId.split('__');
+                const otherMemberId = members.find(id => id !== userPhone);
+                if (!otherMemberId) return null;
+
+                // Get the last message in the chat
+                const { data: lastMessageData, error: lastMessageError } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .eq('chat_id', chatId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (lastMessageError) {
+                    console.error(`Error getting last message for chat ${chatId}:`, lastMessageError);
+                    return null;
+                }
+                
+                // Get unread count for this specific chat
+                 const { count: unreadCount, error: unreadError } = await supabase
+                    .from('messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('chat_id', chatId)
+                    .eq('is_read', false)
+                    .neq('sender_id', userPhone);
+                    
+                if (unreadError) {
+                    console.error(`Error getting unread count for chat ${chatId}:`, unreadError);
+                }
+
+                // Get the other member's name
+                let otherMemberName = `کاربر ${otherMemberId.slice(-4)}`;
+                const provider = await getProviderByPhone(otherMemberId);
+                if (provider) {
+                    otherMemberName = provider.name;
+                } else {
+                    const customers = await getCustomers();
+                    const customer = customers.find(c => c.phone === otherMemberId);
+                    if (customer) {
+                        otherMemberName = customer.name;
+                    }
+                }
+                
+                return {
+                    id: chatId,
+                    otherMemberId: otherMemberId,
+                    otherMemberName: otherMemberName,
+                    lastMessage: lastMessageData.text,
+                    updatedAt: lastMessageData.created_at,
+                    unreadCount: unreadCount || 0,
+                };
+            })
+        );
+        
+        // Filter out any nulls and sort by the most recent message
+        return chatList
+            .filter(chat => chat !== null)
+            .sort((a, b) => new Date(b!.updatedAt).getTime() - new Date(a!.updatedAt).getTime()) as any[];
+
+    } catch (error) {
+        console.error("Error fetching inbox list:", error);
         throw new Error("Could not fetch inbox list.");
     }
-    return data || [];
 }
 
 
