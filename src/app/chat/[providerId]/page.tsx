@@ -1,6 +1,7 @@
+
 'use client';
 
-import { getProviders } from '@/lib/data';
+import { getAllProviders } from '@/lib/api';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,50 +68,60 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoggedIn || !user) {
-        setIsLoading(false);
-        return;
-    }
+    async function loadChatData() {
+        if (!isLoggedIn || !user) {
+            setIsLoading(false);
+            return;
+        }
 
-    let details: OtherPersonDetails | null = null;
-    const allProviders = getProviders();
-    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
-    
-    if (provider) {
-      details = provider;
-    } else {
-      const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
-    }
-    
-    if (!details) {
-        toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-    }
-    setOtherPersonDetails(details);
-    
-    const chatId = getChatId(user.phone, details.phone);
-    if (chatId) {
-      try {
-          const storedMessages = localStorage.getItem(`chat_${chatId}`);
-          if (storedMessages) {
-              setMessages(JSON.parse(storedMessages));
+        let details: OtherPersonDetails | null = null;
+        try {
+            const allProviders = await getAllProviders();
+            const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+            
+            if (provider) {
+              details = provider;
+            } else {
+              // This logic might need adjustment depending on how customers are stored.
+              // For now, we assume if not a provider, it's a customer phone number.
+              const customerPhone = otherPersonIdOrProviderId;
+              details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
+            }
+        } catch (error) {
+            toast({ title: "خطا", description: "خطا در بارگذاری اطلاعات کاربر.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
+        
+        if (!details) {
+            toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
+        setOtherPersonDetails(details);
+        
+        const chatId = getChatId(user.phone, details.phone);
+        if (chatId) {
+          try {
+              const storedMessages = localStorage.getItem(`chat_${chatId}`);
+              if (storedMessages) {
+                  setMessages(JSON.parse(storedMessages));
+              }
+
+              // Mark messages as read when chat is opened
+              const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+              if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+                  allChats[chatId].participants[user.phone].unreadCount = 0;
+                  localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+              }
+          } catch(e) {
+              console.error("Failed to load/update chat from localStorage", e);
           }
-
-          // Mark messages as read when chat is opened
-          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-              allChats[chatId].participants[user.phone].unreadCount = 0;
-              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-          }
-      } catch(e) {
-          console.error("Failed to load/update chat from localStorage", e);
-      }
+        }
+        
+        setIsLoading(false);
     }
-    
-    setIsLoading(false);
-
+    loadChatData();
   }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
 
 
@@ -360,4 +371,3 @@ export default function ChatPage() {
     </div>
   );
 }
-    
