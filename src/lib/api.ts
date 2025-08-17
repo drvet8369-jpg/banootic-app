@@ -499,7 +499,8 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
         .neq('sender_id', userPhone)
-        .like('chat_id', `%${userPhone}%`);
+        .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}`);
+
 
     if (error) {
         console.error('Error getting unread count:', error);
@@ -508,7 +509,6 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
     
     return count || 0;
 }
-
 
 /**
  * Fetches the inbox list for a user by querying the messages table directly.
@@ -522,7 +522,7 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
         const { data: messages, error: messagesError } = await supabase
             .from('messages')
             .select('chat_id, created_at, text, sender_id, is_read')
-            .like('chat_id', `%${userPhone}%`)
+            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}`)
             .order('created_at', { ascending: false });
 
         if (messagesError) {
@@ -534,34 +534,36 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
             return [];
         }
 
-        // Step 2: Process messages to create inbox items
+        // Step 2: Process messages to create unique inbox items based on chat_id
         const inboxMap = new Map();
-
         for (const message of messages) {
             if (!inboxMap.has(message.chat_id)) {
                 const members = message.chat_id.split('__');
                 const otherMemberId = members.find(id => id !== userPhone);
                 
                 if (otherMemberId) {
+                    const unreadCount = messages.filter(m => 
+                        m.chat_id === message.chat_id && 
+                        !m.is_read && 
+                        m.sender_id !== userPhone
+                    ).length;
+
                     inboxMap.set(message.chat_id, {
                         chat_id: message.chat_id,
                         other_member_id: otherMemberId,
                         last_message_text: message.text,
                         last_message_at: message.created_at,
-                        unread_count: 0
+                        unread_count: unreadCount
                     });
                 }
             }
         }
 
-        // Step 3: Get unread counts and enrich with member names
+        // Step 3: Enrich with member names
         const allProviders = await getAllProviders();
         const allCustomers = await getCustomers();
         
         for (const item of inboxMap.values()) {
-            const unreadCount = messages.filter(m => m.chat_id === item.chat_id && !m.is_read && m.sender_id !== userPhone).length;
-            item.unread_count = unreadCount;
-            
             const provider = allProviders.find(p => p.phone === item.other_member_id);
             if (provider) {
                 item.other_member_name = provider.name;
@@ -570,7 +572,7 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                 item.other_member_name = customer?.name || `کاربر ${item.other_member_id.slice(-4)}`;
             }
         }
-
+        
         // Step 4: Convert map to array and sort by last message time
         return Array.from(inboxMap.values())
           .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
