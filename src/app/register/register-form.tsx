@@ -27,7 +27,7 @@ import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
-import { getProviderByPhone, createProvider, getCustomers, saveCustomers } from '@/lib/api';
+import { getProviderByPhone, createProvider, getCustomerByPhone, createCustomer } from '@/lib/api';
 
 
 const formSchema = z.object({
@@ -93,34 +93,21 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      // Check if phone number already exists (for both providers and customers)
+      // Universal check for existing phone number
       const existingProvider = await getProviderByPhone(values.phone);
       if (existingProvider) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
+          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.', variant: 'destructive'});
+          setIsLoading(false);
+          return;
+      }
+      const existingCustomer = await getCustomerByPhone(values.phone);
+      if (existingCustomer) {
+          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است.', variant: 'destructive'});
+          setIsLoading(false);
+          return;
       }
       
-      const allCustomers = await getCustomers();
-      if (allCustomers.some(c => c.phone === values.phone)) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      const userToLogin: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-      };
+      let userToLogin: User;
 
       if (values.accountType === 'provider') {
         const selectedCategory = categories.find(c => c.slug === values.serviceType);
@@ -137,10 +124,19 @@ export default function RegisterForm() {
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
-        await createProvider(newProviderData);
+        const createdProvider = await createProvider(newProviderData);
+        userToLogin = {
+            name: createdProvider.name,
+            phone: createdProvider.phone,
+            accountType: 'provider'
+        };
       } else {
-        // Save the new customer
-        await saveCustomers([...allCustomers, userToLogin]);
+        const createdCustomer = await createCustomer({ 
+            name: values.name, 
+            phone: values.phone, 
+            accountType: 'customer' 
+        });
+        userToLogin = createdCustomer;
       }
       
       login(userToLogin);
@@ -157,7 +153,6 @@ export default function RegisterForm() {
          console.error("Registration failed:", error);
          let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
          if (error instanceof Error) {
-            // Check for unique constraint violation on provider name from Supabase
             if(error.message.includes('duplicate key value violates unique constraint "providers_name_key"')) {
                 errorMessage = 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.';
             }

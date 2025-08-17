@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone, getCustomers } from '@/lib/api';
+import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 
 
@@ -54,9 +54,10 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        const existingProvider = await getProviderByPhone(values.phone);
         let userToLogin: User | null = null;
 
+        // 1. Check if the user is a provider
+        const existingProvider = await getProviderByPhone(values.phone);
         if (existingProvider) {
           userToLogin = {
             name: existingProvider.name,
@@ -64,18 +65,23 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          const allCustomers = await getCustomers();
-          const existingCustomer = allCustomers.find(c => c.phone === values.phone);
-          
+          // 2. If not a provider, check if they are an existing customer
+          const existingCustomer = await getCustomerByPhone(values.phone);
           if (existingCustomer) {
              userToLogin = existingCustomer;
-          } else {
-            userToLogin = {
-                name: `کاربر ${values.phone.slice(-4)}`,
-                phone: values.phone,
-                accountType: 'customer',
-            };
           }
+        }
+        
+        // 3. If user doesn't exist at all, show error and guide to registration
+        if (!userToLogin) {
+            toast({
+                title: 'کاربر یافت نشد',
+                description: 'این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+                variant: 'destructive'
+            });
+            router.push('/register');
+            setIsLoading(false);
+            return;
         }
         
         login(userToLogin);
@@ -103,9 +109,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود، شماره تلفن خود را که قبلا با آن ثبت‌نام کرده‌اید، وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -131,7 +137,7 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
+            حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
               از اینجا ثبت‌نام کنید
             </Link>

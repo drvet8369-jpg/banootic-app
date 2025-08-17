@@ -1,11 +1,9 @@
-
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement } from './types';
 import type { User } from '@/context/AuthContext';
 
-// Ensure environment variables are loaded
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -125,7 +123,6 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'createdAt'>): P
         throw new Error("Could not add review.");
     }
     
-    // After adding a review, we must update the provider's average rating and reviews count.
     await updateProviderRating(reviewData.providerId);
 
     return data;
@@ -175,7 +172,6 @@ export async function createAgreement(provider: Provider, customer: User): Promi
 
     if (error) {
         console.error("Error creating agreement:", error);
-        // Throw the original error to be caught in the component
         throw error;
     }
     return data;
@@ -186,7 +182,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
         .from('agreements')
         .select('*')
         .eq('providerPhone', providerPhone)
-        .order('requestedAt', { ascending: false });
+        .order('requested_at', { ascending: false });
     
     if (error) {
         console.error("Error fetching provider agreements:", error);
@@ -200,7 +196,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
         .from('agreements')
         .select('*')
         .eq('customerPhone', customerPhone)
-        .order('requestedAt', { ascending: false });
+        .order('requested_at', { ascending: false });
 
     if (error) {
         console.error("Error fetching customer agreements:", error);
@@ -225,26 +221,32 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 }
 
 
-// ========== Customer Functions (Using Local Storage) ==========
+// ========== Customer Functions ==========
 
-const CUSTOMERS_STORAGE_KEY = 'banotic-customers';
-
-export async function getCustomers(): Promise<User[]> {
-    if (typeof window === 'undefined') return [];
-    try {
-        const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        console.error("Failed to get customers from localStorage", e);
-        return [];
+export async function getCustomerByPhone(phone: string): Promise<User | null> {
+    const { data, error } = await supabase
+        .from('customers')
+        .select('name, phone, accountType')
+        .eq('phone', phone)
+        .single();
+    
+    if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching customer by phone:', error);
+        throw new Error('Could not fetch customer.');
     }
+    return data;
 }
 
-export async function saveCustomers(customers: User[]): Promise<void> {
-    if (typeof window === 'undefined') return;
-    try {
-        localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(customers));
-    } catch (e) {
-        console.error("Failed to save customers to localStorage", e);
+export async function createCustomer(userData: Omit<User, 'accountType'> & { accountType: 'customer' }): Promise<User> {
+    const { data, error } = await supabase
+        .from('customers')
+        .insert([userData])
+        .select('name, phone, accountType')
+        .single();
+
+    if (error) {
+        console.error('Error creating customer:', error);
+        throw new Error('Could not create customer.');
     }
+    return data;
 }
