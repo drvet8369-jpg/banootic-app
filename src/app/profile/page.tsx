@@ -6,60 +6,45 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2 } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
+import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { dispatchCrossTabEvent } from '@/lib/events';
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [isSaving, setIsSaving] = useState(false);
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  const loadProviderData = useCallback(async () => {
+  const loadProviderData = useCallback(() => {
     if (user && user.accountType === 'provider') {
-        setIsLoading(true);
-        try {
-            const currentProvider = await getProviderByPhone(user.phone);
-            if (currentProvider) {
-                setProvider(currentProvider);
-                setEditedData({
-                    name: currentProvider.name,
-                    service: currentProvider.service,
-                    bio: currentProvider.bio,
-                });
-            } else {
-                toast({ title: "خطا", description: "پروفایل هنرمند یافت نشد.", variant: "destructive"});
-                router.push('/');
-            }
-        } catch(e) {
-            toast({ title: "خطا", description: "خطا در بارگذاری پروفایل.", variant: "destructive"});
-        } finally {
-            setIsLoading(false);
+        const allProviders = getProviders();
+        let currentProvider = allProviders.find(p => p.phone === user.phone);
+        
+        if (currentProvider) {
+            setProvider(currentProvider);
+            setEditedData({
+                name: currentProvider.name,
+                service: currentProvider.service,
+                bio: currentProvider.bio,
+            });
         }
     }
-  }, [user, router, toast]);
+  }, [user]);
 
   useEffect(() => {
-    if (isLoggedIn && user?.accountType === 'provider') {
-      loadProviderData();
-    } else {
-        setIsLoading(false);
-    }
-  }, [isLoggedIn, user, loadProviderData]);
+    loadProviderData();
+  }, [loadProviderData]);
 
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -67,30 +52,31 @@ export default function ProfilePage() {
     setEditedData(prev => ({...prev, [name]: value}));
   }
 
-  const handleSaveChanges = async () => {
-    if (!provider || !user) return;
+  const handleSaveChanges = () => {
     if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
-    
-    setIsSaving(true);
-    try {
-        const updatedProvider = await updateProviderDetails(user.phone, editedData);
-        setProvider(updatedProvider); // Update state with the returned data
-        
-        // If the user's display name changed, update it in the AuthContext
+
+    let userWasUpdated = false;
+    const success = updateProviderData((p) => {
         if(user && user.name !== editedData.name){
+            userWasUpdated = true;
+        }
+        p.name = editedData.name;
+        p.service = editedData.service;
+        p.bio = editedData.bio;
+    });
+
+    if(success) {
+        if (userWasUpdated && user) {
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
-        dispatchCrossTabEvent('profile-update'); // Notify other tabs
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
-    } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی اطلاعات.', variant: 'destructive' });
-    } finally {
-        setIsSaving(false);
+    } else {
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   }
 
@@ -146,53 +132,54 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
-  const addPortfolioItem = async (imageSrc: string) => {
-    if (!provider || !user) return;
-    const updatedPortfolio = [...provider.portfolio, { src: imageSrc, aiHint: 'new work' }];
-    try {
-        const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
-        setProvider(updatedProvider);
-        dispatchCrossTabEvent('profile-update'); // Notify other tabs
-        toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-    } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
+  const updateProviderData = (updateFn: (provider: Provider) => void) => {
+    if (!user) return false;
+    const allProviders = getProviders();
+    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
+    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
+
+    if (providerIndex > -1) {
+      updateFn(updatedProvidersList[providerIndex]);
+      saveProviders(updatedProvidersList);
+      // After saving, reload data into state
+      loadProviderData();
+      return true;
+    }
+    return false;
+  }
+
+  const addPortfolioItem = (imageSrc: string) => {
+    const success = updateProviderData((p) => {
+      if (!p.portfolio) p.portfolio = [];
+      p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
+    });
+    if (success) {
+      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   };
   
-  const deletePortfolioItem = async (itemIndex: number) => {
-    if (!provider || !user) return;
-    const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
-    try {
-        const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
-        setProvider(updatedProvider);
-        dispatchCrossTabEvent('profile-update'); // Notify other tabs
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
-    }
-  };
-
-  const handleProfilePictureChange = async (newImageSrc: string) => {
-      if(!user) return;
-      try {
-        const updatedProvider = await updateProviderProfileImage(user.phone, { src: newImageSrc, aiHint: 'woman portrait' });
-        setProvider(updatedProvider);
-        dispatchCrossTabEvent('profile-update'); // Notify other tabs
+  const handleProfilePictureChange = (newImageSrc: string) => {
+      const success = updateProviderData((p) => {
+        if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
+        p.profileImage.src = newImageSrc;
+      });
+      if (success) {
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-      } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
+      } else {
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
       }
   }
 
-  const handleDeleteProfilePicture = async () => {
-    if(!user) return;
-    try {
-        const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', aiHint: 'woman portrait' });
-        setProvider(updatedProvider);
-        dispatchCrossTabEvent('profile-update'); // Notify other tabs
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-    } catch (e) {
-        toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });
+  const handleDeleteProfilePicture = () => {
+    const success = updateProviderData((p) => {
+      if (p.profileImage) p.profileImage.src = '';
+    });
+    if (success) {
+      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+    } else {
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   };
 
@@ -211,14 +198,6 @@ export default function ProfilePage() {
       event.target.value = '';
     }
   };
-  
-  if (isLoading) {
-    return (
-        <div className="flex justify-center items-center py-20 flex-grow">
-            <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        </div>
-    );
-  }
   
   if (!isLoggedIn) {
      return (
@@ -251,16 +230,12 @@ export default function ProfilePage() {
   }
   
   if (!provider) {
-    return (
-        <div className="flex justify-center items-center py-20 flex-grow">
-            <p>اطلاعات پروفایل یافت نشد.</p>
-        </div>
-    );
+    return <div>در حال بارگذاری پروفایل...</div>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
-      <Card>
+    <div className="w-full py-12 md:py-20 space-y-8">
+      <Card className="w-full max-w-4xl mx-auto">
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
              <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
@@ -279,12 +254,12 @@ export default function ProfilePage() {
                 )}
             </div>
             {mode === 'editing' ? (
-                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" disabled={isSaving} />
+                 <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
             ) : (
                 <CardTitle className="font-headline text-3xl">{provider.name}</CardTitle>
             )}
              {mode === 'editing' ? (
-                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" disabled={isSaving} />
+                 <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" />
             ) : (
                 <CardDescription className="text-lg">{provider.service}</CardDescription>
             )}
@@ -301,18 +276,15 @@ export default function ProfilePage() {
             <CardContent className="p-0 flex-grow">
               <h3 className="font-semibold mb-2">درباره شما</h3>
               {mode === 'editing' ? (
-                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} disabled={isSaving} />
+                  <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
               ) : (
                   <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{provider.bio}</p>
               )}
                <Separator className="my-6" />
                 <div className="mb-4">
                   <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6" disabled={isSaving}>
-                        <PlusCircle className="w-5 h-5 ml-2" />
-                        افزودن نمونه کار جدید
-                   </Button>
-                   <input 
+                  
+                  <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
                     onChange={(e) => handleFileChange(e, addPortfolioItem)}
@@ -326,51 +298,29 @@ export default function ProfilePage() {
                     className="hidden"
                     accept="image/*"
                   />
-                   
-                   {provider.portfolio && provider.portfolio.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {provider.portfolio.map((item, index) => (
-                                <div className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md" key={index}>
-                                    <Image
-                                        src={item.src}
-                                        alt={`نمونه کار ${index + 1}`}
-                                        fill
-                                        className="object-cover"
-                                        data-ai-hint={item.aiHint}
-                                    />
-                                    <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                        onClick={() => deletePortfolioItem(index)}
-                                        aria-label={`حذف نمونه کار ${index + 1}`}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-center text-muted-foreground mt-4">هنوز نمونه کاری اضافه نکرده‌اید.</p>
-                    )}
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                        <PlusCircle className="w-5 h-5 ml-2" />
+                        افزودن نمونه کار جدید
+                   </Button>
+                   <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
                     <>
-                         <Button onClick={handleSaveChanges} className="w-full flex-1" disabled={isSaving}>
-                            {isSaving ? <Loader2 className="animate-spin ml-2" /> : <Save className="w-4 h-4 ml-2" />}
+                         <Button onClick={handleSaveChanges} className="w-full flex-1">
+                            <Save className="w-4 h-4 ml-2" />
                             ذخیره تغییرات
                         </Button>
-                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1" disabled={isSaving}>
+                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
                             <Camera className="w-4 h-4 ml-2" />
                             تغییر عکس پروفایل
                         </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1" disabled={isSaving}>
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
                             <Trash2 className="w-4 h-4 ml-2" />
                             حذف عکس پروفایل
                         </Button>
-                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto" disabled={isSaving}>
+                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو
                         </Button>
