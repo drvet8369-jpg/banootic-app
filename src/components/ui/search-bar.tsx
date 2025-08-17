@@ -12,9 +12,8 @@ export default function SearchBar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchTerm.trim();
-    // Always navigate to the search page. 
-    // If the query is empty, it will show all providers.
-    // If there is a query, it will filter based on it.
+    // Always navigate to the search page.
+    // The search page logic will handle showing all providers if the query is empty.
     router.push(`/search?q=${encodeURIComponent(query)}`);
   };
 
@@ -25,7 +24,7 @@ export default function SearchBar() {
           <Input
             type="search"
             placeholder="جستجو در میان هنرمندان و خدمات..."
-            className="w-full pr-10 bg-background placeholder:font-semibold text-foreground placeholder:text-foreground/60 border-2 border-primary focus-visible:ring-primary/80 focus-visible:ring-offset-2"
+            className="w-full pr-10 bg-background placeholder:font-semibold text-foreground placeholder:text-foreground/60 border-2 border-primary/40 focus-visible:ring-primary/80 focus-visible:ring-offset-2"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
