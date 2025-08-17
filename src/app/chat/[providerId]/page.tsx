@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
@@ -11,7 +12,7 @@ import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Provider, ChatMessage } from '@/lib/types';
-import { getProviderByPhone, sendMessage, subscribeToMessages } from '@/lib/api';
+import { getProviderByPhone, sendMessage, subscribeToMessages, getCustomers } from '@/lib/api';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { dispatchCrossTabEvent } from '@/lib/events';
 
@@ -80,28 +81,33 @@ export default function ChatPage() {
         if(providerDetails) {
             setOtherPersonDetails(providerDetails);
         } else {
-             // Fallback for customer-to-customer or non-provider chats
-            setOtherPersonDetails({ id: otherPersonId, name: `کاربر ${otherPersonId.slice(-4)}`, phone: otherPersonId });
+             const customers = await getCustomers();
+             const customerDetails = customers.find(c => c.phone === otherPersonId);
+             if (customerDetails) {
+                setOtherPersonDetails({ id: otherPersonId, name: customerDetails.name, phone: otherPersonId });
+             } else {
+                setOtherPersonDetails({ id: otherPersonId, name: `کاربر ${otherPersonId.slice(-4)}`, phone: otherPersonId });
+             }
         }
       } catch (error) {
         toast({ title: 'خطا', description: 'اطلاعات کاربر مقابل یافت نشد.', variant: 'destructive' });
       }
 
       // 2. Subscribe to messages
-      const { initialMessages, channel } = await subscribeToMessages(chatId, (newMessage) => {
+      const { initialMessages, channel } = await subscribeToMessages(chatId, user.phone, (newMessage) => {
         setMessages((prevMessages) => {
-          // Avoid adding duplicates
           if (prevMessages.some(m => m.id === newMessage.id)) {
             return prevMessages;
           }
           return [...prevMessages, newMessage];
         });
-        dispatchCrossTabEvent('messages-update'); // Notify other tabs
+        dispatchCrossTabEvent('messages-update');
       });
 
       setMessages(initialMessages);
       channelRef.current = channel;
       setIsLoading(false);
+      dispatchCrossTabEvent('messages-update');
     }
 
     setupChat();
@@ -152,14 +158,8 @@ export default function ChatPage() {
   const handleSaveEdit = async () => {
     if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
     setIsSending(true);
-    // Here you would call an API function to update the message in Supabase
-    // For now, we'll just optimistically update the UI
-    setMessages(messages.map(msg => 
-      msg.id === editingMessageId ? { ...msg, text: editingText.trim(), is_edited: true } : msg
-    ));
-    // await updateMessage(editingMessageId, editingText.trim());
-    dispatchCrossTabEvent('messages-update'); // Notify other tabs
-    toast({ title: 'پیام ویرایش شد.' });
+    // This functionality is complex to implement securely and is disabled for now.
+    toast({ title: 'غیرفعال', description: 'ویرایش پیام در حال حاضر پشتیبانی نمی‌شود.', variant: 'destructive'});
     handleCancelEdit();
     setIsSending(false);
   };
@@ -186,7 +186,7 @@ export default function ChatPage() {
             text: text,
         });
         setNewMessage('');
-        // No need to dispatch here, the subscription handler will do it.
+        // No need to manually update UI or dispatch event, subscription handler does it.
     } catch (error) {
         toast({ title: 'خطا', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
     } finally {
@@ -264,17 +264,6 @@ export default function ChatPage() {
                                   {message.is_edited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
                                 </p>
                             </div>
-                            {/* Edit functionality is disabled for now in the live version */}
-                            {/* {senderIsUser && (
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleStartEdit(message)}
-                                >
-                                    <Edit className="w-4 h-4"/>
-                                </Button>
-                            )} */}
                         </div>
                     )}
 

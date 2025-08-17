@@ -522,43 +522,21 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
         // 1. Get all distinct chat_ids the user is part of.
         const { data: messages, error: messagesError } = await supabase
             .from('messages')
-            .select('chat_id')
-            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`);
-
+            .select('chat_id, created_at, text')
+            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`)
+            .order('created_at', { ascending: false });
 
         if (messagesError) throw messagesError;
-        if (!messages) return [];
-
-        const chatIds = [...new Set(messages.map(m => m.chat_id))];
-        if (chatIds.length === 0) return [];
-
-        // 2. For each chat, fetch the last message and other member's details.
-        const chatList = await Promise.all(
-            chatIds.map(async (chatId) => {
-                const members = chatId.split('__');
-                const otherMemberId = members.find(id => id !== userPhone);
-                if (!otherMemberId) return null;
-
-                const { data: lastMessageData, error: lastMessageError } = await supabase
-                    .from('messages')
-                    .select('*')
-                    .eq('chat_id', chatId)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .single();
-
-                if (lastMessageError && lastMessageError.code !== 'PGRST116') {
-                    console.error(`Error getting last message for chat ${chatId}:`, lastMessageError);
-                    return null;
-                }
+        if (!messages || messages.length === 0) return [];
+        
+        // 2. Process messages to get the last message for each chat
+        const chats: { [key: string]: any } = {};
+        for (const msg of messages) {
+            if (!chats[msg.chat_id]) {
+                const members = msg.chat_id.split('__');
+                const otherMemberId = members.find((id: string) => id !== userPhone);
+                if (!otherMemberId) continue;
                 
-                const { count: unreadCount } = await supabase
-                    .from('messages')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('chat_id', chatId)
-                    .eq('is_read', false)
-                    .neq('sender_id', userPhone);
-                    
                 let otherMemberName = `کاربر ${otherMemberId.slice(-4)}`;
                 const provider = await getProviderByPhone(otherMemberId);
                 if (provider) {
@@ -571,20 +549,26 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                     }
                 }
                 
-                return {
-                    id: chatId,
+                const { count: unreadCount } = await supabase
+                    .from('messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('chat_id', msg.chat_id)
+                    .eq('is_read', false)
+                    .neq('sender_id', userPhone);
+
+                chats[msg.chat_id] = {
+                    id: msg.chat_id,
                     otherMemberId: otherMemberId,
                     otherMemberName: otherMemberName,
-                    lastMessage: lastMessageData ? lastMessageData.text : 'هنوز پیامی ارسال نشده',
-                    updatedAt: lastMessageData ? lastMessageData.created_at : new Date().toISOString(),
+                    lastMessage: msg.text,
+                    updatedAt: msg.created_at,
                     unreadCount: unreadCount || 0,
                 };
-            })
-        );
+            }
+        }
         
-        return chatList
-            .filter((chat): chat is object => chat !== null)
-            .sort((a, b) => new Date((b as any).updatedAt).getTime() - new Date((a as any).updatedAt).getTime());
+        return Object.values(chats)
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     } catch (error) {
         console.error("Error fetching inbox list:", error);
@@ -639,7 +623,6 @@ export async function subscribeToMessages(chatId: string, currentUserPhone: stri
                 .from('messages')
                 .update({ is_read: true })
                 .eq('id', newMessage.id);
-            // The UI will update via the onNewMessage callback.
         }
         onNewMessage(newMessage);
       }
@@ -655,3 +638,4 @@ export async function subscribeToMessages(chatId: string, currentUserPhone: stri
 
   return { initialMessages, channel };
 }
+
