@@ -19,27 +19,27 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number;
+  id: number; // This will now be the Supabase auto-generated ID
   name: string;
-  service: string; // The specific service they provide, e.g., "Manicure"
+  service: string; 
   location: string;
-  phone: string;
+  phone: string; // Keep as a unique identifier for now
   bio: string;
   categorySlug: Category['slug'];
-  serviceSlug: Service['slug']; // Link to the service
+  serviceSlug: Service['slug'];
   rating: number;
   reviewsCount: number;
-  profileImage: PortfolioItem; // Dedicated profile image
+  profileImage: PortfolioItem;
   portfolio: PortfolioItem[];
 }
 
 export interface Review {
-  id: string;
-  providerId: number;
+  id: number; // This will now be the Supabase auto-generated ID
+  providerId: number; // Foreign key to Provider.id
   authorName: string;
   rating: number;
   comment: string;
-  createdAt: string; // ISO String format
+  createdAt: string; // Supabase returns ISO String for timestamps
 }
 
 export interface Message {

@@ -1,8 +1,10 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews, getAgreements, saveAgreements } from '@/lib/data';
+import { getProviderByPhone, getReviewsByProviderId, addReview, updateProviderPortfolio } from '@/lib/api';
+import { getAgreements, saveAgreements } from '@/lib/data';
 import type { Provider, Review, Agreement } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -69,7 +71,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     return null;
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
@@ -77,40 +79,24 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     }
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-        const allReviews = getReviews();
-        const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
-        };
-
-        const updatedReviews = [...allReviews, newReview];
-        saveReviews(updatedReviews);
-
-        // Recalculate provider's average rating
-        const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.id === providerId);
-        if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
-            
-            allProviders[providerIndex].rating = newAverageRating;
-            allProviders[providerIndex].reviewsCount = providerReviews.length;
-            saveProviders(allProviders);
-        }
+    try {
+        await addReview({
+            providerId,
+            authorName: user.name,
+            rating,
+            comment: comment.trim(),
+        });
 
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
-        setIsSubmitting(false);
         onSubmit(); // Callback to trigger data refresh in parent
-    }, 1000);
+    } catch (error) {
+        console.error(error);
+        toast({ title: "خطا", description: "خطا در ثبت نظر. لطفاً دوباره تلاش کنید.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
@@ -168,38 +154,34 @@ export default function ProviderProfilePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [hasRequested, setHasRequested] = useState(false);
 
-  const loadData = useCallback(() => {
-    const allProviders = getProviders();
-    const foundProvider = allProviders.find(p => p.phone === providerPhone);
-    
-    if (foundProvider) {
-      setProvider(foundProvider);
-      const allReviews = getReviews();
-      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setReviews(providerReviews);
-      
-       if (user && user.accountType === 'customer') {
-            const allAgreements = getAgreements();
-            const existingRequest = allAgreements.find(a => a.providerPhone === foundProvider.phone && a.customerPhone === user.phone);
-            setHasRequested(!!existingRequest);
-       }
-
-    } else {
-      setProvider(null);
+  const loadData = useCallback(async () => {
+    try {
+        const foundProvider = await getProviderByPhone(providerPhone);
+        if (foundProvider) {
+          setProvider(foundProvider);
+          const providerReviews = await getReviewsByProviderId(foundProvider.id);
+          setReviews(providerReviews);
+          
+           if (user && user.accountType === 'customer') {
+                const allAgreements = getAgreements();
+                const existingRequest = allAgreements.find(a => a.providerPhone === foundProvider.phone && a.customerPhone === user.phone);
+                setHasRequested(!!existingRequest);
+           }
+        } else {
+          setProvider(null);
+          notFound(); // Trigger 404 if provider not found
+        }
+    } catch (error) {
+        console.error("Failed to load provider data:", error);
+        toast({ title: 'خطا', description: 'خطا در بارگذاری اطلاعات هنرمند.', variant: 'destructive'});
+    } finally {
+        setIsLoading(false);
     }
-    
-    setIsLoading(false);
-  }, [providerPhone, user]);
+  }, [providerPhone, user, toast]);
 
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    // Add a focus listener to reload data when the user returns to the tab.
-    window.addEventListener('focus', loadData);
-    return () => {
-      window.removeEventListener('focus', loadData);
-    };
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
@@ -212,7 +194,6 @@ export default function ProviderProfilePage() {
      }
      action();
   };
-
 
   const handleRequestAgreement = () => {
     handleProtectedAction(() => {
@@ -254,14 +235,15 @@ export default function ProviderProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!provider) {
-    notFound();
+    // This case should be handled by notFound() in loadData, but as a fallback:
+    return null;
   }
 
   return (
@@ -292,7 +274,7 @@ export default function ProviderProfilePage() {
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
-                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center whitespace-pre-wrap">{provider.bio}</p>
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (

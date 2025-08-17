@@ -5,7 +5,7 @@
 // and easier to maintain or switch data sources in the future.
 
 import { createClient } from '@supabase/supabase-js';
-import type { Provider, Review, Agreement } from './types';
+import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import { defaultProviders } from './data'; // We need this for seeding
 
 // These values are loaded from the .env file.
@@ -23,6 +23,37 @@ if (!supabaseAnonKey || supabaseAnonKey.includes('YOUR_SUPABASE_ANON_KEY_HERE'))
 
 // Initialize the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Helper function to map Supabase provider record to our Provider type
+const mapToProvider = (p: any): Provider => ({
+    id: p.id,
+    name: p.name,
+    service: p.service,
+    location: p.location,
+    phone: p.phone,
+    bio: p.bio,
+    categorySlug: p.category_slug,
+    serviceSlug: p.service_slug,
+    rating: p.rating,
+    reviewsCount: p.reviews_count,
+    profileImage: p.profile_image,
+    portfolio: p.portfolio,
+});
+
+// Helper function to map our Provider type to a Supabase record
+const mapFromProvider = (p: Provider) => ({
+    name: p.name,
+    service: p.service,
+    location: p.location,
+    phone: p.phone,
+    bio: p.bio,
+    category_slug: p.categorySlug,
+    service_slug: p.serviceSlug,
+    rating: p.rating,
+    reviews_count: p.reviewsCount,
+    profile_image: p.profileImage,
+    portfolio: p.portfolio,
+});
 
 
 /**
@@ -60,21 +91,7 @@ async function seedInitialProviders(): Promise<Provider[]> {
     }
     
     console.log("Seeding successful!");
-     const providers = data.map(p => ({
-      id: p.id,
-      name: p.name,
-      service: p.service,
-      location: p.location,
-      phone: p.phone,
-      bio: p.bio,
-      categorySlug: p.category_slug,
-      serviceSlug: p.service_slug,
-      rating: p.rating,
-      reviewsCount: p.reviews_count,
-      profileImage: p.profile_image,
-      portfolio: p.portfolio,
-  }));
-    return providers;
+    return data.map(mapToProvider);
 }
 
 
@@ -86,18 +103,15 @@ async function seedInitialProviders(): Promise<Provider[]> {
 export async function getAllProviders(): Promise<Provider[]> {
   console.log("API: Fetching all providers from Supabase...");
 
-  // First, check if there are any providers in the table
   let { count } = await supabase
     .from('providers')
     .select('id', { count: 'exact', head: true });
 
-  // If the table is empty, seed it with initial data
   if (count === 0) {
       console.log("No providers found. Seeding initial data...");
       return await seedInitialProviders();
   }
 
-  // If providers exist, fetch all of them
   const { data, error } = await supabase
     .from('providers')
     .select('*');
@@ -107,22 +121,137 @@ export async function getAllProviders(): Promise<Provider[]> {
     throw new Error("Could not fetch providers.");
   }
 
-  // The data from supabase will have snake_case keys, we need to convert them to camelCase
-  // to match our Provider type.
-  const providers = data.map(p => ({
-      id: p.id,
-      name: p.name,
-      service: p.service,
-      location: p.location,
-      phone: p.phone,
-      bio: p.bio,
-      categorySlug: p.category_slug,
-      serviceSlug: p.service_slug,
-      rating: p.rating,
-      reviewsCount: p.reviews_count,
-      profileImage: p.profile_image,
-      portfolio: p.portfolio,
-  }));
-  
-  return providers;
+  return data.map(mapToProvider);
+}
+
+/**
+ * Fetches a single provider by their phone number.
+ * @param {string} phone The provider's phone number.
+ * @returns {Promise<Provider | null>} The provider object or null if not found.
+ */
+export async function getProviderByPhone(phone: string): Promise<Provider | null> {
+    const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('phone', phone)
+        .single(); // .single() returns one record or null, and errors if more than one is found.
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is the code for "No rows found"
+        console.error("Error fetching provider by phone:", error);
+        throw new Error("Could not fetch provider.");
+    }
+
+    if (!data) return null;
+    
+    return mapToProvider(data);
+}
+
+/**
+ * Fetches all reviews for a specific provider ID.
+ * @param {number} providerId The ID of the provider.
+ * @returns {Promise<Review[]>} A list of reviews for the provider.
+ */
+export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
+    const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('provider_id', providerId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching reviews:", error);
+        throw new Error("Could not fetch reviews.");
+    }
+
+    return data.map(r => ({
+        id: r.id,
+        providerId: r.provider_id,
+        authorName: r.author_name,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.created_at,
+    }));
+}
+
+type NewReview = Omit<Review, 'id' | 'createdAt'>;
+
+/**
+ * Adds a new review to the database and updates the provider's average rating.
+ * @param {NewReview} review The new review object.
+ * @returns {Promise<Review>} The newly created review.
+ */
+export async function addReview(review: NewReview): Promise<Review> {
+    // 1. Insert the new review
+    const { data: newReviewData, error: reviewError } = await supabase
+        .from('reviews')
+        .insert({
+            provider_id: review.providerId,
+            author_name: review.authorName,
+            rating: review.rating,
+            comment: review.comment,
+        })
+        .select()
+        .single();
+
+    if (reviewError) {
+        console.error("Error adding review:", reviewError);
+        throw new Error("Could not add review.");
+    }
+    
+    // 2. Recalculate the provider's average rating
+    const { data: reviews, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('provider_id', review.providerId);
+        
+    if(reviewsError){
+         console.error("Error fetching reviews for rating update:", reviewsError);
+         // We don't throw here because the review was already added successfully.
+         // We can just return the new review and log the error.
+    } else {
+        const totalRating = reviews.reduce((acc, r) => acc + r.rating, 0);
+        const reviewsCount = reviews.length;
+        const newAverageRating = parseFloat((totalRating / reviewsCount).toFixed(1));
+
+        // 3. Update the provider's record
+        const { error: providerUpdateError } = await supabase
+            .from('providers')
+            .update({ rating: newAverageRating, reviews_count: reviewsCount })
+            .eq('id', review.providerId);
+            
+        if(providerUpdateError){
+            console.error("Error updating provider rating:", providerUpdateError);
+        }
+    }
+    
+    return {
+        id: newReviewData.id,
+        providerId: newReviewData.provider_id,
+        authorName: newReviewData.author_name,
+        rating: newReviewData.rating,
+        comment: newReviewData.comment,
+        createdAt: newReviewData.created_at,
+    };
+}
+
+/**
+ * Updates a provider's portfolio.
+ * @param {string} phone The provider's phone number to identify them.
+ * @param {PortfolioItem[]} portfolio The new array of portfolio items.
+ * @returns {Promise<Provider>} The updated provider object.
+ */
+export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ portfolio: portfolio })
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating portfolio:", error);
+        throw new Error("Could not update provider's portfolio.");
+    }
+    
+    return mapToProvider(data);
 }
