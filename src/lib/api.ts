@@ -20,33 +20,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // --- Provider Functions ---
 
 export async function getAllProviders(): Promise<Provider[]> {
-  console.log("API: Fetching all providers from Supabase");
-  const { data, error } = await supabase
-    .from('providers')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching providers:', error);
-    throw new Error('Could not fetch providers from the database.');
-  }
-
-  // The data from Supabase needs to be mapped to our Provider type.
-  // Supabase uses snake_case, our app uses camelCase.
-  return data.map(p => ({
-      id: p.id,
-      name: p.name,
-      service: p.service,
-      location: p.location,
-      phone: p.phone,
-      bio: p.bio,
-      categorySlug: p.category_slug,
-      serviceSlug: p.service_slug,
-      rating: p.rating,
-      reviewsCount: p.reviews_count,
-      profileImage: p.profile_image,
-      portfolio: p.portfolio || [], // Ensure portfolio is always an array
-  }));
+  // Placeholder implementation. We will replace this with a real Supabase call.
+  console.log("API: Fetching all providers...");
+  // For now, it returns an empty array.
+  return [];
 }
 
 // We will add more functions here as we migrate each piece of functionality,
