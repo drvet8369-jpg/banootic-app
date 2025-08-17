@@ -6,7 +6,7 @@
 // and easier to maintain or switch data sources in the future.
 
 import { createClient } from '@supabase/supabase-js';
-import type { Provider, Review, Agreement, PortfolioItem } from './types';
+import type { Provider, Review, Agreement, PortfolioItem, ChatMessage } from './types';
 import type { User } from '@/context/AuthContext';
 
 
@@ -470,3 +470,62 @@ export const saveCustomers = async (customers: User[]): Promise<void> => {
         console.error("Failed to save customers to localStorage", e);
     }
 };
+
+// ----- Real-time Chat -----
+
+type NewMessagePayload = Omit<ChatMessage, 'id' | 'created_at' | 'is_edited'>;
+
+/**
+ * Sends a new chat message to the database.
+ * @param {NewMessagePayload} message The message payload.
+ */
+export async function sendMessage(message: NewMessagePayload) {
+  const { error } = await supabase.from('messages').insert(message);
+  if (error) {
+    console.error("Error sending message:", error);
+    throw new Error("Could not send message.");
+  }
+}
+
+/**
+ * Subscribes to real-time messages for a given chat ID.
+ * @param {string} chatId The ID of the chat to subscribe to.
+ * @param {(message: ChatMessage) => void} onNewMessage A callback function to handle new messages.
+ * @returns {Promise<{initialMessages: ChatMessage[], channel: RealtimeChannel}>} An object containing the initial messages and the Supabase channel for cleanup.
+ */
+export async function subscribeToMessages(chatId: string, onNewMessage: (message: ChatMessage) => void) {
+  // First, fetch initial messages
+  const { data: initialMessagesData, error: initialError } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: true });
+
+  if (initialError) {
+    console.error("Error fetching initial messages:", initialError);
+    throw new Error("Could not fetch initial messages.");
+  }
+  
+  const initialMessages: ChatMessage[] = initialMessagesData || [];
+  
+  // Then, set up the real-time subscription
+  const channel = supabase
+    .channel(`chat:${chatId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
+      (payload) => {
+        onNewMessage(payload.new as ChatMessage);
+      }
+    )
+    .subscribe((status, err) => {
+        if(status === 'SUBSCRIBED') {
+            console.log(`Successfully subscribed to channel: chat:${chatId}`);
+        }
+        if(status === 'CHANNEL_ERROR') {
+            console.error(`Subscription error on channel chat:${chatId}:`, err);
+        }
+    });
+
+  return { initialMessages, channel };
+}

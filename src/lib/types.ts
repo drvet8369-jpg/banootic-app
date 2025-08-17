@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-
 export interface Category {
   id: number;
   name: string;
@@ -42,13 +40,6 @@ export interface Review {
   createdAt: string; // Supabase returns ISO String for timestamps
 }
 
-export interface Message {
-  text: string;
-  senderId: string;
-  receiverId?: string;
-  createdAt: Timestamp;
-}
-
 export interface Agreement {
   id: number; // Supabase ID
   providerPhone: string;
@@ -57,4 +48,13 @@ export interface Agreement {
   status: 'pending' | 'confirmed' | 'rejected';
   requestedAt: string; // ISO String
   confirmedAt?: string | null; // ISO String
+}
+
+export interface ChatMessage {
+  id?: number;
+  chat_id: string;
+  sender_id: string;
+  text: string;
+  created_at?: string;
+  is_edited?: boolean;
 }
