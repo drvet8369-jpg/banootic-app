@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
+import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,10 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { dispatchCrossTabEvent } from '@/lib/events';
 
-// Reusable Avatar components for ReviewCard
+
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)} {...props} />
 );
@@ -36,7 +37,6 @@ const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLDivEle
   <div className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)} {...props} />
 );
 
-// Review Card Component
 const ReviewCard = ({ review }: { review: Review }) => (
   <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
     <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
@@ -57,7 +57,6 @@ const ReviewCard = ({ review }: { review: Review }) => (
   </div>
 );
 
-// Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
@@ -69,48 +68,30 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     return null;
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
       toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-
-    // Simulate API call
-    setTimeout(() => {
-        const allReviews = getReviews();
-        const newReview: Review = {
-        id: Date.now().toString(),
-        providerId,
-        authorName: user.name,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
-        };
-
-        const updatedReviews = [...allReviews, newReview];
-        saveReviews(updatedReviews);
-
-        // Recalculate provider's average rating
-        const allProviders = getProviders();
-        const providerIndex = allProviders.findIndex(p => p.id === providerId);
-        if (providerIndex > -1) {
-            const providerReviews = updatedReviews.filter(r => r.providerId === providerId);
-            const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
-            const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
-            
-            allProviders[providerIndex].rating = newAverageRating;
-            allProviders[providerIndex].reviewsCount = providerReviews.length;
-            saveProviders(allProviders);
-        }
-
+    
+    try {
+        await addReview({
+            providerId,
+            authorName: user.name,
+            rating,
+            comment,
+        });
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
+        onSubmit(); 
+    } catch (error) {
+        toast({ title: "خطا", description: "خطا در ثبت نظر.", variant: "destructive" });
+    } finally {
         setIsSubmitting(false);
-        onSubmit(); // Callback to trigger data refresh in parent
-    }, 1000);
+    }
   };
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
@@ -159,58 +140,77 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingAgreement, setIsCreatingAgreement] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const loadData = useCallback(() => {
-    const allProviders = getProviders();
-    const foundProvider = allProviders.find(p => p.phone === providerPhone);
-    
-    if (foundProvider) {
-      setProvider(foundProvider);
-      const allReviews = getReviews();
-      const providerReviews = allReviews.filter(r => r.providerId === foundProvider.id)
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setReviews(providerReviews);
-    } else {
-      setProvider(null);
+  const loadData = useCallback(async () => {
+    try {
+        const foundProvider = await getProviderByPhone(providerPhone);
+        if (foundProvider) {
+          setProvider(foundProvider);
+          const providerReviews = await getReviewsByProviderId(foundProvider.id);
+          setReviews(providerReviews);
+        } else {
+          setProvider(null);
+        }
+    } catch(error) {
+        setProvider(null);
+    } finally {
+        setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }, [providerPhone]);
 
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
-  }, [loadData]);
+    
+    const handleProfileUpdate = () => {
+        if(user && user.phone === providerPhone) {
+            loadData();
+        }
+    };
+    
+    window.addEventListener('profile-update', handleProfileUpdate);
+    return () => window.removeEventListener('profile-update', handleProfileUpdate);
+
+  }, [loadData, user, providerPhone]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
 
-  const deletePortfolioItem = (itemIndex: number) => {
-    if (!provider) return;
-
-    const allProviders = getProviders();
-    const providerIndex = allProviders.findIndex(p => p.id === provider.id);
-    if (providerIndex > -1) {
-        allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
-        saveProviders(allProviders);
-        loadData(); // Refresh data
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+  const handleCreateAgreement = async () => {
+    if (!provider || !user) return;
+    setIsCreatingAgreement(true);
+    try {
+        await createAgreement(provider, user);
+        toast({ title: 'موفق', description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد.'});
+        dispatchCrossTabEvent('agreements-update');
+    } catch(error: any) {
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+            toast({ title: 'درخواست تکراری', description: 'شما قبلا برای این هنرمند درخواست توافق ارسال کرده‌اید.', variant: 'default' });
+        } else {
+            toast({ title: 'خطا', description: 'خطا در ارسال درخواست توافق.', variant: 'destructive'});
+        }
+    } finally {
+        setIsCreatingAgreement(false);
     }
+  }
+
+  // Deleting portfolio items can now only be done from the profile management page.
+  // This logic is kept here for reference but the button is removed.
+  const deletePortfolioItem = (itemIndex: number) => {
+    // This action has been moved to the profile management page
+    // to simplify this public-facing component.
   };
 
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
@@ -266,17 +266,6 @@ export default function ProviderProfilePage() {
                                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                                             data-ai-hint={item.aiHint}
                                         />
-                                        {isOwnerViewing && (
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
-                                            aria-label={`حذف نمونه کار ${index + 1}`}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                        )}
                                     </div>
                                 </DialogTrigger>
                             ))}
@@ -311,7 +300,13 @@ export default function ProviderProfilePage() {
 
             {!isOwnerViewing && (
             <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                <Button asChild className="w-full">
+                {isLoggedIn && user?.accountType === 'customer' && (
+                    <Button onClick={handleCreateAgreement} disabled={isCreatingAgreement} className="w-full">
+                        {isCreatingAgreement ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
+                        درخواست توافق
+                    </Button>
+                )}
+                 <Button asChild className="w-full">
                     <Link href={`/chat/${provider.phone}`}>
                         <MessageSquare className="w-4 h-4 ml-2" />
                         ارسال پیام

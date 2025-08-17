@@ -6,41 +6,53 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
-import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
+import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviders, saveProviders } from '@/lib/data';
+import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { dispatchCrossTabEvent } from '@/lib/events';
+
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
-  const [provider, setProvider] = useState<Provider | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
+  
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
-  const loadProviderData = useCallback(() => {
+  const loadProviderData = useCallback(async () => {
     if (user && user.accountType === 'provider') {
-        const allProviders = getProviders();
-        let currentProvider = allProviders.find(p => p.phone === user.phone);
-        
-        if (currentProvider) {
-            setProvider(currentProvider);
-            setEditedData({
-                name: currentProvider.name,
-                service: currentProvider.service,
-                bio: currentProvider.bio,
-            });
+        setIsLoading(true);
+        try {
+            const currentProvider = await getProviderByPhone(user.phone);
+            if (currentProvider) {
+                setProvider(currentProvider);
+                setEditedData({
+                    name: currentProvider.name,
+                    service: currentProvider.service,
+                    bio: currentProvider.bio,
+                });
+            }
+        } catch (error) {
+            toast({ title: "خطا", description: "امکان بارگذاری اطلاعات پروفایل وجود ندارد.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
         }
+    } else {
+        setIsLoading(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     loadProviderData();
@@ -52,31 +64,28 @@ export default function ProfilePage() {
     setEditedData(prev => ({...prev, [name]: value}));
   }
 
-  const handleSaveChanges = () => {
-    if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+  const handleSaveChanges = async () => {
+    if(!user || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
-
-    let userWasUpdated = false;
-    const success = updateProviderData((p) => {
-        if(user && user.name !== editedData.name){
-            userWasUpdated = true;
-        }
-        p.name = editedData.name;
-        p.service = editedData.service;
-        p.bio = editedData.bio;
-    });
-
-    if(success) {
-        if (userWasUpdated && user) {
+    setIsSaving(true);
+    try {
+        const updatedProvider = await updateProviderDetails(user.phone, editedData);
+        setProvider(updatedProvider); // Update local state with returned data
+        
+        if (user.name !== editedData.name) {
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
+
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
-    } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+        dispatchCrossTabEvent('profile-update');
+    } catch (error) {
+        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی اطلاعات.', variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
     }
   }
 
@@ -91,8 +100,8 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-
   const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
+      setIsSaving(true);
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageSrc = e.target?.result as string;
@@ -124,78 +133,69 @@ export default function ProfilePage() {
             const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
             callback(compressedDataUrl);
           } else {
-            callback(imageSrc);
+            callback(imageSrc); // Fallback to original if canvas fails
           }
         };
         img.src = imageSrc;
       };
+      reader.onerror = () => {
+          setIsSaving(false);
+          toast({title: 'خطا', description: 'خطا در خواندن فایل تصویر.', variant: 'destructive'})
+      }
       reader.readAsDataURL(file);
   }
 
-  const updateProviderData = (updateFn: (provider: Provider) => void) => {
-    if (!user) return false;
-    const allProviders = getProviders();
-    const updatedProvidersList = JSON.parse(JSON.stringify(allProviders));
-    const providerIndex = updatedProvidersList.findIndex((p: Provider) => p.phone === user.phone);
-
-    if (providerIndex > -1) {
-      updateFn(updatedProvidersList[providerIndex]);
-      saveProviders(updatedProvidersList);
-      // After saving, reload data into state
-      loadProviderData();
-      return true;
-    }
-    return false;
-  }
-
-  const addPortfolioItem = (imageSrc: string) => {
-    const success = updateProviderData((p) => {
-      if (!p.portfolio) p.portfolio = [];
-      p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
-    });
-    if (success) {
+  const addPortfolioItem = async (imageSrc: string) => {
+    if (!user || !provider) return;
+    const newPortfolio = [...(provider.portfolio || []), { src: imageSrc, aiHint: 'new work' }];
+    try {
+      const updatedProvider = await updateProviderPortfolio(user.phone, newPortfolio);
+      setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+      dispatchCrossTabEvent('profile-update');
+    } catch (error) {
+       toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
     }
   };
   
-  const handleProfilePictureChange = (newImageSrc: string) => {
-      const success = updateProviderData((p) => {
-        if (!p.profileImage) p.profileImage = { src: '', aiHint: 'woman portrait' };
-        p.profileImage.src = newImageSrc;
-      });
-      if (success) {
+  const handleProfilePictureChange = async (newImageSrc: string) => {
+      if (!user) return;
+      try {
+        const updatedProvider = await updateProviderProfileImage(user.phone, { src: newImageSrc, aiHint: 'woman portrait' });
+        setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-      } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+        dispatchCrossTabEvent('profile-update');
+      } catch (error) {
+        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
+      } finally {
+        setIsSaving(false);
       }
   }
 
-  const handleDeleteProfilePicture = () => {
-    const success = updateProviderData((p) => {
-      if (p.profileImage) p.profileImage.src = '';
-    });
-    if (success) {
+  const handleDeleteProfilePicture = async () => {
+    if(!user) return;
+    setIsSaving(true);
+    try {
+      const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', aiHint: 'woman portrait' });
+      setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-    } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+      dispatchCrossTabEvent('profile-update');
+    } catch (error) {
+      toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
     }
   };
 
-  const handleAddPortfolioClick = () => {
-    portfolioFileInputRef.current?.click();
-  };
-  
-  const handleEditProfilePicClick = () => {
-    profilePicInputRef.current?.click();
-  }
-
+  const handleAddPortfolioClick = () => { portfolioFileInputRef.current?.click(); };
+  const handleEditProfilePicClick = () => { profilePicInputRef.current?.click(); }
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (dataUrl: string) => void) => {
     const file = event.target.files?.[0];
     if (file) {
       handleImageResizeAndSave(file, callback);
-      event.target.value = '';
+      event.target.value = ''; // Reset file input
     }
   };
   
@@ -220,7 +220,7 @@ export default function ProfilePage() {
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
-                این صفحه فقط برای ارائه‌دهندگان خدمات است. برای ثبت نام به عنوان هنرمند، به صفحه ثبت‌نام بروید.
+                این صفحه فقط برای ارائه‌دهندگان خدمات است.
             </p>
             <Button asChild size="lg" className="mt-8">
                 <Link href="/register">ثبت‌نام به عنوان هنرمند</Link>
@@ -229,13 +229,30 @@ export default function ProfilePage() {
      )
   }
   
+  if (isLoading) {
+    return <div className="flex justify-center items-center py-20"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+  }
+
   if (!provider) {
-    return <div>در حال بارگذاری پروفایل...</div>;
+      return (
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
+             <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل یافت نشد</h1>
+             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
+                اطلاعات پروفایل شما در پایگاه داده یافت نشد. لطفاً با پشتیبانی تماس بگیرید.
+            </p>
+        </div>
+      )
   }
 
   return (
-    <div className="w-full py-12 md:py-20 space-y-8">
-      <Card className="w-full max-w-4xl mx-auto">
+    <div className="w-full py-12 md:py-20 space-y-8 flex justify-center">
+      <Card className="w-full max-w-4xl">
+         {isSaving && (
+            <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            </div>
+         )}
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
              <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
@@ -283,7 +300,6 @@ export default function ProfilePage() {
                <Separator className="my-6" />
                 <div className="mb-4">
                   <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
-                  
                   <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
