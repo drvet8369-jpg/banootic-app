@@ -56,6 +56,7 @@ export default function LoginPage() {
     try {
         let userToLogin: User | null = null;
 
+        // 1. Check if the user is a provider
         const existingProvider = await getProviderByPhone(values.phone);
         if (existingProvider) {
           userToLogin = {
@@ -64,12 +65,14 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
+          // 2. If not a provider, check if they are a customer
           const existingCustomer = await getCustomerByPhone(values.phone);
           if (existingCustomer) {
              userToLogin = existingCustomer;
           }
         }
         
+        // 3. If user is neither, they need to register
         if (!userToLogin) {
             toast({
                 title: 'کاربر یافت نشد',
@@ -81,6 +84,7 @@ export default function LoginPage() {
             return;
         }
         
+        // 4. Log the user in
         login(userToLogin);
 
         toast({
@@ -103,7 +107,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
