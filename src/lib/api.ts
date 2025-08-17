@@ -12,10 +12,14 @@ import { defaultProviders } from './data'; // We need this for seeding
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Check if the environment variables are set
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase URL and Anon Key must be provided in the .env file.");
+// More robust check for environment variables to prevent runtime errors.
+if (!supabaseUrl || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE') || !supabaseUrl.startsWith('http')) {
+  throw new Error("Supabase URL is not configured correctly in the .env file. Please make sure NEXT_PUBLIC_SUPABASE_URL is a valid URL.");
 }
+if (!supabaseAnonKey || supabaseAnonKey.includes('YOUR_SUPABASE_ANON_KEY_HERE')) {
+    throw new Error("Supabase Anon Key is not configured correctly in the .env file. Please check NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+}
+
 
 // Initialize the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
