@@ -29,9 +29,9 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     const { data, error } = await supabase.from('providers').select('*').eq('phone', phone).single();
     if (error && error.code !== 'PGRST116') { // PGRST116: "The result contains 0 rows"
         console.error("Error fetching provider by phone:", error);
-        throw new Error("Could not fetch provider data.");
+        // Do not throw here, just return null so the login flow can continue
     }
-    return data;
+    return data || null;
 }
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviewsCount'>): Promise<Provider> {
@@ -225,7 +225,7 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const { data, error } = await supabase
-        .from('customers')
+        .from('customer')
         .select('name, phone, account_type')
         .eq('phone', phone)
         .single();
@@ -246,7 +246,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
 
 export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
     const { data, error } = await supabase
-        .from('customers')
+        .from('customer')
         .insert([{
             name: userData.name,
             phone: userData.phone,
