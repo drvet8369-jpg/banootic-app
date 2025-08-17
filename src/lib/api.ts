@@ -495,7 +495,7 @@ export async function sendMessage(message: NewMessagePayload) {
  */
 export async function getUnreadCount(userPhone: string): Promise<number> {
     const { data, error } = await supabase.rpc('get_unread_message_counts', {
-        user_phone: userPhone
+        user_phone_param: userPhone
     });
 
     if (error) {
@@ -503,6 +503,7 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
         return 0; // Return 0 on error
     }
     
+    // The RPC function returns an array with a single object like `[{ unread_count: 5 }]`
     return data?.[0]?.unread_count || 0;
 }
 
