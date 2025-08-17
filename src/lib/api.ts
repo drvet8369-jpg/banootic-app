@@ -500,7 +500,7 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
         .neq('sender_id', userPhone) 
-        .like('chat_id', `%${userPhone}%`); 
+        .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`); 
 
     if (error) {
         console.error('Error getting unread count:', error);
@@ -523,22 +523,22 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
         const { data: messages, error: messagesError } = await supabase
             .from('messages')
             .select('chat_id')
-            .like('chat_id', `%${userPhone}%`);
+            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`);
+
 
         if (messagesError) throw messagesError;
         if (!messages) return [];
 
         const chatIds = [...new Set(messages.map(m => m.chat_id))];
+        if (chatIds.length === 0) return [];
 
         // 2. For each chat, fetch the last message and other member's details.
         const chatList = await Promise.all(
             chatIds.map(async (chatId) => {
-                // Get the other member's phone number from the chat_id
                 const members = chatId.split('__');
                 const otherMemberId = members.find(id => id !== userPhone);
                 if (!otherMemberId) return null;
 
-                // Get the last message in the chat
                 const { data: lastMessageData, error: lastMessageError } = await supabase
                     .from('messages')
                     .select('*')
@@ -547,24 +547,18 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                     .limit(1)
                     .single();
 
-                if (lastMessageError && lastMessageError.code !== 'PGRST116') { // Ignore "No rows found" error
+                if (lastMessageError && lastMessageError.code !== 'PGRST116') {
                     console.error(`Error getting last message for chat ${chatId}:`, lastMessageError);
                     return null;
                 }
                 
-                // Get unread count for this specific chat
-                 const { count: unreadCount, error: unreadError } = await supabase
+                const { count: unreadCount } = await supabase
                     .from('messages')
                     .select('*', { count: 'exact', head: true })
                     .eq('chat_id', chatId)
                     .eq('is_read', false)
                     .neq('sender_id', userPhone);
                     
-                if (unreadError) {
-                    console.error(`Error getting unread count for chat ${chatId}:`, unreadError);
-                }
-
-                // Get the other member's name
                 let otherMemberName = `کاربر ${otherMemberId.slice(-4)}`;
                 const provider = await getProviderByPhone(otherMemberId);
                 if (provider) {
@@ -588,10 +582,9 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
             })
         );
         
-        // Filter out any nulls and sort by the most recent message
         return chatList
             .filter((chat): chat is object => chat !== null)
-            .sort((a, b) => new Date((b as any).updatedAt).getTime() - new Date((a as any).updatedAt).getTime()) as any[];
+            .sort((a, b) => new Date((b as any).updatedAt).getTime() - new Date((a as any).updatedAt).getTime());
 
     } catch (error) {
         console.error("Error fetching inbox list:", error);
@@ -610,16 +603,12 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
  */
 export async function subscribeToMessages(chatId: string, currentUserPhone: string, onNewMessage: (message: ChatMessage) => void): Promise<{initialMessages: ChatMessage[], channel: RealtimeChannel}> {
   // Mark messages as read upon opening the chat
-  const { error: updateError } = await supabase
+  await supabase
     .from('messages')
     .update({ is_read: true })
     .eq('chat_id', chatId)
     .neq('sender_id', currentUserPhone)
     .eq('is_read', false);
-
-  if (updateError) {
-      console.error("Error marking messages as read:", updateError);
-  }
 
   // Fetch initial messages
   const { data: initialMessagesData, error: initialError } = await supabase
@@ -643,12 +632,14 @@ export async function subscribeToMessages(chatId: string, currentUserPhone: stri
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
       async (payload) => {
         const newMessage = payload.new as ChatMessage;
-        // If the new message is not from the current user, mark it as read immediately
+        
+        // Immediately mark the received message as read if it's not from the current user.
         if (newMessage.sender_id !== currentUserPhone) {
             await supabase
                 .from('messages')
                 .update({ is_read: true })
                 .eq('id', newMessage.id);
+            // The UI will update via the onNewMessage callback.
         }
         onNewMessage(newMessage);
       }
