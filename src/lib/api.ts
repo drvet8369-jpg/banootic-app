@@ -43,21 +43,6 @@ const mapToProvider = (p: any): Provider => ({
     portfolio: p.portfolio,
 });
 
-// Helper function to map our Provider type to a Supabase record
-const mapFromProvider = (p: Provider) => ({
-    name: p.name,
-    service: p.service,
-    location: p.location,
-    phone: p.phone,
-    bio: p.bio,
-    category_slug: p.categorySlug,
-    service_slug: p.serviceSlug,
-    rating: p.rating,
-    reviews_count: p.reviewsCount,
-    profile_image: p.profileImage,
-    portfolio: p.portfolio,
-});
-
 
 /**
  * Seeds the initial provider data from the local `data.ts` file into the Supabase table.
@@ -104,9 +89,7 @@ async function seedInitialProviders(): Promise<Provider[]> {
  * @returns {Promise<Provider[]>} A list of all providers.
  */
 export async function getAllProviders(): Promise<Provider[]> {
-  console.log("API: Fetching all providers from Supabase...");
-
-  let { count } = await supabase
+  const { count } = await supabase
     .from('providers')
     .select('id', { count: 'exact', head: true });
 
@@ -126,6 +109,39 @@ export async function getAllProviders(): Promise<Provider[]> {
 
   return data.map(mapToProvider);
 }
+
+/**
+ * Creates a new provider in the database.
+ * @param {Omit<Provider, 'id'>} providerData The data for the new provider.
+ * @returns {Promise<Provider>} The newly created provider.
+ */
+export async function createProvider(providerData: Omit<Provider, 'id'>): Promise<Provider> {
+    const { data, error } = await supabase
+        .from('providers')
+        .insert({
+            name: providerData.name,
+            service: providerData.service,
+            location: providerData.location,
+            phone: providerData.phone,
+            bio: providerData.bio,
+            category_slug: providerData.categorySlug,
+            service_slug: providerData.serviceSlug,
+            rating: providerData.rating,
+            reviews_count: providerData.reviewsCount,
+            profile_image: providerData.profileImage,
+            portfolio: providerData.portfolio,
+        })
+        .select()
+        .single(); // Use single to get the created object back
+
+    if (error) {
+        console.error("Error creating provider:", error);
+        throw new Error(error.message); // Throw the actual Supabase error
+    }
+
+    return mapToProvider(data);
+}
+
 
 /**
  * Fetches a single provider by their phone number.
@@ -293,3 +309,24 @@ export async function createAgreement(provider: Provider, customer: User): Promi
     }
   });
 }
+
+// ----- Customer Data -----
+const CUSTOMERS_STORAGE_KEY = 'banotic-customers';
+export const getCustomers = async (): Promise<User[]> => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+};
+
+export const saveCustomers = async (customers: User[]): Promise<void> => {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(customers));
+    } catch (e) {
+        console.error("Failed to save customers to localStorage", e);
+    }
+};
