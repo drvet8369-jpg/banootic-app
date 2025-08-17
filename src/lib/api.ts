@@ -1,3 +1,4 @@
+'use client';
 // This file will be our Data Access Layer.
 // All functions that interact with Supabase will live here.
 // The UI components will call these functions instead of directly
@@ -7,6 +8,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import { defaultProviders } from './data'; // We need this for seeding
+import type { User } from '@/context/AuthContext';
+
 
 // These values are loaded from the .env file.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -254,4 +257,39 @@ export async function updateProviderPortfolio(phone: string, portfolio: Portfoli
     }
     
     return mapToProvider(data);
+}
+
+/**
+ * Creates a new agreement request.
+ * For now, this interacts with localStorage.
+ * @param {Provider} provider The provider the request is for.
+ * @param {User} customer The customer making the request.
+ * @returns {Promise<Agreement>} The newly created agreement.
+ */
+export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
+  const AGREEMENTS_STORAGE_KEY = 'banotic-agreements';
+  
+  return new Promise((resolve, reject) => {
+    try {
+      const allAgreements = JSON.parse(localStorage.getItem(AGREEMENTS_STORAGE_KEY) || '[]');
+      
+      const newAgreement: Agreement = {
+        id: `agr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        providerPhone: provider.phone,
+        customerPhone: customer.phone,
+        customerName: customer.name,
+        status: 'pending',
+        requestedAt: new Date().toISOString(),
+      };
+      
+      const updatedAgreements = [...allAgreements, newAgreement];
+      localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(updatedAgreements));
+      
+      resolve(newAgreement);
+
+    } catch (error) {
+      console.error("Error creating agreement in localStorage:", error);
+      reject(new Error("Could not create agreement."));
+    }
+  });
 }

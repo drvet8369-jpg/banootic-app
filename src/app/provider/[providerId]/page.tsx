@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview } from '@/lib/api';
+import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -150,6 +150,7 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingAgreement, setIsSubmittingAgreement] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -177,16 +178,49 @@ export default function ProviderProfilePage() {
   const isOwnerViewing = user && user.phone === provider?.phone;
 
   const handleProtectedAction = (action: () => void) => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !user) {
       toast({
         title: "نیاز به ورود",
         description: "برای استفاده از این قابلیت، لطفاً ابتدا وارد شوید یا ثبت‌نام کنید.",
+        variant: "destructive",
       });
       router.push('/login');
       return;
     }
+    // Only customers can perform these actions
+    if (user.accountType !== 'customer') {
+        toast({
+            title: "ویژه مشتریان",
+            description: "این قابلیت فقط برای مشتریان در دسترس است.",
+            variant: "destructive",
+        });
+        return;
+    }
     action();
   };
+
+  const handleRequestAgreement = () => {
+    handleProtectedAction(async () => {
+        if (!provider || !user) return;
+        setIsSubmittingAgreement(true);
+        try {
+            await createAgreement(provider, user);
+            toast({
+                title: "درخواست ارسال شد",
+                description: "درخواست توافق شما برای هنرمند ارسال شد. می‌توانید وضعیت آن را در صفحه درخواست‌ها پیگیری کنید.",
+            });
+            router.push('/requests');
+        } catch(e) {
+            toast({
+                title: "خطا",
+                description: "خطا در ارسال درخواست توافق. لطفا دوباره تلاش کنید.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmittingAgreement(false);
+        }
+    });
+  }
 
 
   if (isLoading) {
@@ -283,8 +317,17 @@ export default function ProviderProfilePage() {
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button 
+                        onClick={handleRequestAgreement}
+                        className="w-full"
+                        disabled={isSubmittingAgreement}
+                    >
+                         {isSubmittingAgreement ? <Loader2 className="animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
+                        درخواست توافق
+                    </Button>
+                     <Button 
                         onClick={() => handleProtectedAction(() => router.push(`/chat/${provider.phone}`))}
                         className="w-full"
+                        variant="secondary"
                     >
                         <MessageSquare className="w-4 h-4 ml-2" />
                         ارسال پیام
@@ -292,7 +335,7 @@ export default function ProviderProfilePage() {
                     <Button 
                         onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}
                         className="w-full" 
-                        variant="secondary"
+                        variant="outline"
                     >
                         <Phone className="w-4 h-4 ml-2" />
                         تماس
