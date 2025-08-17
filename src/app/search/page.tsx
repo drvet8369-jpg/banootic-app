@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getProviders } from '@/lib/data';
+import { getProviders, getAgreements, calculateProviderScore } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -13,28 +13,37 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This function now correctly re-fetches and filters data whenever the query changes.
   const performSearch = useCallback(() => {
     setIsLoading(true);
-    // Always get the latest providers from localStorage at the moment of searching.
     const allProviders = getProviders();
+    const allAgreements = getAgreements();
+
+    const getScore = (provider: Provider) => {
+        const confirmedCount = allAgreements.filter(a => a.providerPhone === provider.phone && a.status === 'confirmed').length;
+        return calculateProviderScore(provider, confirmedCount);
+    };
+
+    let results: Provider[];
+
     if (!query) {
-      setSearchResults([]);
-      setIsLoading(false);
-      return;
+      // If query is empty, show all providers sorted by ladder score
+      results = [...allProviders].sort((a, b) => getScore(b) - getScore(a));
+    } else {
+      // If there is a query, filter and then sort the results by ladder score
+      const lowercasedQuery = query.toLowerCase();
+      results = allProviders
+        .filter(provider => 
+          provider.name.toLowerCase().includes(lowercasedQuery) ||
+          provider.service.toLowerCase().includes(lowercasedQuery) ||
+          (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+        )
+        .sort((a,b) => getScore(b) - getScore(a));
     }
-    const lowercasedQuery = query.toLowerCase();
-    const results = allProviders.filter(provider => 
-      provider.name.toLowerCase().includes(lowercasedQuery) ||
-      provider.service.toLowerCase().includes(lowercasedQuery) ||
-      provider.bio.toLowerCase().includes(lowercasedQuery)
-    );
+
     setSearchResults(results);
     setIsLoading(false);
   }, [query]);
 
-  // useEffect now correctly depends on performSearch.
-  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
 
@@ -48,14 +57,16 @@ export default function SearchPage() {
   return (
     <div className="py-12 md:py-20">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold">
+            {query ? 'نتایج جستجو' : 'برترین هنرمندان'}
+        </h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            لطفا عبارتی را برای جستجو وارد کنید.
+            لیست هنرمندان بر اساس امتیاز و فعالیت در پلتفرم مرتب شده است.
           </p>
         )}
       </div>
