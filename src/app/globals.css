@@ -20,9 +20,6 @@
     --accent-foreground: 353 30% 18%; /* Made darker */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --success: 140 50% 95%; /* Light green background */
-    --success-foreground: 145 55% 25%; /* Darker green text */
-    --success-active: 140 60% 45%; /* Bright green for dot */
     --border: 140 25% 75%; /* Made darker and less saturated */
     --input: 140 25% 75%; /* Made darker and less saturated */
     --ring: 140 44% 55%; /* Made darker */

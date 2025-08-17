@@ -1,4 +1,3 @@
-
 'use client';
 
 import { getAllProviders } from '@/lib/api';
@@ -280,13 +279,7 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <div className="flex items-center gap-2 text-sm text-success-foreground">
-                <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success-active"></span>
-                </span>
-                <span>آنلاین</span>
-            </div>
+            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
