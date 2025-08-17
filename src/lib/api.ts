@@ -581,8 +581,8 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                     id: chatId,
                     otherMemberId: otherMemberId,
                     otherMemberName: otherMemberName,
-                    lastMessage: lastMessageData?.text || 'هنوز پیامی ارسال نشده',
-                    updatedAt: lastMessageData?.created_at || new Date().toISOString(),
+                    lastMessage: lastMessageData ? lastMessageData.text : 'هنوز پیامی ارسال نشده',
+                    updatedAt: lastMessageData ? lastMessageData.created_at : new Date().toISOString(),
                     unreadCount: unreadCount || 0,
                 };
             })
@@ -590,8 +590,8 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
         
         // Filter out any nulls and sort by the most recent message
         return chatList
-            .filter(chat => chat !== null)
-            .sort((a, b) => new Date(b!.updatedAt).getTime() - new Date(a!.updatedAt).getTime()) as any[];
+            .filter((chat): chat is object => chat !== null)
+            .sort((a, b) => new Date((b as any).updatedAt).getTime() - new Date((a as any).updatedAt).getTime()) as any[];
 
     } catch (error) {
         console.error("Error fetching inbox list:", error);
