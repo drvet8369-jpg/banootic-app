@@ -1,4 +1,3 @@
-
 'use client';
 // This file will be our Data Access Layer.
 // All functions that interact with Supabase will live here.
@@ -489,87 +488,42 @@ export async function sendMessage(message: NewMessagePayload) {
 }
 
 /**
- * Gets the total number of unread messages for a user.
- * This is a reliable client-side implementation that queries the table directly.
+ * Gets the total number of unread messages for a user by calling a Supabase RPC function.
  * @param {string} userPhone The phone number of the user.
  * @returns {Promise<number>} The total count of unread messages.
  */
 export async function getUnreadCount(userPhone: string): Promise<number> {
-    const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_read', false)
-        .neq('sender_id', userPhone) 
-        .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`); 
+    const { data, error } = await supabase.rpc('get_unread_message_counts', {
+        user_phone_param: userPhone
+    });
 
     if (error) {
         console.error('Error getting unread count:', error);
-        return 0;
+        return 0; // Return 0 on error
     }
     
-    return count || 0;
+    // The RPC function is expected to return a single record with a 'count' field.
+    return data && data.length > 0 ? data[0].unread_count : 0;
 }
 
 
 /**
- * Fetches the inbox list for a user.
- * This is a client-side implementation that avoids RPC calls.
+ * Fetches the inbox list for a user by calling a Supabase RPC function.
+ * This is a more efficient approach than doing complex client-side logic.
  * @param {string} userPhone The phone number of the user.
  * @returns {Promise<any[]>} A list of chat summaries for the inbox.
  */
 export async function getInboxList(userPhone: string): Promise<any[]> {
     try {
-        // 1. Get all distinct chat_ids the user is part of.
-        const { data: messages, error: messagesError } = await supabase
-            .from('messages')
-            .select('chat_id, created_at, text')
-            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`)
-            .order('created_at', { ascending: false });
+        const { data, error } = await supabase.rpc('get_inbox_for_user', {
+            user_phone_param: userPhone
+        });
 
-        if (messagesError) throw messagesError;
-        if (!messages || messages.length === 0) return [];
-        
-        // 2. Process messages to get the last message for each chat
-        const chats: { [key: string]: any } = {};
-        for (const msg of messages) {
-            if (!chats[msg.chat_id]) {
-                const members = msg.chat_id.split('__');
-                const otherMemberId = members.find((id: string) => id !== userPhone);
-                if (!otherMemberId) continue;
-                
-                let otherMemberName = `کاربر ${otherMemberId.slice(-4)}`;
-                const provider = await getProviderByPhone(otherMemberId);
-                if (provider) {
-                    otherMemberName = provider.name;
-                } else {
-                    const customers = await getCustomers();
-                    const customer = customers.find(c => c.phone === otherMemberId);
-                    if (customer) {
-                        otherMemberName = customer.name;
-                    }
-                }
-                
-                const { count: unreadCount } = await supabase
-                    .from('messages')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('chat_id', msg.chat_id)
-                    .eq('is_read', false)
-                    .neq('sender_id', userPhone);
-
-                chats[msg.chat_id] = {
-                    id: msg.chat_id,
-                    otherMemberId: otherMemberId,
-                    otherMemberName: otherMemberName,
-                    lastMessage: msg.text,
-                    updatedAt: msg.created_at,
-                    unreadCount: unreadCount || 0,
-                };
-            }
+        if (error) {
+            console.error("Error fetching inbox:", error);
+            throw new Error("Could not fetch inbox list.");
         }
-        
-        return Object.values(chats)
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
+        return data || [];
     } catch (error) {
         console.error("Error fetching inbox list:", error);
         throw new Error("Could not fetch inbox list.");
@@ -638,4 +592,3 @@ export async function subscribeToMessages(chatId: string, currentUserPhone: stri
 
   return { initialMessages, channel };
 }
-

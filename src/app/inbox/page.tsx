@@ -15,7 +15,7 @@ import { useCrossTabEventListener } from '@/lib/events';
 
 
 interface Chat {
-  id: string;
+  id: string; // This is the chat_id
   otherMemberName: string;
   otherMemberId: string;
   lastMessage: string;
@@ -54,8 +54,17 @@ export default function InboxPage() {
     setError(null);
     
     try {
-      const inboxChats = await getInboxList(user.phone);
-      setChats(inboxChats);
+      // The RPC function returns a slightly different shape
+      const inboxData = await getInboxList(user.phone);
+      const mappedChats = inboxData.map(item => ({
+        id: item.chat_id,
+        otherMemberId: item.other_member_id,
+        otherMemberName: item.other_member_name || `کاربر ${item.other_member_id.slice(-4)}`,
+        lastMessage: item.last_message_text,
+        updatedAt: item.last_message_at,
+        unreadCount: item.unread_count
+      }));
+      setChats(mappedChats);
     } catch (e) {
       console.error("Failed to load inbox from API", e);
       setError('خطا در بارگذاری صندوق ورودی.');
@@ -161,9 +170,11 @@ export default function InboxPage() {
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
-                                <p className="text-xs text-muted-foreground flex-shrink-0">
-                                  {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
-                                </p>
+                                {chat.updatedAt && (
+                                  <p className="text-xs text-muted-foreground flex-shrink-0">
+                                    {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
+                                  </p>
+                                )}
                             </div>
                             <div className="flex justify-between items-center mt-1">
                                 <p className="text-sm text-muted-foreground truncate font-semibold">{chat.lastMessage}</p>
