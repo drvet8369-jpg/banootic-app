@@ -247,7 +247,11 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
 export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
     const { data, error } = await supabase
         .from('customers')
-        .insert([userData])
+        .insert([{
+            name: userData.name,
+            phone: userData.phone,
+            account_type: 'customer'
+        }])
         .select('name, phone, account_type')
         .single();
 

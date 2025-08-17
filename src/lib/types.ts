@@ -46,6 +46,6 @@ export interface Agreement {
   customerPhone: string;
   customerName: string;
   status: 'pending' | 'confirmed' | 'rejected';
-  requested_at: string; // ISO String, matches DB column name
-  confirmedAt?: string | null; // ISO String
+  requested_at: string; // Supabase returns snake_case
+  confirmedAt?: string | null; // camelCase for JS/TS
 }
