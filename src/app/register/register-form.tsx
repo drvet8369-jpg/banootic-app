@@ -27,7 +27,6 @@ import { categories, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
 import { getProviderByPhone, createProvider, getCustomers, saveCustomers } from '@/lib/api';
 
 
@@ -46,7 +45,7 @@ const formSchema = z.object({
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.location;
+        return !!data.location && data.location.trim().length > 0;
     }
     return true;
 }, {
@@ -242,7 +241,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="...09" {...field} disabled={isLoading} className="text-left dir-ltr placeholder:text-muted-foreground" />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

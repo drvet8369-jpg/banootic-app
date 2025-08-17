@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
+import { getProviderByPhone, getCustomers } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 
 
@@ -36,17 +36,6 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
-
-// Helper to get stored customers, returns an empty array if none exist.
-const getCustomers = (): User[] => {
-    if (typeof window === 'undefined') return [];
-    try {
-        const stored = localStorage.getItem('banotic-customers');
-        return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        return [];
-    }
-}
 
 
 export default function LoginPage() {
@@ -65,12 +54,10 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        // First, check if the phone number belongs to a registered provider in Supabase
+        const existingProvider = await getProviderByPhone(values.phone);
 
-        let userToLogin: User;
+        let userToLogin: User | null = null;
 
         if (existingProvider) {
           // User is a known provider
@@ -80,8 +67,8 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          // Check if the user is a known customer
-          const allCustomers = getCustomers();
+          // If not a provider, check if the user is a known customer in localStorage
+          const allCustomers = await getCustomers();
           const existingCustomer = allCustomers.find(c => c.phone === values.phone);
           
           if (existingCustomer) {
@@ -89,7 +76,7 @@ export default function LoginPage() {
           } else {
              // User is a completely new customer
             userToLogin = {
-                name: `کاربر ${values.phone.slice(-4)}`,
+                name: `مشتری ${values.phone.slice(-4)}`,
                 phone: values.phone,
                 accountType: 'customer',
             };
@@ -136,7 +123,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="...09" {...field} disabled={isLoading} className="text-left dir-ltr placeholder:text-muted-foreground" />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

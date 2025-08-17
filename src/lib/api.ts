@@ -11,16 +11,14 @@ import { defaultProviders } from './data'; // We need this for seeding
 import type { User } from '@/context/AuthContext';
 
 
-// These values are loaded from the .env file.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// More robust check for environment variables to prevent runtime errors.
 if (!supabaseUrl || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE') || !supabaseUrl.startsWith('http')) {
   throw new Error("Supabase URL is not configured correctly. Please make sure NEXT_PUBLIC_SUPABASE_URL in your .env file is a valid URL from your Supabase project settings.");
 }
 if (!supabaseAnonKey || supabaseAnonKey.includes('YOUR_SUPABASE_ANON_KEY_HERE')) {
-    throw new Error("Supabase Anon Key is not configured correctly. Please check NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env file. It should be the 'anon' public key from your Supabase project settings.");
+    throw new Error("Supabase Anon Key is not configured correctly. Please check NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env file. It should be the 'anon' public key from your Supabase project's API settings.");
 }
 
 
