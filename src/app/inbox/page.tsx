@@ -23,7 +23,10 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
+  if (names.length > 1 && names[1] && !isNaN(parseInt(names[1]))) {
+    return `${names[0][0]}${names[1][0]}`;
+  }
+   if (names.length > 1 && names[1]) {
     return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
@@ -130,8 +133,13 @@ export default function InboxPage() {
                     <p className="text-muted-foreground mt-2">
                         {user.accountType === 'provider'
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
-                            : 'وقتی به یک هنرمند پیام دهید، گفتگوی شما اینجا نمایش داده می‌شود.'}
+                            : 'برای شروع، به پروفایل یک هنرمند بروید و به او پیام دهید.'}
                     </p>
+                    {user.accountType === 'customer' && (
+                        <Button asChild className="mt-6">
+                            <Link href="/">یافتن هنرمندان</Link>
+                        </Button>
+                    )}
                 </div>
             </CardContent>
         </Card>

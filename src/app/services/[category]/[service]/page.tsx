@@ -1,6 +1,8 @@
 'use client';
 
-import { services, categories, getProviders, getAgreements, calculateProviderScore } from '@/lib/data';
+import { services, categories } from '@/lib/constants';
+import { getAgreements, calculateProviderScore } from '@/lib/data';
+import { getAllProviders } from '@/lib/api';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -18,9 +20,7 @@ export default function ServiceProvidersPage() {
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This logic is now wrapped in a useCallback to ensure it's stable
-  // and correctly re-fetches data whenever the URL slugs change.
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
 
     const foundCategory = categories.find((c) => c.slug === categorySlug);
@@ -30,8 +30,7 @@ export default function ServiceProvidersPage() {
     setService(foundService || null);
       
     if (foundCategory && foundService) {
-      // Always get the latest providers and agreements from localStorage
-      const allProviders = getProviders();
+      const allProviders = await getAllProviders();
       const allAgreements = getAgreements();
       
       const getScore = (provider: Provider) => {
@@ -39,9 +38,7 @@ export default function ServiceProvidersPage() {
           return calculateProviderScore(provider, confirmedCount);
       }
 
-      // Correctly filter providers based on the serviceSlug from the URL.
       const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-      // Sort the found providers by the new ladder score
       const sortedProviders = foundProviders.sort((a,b) => getScore(b) - getScore(a));
       setServiceProviders(sortedProviders);
     } else {
@@ -51,15 +48,8 @@ export default function ServiceProvidersPage() {
     setIsLoading(false);
   }, [categorySlug, serviceSlug]);
 
-  // useEffect now has a stable dependency and will re-run correctly
-  // every time the user navigates to a new service page or revisits the tab.
   useEffect(() => {
     loadData();
-
-    window.addEventListener('focus', loadData);
-    return () => {
-      window.removeEventListener('focus', loadData);
-    };
   }, [loadData]);
 
   if (isLoading) {

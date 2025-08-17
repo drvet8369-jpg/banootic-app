@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { categories } from '@/lib/data';
+import { categories } from '@/lib/constants';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';

@@ -9,7 +9,8 @@ import { Loader2, User, FileText, CheckCircle, Hourglass, Eye } from 'lucide-rea
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
-import { getAgreements, getProviders } from '@/lib/data';
+import { getAgreements } from '@/lib/data';
+import { getAllProviders } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerRequestsPage() {
@@ -25,18 +26,18 @@ export default function CustomerRequestsPage() {
     setIsClient(true);
   }, []);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     if (!user) return;
     setIsLoading(true);
     try {
         const allAgreements = getAgreements();
         const userAgreements = allAgreements.filter(a => a.customerPhone === user.phone);
-        const allProviders = getProviders();
+        const allProviders = await getAllProviders();
         
         setAgreements(userAgreements.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
         setProviders(allProviders);
     } catch(e){
-        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها از حافظه محلی.', variant: 'destructive'})
+        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها.', variant: 'destructive'})
     } finally {
         setIsLoading(false);
     }
