@@ -1,6 +1,7 @@
+
 'use client';
 
-import { getProviders } from '@/lib/data';
+import { getAllProviders } from '@/lib/api';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,56 +68,67 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoggedIn || !user) {
-        setIsLoading(false);
-        return;
-    }
+    const setupChat = async () => {
+        if (!isLoggedIn || !user) {
+            setIsLoading(false);
+            return;
+        }
 
-    let details: OtherPersonDetails | null = null;
-    const allProviders = getProviders();
-    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
-    
-    if (provider) {
-      details = provider;
-    } else {
-      const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
-    }
-    
-    if (!details) {
-        toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-    }
-    setOtherPersonDetails(details);
-    
-    const chatId = getChatId(user.phone, details.phone);
-    if (chatId) {
-      try {
-          const storedMessages = localStorage.getItem(`chat_${chatId}`);
-          if (storedMessages) {
-              setMessages(JSON.parse(storedMessages));
-          }
+        let details: OtherPersonDetails | null = null;
+        try {
+            const allProviders = await getAllProviders();
+            const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+            
+            if (provider) {
+              details = provider;
+            } else {
+              const customerPhone = otherPersonIdOrProviderId;
+              // This is a fallback for when the other person is a customer.
+              // We'll try to find them in the chat history later if needed.
+              details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
+            }
+        } catch (error) {
+            toast({ title: "خطا", description: "امکان بارگذاری اطلاعات هنرمند وجود ندارد.", variant: "destructive"});
+            setIsLoading(false);
+            return;
+        }
+        
+        if (!details) {
+            toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
+        setOtherPersonDetails(details);
+        
+        const chatId = getChatId(user.phone, details.phone);
+        if (chatId) {
+          try {
+              const storedMessages = localStorage.getItem(`chat_${chatId}`);
+              if (storedMessages) {
+                  setMessages(JSON.parse(storedMessages));
+              }
 
-          // Mark messages as read when chat is opened
-          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-              allChats[chatId].participants[user.phone].unreadCount = 0;
-              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+              const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+              if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+                  allChats[chatId].participants[user.phone].unreadCount = 0;
+                  localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+              }
+          } catch(e) {
+              console.error("Failed to load/update chat from localStorage", e);
           }
-      } catch(e) {
-          console.error("Failed to load/update chat from localStorage", e);
-      }
+        }
+        
+        setIsLoading(false);
     }
     
-    setIsLoading(false);
+    setupChat();
 
   }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
 
 
   if (!isLoggedIn || !user) {
     return (
-        <div className="flex flex-col items-center justify-center text-center py-20">
+        <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
             <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
             <p className="text-muted-foreground mt-2">برای ارسال پیام باید وارد حساب کاربری خود شوید.</p>
@@ -129,7 +141,7 @@ export default function ChatPage() {
   
   if (isLoading) {
      return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
         </div>
@@ -162,7 +174,6 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
 
-    // Also update the last message in the inbox if this was the last message
     const lastMessage = updatedMessages[updatedMessages.length - 1];
     if (lastMessage.id === editingMessageId) {
         const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
@@ -208,11 +219,9 @@ export default function ChatPage() {
                 }
             };
             
-            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
-            // Increment unread count for the receiver
             const receiverPhone = otherPersonDetails.phone;
             if (currentChat.participants[receiverPhone]) {
                 currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
@@ -220,7 +229,6 @@ export default function ChatPage() {
                  currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
 
-            // Ensure sender's participant data exists
             if (!currentChat.participants[user.phone]) {
                 currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
             }
@@ -242,7 +250,6 @@ export default function ChatPage() {
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    // For customers, check if they have any chats, if so link to inbox, otherwise home.
     try {
       const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
       const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
@@ -253,7 +260,7 @@ export default function ChatPage() {
 
 
   return (
-    <div className="flex flex-col h-full py-4">
+    <div className="flex flex-col h-full py-4 flex-grow">
       <Card className="flex-1 flex flex-col w-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
@@ -269,7 +276,7 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم (موقتی)'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
