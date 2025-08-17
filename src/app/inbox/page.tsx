@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,12 +10,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { getInboxList } from '@/lib/api';
-import { useCrossTabEventListener } from '@/lib/events';
-
 
 interface Chat {
-  id: string; // This is the chat_id
+  id: string;
   otherMemberName: string;
   otherMemberId: string;
   lastMessage: string;
@@ -26,10 +23,7 @@ interface Chat {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  if (names.length > 1 && names[1] && !isNaN(parseInt(names[1]))) {
-    return `${names[0][0]}${names[1][0]}`;
-  }
-   if (names.length > 1 && names[1]) {
+  if (names.length > 1 && names[1] && isNaN(parseInt(names[1]))) {
     return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
@@ -43,7 +37,12 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
-  const fetchInbox = useCallback(async () => {
+  useEffect(() => {
+    // This effect runs only on the client, preventing hydration mismatch for date formatting.
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -54,42 +53,41 @@ export default function InboxPage() {
     setError(null);
     
     try {
-      // The RPC function returns a slightly different shape
-      const inboxData = await getInboxList(user.phone);
-      const mappedChats = inboxData.map(item => ({
-        id: item.chat_id,
-        otherMemberId: item.other_member_id,
-        otherMemberName: item.other_member_name || `کاربر ${item.other_member_id.slice(-4)}`,
-        lastMessage: item.last_message_text,
-        updatedAt: item.last_message_at,
-        unreadCount: item.unread_count
-      }));
-      setChats(mappedChats);
+      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      
+      const userChats = Object.values(allChatsData)
+        .filter((chat: any) => chat.members?.includes(user.phone))
+        .map((chat: any): Chat | null => {
+            if (!chat.participants || !chat.members) return null;
+
+            const otherMemberId = chat.members.find((id: string) => id !== user.phone);
+            if (!otherMemberId) return null;
+            
+            const otherMemberInfo = chat.participants[otherMemberId];
+            const selfInfo = chat.participants[user.phone];
+
+            const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
+
+            return {
+                id: chat.id,
+                otherMemberId: otherMemberId,
+                otherMemberName: otherMemberName,
+                lastMessage: chat.lastMessage || '',
+                updatedAt: chat.updatedAt,
+                unreadCount: selfInfo?.unreadCount || 0,
+            };
+        })
+        .filter((chat): chat is Chat => chat !== null)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        
+      setChats(userChats);
     } catch (e) {
-      console.error("Failed to load inbox from API", e);
-      setError('خطا در بارگذاری صندوق ورودی.');
+      console.error("Failed to load chats from localStorage", e);
+      setError('خطا در بارگذاری گفتگوهای موقت.');
     } finally {
       setIsLoading(false);
     }
   }, [user?.phone]);
-
-  useEffect(() => {
-    setIsClient(true);
-    fetchInbox();
-  }, [fetchInbox]);
-
-  // Listen for updates from other tabs
-  useEffect(() => {
-    const cleanup = useCrossTabEventListener('messages-update', fetchInbox);
-    return cleanup;
-  }, [fetchInbox]);
-
-  // Also refetch on window focus
-  useEffect(() => {
-    const handleFocus = () => fetchInbox();
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchInbox]);
 
 
   if (isLoading) {
@@ -132,11 +130,11 @@ export default function InboxPage() {
                     <p className="text-muted-foreground mt-2">
                         {user.accountType === 'provider'
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
-                            : 'برای شروع، به پروفایل یک هنرمند بروید و به او پیام دهید.'}
+                            : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
                     {user.accountType === 'customer' && (
                         <Button asChild className="mt-6">
-                            <Link href="/">یافتن هنرمندان</Link>
+                            <Link href="/">مشاهده هنرمندان</Link>
                         </Button>
                     )}
                 </div>
@@ -151,7 +149,7 @@ export default function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها موقتا در مرورگر شما ذخیره می‌شوند.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -170,11 +168,9 @@ export default function InboxPage() {
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <h4 className="font-bold">{chat.otherMemberName}</h4>
-                                {chat.updatedAt && (
-                                  <p className="text-xs text-muted-foreground flex-shrink-0">
-                                    {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
-                                  </p>
-                                )}
+                                <p className="text-xs text-muted-foreground flex-shrink-0">
+                                  {isClient ? formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true, locale: faIR }) : '...'}
+                                </p>
                             </div>
                             <div className="flex justify-between items-center mt-1">
                                 <p className="text-sm text-muted-foreground truncate font-semibold">{chat.lastMessage}</p>
