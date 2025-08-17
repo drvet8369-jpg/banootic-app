@@ -37,8 +37,8 @@ const mapToProvider = (p: any): Provider => ({
     serviceSlug: p.service_slug,
     rating: p.rating,
     reviewsCount: p.reviews_count,
-    profileImage: p.profile_image,
-    portfolio: p.portfolio,
+    profileImage: p.profile_image || { src: '', aiHint: 'woman portrait' },
+    portfolio: p.portfolio || [],
 });
 
 
@@ -113,7 +113,7 @@ export async function getAllProviders(): Promise<Provider[]> {
  * @param {Omit<Provider, 'id'>} providerData The data for the new provider.
  * @returns {Promise<Provider>} The newly created provider.
  */
-export async function createProvider(providerData: Omit<Provider, 'id'>): Promise<Provider> {
+export async function createProvider(providerData: Omit<Provider, 'id'|'rating'|'reviewsCount'>): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
         .insert({
@@ -124,8 +124,8 @@ export async function createProvider(providerData: Omit<Provider, 'id'>): Promis
             bio: providerData.bio,
             category_slug: providerData.categorySlug,
             service_slug: providerData.serviceSlug,
-            rating: providerData.rating,
-            reviews_count: providerData.reviewsCount,
+            rating: 0,
+            reviews_count: 0,
             profile_image: providerData.profileImage,
             portfolio: providerData.portfolio,
         })
@@ -162,6 +162,73 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     
     return mapToProvider(data);
 }
+
+/**
+ * Updates a provider's main details.
+ * @param {string} phone The provider's phone number to identify them.
+ * @param {object} detailsToUpdate An object with the fields to update.
+ * @returns {Promise<Provider>} The updated provider object.
+ */
+export async function updateProviderDetails(phone: string, detailsToUpdate: { name: string; service: string; bio: string; }): Promise<Provider> {
+    const { data, error } = await supabase
+        .from('providers')
+        .update(detailsToUpdate)
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating provider details:", error);
+        throw new Error("Could not update provider's details.");
+    }
+    
+    return mapToProvider(data);
+}
+
+/**
+ * Updates a provider's portfolio items.
+ * @param {string} phone The provider's phone number to identify them.
+ * @param {PortfolioItem[]} portfolio The new array of portfolio items.
+ * @returns {Promise<Provider>} The updated provider object.
+ */
+export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ portfolio: portfolio })
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating portfolio:", error);
+        throw new Error("Could not update provider's portfolio.");
+    }
+    
+    return mapToProvider(data);
+}
+
+/**
+ * Updates a provider's profile image.
+ * @param {string} phone The provider's phone number to identify them.
+ * @param {PortfolioItem} profileImage The new profile image object.
+ * @returns {Promise<Provider>} The updated provider object.
+ */
+export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ profile_image: profileImage })
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating profile image:", error);
+        throw new Error("Could not update provider's profile image.");
+    }
+    
+    return mapToProvider(data);
+}
+
 
 /**
  * Fetches all reviews for a specific provider ID.
@@ -251,27 +318,7 @@ export async function addReview(review: NewReview): Promise<Review> {
     };
 }
 
-/**
- * Updates a provider's portfolio.
- * @param {string} phone The provider's phone number to identify them.
- * @param {PortfolioItem[]} portfolio The new array of portfolio items.
- * @returns {Promise<Provider>} The updated provider object.
- */
-export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio: portfolio })
-        .eq('phone', phone)
-        .select()
-        .single();
 
-    if (error) {
-        console.error("Error updating portfolio:", error);
-        throw new Error("Could not update provider's portfolio.");
-    }
-    
-    return mapToProvider(data);
-}
 
 /**
  * Creates a new agreement request.
