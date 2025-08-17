@@ -11,21 +11,23 @@ export default function SearchBar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    if (searchTerm.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   return (
-    <div className="bg-muted border-b w-full sticky top-16 z-40">
+    <div className="bg-muted border-b w-full">
       <div className="container p-2">
         <form onSubmit={handleSearch} className="relative">
           <Input
             type="search"
             placeholder="جستجو در میان هنرمندان و خدمات..."
-            className="w-full pr-10 bg-background placeholder:font-semibold text-foreground placeholder:text-foreground/80"
+            className="w-full pr-10 bg-background placeholder:font-semibold text-foreground placeholder:text-foreground/60 border-2 border-primary/40 focus-visible:ring-primary/80 focus-visible:ring-offset-2"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="جستجو">
+          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             <Search className="h-5 w-5" />
           </button>
         </form>
