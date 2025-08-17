@@ -499,7 +499,7 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
         .neq('sender_id', userPhone)
-        .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`);
+        .or(`chat_id.like.%${userPhone}%,chat_id.like.%_${userPhone}`);
 
     if (error) {
         console.error('Error getting unread count:', error);
@@ -522,7 +522,7 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
         const { data: messagesData, error: messagesError } = await supabase
             .from('messages')
             .select('chat_id, sender_id, text, created_at, is_read')
-            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`)
+            .or(`chat_id.like.%${userPhone}%,chat_id.like.%_${userPhone}`)
             .order('created_at', { ascending: false });
 
         if (messagesError) {
@@ -550,12 +550,16 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
                     other_member_name: `کاربر ${otherMemberId.slice(-4)}` // Default name
                 });
             }
-            const chat = chatsMap.get(message.chat_id);
-            if (message.sender_id !== userPhone && !message.is_read) {
+        }
+        
+        // Count unread messages after grouping
+        for (const message of messagesData) {
+             const chat = chatsMap.get(message.chat_id);
+             if (chat && message.sender_id !== userPhone && !message.is_read) {
                 chat.unread_count += 1;
             }
         }
-        
+
         const otherMemberIds = Array.from(chatsMap.values()).map(c => c.other_member_id);
 
         // Step 2: Fetch names for all other members in one go
@@ -585,7 +589,9 @@ export async function getInboxList(userPhone: string): Promise<any[]> {
             }
         });
         
-        return Array.from(chatsMap.values());
+        const sortedChats = Array.from(chatsMap.values()).sort((a,b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+
+        return sortedChats;
 
     } catch (error) {
         console.error("Error fetching inbox list:", error);
@@ -656,5 +662,7 @@ export async function subscribeToMessages(chatId: string, currentUserPhone: stri
   return { initialMessages, channel };
 }
 
+
+    
 
     
