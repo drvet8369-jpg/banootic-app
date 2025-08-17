@@ -499,7 +499,7 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
         .neq('sender_id', userPhone)
-        .like('chat_id', `%${userPhone}%`);
+        .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`);
 
     if (error) {
         console.error('Error getting unread count:', error);
@@ -509,22 +509,88 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
     return count || 0;
 }
 
+
 /**
- * Fetches the inbox list for a user by querying the messages table directly.
- * This is more robust than relying on an RPC that might not exist.
+ * Fetches the inbox list for a user.
+ * This implementation avoids RPC calls and builds the list using standard queries.
  * @param {string} userPhone The phone number of the user.
  * @returns {Promise<any[]>} A list of chat summaries for the inbox.
  */
 export async function getInboxList(userPhone: string): Promise<any[]> {
-  const { data, error } = await supabase.rpc('get_inbox_for_user', {
-    user_phone_param: userPhone,
-  });
+    try {
+        // Step 1: Fetch all messages involving the user to identify unique chats
+        const { data: messagesData, error: messagesError } = await supabase
+            .from('messages')
+            .select('chat_id, sender_id, text, created_at, is_read')
+            .or(`chat_id.like.%${userPhone}%,chat_id.like.%${userPhone}_%`)
+            .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching inbox:', error);
-    throw new Error('Could not fetch inbox list.');
-  }
-  return data || [];
+        if (messagesError) {
+            console.error("Error fetching messages for inbox:", messagesError);
+            throw messagesError;
+        }
+
+        if (!messagesData || messagesData.length === 0) {
+            return [];
+        }
+
+        // Group messages by chat_id
+        const chatsMap = new Map<string, any>();
+        for (const message of messagesData) {
+            if (!chatsMap.has(message.chat_id)) {
+                const members = message.chat_id.split('__');
+                const otherMemberId = members.find(id => id !== userPhone) || '';
+                
+                chatsMap.set(message.chat_id, {
+                    chat_id: message.chat_id,
+                    other_member_id: otherMemberId,
+                    last_message_text: message.text,
+                    last_message_at: message.created_at,
+                    unread_count: 0,
+                    other_member_name: `کاربر ${otherMemberId.slice(-4)}` // Default name
+                });
+            }
+            const chat = chatsMap.get(message.chat_id);
+            if (message.sender_id !== userPhone && !message.is_read) {
+                chat.unread_count += 1;
+            }
+        }
+        
+        const otherMemberIds = Array.from(chatsMap.values()).map(c => c.other_member_id);
+
+        // Step 2: Fetch names for all other members in one go
+        const { data: providersData, error: providersError } = await supabase
+            .from('providers')
+            .select('phone, name')
+            .in('phone', otherMemberIds);
+        
+        if (providersError) {
+             console.error("Error fetching provider names for inbox:", providersError);
+             // Continue without provider names if this fails
+        } else if (providersData) {
+             providersData.forEach(p => {
+                const chat = Array.from(chatsMap.values()).find(c => c.other_member_id === p.phone);
+                if (chat) {
+                    chat.other_member_name = p.name;
+                }
+            });
+        }
+        
+        // Also check customers from localStorage
+        const customers = await getCustomers();
+        customers.forEach(c => {
+            const chat = Array.from(chatsMap.values()).find(item => item.other_member_id === c.phone);
+             if (chat && chat.other_member_name.startsWith('کاربر')) { // Only update if it's still the default
+                chat.other_member_name = c.name;
+            }
+        });
+        
+        return Array.from(chatsMap.values());
+
+    } catch (error) {
+        console.error("Error fetching inbox list:", error);
+        throw new Error("Could not fetch inbox list.");
+    }
 }
 
 
@@ -590,3 +656,5 @@ export async function subscribeToMessages(chatId: string, currentUserPhone: stri
   return { initialMessages, channel };
 }
 
+
+    
