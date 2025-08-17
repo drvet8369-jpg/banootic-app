@@ -8,13 +8,16 @@ import { createClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement } from './types';
 import { defaultProviders } from './data'; // We need this for seeding
 
-// IMPORTANT: These values should be loaded from environment variables
-// We'll add them to .env.local later. For now, they are placeholders.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// These values are loaded from the .env file.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Check if the environment variables are set
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Supabase URL and Anon Key must be provided in the .env file.");
+}
 
 // Initialize the Supabase client
-// We are asserting non-null here because we will ensure these are set in the environment.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 
