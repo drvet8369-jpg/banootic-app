@@ -9,8 +9,7 @@ import { Loader2, User, FileText, CheckCircle, Hourglass, Eye } from 'lucide-rea
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
-import { getAgreements } from '@/lib/data';
-import { getAllProviders } from '@/lib/api';
+import { getAgreementsByCustomer, getAllProviders } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerRequestsPage() {
@@ -30,11 +29,10 @@ export default function CustomerRequestsPage() {
     if (!user) return;
     setIsLoading(true);
     try {
-        const allAgreements = getAgreements();
-        const userAgreements = allAgreements.filter(a => a.customerPhone === user.phone);
+        const userAgreements = await getAgreementsByCustomer(user.phone);
         const allProviders = await getAllProviders();
         
-        setAgreements(userAgreements.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
+        setAgreements(userAgreements);
         setProviders(allProviders);
     } catch(e){
         toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها.', variant: 'destructive'})
@@ -90,8 +88,6 @@ export default function CustomerRequestsPage() {
     );
   }
 
-  const myRequests = agreements.filter(a => a.customerPhone === user.phone);
-
   return (
     <div className="max-w-4xl mx-auto py-12">
       <Card>
@@ -102,7 +98,7 @@ export default function CustomerRequestsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {myRequests.length === 0 ? (
+          {agreements.length === 0 ? (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
                 <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-bold text-xl">شما هنوز درخواستی ثبت نکرده‌اید</h3>
@@ -112,13 +108,13 @@ export default function CustomerRequestsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {myRequests.map(request => (
+              {agreements.map(request => (
                 <div key={request.id} className="flex flex-col sm:flex-row items-center justify-between p-4 border rounded-lg">
                   <div className="flex-grow">
                     <p>هنرمند: <span className="font-bold">{getProviderName(request.providerPhone)}</span></p>
                     {isClient && (
                       <p className="text-xs text-muted-foreground mt-1">
-                          درخواست شده در: {formatDistanceToNow(new Date(request.requestedAt), { addSuffix: true, locale: faIR })}
+                          درخواست شده: {formatDistanceToNow(new Date(request.requestedAt), { addSuffix: true, locale: faIR })}
                       </p>
                     )}
                   </div>

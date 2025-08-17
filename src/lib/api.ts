@@ -352,43 +352,105 @@ export async function addReview(review: NewReview): Promise<Review> {
 }
 
 
+// ----- Agreements -----
+
+const mapToAgreement = (a: any): Agreement => ({
+  id: a.id,
+  providerPhone: a.provider_phone,
+  customerPhone: a.customer_phone,
+  customerName: a.customer_name,
+  status: a.status,
+  requestedAt: a.requested_at,
+  confirmedAt: a.confirmed_at,
+});
+
 
 /**
- * Creates a new agreement request.
- * For now, this interacts with localStorage.
+ * Creates a new agreement request in the database.
  * @param {Provider} provider The provider the request is for.
  * @param {User} customer The customer making the request.
  * @returns {Promise<Agreement>} The newly created agreement.
  */
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
-  const AGREEMENTS_STORAGE_KEY = 'banotic-agreements';
-  
-  return new Promise((resolve, reject) => {
-    try {
-      const allAgreements = JSON.parse(localStorage.getItem(AGREEMENTS_STORAGE_KEY) || '[]');
-      
-      const newAgreement: Agreement = {
-        id: `agr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        providerPhone: provider.phone,
-        customerPhone: customer.phone,
-        customerName: customer.name,
-        status: 'pending',
-        requestedAt: new Date().toISOString(),
-      };
-      
-      const updatedAgreements = [...allAgreements, newAgreement];
-      localStorage.setItem(AGREEMENTS_STORAGE_KEY, JSON.stringify(updatedAgreements));
-      
-      resolve(newAgreement);
+  const { data, error } = await supabase
+    .from('agreements')
+    .insert({
+      provider_phone: provider.phone,
+      customer_phone: customer.phone,
+      customer_name: customer.name,
+    })
+    .select()
+    .single();
 
-    } catch (error) {
-      console.error("Error creating agreement in localStorage:", error);
-      reject(new Error("Could not create agreement."));
-    }
-  });
+  if (error) {
+    console.error("Error creating agreement:", error);
+    throw new Error("Could not create agreement.");
+  }
+  return mapToAgreement(data);
 }
 
-// ----- Customer Data -----
+/**
+ * Fetches all agreements for a specific provider.
+ * @param {string} phone The provider's phone number.
+ * @returns {Promise<Agreement[]>} A list of agreements.
+ */
+export async function getAgreementsByProvider(phone: string): Promise<Agreement[]> {
+  const { data, error } = await supabase
+    .from('agreements')
+    .select('*')
+    .eq('provider_phone', phone)
+    .order('requested_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching agreements for provider:', error);
+    throw new Error('Could not fetch agreements.');
+  }
+
+  return data.map(mapToAgreement);
+}
+
+/**
+ * Fetches all agreements for a specific customer.
+ * @param {string} phone The customer's phone number.
+ * @returns {Promise<Agreement[]>} A list of agreements.
+ */
+export async function getAgreementsByCustomer(phone: string): Promise<Agreement[]> {
+  const { data, error } = await supabase
+    .from('agreements')
+    .select('*')
+    .eq('customer_phone', phone)
+    .order('requested_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching agreements for customer:', error);
+    throw new Error('Could not fetch agreements.');
+  }
+
+  return data.map(mapToAgreement);
+}
+
+/**
+ * Updates an agreement's status to 'confirmed'.
+ * @param {number} agreementId The ID of the agreement to update.
+ * @returns {Promise<Agreement>} The updated agreement object.
+ */
+export async function confirmAgreement(agreementId: number): Promise<Agreement> {
+  const { data, error } = await supabase
+    .from('agreements')
+    .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
+    .eq('id', agreementId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error confirming agreement:', error);
+    throw new Error('Could not confirm agreement.');
+  }
+  return mapToAgreement(data);
+}
+
+
+// ----- Customer Data (localStorage) -----
 const CUSTOMERS_STORAGE_KEY = 'banotic-customers';
 export const getCustomers = async (): Promise<User[]> => {
     if (typeof window === 'undefined') return [];

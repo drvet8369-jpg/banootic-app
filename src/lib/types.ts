@@ -50,11 +50,11 @@ export interface Message {
 }
 
 export interface Agreement {
-  id: string;
+  id: number; // Supabase ID
   providerPhone: string;
   customerPhone: string;
   customerName: string;
   status: 'pending' | 'confirmed' | 'rejected';
   requestedAt: string; // ISO String
-  confirmedAt?: string; // ISO String
+  confirmedAt?: string | null; // ISO String
 }

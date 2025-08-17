@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
@@ -11,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,8 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
+import { X } from 'lucide-react';
+
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -316,7 +317,7 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    <Button 
+                     <Button 
                         onClick={() => handleProtectedAction(() => window.location.href = `tel:${provider.phone}`)}
                         className="w-full" 
                     >

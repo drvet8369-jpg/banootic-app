@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { getAgreements, saveAgreements } from '@/lib/data';
+import { getAgreementsByProvider, confirmAgreement } from '@/lib/api';
 
 export default function AgreementsPage() {
   const { user, isLoggedIn } = useAuth();
@@ -23,12 +23,11 @@ export default function AgreementsPage() {
     setIsClient(true);
   }, []);
 
-  const fetchAgreements = () => {
+  const fetchAgreements = async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-        const allAgreements = getAgreements();
-        const userAgreements = allAgreements.filter(a => a.providerPhone === user.phone);
+        const userAgreements = await getAgreementsByProvider(user.phone);
         setAgreements(userAgreements);
     } catch(e){
         toast({ title: 'خطا', description: 'خطا در بارگذاری توافق‌ها.', variant: 'destructive'})
@@ -45,20 +44,11 @@ export default function AgreementsPage() {
     }
   }, [user]);
 
-  const handleConfirmAgreement = (agreementId: string) => {
+  const handleConfirmAgreement = async (agreementId: number) => {
     try {
-        const allAgreements = getAgreements();
-        const agreementIndex = allAgreements.findIndex(a => a.id === agreementId);
-
-        if (agreementIndex > -1) {
-            allAgreements[agreementIndex].status = 'confirmed';
-            allAgreements[agreementIndex].confirmedAt = new Date().toISOString();
-            saveAgreements(allAgreements);
-            toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
-            fetchAgreements(); // Re-fetch to update the list
-        } else {
-            throw new Error("Agreement not found");
-        }
+        await confirmAgreement(agreementId);
+        toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
+        fetchAgreements(); // Re-fetch to update the list
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
     }
@@ -98,9 +88,8 @@ export default function AgreementsPage() {
     );
   }
 
-  const providerAgreements = agreements.filter(a => a.providerPhone === user.phone);
-  const pendingAgreements = providerAgreements.filter(a => a.status === 'pending');
-  const confirmedAgreements = providerAgreements.filter(a => a.status === 'confirmed');
+  const pendingAgreements = agreements.filter(a => a.status === 'pending');
+  const confirmedAgreements = agreements.filter(a => a.status === 'confirmed');
 
   return (
     <div className="max-w-4xl mx-auto py-12">
@@ -112,7 +101,7 @@ export default function AgreementsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {providerAgreements.length === 0 ? (
+          {agreements.length === 0 ? (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
                 <Handshake className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-bold text-xl">هیچ درخواست توافقی وجود ندارد</h3>
