@@ -11,9 +11,11 @@ export default function SearchBar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
+    const query = searchTerm.trim();
+    // Always navigate to the search page. 
+    // If the query is empty, it will show all providers.
+    // If there is a query, it will filter based on it.
+    router.push(`/search?q=${encodeURIComponent(query)}`);
   };
 
   return (
