@@ -1,3 +1,4 @@
+
 'use client';
 // This file will be our Data Access Layer.
 // All functions that interact with Supabase will live here.
@@ -488,8 +489,8 @@ export async function sendMessage(message: NewMessagePayload) {
 }
 
 /**
- * Gets the total number of unread messages for a user.
- * This is a robust, client-side implementation that does not rely on RPC.
+ * Gets the total number of unread messages for a user using a direct query.
+ * This is more robust than relying on an RPC that might not exist.
  * @param {string} userPhone The phone number of the user.
  * @returns {Promise<number>} The total count of unread messages.
  */
@@ -497,9 +498,9 @@ export async function getUnreadCount(userPhone: string): Promise<number> {
     const { count, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
-        .like('chat_id', `%${userPhone}%`) // Find all chats the user is part of
         .eq('is_read', false)
-        .neq('sender_id', userPhone); // Count messages not sent by the user
+        .neq('sender_id', userPhone)
+        .like('chat_id', `%${userPhone}%`); // Ensure we only count chats the user is in
 
     if (error) {
         console.error('Error getting unread count:', error);
