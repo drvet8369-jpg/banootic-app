@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview } from '@/lib/api';
+import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,19 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { dispatchCrossTabEvent } from '@/lib/events';
+
 
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)} {...props} />
@@ -138,23 +151,31 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
+  const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRequestingAgreement, setIsRequestingAgreement] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
         const foundProvider = await getProviderByPhone(providerPhone);
+        setProvider(foundProvider); // Set provider first
+
         if (foundProvider) {
-          setProvider(foundProvider);
-          const providerReviews = await getReviewsByProviderId(foundProvider.id);
-          setReviews(providerReviews);
-        } else {
-          setProvider(null);
+          try {
+            const providerReviews = await getReviewsByProviderId(foundProvider.id);
+            setReviews(providerReviews);
+          } catch (reviewError) {
+             console.error("Could not fetch reviews, but showing profile anyway.", reviewError);
+             setReviews([]); // Show profile without reviews
+          }
         }
     } catch(error) {
+        console.error("Failed to fetch provider, showing 404.", error);
         setProvider(null);
     } finally {
         setIsLoading(false);
@@ -162,11 +183,30 @@ export default function ProviderProfilePage() {
   }, [providerPhone]);
 
   useEffect(() => {
-    setIsLoading(true);
     loadData();
   }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
+
+  const handleRequestAgreement = async () => {
+    if (!provider || !user) return;
+    setIsRequestingAgreement(true);
+    try {
+      await createAgreement(provider, user);
+      toast({
+        title: 'موفق',
+        description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد. می‌توانید وضعیت آن را در صفحه "درخواست‌های من" پیگیری کنید.',
+      });
+      dispatchCrossTabEvent('agreements-update');
+    } catch (error) {
+      const errorMessage = error instanceof Error && error.message.includes('23505') 
+          ? 'شما قبلاً یک درخواست برای این هنرمند ثبت کرده‌اید.'
+          : 'خطا در ارسال درخواست توافق.';
+      toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsRequestingAgreement(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -208,7 +248,7 @@ export default function ProviderProfilePage() {
                 </div>
 
                 <CardContent className="p-6 flex-grow flex flex-col">
-                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
+                    <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center whitespace-pre-wrap">{provider.bio}</p>
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
                     {provider.portfolio && provider.portfolio.length > 0 ? (
@@ -227,17 +267,6 @@ export default function ProviderProfilePage() {
                                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                                                 data-ai-hint={item.aiHint}
                                             />
-                                            {isOwnerViewing && (
-                                            <Button
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                onClick={(e) => { e.stopPropagation(); /* Deletion moved to profile page */ }}
-                                                aria-label={`حذف نمونه کار ${index + 1}`}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                            )}
                                         </div>
                                     </DialogTrigger>
                                 ))}
@@ -273,7 +302,7 @@ export default function ProviderProfilePage() {
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
-                        <Link href={`/chat/${provider.phone}`}>
+                        <Link href={isLoggedIn ? `/chat/${provider.phone}` : '/login'}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
@@ -284,6 +313,30 @@ export default function ProviderProfilePage() {
                             تماس
                         </a>
                     </Button>
+                    {isLoggedIn && user?.accountType === 'customer' && (
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <Button className="w-full bg-accent hover:bg-accent/90">
+                                {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
+                                درخواست توافق
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>تایید درخواست توافق؟</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                با این کار، شما یک درخواست رسمی برای این هنرمند ثبت می‌کنید که نشان‌دهنده شروع همکاری شماست. این به بهبود رتبه هنرمند در پلتفرم کمک می‌کند. آیا ادامه می‌دهید؟
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>انصراف</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleRequestAgreement} disabled={isRequestingAgreement}>
+                                {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : "بله، درخواست را ارسال کن"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                    )}
                 </CardFooter>
                 )}
 
