@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { Agreement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { getAgreementsByProvider, confirmAgreement } from '@/lib/api';
-import { dispatchCrossTabEvent } from '@/lib/events';
+import { dispatchCrossTabEvent, useCrossTabEventListener } from '@/lib/events';
 
 
 export default function AgreementsPage() {
@@ -25,7 +25,7 @@ export default function AgreementsPage() {
     setIsClient(true);
   }, []);
 
-  const fetchAgreements = async () => {
+  const fetchAgreements = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
@@ -36,7 +36,7 @@ export default function AgreementsPage() {
     } finally {
         setIsLoading(false);
     }
-  }
+  }, [user, toast]);
 
   useEffect(() => {
     if (user && user.accountType === 'provider') {
@@ -44,14 +44,17 @@ export default function AgreementsPage() {
     } else {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, fetchAgreements]);
+
+  // Listen for cross-tab updates to re-fetch data
+  useCrossTabEventListener('agreements-update', fetchAgreements);
 
   const handleConfirmAgreement = async (agreementId: number) => {
     try {
         await confirmAgreement(agreementId);
         toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
         dispatchCrossTabEvent('agreements-update'); // Notify other tabs
-        fetchAgreements(); // Re-fetch to update the list
+        fetchAgreements(); // Re-fetch to update the list in the current tab
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
     }
@@ -104,7 +107,7 @@ export default function AgreementsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {agreements.length === 0 ? (
+          {agreements.length === 0 && !isLoading ? (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
                 <Handshake className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-bold text-xl">هیچ درخواست توافقی وجود ندارد</h3>
@@ -122,7 +125,7 @@ export default function AgreementsPage() {
                                 <div key={agreement.id} className="flex flex-col sm:flex-row items-center justify-between p-4 border rounded-lg bg-muted/50">
                                     <div>
                                         <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
-                                        <p className="text-sm text-muted-foreground">شماره تماس: {agreement.customerPhone}</p>
+                                        <p className="text-sm text-muted-foreground">شماره تماس: {agreement.customer_phone}</p>
                                         {isClient && (
                                             <p className="text-xs text-muted-foreground mt-1">
                                                 {formatDistanceToNow(new Date(agreement.requested_at), { addSuffix: true, locale: faIR })}
@@ -135,7 +138,7 @@ export default function AgreementsPage() {
                                         تایید
                                       </Button>
                                       <Button asChild variant="outline">
-                                        <Link href={`/chat/${agreement.customerPhone}`}>ارسال پیام</Link>
+                                        <Link href={`/chat/${agreement.customer_phone}`}>ارسال پیام</Link>
                                       </Button>
                                     </div>
                                 </div>
@@ -152,9 +155,9 @@ export default function AgreementsPage() {
                                 <div key={agreement.id} className="flex items-center justify-between p-4 border rounded-lg opacity-70">
                                     <div>
                                         <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
-                                        {isClient && agreement.confirmedAt && (
+                                        {isClient && agreement.confirmed_at && (
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                تایید شده در: {new Date(agreement.confirmedAt).toLocaleDateString('fa-IR')}
+                                                تایید شده در: {new Date(agreement.confirmed_at).toLocaleDateString('fa-IR')}
                                             </p>
                                         )}
                                     </div>
