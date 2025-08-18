@@ -29,8 +29,6 @@ export async function getAllProviders(): Promise<Provider[]> {
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const { data, error } = await supabase.from('providers').select('*').eq('phone', phone).single();
     
-    // 'PGRST116' is the error code for "No rows found". This is an expected case, not an error.
-    // For any other error, we should log it and re-throw.
     if (error && error.code !== 'PGRST116') {
         console.error("Error fetching provider by phone:", error);
         throw new Error('Could not fetch provider data.');
@@ -231,7 +229,7 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const { data, error } = await supabase
         .from('customers')
-        .select('name, phone, account_type')
+        .select('name, phone, accountType:account_type')
         .eq('phone', phone)
         .single();
     
@@ -240,13 +238,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         throw new Error('Could not fetch customer data.');
     }
     
-    if (!data) return null;
-
-    return {
-        name: data.name,
-        phone: data.phone,
-        accountType: data.account_type as 'customer',
-    };
+    return data || null;
 }
 
 export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
@@ -257,16 +249,13 @@ export async function createCustomer(userData: { name: string, phone: string }):
             phone: userData.phone,
             account_type: 'customer'
         }])
-        .select('name, phone, account_type')
+        .select('name, phone, accountType:account_type')
         .single();
 
     if (error) {
         console.error('Error creating customer:', error);
         throw new Error('Could not create customer.');
     }
-    return {
-      name: data.name,
-      phone: data.phone,
-      accountType: data.account_type as 'customer',
-    };
+    
+    return data as User;
 }
