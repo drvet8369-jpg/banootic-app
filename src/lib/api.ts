@@ -186,7 +186,7 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 
     if (error) {
         console.error("Error fetching reviews:", error.message);
-        throw new Error("Could not fetch reviews.");
+        return [];
     }
     return data || [];
 }
@@ -280,7 +280,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
     
     if (error) {
         console.error("Error fetching provider agreements:", error.message);
-        throw new Error("Could not fetch agreements.");
+        return [];
     }
     return data || [];
 }
