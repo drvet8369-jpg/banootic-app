@@ -1,0 +1,4 @@
+-- This migration file is intentionally left empty to remove the previously seeded customer.
+-- The file is kept to maintain the migration history but will perform no action.
+-- This ensures that the "Mozhgan Joodaki" user is no longer pre-loaded,
+-- allowing for a clean registration and login testing flow.
