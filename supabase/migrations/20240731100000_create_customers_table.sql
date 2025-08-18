@@ -1,31 +1,24 @@
 
 -- Create the customers table
-CREATE TABLE IF NOT EXISTS public.customers (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name text NOT NULL,
-    phone text NOT NULL UNIQUE,
-    account_type text NOT NULL DEFAULT 'customer'::text,
-    created_at timestamp with time zone NOT NULL DEFAULT now()
+CREATE TABLE customers (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE,
+    account_type TEXT NOT NULL DEFAULT 'customer',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Add comments to the table and columns for clarity
-COMMENT ON TABLE public.customers IS 'Stores customer user data.';
-COMMENT ON COLUMN public.customers.name IS 'Full name of the customer.';
-COMMENT ON COLUMN public.customers.phone IS 'Unique phone number for the customer, used for login.';
-COMMENT ON COLUMN public.customers.account_type IS 'The type of user account, always ''customer''.';
+-- Enable Row Level Security
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
-
--- Enable Row Level Security (RLS) for the customers table
-ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
-
--- Create a policy that allows anyone to create a new customer (for registration)
+-- Create policy to allow anyone to create a new customer (for registration)
 CREATE POLICY "Allow public inserts for customers"
-ON public.customers
+ON customers
 FOR INSERT
 WITH CHECK (true);
 
--- Create a policy that allows anyone to read customer data (for login checks)
+-- Create policy to allow anyone to read customer data (for login and profile fetching)
 CREATE POLICY "Enable read access for all users"
-ON public.customers
+ON customers
 FOR SELECT
 USING (true);
