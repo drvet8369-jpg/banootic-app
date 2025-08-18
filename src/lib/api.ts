@@ -226,8 +226,8 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const { data, error } = await supabase
-        .from('customer')
-        .select('name, phone, account_type')
+        .from('customers')
+        .select('name, phone, accountType')
         .eq('phone', phone)
         .single();
     
@@ -241,19 +241,19 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
     return {
         name: data.name,
         phone: data.phone,
-        accountType: data.account_type as 'customer' | 'provider',
+        accountType: data.accountType as 'customer' | 'provider',
     };
 }
 
 export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
     const { data, error } = await supabase
-        .from('customer')
+        .from('customers')
         .insert([{
             name: userData.name,
             phone: userData.phone,
-            account_type: 'customer'
+            accountType: 'customer'
         }])
-        .select('name, phone, account_type')
+        .select('name, phone, accountType')
         .single();
 
     if (error) {
@@ -263,6 +263,6 @@ export async function createCustomer(userData: { name: string, phone: string }):
     return {
       name: data.name,
       phone: data.phone,
-      accountType: data.account_type as 'customer' | 'provider',
+      accountType: data.accountType as 'customer' | 'provider',
     };
 }
