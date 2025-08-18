@@ -1,3 +1,4 @@
+
 export interface Category {
   id: number;
   name: string;
@@ -47,5 +48,5 @@ export interface Agreement {
   customerName: string;
   status: 'pending' | 'confirmed' | 'rejected';
   requested_at: string; // Supabase returns snake_case
-  confirmedAt?: string | null; // camelCase for JS/TS
+  confirmed_at?: string | null; // Supabase returns snake_case
 }
