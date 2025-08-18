@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement } from '@/lib/api';
+import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement, getAgreementsByProvider } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, ThumbsUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -155,6 +155,7 @@ export default function ProviderProfilePage() {
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [confirmedAgreementsCount, setConfirmedAgreementsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequestingAgreement, setIsRequestingAgreement] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -163,19 +164,18 @@ export default function ProviderProfilePage() {
     setIsLoading(true);
     try {
         const foundProvider = await getProviderByPhone(providerPhone);
-        setProvider(foundProvider); // Set provider first
+        setProvider(foundProvider);
 
         if (foundProvider) {
-          try {
-            const providerReviews = await getReviewsByProviderId(foundProvider.id);
-            setReviews(providerReviews);
-          } catch (reviewError) {
-             console.error("Could not fetch reviews, but showing profile anyway.", reviewError);
-             setReviews([]); // Show profile without reviews
-          }
+          const [providerReviews, providerAgreements] = await Promise.all([
+             getReviewsByProviderId(foundProvider.id),
+             getAgreementsByProvider(foundProvider.phone)
+          ]);
+          setReviews(providerReviews);
+          setConfirmedAgreementsCount(providerAgreements.filter(a => a.status === 'confirmed').length);
         }
     } catch(error) {
-        console.error("Failed to fetch provider, showing 404.", error);
+        console.error("Failed to fetch provider data:", error);
         setProvider(null);
     } finally {
         setIsLoading(false);
@@ -242,8 +242,12 @@ export default function ProviderProfilePage() {
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
-                    <div className="mt-2">
+                    <div className="mt-4 flex flex-col sm:flex-row items-center gap-x-6 gap-y-2">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                        <div className="flex items-center gap-2 text-muted-foreground font-semibold">
+                            <ThumbsUp className="w-5 h-5 text-green-500" />
+                            <span>{confirmedAgreementsCount} توافق موفق</span>
+                        </div>
                     </div>
                 </div>
 
