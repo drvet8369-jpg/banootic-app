@@ -247,7 +247,7 @@ async function updateProviderRating(providerId: number) {
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
     const agreementData = {
         providerPhone: provider.phone,
-        customerPhone: customer.phone,
+        customer_phone: customer.phone,
         customerName: customer.name,
         status: 'pending' as const,
     };
@@ -283,14 +283,17 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
 }
 
 /**
- * Fetches all agreements initiated by a specific customer using a secure RPC function.
+ * Fetches all agreements initiated by a specific customer.
  */
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
     const { data, error } = await supabase
-        .rpc('get_customer_agreements', { p_customer_phone: customerPhone });
+        .from('agreements')
+        .select('*')
+        .eq('customer_phone', customerPhone)   // 👈 اینجا اصلاح شد
+        .order('requested_at', { ascending: false });
 
     if (error) {
-        console.error("Error fetching customer agreements via RPC:", error.message);
+        console.error("Error fetching customer agreements:", error.message);
         throw new Error("Could not fetch agreements.");
     }
     return data || [];
