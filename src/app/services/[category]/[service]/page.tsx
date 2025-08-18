@@ -28,8 +28,9 @@ export default function ServiceProvidersPage() {
     setCategory(foundCategory || null);
     setService(foundService || null);
       
-    if (foundCategory && foundService) {
+    if (foundService) { // Check only for foundService
       const allProviders = await getAllProviders();
+      // Correctly filter providers based on just the serviceSlug from the URL.
       const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
       setServiceProviders(foundProviders);
     } else {
@@ -45,7 +46,7 @@ export default function ServiceProvidersPage() {
 
   if (isLoading) {
     return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
         </div>
@@ -57,7 +58,7 @@ export default function ServiceProvidersPage() {
   }
 
   return (
-    <div className="py-12 md:py-20">
+    <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">

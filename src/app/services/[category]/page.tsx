@@ -1,19 +1,61 @@
 'use client';
 
 import { categories, services } from '@/lib/constants';
-import type { Category, Service } from '@/lib/types';
+import type { Category, Provider } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ChevronLeft, Loader2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useEffect, useState, useCallback } from 'react';
+import { getAllProviders } from '@/lib/api';
+import SearchResultCard from '@/components/search-result-card';
+
 
 export default function CategoryPage() {
   const params = useParams<{ category: string }>();
-  const categorySlug = params.category;
+  const categorySlug = params.category as Category['slug'];
 
-  const category = categories.find((c) => c.slug === categorySlug);
-  const categoryServices = services.filter((s) => s.categorySlug === categorySlug);
+  const [category, setCategory] = useState<Category | null>(null);
+  const [categoryProviders, setCategoryProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    const foundCategory = categories.find((c) => c.slug === categorySlug);
+    setCategory(foundCategory || null);
+
+    if (foundCategory) {
+      // Get the list of all service slugs that belong to this category
+      const serviceSlugsInCategory = services
+        .filter(s => s.categorySlug === foundCategory.slug)
+        .map(s => s.slug);
+      
+      const allProviders = await getAllProviders();
+      // Filter providers whose serviceSlug is in the list for this category
+      const providersInCategory = allProviders.filter(p => 
+        serviceSlugsInCategory.includes(p.serviceSlug)
+      );
+      setCategoryProviders(providersInCategory);
+    } else {
+      setCategoryProviders([]);
+    }
+    setIsLoading(false);
+  }, [categorySlug]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+
+  if (isLoading) {
+     return (
+        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
+        </div>
+    );
+  }
 
   if (!category) {
     notFound();
@@ -26,22 +68,15 @@ export default function CategoryPage() {
         <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">{category.description}</p>
       </div>
 
-      {categoryServices.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categoryServices.map((service) => (
-            <Link href={`/services/${category.slug}/${service.slug}`} key={service.slug}>
-              <Card className="h-full hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="font-headline text-xl">{service.name}</CardTitle>
-                  <ChevronLeft className="w-6 h-6 text-muted-foreground" />
-                </CardHeader>
-              </Card>
-            </Link>
+      {categoryProviders.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {categoryProviders.map((provider) => (
+            <SearchResultCard key={provider.id} provider={provider} />
           ))}
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">هنوز هیچ خدماتی در این دسته‌بندی ثبت نشده است.</p>
+          <p className="text-muted-foreground">هنوز هیچ هنرمندی در این دسته‌بندی ثبت‌نام نکرده است.</p>
            <Button asChild variant="link" className="mt-2">
             <Link href="/register">اولین نفر باشید!</Link>
           </Button>
