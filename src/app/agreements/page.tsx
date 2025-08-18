@@ -43,9 +43,14 @@ export default function AgreementsPage() {
   }, [user]);
 
   useEffect(() => {
-    // Simplified effect. It just runs when fetchAgreements changes (which only happens when user changes)
-    fetchAgreements();
-  }, [fetchAgreements]);
+    // This effect ensures fetchAgreements is called only when the user is fully loaded and is a provider.
+    if (isLoggedIn && user?.accountType === 'provider') {
+      fetchAgreements();
+    } else {
+      // If the user is not a provider or not logged in, stop the loading indicator.
+      setIsLoading(false);
+    }
+  }, [isLoggedIn, user, fetchAgreements]);
 
   // Listen for cross-tab updates to re-fetch data
   useCrossTabEventListener('agreements-update', fetchAgreements);
@@ -55,13 +60,13 @@ export default function AgreementsPage() {
         await confirmAgreement(agreementId);
         toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
         dispatchCrossTabEvent('agreements-update'); // Notify other tabs
-        fetchAgreements(); // Re-fetch to update the list in the current tab
+        await fetchAgreements(); // Re-fetch to update the list in the current tab
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
     }
   };
   
-  if (isLoading && agreements.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

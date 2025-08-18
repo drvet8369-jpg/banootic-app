@@ -48,8 +48,12 @@ export default function CustomerRequestsPage() {
   }, [user, toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (isLoggedIn && user?.accountType === 'customer') {
+      fetchData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isLoggedIn, user, fetchData]);
   
   const getProviderName = (phone: string) => {
       const provider = providers.find(p => p.phone === phone);
