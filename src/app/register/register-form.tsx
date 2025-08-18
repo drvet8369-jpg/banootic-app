@@ -129,9 +129,10 @@ export default function RegisterForm() {
             accountType: 'provider'
         };
       } else {
+        // Only pass name and phone for customer creation
         const createdCustomer = await createCustomer({ 
             name: values.name, 
-            phone: values.phone, 
+            phone: values.phone,
         });
         userToLogin = createdCustomer;
       }
@@ -152,6 +153,8 @@ export default function RegisterForm() {
          if (error instanceof Error) {
             if(error.message.includes('duplicate key value violates unique constraint "providers_name_key"')) {
                 errorMessage = 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.';
+            } else {
+                errorMessage = error.message; // Show the actual error message from api.ts
             }
          }
          toast({
