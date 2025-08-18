@@ -26,7 +26,11 @@ export default function AgreementsPage() {
   }, []);
 
   const fetchAgreements = useCallback(async () => {
-    if (!user) return;
+    // This is the corrected, more robust check.
+    if (!user || user.accountType !== 'provider') {
+        setIsLoading(false);
+        return;
+    };
     setIsLoading(true);
     try {
         const userAgreements = await getAgreementsByProvider(user.phone);
@@ -36,15 +40,12 @@ export default function AgreementsPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   useEffect(() => {
-    if (user && user.accountType === 'provider') {
-      fetchAgreements();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user, fetchAgreements]);
+    // Simplified effect. It just runs when fetchAgreements changes (which only happens when user changes)
+    fetchAgreements();
+  }, [fetchAgreements]);
 
   // Listen for cross-tab updates to re-fetch data
   useCrossTabEventListener('agreements-update', fetchAgreements);
@@ -60,7 +61,7 @@ export default function AgreementsPage() {
     }
   };
   
-  if (isLoading) {
+  if (isLoading && agreements.length === 0) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
