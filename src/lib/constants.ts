@@ -30,19 +30,23 @@ export const categories: Category[] = [
 ];
 
 export const services: Service[] = [
+  // Beauty
   { name: 'خدمات ناخن', slug: 'manicure-pedicure', categorySlug: 'beauty' },
   { name: 'خدمات مو', slug: 'haircut-coloring', categorySlug: 'beauty' },
   { name: 'پاکسازی پوست', slug: 'facial-treatment', categorySlug: 'beauty' },
   { name: 'آرایش صورت', slug: 'makeup', categorySlug: 'beauty' },
   { name: 'اپیلاسیون', slug: 'waxing', categorySlug: 'beauty' },
+  // Cooking
   { name: 'غذای سنتی', slug: 'traditional-food', categorySlug: 'cooking' },
   { name: 'کیک و شیرینی', slug: 'cakes-sweets', categorySlug: 'cooking' },
   { name: 'غذای گیاهی', slug: 'vegetarian-vegan', categorySlug: 'cooking' },
   { name: 'فینگرفود', slug: 'finger-food', categorySlug: 'cooking' },
   { name: 'نان خانگی', slug: 'homemade-bread', categorySlug: 'cooking' },
+  // Tailoring
   { name: 'دوخت سفارشی لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
   { name: 'مزون، لباس عروس و مجلسی', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
   { name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
+  // Handicrafts
   { name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
   { name: 'سفال تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
   { name: 'بافتنی‌ها', slug: 'termeh-kilim', categorySlug: 'handicrafts' },
