@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
@@ -284,21 +283,19 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
 }
 
 /**
- * Fetches all agreements initiated by a specific customer.
+ * Fetches all agreements initiated by a specific customer using a secure RPC function.
  */
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
     const { data, error } = await supabase
-        .from('agreements')
-        .select('*')
-        .eq('customerPhone', customerPhone)
-        .order('requested_at', { ascending: false });
+        .rpc('get_customer_agreements', { p_customer_phone: customerPhone });
 
     if (error) {
-        console.error("Error fetching customer agreements:", error.message);
+        console.error("Error fetching customer agreements via RPC:", error.message);
         throw new Error("Could not fetch agreements.");
     }
     return data || [];
 }
+
 
 /**
  * Confirms an agreement, updating its status and timestamp.
@@ -306,7 +303,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
     const { data, error } = await supabase
         .from('agreements')
-        .update({ status: 'confirmed', confirmedAt: new Date().toISOString() })
+        .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
         .eq('id', agreementId)
         .select()
         .single();
