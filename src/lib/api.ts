@@ -140,8 +140,8 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         console.error("Error fetching customer by phone:", error);
         return null;
     }
-
-    return data || null;
+    
+    return data;
 }
 
 
@@ -161,7 +161,10 @@ export async function createCustomer(userData: { name: string, phone: string }):
 
     if (error) {
         console.error('Error creating customer:', error.message);
-        throw error;
+        if (error.code === '23505') { // Unique constraint violation
+             throw new Error('This phone number is already registered.');
+        }
+        throw new Error('Could not create customer account.');
     }
     
     return data as User;
