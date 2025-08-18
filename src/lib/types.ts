@@ -43,10 +43,12 @@ export interface Review {
 
 export interface Agreement {
   id: number; // Supabase ID
-  providerPhone: string;
-  customerPhone: string;
-  customerName: string;
+  provider_phone: string;
+  customer_phone: string;
+  customer_name: string;
   status: 'pending' | 'confirmed' | 'rejected';
   requested_at: string; // Supabase returns snake_case
   confirmed_at?: string | null; // Supabase returns snake_case
 }
+
+    

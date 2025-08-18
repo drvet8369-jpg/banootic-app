@@ -117,7 +117,7 @@ export default function CustomerRequestsPage() {
               {agreements.map(request => (
                 <div key={request.id} className="flex flex-col sm:flex-row items-center justify-between p-4 border rounded-lg">
                   <div className="flex-grow">
-                    <p>هنرمند: <span className="font-bold">{getProviderName(request.providerPhone)}</span></p>
+                    <p>هنرمند: <span className="font-bold">{getProviderName(request.provider_phone)}</span></p>
                     {isClient && (
                       <p className="text-xs text-muted-foreground mt-1">
                           درخواست شده: {formatDistanceToNow(new Date(request.requested_at), { addSuffix: true, locale: faIR })}
@@ -137,7 +137,7 @@ export default function CustomerRequestsPage() {
                        </div>
                     )}
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/provider/${request.providerPhone}`}>
+                      <Link href={`/provider/${request.provider_phone}`}>
                          <Eye className="w-4 h-4 ml-2" />
                          مشاهده پروفایل
                       </Link>
@@ -152,3 +152,5 @@ export default function CustomerRequestsPage() {
     </div>
   );
 }
+
+    

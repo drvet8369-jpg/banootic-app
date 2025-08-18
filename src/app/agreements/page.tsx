@@ -26,7 +26,6 @@ export default function AgreementsPage() {
   }, []);
 
   const fetchAgreements = useCallback(async () => {
-    // This is the corrected, more robust check.
     if (!user || user.accountType !== 'provider') {
         setIsLoading(false);
         return;
@@ -40,27 +39,24 @@ export default function AgreementsPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
-    // This effect ensures fetchAgreements is called only when the user is fully loaded and is a provider.
     if (isLoggedIn && user?.accountType === 'provider') {
       fetchAgreements();
     } else {
-      // If the user is not a provider or not logged in, stop the loading indicator.
       setIsLoading(false);
     }
   }, [isLoggedIn, user, fetchAgreements]);
 
-  // Listen for cross-tab updates to re-fetch data
   useCrossTabEventListener('agreements-update', fetchAgreements);
 
   const handleConfirmAgreement = async (agreementId: number) => {
     try {
         await confirmAgreement(agreementId);
         toast({ title: 'موفق', description: 'توافق با موفقیت تایید شد.' });
-        dispatchCrossTabEvent('agreements-update'); // Notify other tabs
-        await fetchAgreements(); // Re-fetch to update the list in the current tab
+        dispatchCrossTabEvent('agreements-update'); 
+        await fetchAgreements();
     } catch (e) {
         toast({ title: 'خطا', description: 'خطا در تایید توافق.', variant: 'destructive'})
     }
@@ -130,7 +126,7 @@ export default function AgreementsPage() {
                             {pendingAgreements.map(agreement => (
                                 <div key={agreement.id} className="flex flex-col sm:flex-row items-center justify-between p-4 border rounded-lg bg-muted/50">
                                     <div>
-                                        <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
+                                        <p>مشتری: <span className="font-bold">{agreement.customer_name}</span></p>
                                         <p className="text-sm text-muted-foreground">شماره تماس: {agreement.customer_phone}</p>
                                         {isClient && (
                                             <p className="text-xs text-muted-foreground mt-1">
@@ -160,7 +156,7 @@ export default function AgreementsPage() {
                             {confirmedAgreements.map(agreement => (
                                 <div key={agreement.id} className="flex items-center justify-between p-4 border rounded-lg opacity-70">
                                     <div>
-                                        <p>مشتری: <span className="font-bold">{agreement.customerName}</span></p>
+                                        <p>مشتری: <span className="font-bold">{agreement.customer_name}</span></p>
                                         {isClient && agreement.confirmed_at && (
                                             <p className="text-xs text-muted-foreground mt-1">
                                                 تایید شده در: {new Date(agreement.confirmed_at).toLocaleDateString('fa-IR')}
@@ -181,3 +177,5 @@ export default function AgreementsPage() {
     </div>
   );
 }
+
+    

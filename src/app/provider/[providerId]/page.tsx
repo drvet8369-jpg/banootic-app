@@ -88,6 +88,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     setIsSubmitting(true);
     
     try {
+        if (!user) throw new Error("User not found");
         await addReview({
             providerId,
             authorName: user.name,
@@ -392,3 +393,5 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
+
+    

@@ -41,7 +41,8 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
   location: z.string().optional(),
-  serviceType: z.string().optional(),
+  categorySlug: z.string().optional(),
+  serviceSlug: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
@@ -53,12 +54,20 @@ const formSchema = z.object({
     path: ['location'],
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.serviceType;
+        return !!data.categorySlug;
     }
     return true;
 }, {
-    message: 'لطفاً نوع خدمات را انتخاب کنید.',
-    path: ['serviceType'],
+    message: 'لطفاً دسته‌بندی خدمات را انتخاب کنید.',
+    path: ['categorySlug'],
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.serviceSlug;
+    }
+    return true;
+}, {
+    message: 'لطفاً نوع خدمات دقیق را انتخاب کنید.',
+    path: ['serviceSlug'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
@@ -89,11 +98,12 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
+  const selectedCategorySlug = form.watch('categorySlug');
+  const availableServices = services.filter(s => s.categorySlug === selectedCategorySlug);
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      // First, check if the phone number already exists in either table.
       const existingProvider = await getProviderByPhone(values.phone);
       const existingCustomer = await getCustomerByPhone(values.phone);
 
@@ -105,17 +115,17 @@ export default function RegisterForm() {
       
       let userToLogin: User;
 
-      if (values.accountType === 'provider') {
-        const selectedCategory = categories.find(c => c.slug === values.serviceType);
+      if (values.accountType === 'provider' && values.serviceSlug && values.categorySlug) {
+        const selectedService = services.find(s => s.slug === values.serviceSlug);
         
         const newProviderData = {
           name: values.name,
           phone: values.phone,
-          service: selectedCategory?.name || 'خدمت جدید',
+          service: selectedService?.name || 'خدمت جدید',
           location: values.location || 'ارومیه',
           bio: values.bio || '',
-          categorySlug: selectedCategory?.slug || 'beauty',
-          serviceSlug: services.find(s => s.categorySlug === selectedCategory?.slug)?.slug || 'manicure-pedicure',
+          categorySlug: values.categorySlug as any,
+          serviceSlug: values.serviceSlug,
           profileImage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
@@ -126,7 +136,6 @@ export default function RegisterForm() {
             accountType: 'provider'
         };
       } else {
-        // Only pass name and phone for customer creation
         const createdCustomer = await createCustomer({ 
             name: values.name, 
             phone: values.phone,
@@ -148,7 +157,7 @@ export default function RegisterForm() {
          console.error("Registration failed:", error);
          let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
          if (error instanceof Error) {
-            errorMessage = error.message; // Show the actual error message from api.ts
+            errorMessage = error.message;
          }
          toast({
             title: 'خطا در ثبت‌نام',
@@ -175,9 +184,14 @@ export default function RegisterForm() {
                     <RadioGroup
                       onValueChange={(value) => {
                         field.onChange(value);
-                        if (value === 'provider') {
-                            form.setValue('location', 'ارومیه');
-                        }
+                        form.reset({ 
+                            ...form.getValues(),
+                            accountType: value as 'customer' | 'provider',
+                            categorySlug: undefined,
+                            serviceSlug: undefined,
+                            bio: '',
+                            location: 'ارومیه',
+                         });
                       }}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
@@ -254,11 +268,14 @@ export default function RegisterForm() {
                 />
                 <FormField
                   control={form.control}
-                  name="serviceType"
+                  name="categorySlug"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                      <FormLabel>دسته‌بندی خدمات</FormLabel>
+                      <Select onValueChange={(value) => {
+                          field.onChange(value)
+                          form.setValue('serviceSlug', '')
+                      }} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -276,6 +293,32 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
+                 {selectedCategorySlug && (
+                   <FormField
+                      control={form.control}
+                      name="serviceSlug"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سرویس دقیق شما</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || !availableServices.length}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="سرویس دقیق خود را انتخاب کنید" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableServices.map((service) => (
+                                <SelectItem key={service.slug} value={service.slug}>
+                                  {service.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                 )}
                 <FormField
                   control={form.control}
                   name="bio"
@@ -291,7 +334,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۰ کاراکتر).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -317,3 +360,4 @@ export default function RegisterForm() {
     </Card>
   );
 }
+    

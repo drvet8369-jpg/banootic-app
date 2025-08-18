@@ -249,9 +249,9 @@ async function updateProviderRating(providerId: number) {
  */
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
     const agreementData = {
-        providerPhone: provider.phone,
+        provider_phone: provider.phone,
         customer_phone: customer.phone,
-        customerName: customer.name,
+        customer_name: customer.name,
         status: 'pending' as const,
     };
     
@@ -275,7 +275,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
     const { data, error } = await supabase
         .from('agreements')
         .select('*')
-        .eq('providerPhone', providerPhone)
+        .eq('provider_phone', providerPhone)
         .order('requested_at', { ascending: false });
     
     if (error) {
@@ -297,7 +297,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 
     if (error) {
         console.error("Error fetching customer agreements:", error.message);
-        throw new Error("Could not fetch agreements.");
+        return [];
     }
     return data || [];
 }
@@ -320,3 +320,5 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     }
     return data;
 }
+
+    
