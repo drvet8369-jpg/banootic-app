@@ -235,8 +235,6 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         .eq('phone', phone)
         .single();
     
-    // 'PGRST116' is the error code for "No rows found". This is an expected case, not an error.
-    // For any other error, we should log it and re-throw.
     if (error && error.code !== 'PGRST116') {
         console.error('Error fetching customer by phone:', error);
         throw new Error('Could not fetch customer data.');
