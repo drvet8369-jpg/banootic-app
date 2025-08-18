@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
@@ -31,15 +32,18 @@ export async function getAllProviders(): Promise<Provider[]> {
 
 /**
  * Fetches a single provider by their phone number.
- * Returns null if no provider is found.
+ * Returns null if no provider is found or an error occurs.
  */
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
-    const { data, error } = await supabase.from('providers').select('*').eq('phone', phone).single();
-    
-    // 'PGRST116' is the code for "No rows found", which is not a true error in this case.
-    if (error && error.code !== 'PGRST116') {
-        console.error("Error fetching provider by phone:", error.message);
-        throw new Error('Could not fetch provider data.');
+    const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error fetching provider by phone:", error);
+        return null;
     }
     
     return data || null;
@@ -123,22 +127,23 @@ export async function updateProviderProfileImage(phone: string, profileImage: an
 
 /**
  * Fetches a single customer by their phone number.
- * Returns null if no customer is found.
+ * Returns null if no customer is found or an error occurs.
  */
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const { data, error } = await supabase
-        .from('customers')
-        .select('name, phone, accountType:account_type')
-        .eq('phone', phone)
-        .single();
-    
-    if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching customer by phone:', error.message);
-        throw new Error('Could not fetch customer data.');
+        .from("customers")
+        .select("name, phone, accountType:account_type")
+        .eq("phone", phone)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error fetching customer by phone:", error);
+        return null;
     }
-    
+
     return data || null;
 }
+
 
 /**
  * Creates a new customer in the database.

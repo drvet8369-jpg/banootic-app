@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,6 +57,7 @@ export default function LoginPage() {
     let userToLogin: User | null = null;
 
     try {
+      // Step 1: Check if the user is a provider.
       const provider = await getProviderByPhone(values.phone);
       if (provider) {
         userToLogin = {
@@ -64,12 +66,14 @@ export default function LoginPage() {
           accountType: 'provider',
         };
       } else {
+        // Step 2: If not a provider, check if they are a customer.
         const customer = await getCustomerByPhone(values.phone);
         if (customer) {
           userToLogin = customer;
         }
       }
 
+      // Step 3: If user is not found in either table, guide them to register.
       if (!userToLogin) {
         toast({
           title: 'کاربر یافت نشد',
@@ -77,10 +81,10 @@ export default function LoginPage() {
           variant: 'destructive',
         });
         router.push('/register');
-        setIsLoading(false);
         return;
       }
 
+      // Step 4: If user is found, log them in.
       login(userToLogin);
 
       toast({
