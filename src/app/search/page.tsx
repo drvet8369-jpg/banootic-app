@@ -1,56 +1,84 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getAllProviders } from '@/lib/api';
+import { getAllProviders, getAgreementsByProvider } from '@/lib/api';
+import { calculateProviderScore } from '@/lib/ranking';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
+// Extend the Provider type to include the score for sorting purposes
+type ProviderWithScore = Provider & { score: number };
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [searchResults, setSearchResults] = useState<Provider[]>([]);
+  const [searchResults, setSearchResults] = useState<ProviderWithScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const performSearch = useCallback(async () => {
+  const performSearchAndRank = useCallback(async () => {
     setIsLoading(true);
     try {
         const allProviders = await getAllProviders();
-        if (!query) {
-          setSearchResults(allProviders);
+        
+        // Fetch confirmed agreement counts for all providers and calculate scores
+        const providersWithScores = await Promise.all(
+            allProviders.map(async (provider) => {
+                const agreements = await getAgreementsByProvider(provider.phone);
+                const confirmedCount = agreements.filter(a => a.status === 'confirmed').length;
+                const score = calculateProviderScore(provider, confirmedCount);
+                return { ...provider, score };
+            })
+        );
+        
+        let filteredResults: ProviderWithScore[];
+
+        // Filter results if there is a search query
+        if (query) {
+            const lowercasedQuery = query.toLowerCase();
+            filteredResults = providersWithScores
+                .filter(provider => 
+                    provider.name.toLowerCase().includes(lowercasedQuery) ||
+                    provider.service.toLowerCase().includes(lowercasedQuery) ||
+                    (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+                );
         } else {
-          const lowercasedQuery = query.toLowerCase();
-          const results = allProviders.filter(provider => 
-            provider.name.toLowerCase().includes(lowercasedQuery) ||
-            provider.service.toLowerCase().includes(lowercasedQuery) ||
-            (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-          );
-          setSearchResults(results);
+            // If no query, use all providers
+            filteredResults = providersWithScores;
         }
+        
+        // Sort the final list (either all providers or filtered ones) by score in descending order
+        filteredResults.sort((a,b) => b.score - a.score);
+
+        setSearchResults(filteredResults);
+
     } catch (error) {
-        console.error("Failed to fetch providers for search:", error);
+        console.error("Failed to fetch and rank providers:", error);
+        setSearchResults([]); // Clear results on error
     } finally {
         setIsLoading(false);
     }
   }, [query]);
 
   useEffect(() => {
-    performSearch();
-  }, [performSearch]);
+    performSearchAndRank();
+  }, [performSearchAndRank]);
 
 
   return (
-    <div className="py-12 md:py-20">
+    <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold">
+            {query ? 'نتایج جستجو' : 'برترین هنرمندان'}
+        </h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
-            برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
+            نتایج برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            تمامی هنرمندان نمایش داده شده‌اند.
+            لیست هنرمندان بر اساس امتیاز و فعالیت در پلتفرم مرتب شده است.
           </p>
         )}
       </div>
@@ -58,7 +86,7 @@ export default function SearchPage() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
+            <p className="mt-4 text-muted-foreground">در حال بارگذاری و رتبه‌بندی...</p>
         </div>
       ) : searchResults.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -67,15 +95,16 @@ export default function SearchPage() {
           ))}
         </div>
       ) : (
-        query && (
-          <div className="text-center py-16 border-2 border-dashed rounded-lg">
-            <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
-            <p className="text-muted-foreground mt-2">
-              هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید.
-            </p>
-          </div>
-        )
+        <div className="text-center py-16 border-2 border-dashed rounded-lg">
+          <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
+          <p className="text-muted-foreground mt-2">
+            {query 
+              ? "هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید."
+              : "هنوز هیچ هنرمندی در پلتفرم ثبت‌نام نکرده است."
+            }
+          </p>
+        </div>
       )}
     </div>
   );
