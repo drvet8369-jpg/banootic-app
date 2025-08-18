@@ -141,7 +141,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         return null;
     }
     
-    return data;
+    return data || null;
 }
 
 
