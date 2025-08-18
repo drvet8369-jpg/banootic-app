@@ -28,7 +28,7 @@ export async function getAllProviders(): Promise<Provider[]> {
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const { data, error } = await supabase.from('providers').select('*').eq('phone', phone).single();
-    if (error && error.code !== 'PGRST116') { // PGRST116: "The result contains 0 rows"
+    if (error && error.code !== 'PGRST116') { // PGRST116: "The result contains 0 rows" which is fine.
         console.error("Error fetching provider by phone:", error);
         throw new Error('Could not fetch provider.');
     }
