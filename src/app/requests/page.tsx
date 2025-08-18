@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { Agreement, Provider } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,34 +20,36 @@ export default function CustomerRequestsPage() {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
-
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const fetchData = async () => {
-    if (!user) return;
+  const fetchData = useCallback(async () => {
+    if (!user || user.accountType !== 'customer') {
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     try {
-        const userAgreements = await getAgreementsByCustomer(user.phone);
-        const allProviders = await getAllProviders();
+        const [userAgreements, allProviders] = await Promise.all([
+            getAgreementsByCustomer(user.phone),
+            getAllProviders()
+        ]);
         
         setAgreements(userAgreements);
         setProviders(allProviders);
     } catch(e){
-        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها.', variant: 'destructive'})
+        console.error("Failed to fetch agreements:", e);
+        toast({ title: 'خطا', description: 'خطا در بارگذاری درخواست‌ها. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
     } finally {
         setIsLoading(false);
     }
-  }
+  }, [user, toast]);
 
   useEffect(() => {
-    if (user && user.accountType === 'customer') {
-      fetchData();
-    } else {
-        setIsLoading(false);
-    }
-  }, [user]);
+    fetchData();
+  }, [fetchData]);
   
   const getProviderName = (phone: string) => {
       const provider = providers.find(p => p.phone === phone);
