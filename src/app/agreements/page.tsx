@@ -36,7 +36,7 @@ export default function AgreementsPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user && user.accountType === 'provider') {
