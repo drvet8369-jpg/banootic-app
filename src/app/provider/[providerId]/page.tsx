@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement } from '@/lib/api';
+import { getProviderByPhone, getReviewsByProviderId, addReview } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog";
-import { dispatchCrossTabEvent } from '@/lib/events';
-
+} from "@/components/ui/dialog"
 
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)} {...props} />
@@ -140,12 +138,10 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
-  const { toast } = useToast();
+  const { user } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreatingAgreement, setIsCreatingAgreement] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -168,45 +164,9 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setIsLoading(true);
     loadData();
-    
-    const handleProfileUpdate = () => {
-        if(user && user.phone === providerPhone) {
-            loadData();
-        }
-    };
-    
-    window.addEventListener('profile-update', handleProfileUpdate);
-    return () => window.removeEventListener('profile-update', handleProfileUpdate);
-
-  }, [loadData, user, providerPhone]);
+  }, [loadData]);
   
   const isOwnerViewing = user && user.phone === provider?.phone;
-
-  const handleCreateAgreement = async () => {
-    if (!provider || !user) return;
-    setIsCreatingAgreement(true);
-    try {
-        await createAgreement(provider, user);
-        toast({ title: 'موفق', description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد.'});
-        dispatchCrossTabEvent('agreements-update');
-    } catch(error: any) {
-        if (error.message.includes('duplicate key value violates unique constraint')) {
-            toast({ title: 'درخواست تکراری', description: 'شما قبلا برای این هنرمند درخواست توافق ارسال کرده‌اید.', variant: 'default' });
-        } else {
-            toast({ title: 'خطا', description: 'خطا در ارسال درخواست توافق.', variant: 'destructive'});
-        }
-    } finally {
-        setIsCreatingAgreement(false);
-    }
-  }
-
-  // Deleting portfolio items can now only be done from the profile management page.
-  // This logic is kept here for reference but the button is removed.
-  const deletePortfolioItem = (itemIndex: number) => {
-    // This action has been moved to the profile management page
-    // to simplify this public-facing component.
-  };
-
 
   if (isLoading) {
     return (
@@ -222,7 +182,7 @@ export default function ProviderProfilePage() {
 
   return (
     <div className="py-12 md:py-20 flex justify-center">
-        <div className="w-full max-w-4xl">
+        <div className="max-w-2xl w-full">
             <Card className="flex flex-col w-full overflow-hidden h-full">
                 <div className="p-6 flex flex-col items-center text-center bg-muted/30">
                     <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
@@ -272,7 +232,7 @@ export default function ProviderProfilePage() {
                                                 variant="destructive"
                                                 size="icon"
                                                 className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                onClick={(e) => { e.stopPropagation(); /* deletePortfolioItem(index); */ }}
+                                                onClick={(e) => { e.stopPropagation(); /* Deletion moved to profile page */ }}
                                                 aria-label={`حذف نمونه کار ${index + 1}`}
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -312,13 +272,7 @@ export default function ProviderProfilePage() {
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
-                    {isLoggedIn && user?.accountType === 'customer' && (
-                        <Button onClick={handleCreateAgreement} disabled={isCreatingAgreement} className="w-full">
-                            {isCreatingAgreement ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
-                            درخواست توافق
-                        </Button>
-                    )}
-                     <Button asChild className="w-full">
+                    <Button asChild className="w-full">
                         <Link href={`/chat/${provider.phone}`}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام

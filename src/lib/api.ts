@@ -1,10 +1,10 @@
-
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement } from './types';
 import type { User } from '@/context/AuthContext';
 
+// Ensure environment variables are loaded and present.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -12,31 +12,42 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL and Anon Key must be provided in environment variables.');
 }
 
+// Create a single, reusable Supabase client instance.
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 
 // ========== Provider Functions ==========
 
+/**
+ * Fetches all providers from the database.
+ */
 export async function getAllProviders(): Promise<Provider[]> {
     const { data, error } = await supabase.from('providers').select('*');
     if (error) {
-        console.error("Error fetching all providers:", error);
+        console.error("Error fetching all providers:", error.message);
         throw new Error("Could not fetch providers.");
     }
     return data || [];
 }
 
+/**
+ * Fetches a single provider by their phone number.
+ * Returns null if no provider is found.
+ */
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const { data, error } = await supabase.from('providers').select('*').eq('phone', phone).single();
     
+    // 'PGRST116' is the code for "No rows found", which is not a true error in this case.
     if (error && error.code !== 'PGRST116') {
-        console.error("Error fetching provider by phone:", error);
+        console.error("Error fetching provider by phone:", error.message);
         throw new Error('Could not fetch provider data.');
     }
     
     return data || null;
 }
 
+/**
+ * Creates a new provider in the database.
+ */
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviewsCount'>): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
@@ -47,12 +58,16 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
         .single();
 
     if (error) {
-        console.error("Error creating provider:", error);
+        console.error("Error creating provider:", error.message);
+        // Rethrow the original Supabase error for more detailed debugging.
         throw error;
     }
     return data;
 }
 
+/**
+ * Updates a provider's core details (name, service, bio).
+ */
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
@@ -62,12 +77,15 @@ export async function updateProviderDetails(phone: string, details: { name: stri
         .single();
     
     if (error) {
-        console.error("Error updating provider details:", error);
+        console.error("Error updating provider details:", error.message);
         throw new Error("Could not update provider details.");
     }
     return data;
 }
 
+/**
+ * Updates a provider's entire portfolio.
+ */
 export async function updateProviderPortfolio(phone: string, portfolio: any[]): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
@@ -77,12 +95,15 @@ export async function updateProviderPortfolio(phone: string, portfolio: any[]): 
         .single();
 
     if (error) {
-        console.error("Error updating portfolio:", error);
+        console.error("Error updating portfolio:", error.message);
         throw new Error("Could not update portfolio.");
     }
     return data;
 }
 
+/**
+ * Updates a provider's profile image.
+ */
 export async function updateProviderProfileImage(phone: string, profileImage: any): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
@@ -92,14 +113,60 @@ export async function updateProviderProfileImage(phone: string, profileImage: an
         .single();
 
     if (error) {
-        console.error("Error updating profile image:", error);
+        console.error("Error updating profile image:", error.message);
         throw new Error("Could not update profile image.");
     }
     return data;
 }
 
+// ========== Customer Functions ==========
+
+/**
+ * Fetches a single customer by their phone number.
+ * Returns null if no customer is found.
+ */
+export async function getCustomerByPhone(phone: string): Promise<User | null> {
+    const { data, error } = await supabase
+        .from('customers')
+        .select('name, phone, accountType:account_type')
+        .eq('phone', phone)
+        .single();
+    
+    if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching customer by phone:', error.message);
+        throw new Error('Could not fetch customer data.');
+    }
+    
+    return data || null;
+}
+
+/**
+ * Creates a new customer in the database.
+ */
+export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
+    const { data, error } = await supabase
+        .from('customers')
+        .insert([{
+            name: userData.name,
+            phone: userData.phone,
+            account_type: 'customer'
+        }])
+        .select('name, phone, accountType:account_type')
+        .single();
+
+    if (error) {
+        console.error('Error creating customer:', error.message);
+        throw error;
+    }
+    
+    return data as User;
+}
+
 // ========== Review Functions ==========
 
+/**
+ * Fetches all reviews for a specific provider.
+ */
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
     const { data, error } = await supabase
         .from('reviews')
@@ -108,12 +175,15 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
         .order('createdAt', { ascending: false });
 
     if (error) {
-        console.error("Error fetching reviews:", error);
+        console.error("Error fetching reviews:", error.message);
         throw new Error("Could not fetch reviews.");
     }
     return data || [];
 }
 
+/**
+ * Adds a new review for a provider and updates the provider's average rating.
+ */
 export async function addReview(reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<Review> {
     const { data, error } = await supabase
         .from('reviews')
@@ -122,15 +192,20 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'createdAt'>): P
         .single();
 
     if (error) {
-        console.error("Error adding review:", error);
+        console.error("Error adding review:", error.message);
         throw new Error("Could not add review.");
     }
     
+    // After adding the review, recalculate and update the provider's rating.
     await updateProviderRating(reviewData.providerId);
 
     return data;
 }
 
+/**
+ * Recalculates and updates a provider's average rating and review count.
+ * This is a private helper function.
+ */
 async function updateProviderRating(providerId: number) {
     const { data: reviews, error: reviewsError } = await supabase
         .from('reviews')
@@ -138,7 +213,7 @@ async function updateProviderRating(providerId: number) {
         .eq('providerId', providerId);
 
     if (reviewsError) {
-        console.error("Error fetching reviews for rating update:", reviewsError);
+        console.error("Error fetching reviews for rating update:", reviewsError.message);
         return;
     }
 
@@ -152,13 +227,16 @@ async function updateProviderRating(providerId: number) {
         .eq('id', providerId);
     
     if (updateError) {
-        console.error("Error updating provider rating:", updateError);
+        console.error("Error updating provider rating:", updateError.message);
     }
 }
 
 
 // ========== Agreement Functions ==========
 
+/**
+ * Creates a new agreement request from a customer to a provider.
+ */
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
     const agreementData = {
         providerPhone: provider.phone,
@@ -174,12 +252,15 @@ export async function createAgreement(provider: Provider, customer: User): Promi
         .single();
 
     if (error) {
-        console.error("Error creating agreement:", error);
+        console.error("Error creating agreement:", error.message);
         throw error;
     }
     return data;
 }
 
+/**
+ * Fetches all agreements for a specific provider.
+ */
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
     const { data, error } = await supabase
         .from('agreements')
@@ -188,12 +269,15 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
         .order('requested_at', { ascending: false });
     
     if (error) {
-        console.error("Error fetching provider agreements:", error);
+        console.error("Error fetching provider agreements:", error.message);
         throw new Error("Could not fetch agreements.");
     }
     return data || [];
 }
 
+/**
+ * Fetches all agreements initiated by a specific customer.
+ */
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
     const { data, error } = await supabase
         .from('agreements')
@@ -202,12 +286,15 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
         .order('requested_at', { ascending: false });
 
     if (error) {
-        console.error("Error fetching customer agreements:", error);
+        console.error("Error fetching customer agreements:", error.message);
         throw new Error("Could not fetch agreements.");
     }
     return data || [];
 }
 
+/**
+ * Confirms an agreement, updating its status and timestamp.
+ */
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
     const { data, error } = await supabase
         .from('agreements')
@@ -217,45 +304,8 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
         .single();
     
     if (error) {
-        console.error("Error confirming agreement:", error);
+        console.error("Error confirming agreement:", error.message);
         throw new Error("Could not confirm agreement.");
     }
     return data;
-}
-
-
-// ========== Customer Functions ==========
-
-export async function getCustomerByPhone(phone: string): Promise<User | null> {
-    const { data, error } = await supabase
-        .from('customers')
-        .select('name, phone, accountType:account_type')
-        .eq('phone', phone)
-        .single();
-    
-    if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching customer by phone:', error);
-        throw new Error('Could not fetch customer data.');
-    }
-    
-    return data || null;
-}
-
-export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
-    const { data, error } = await supabase
-        .from('customers')
-        .insert([{
-            name: userData.name,
-            phone: userData.phone,
-            account_type: 'customer'
-        }])
-        .select('name, phone, accountType:account_type')
-        .single();
-
-    if (error) {
-        console.error('Error creating customer:', error);
-        throw new Error('Could not create customer.');
-    }
-    
-    return data as User;
 }

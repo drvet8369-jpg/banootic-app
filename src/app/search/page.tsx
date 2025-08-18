@@ -1,8 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getAgreements, calculateProviderScore } from '@/lib/data';
-import { getAllProviders } from '@/lib/api'; // Import from the new api file
+import { getAllProviders } from '@/lib/api';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -17,32 +16,20 @@ export default function SearchPage() {
   const performSearch = useCallback(async () => {
     setIsLoading(true);
     try {
-        const allProviders = await getAllProviders(); // Use the async API call
-        const allAgreements = getAgreements(); // This still comes from localStorage for now
-
-        const getScore = (provider: Provider) => {
-            const confirmedCount = allAgreements.filter(a => a.providerPhone === provider.phone && a.status === 'confirmed').length;
-            return calculateProviderScore(provider, confirmedCount);
-        };
-
-        let results: Provider[];
-
+        const allProviders = await getAllProviders();
         if (!query) {
-            results = [...allProviders].sort((a, b) => getScore(b) - getScore(a));
+          setSearchResults(allProviders);
         } else {
-            const lowercasedQuery = query.toLowerCase();
-            results = allProviders
-                .filter(provider => 
-                    provider.name.toLowerCase().includes(lowercasedQuery) ||
-                    provider.service.toLowerCase().includes(lowercasedQuery) ||
-                    (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-                )
-                .sort((a,b) => getScore(b) - getScore(a));
+          const lowercasedQuery = query.toLowerCase();
+          const results = allProviders.filter(provider => 
+            provider.name.toLowerCase().includes(lowercasedQuery) ||
+            provider.service.toLowerCase().includes(lowercasedQuery) ||
+            (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
+          );
+          setSearchResults(results);
         }
-        setSearchResults(results);
     } catch (error) {
         console.error("Failed to fetch providers for search:", error);
-        // Optionally, show a toast or error message to the user
     } finally {
         setIsLoading(false);
     }
@@ -56,16 +43,14 @@ export default function SearchPage() {
   return (
     <div className="py-12 md:py-20">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">
-            {query ? 'نتایج جستجو' : 'برترین هنرمندان'}
-        </h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            لیست هنرمندان بر اساس امتیاز و فعالیت در پلتفرم مرتب شده است.
+            تمامی هنرمندان نمایش داده شده‌اند.
           </p>
         )}
       </div>

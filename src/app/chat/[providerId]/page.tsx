@@ -1,6 +1,6 @@
 'use client';
 
-import { getAllProviders } from '@/lib/api';
+import { getProviderByPhone } from '@/lib/api';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,15 +75,12 @@ export default function ChatPage() {
 
         let details: OtherPersonDetails | null = null;
         try {
-            const allProviders = await getAllProviders();
-            const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+            const provider = await getProviderByPhone(otherPersonIdOrProviderId);
             
             if (provider) {
               details = provider;
             } else {
               const customerPhone = otherPersonIdOrProviderId;
-              // This is a fallback for when the other person is a customer.
-              // We'll try to find them in the chat history later if needed.
               details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
             }
         } catch (error) {

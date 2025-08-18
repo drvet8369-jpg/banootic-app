@@ -14,8 +14,6 @@ import type { Provider } from '@/lib/types';
 import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { dispatchCrossTabEvent } from '@/lib/events';
-
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
@@ -72,7 +70,7 @@ export default function ProfilePage() {
     setIsSaving(true);
     try {
         const updatedProvider = await updateProviderDetails(user.phone, editedData);
-        setProvider(updatedProvider); // Update local state with returned data
+        setProvider(updatedProvider);
         
         if (user.name !== editedData.name) {
             const updatedUser = { ...user, name: editedData.name };
@@ -81,7 +79,6 @@ export default function ProfilePage() {
 
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
-        dispatchCrossTabEvent('profile-update');
     } catch (error) {
         toast({ title: 'خطا', description: 'خطا در به‌روزرسانی اطلاعات.', variant: 'destructive' });
     } finally {
@@ -133,7 +130,7 @@ export default function ProfilePage() {
             const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
             callback(compressedDataUrl);
           } else {
-            callback(imageSrc); // Fallback to original if canvas fails
+            callback(imageSrc);
           }
         };
         img.src = imageSrc;
@@ -152,7 +149,6 @@ export default function ProfilePage() {
       const updatedProvider = await updateProviderPortfolio(user.phone, newPortfolio);
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
-      dispatchCrossTabEvent('profile-update');
     } catch (error) {
        toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
     } finally {
@@ -166,7 +162,6 @@ export default function ProfilePage() {
         const updatedProvider = await updateProviderProfileImage(user.phone, { src: newImageSrc, aiHint: 'woman portrait' });
         setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-        dispatchCrossTabEvent('profile-update');
       } catch (error) {
         toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
       } finally {
@@ -181,7 +176,6 @@ export default function ProfilePage() {
       const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', aiHint: 'woman portrait' });
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-      dispatchCrossTabEvent('profile-update');
     } catch (error) {
       toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });
     } finally {
@@ -195,7 +189,7 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (file) {
       handleImageResizeAndSave(file, callback);
-      event.target.value = ''; // Reset file input
+      event.target.value = '';
     }
   };
   
@@ -247,7 +241,7 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full py-12 md:py-20 space-y-8 flex justify-center">
-      <Card className="w-full max-w-4xl">
+      <Card className="w-full max-w-4xl relative">
          {isSaving && (
             <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center rounded-lg">
                 <Loader2 className="w-12 h-12 animate-spin text-primary" />

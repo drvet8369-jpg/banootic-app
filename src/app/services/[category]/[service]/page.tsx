@@ -1,8 +1,7 @@
 'use client';
 
 import { services, categories } from '@/lib/constants';
-import { getAllProviders, getAgreementsByProvider } from '@/lib/api';
-import { calculateProviderScore } from '@/lib/ranking';
+import { getAllProviders } from '@/lib/api';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -31,19 +30,8 @@ export default function ServiceProvidersPage() {
       
     if (foundCategory && foundService) {
       const allProviders = await getAllProviders();
-      const filteredProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
-
-      const providersWithScores = await Promise.all(
-        filteredProviders.map(async (provider) => {
-          const agreements = await getAgreementsByProvider(provider.phone);
-          const confirmedCount = agreements.filter(a => a.status === 'confirmed').length;
-          const score = calculateProviderScore(provider, confirmedCount);
-          return { ...provider, score };
-        })
-      );
-      
-      const sortedProviders = providersWithScores.sort((a,b) => b.score - a.score);
-      setServiceProviders(sortedProviders);
+      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      setServiceProviders(foundProviders);
     } else {
       setServiceProviders([]);
     }
