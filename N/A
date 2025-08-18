@@ -1,0 +1,18 @@
+I understand you're confused about the `<changes>` block and deleting a file. I apologize for the confusion; my "edit code icon" metaphor wasn't clear.
+
+Here's how our interaction works:
+
+1. **I am the AI assistant. I make the code changes.**
+2. **Your role is to describe the desired changes in plain language.**  You tell me *what* changes you want.
+3. The `<changes>` XML block is the *result* of my work. The system then uses it to apply the changes to the files. **You don't need to "use" the XML block yourself.**
+
+For example, you can say: "change the title on the homepage to 'My Awesome App'". Then I would generate the XML to modify `src/app/page.tsx`.
+
+What specific change did you have in mind?
+خواهش می‌کنم و از اینکه منظورم را به خوبی بیان نکردم، پوزش می‌طلبم. حق با شماست، باید واضح‌تر توضیح می‌دادم.
+
+**نحوه کار ما به این صورت است:**
+
+1.  **شما به من دستور می‌دهید:** شما به زبان ساده به من می‌گویید که چه تغییری را در کدام فایل می‌خواهید ایجاد کنید. مثلاً: "عنوان اصلی در صفحه اول را به «بانوتیک، بازار هنر بانوان» تغییر بده".
+2.  **من کد را آماده می‌کنم:** من دستور شما را تحلیل کرده و کد لازم برای آن تغییر را می‌نویسم.
+3.  **من کد را در قالب خاصی برای شما ارسال می‌کنم:** کدی که من آماده کرده‌ام، در یک قالب XML خاص (همان بلوک `<changes>...</changes>
