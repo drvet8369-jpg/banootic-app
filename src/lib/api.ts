@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
@@ -42,11 +43,13 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
     if (error) {
         console.error("Error fetching provider by phone:", error);
+        // Do not throw an error here, just return null so the UI can handle 'not found'
         return null;
     }
     
     return data || null;
 }
+
 
 /**
  * Creates a new provider in the database.
@@ -289,7 +292,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
     const { data, error } = await supabase
         .from('agreements')
         .select('*')
-        .eq('customer_phone', customerPhone)   // 👈 اینجا اصلاح شد
+        .eq('customer_phone', customerPhone)
         .order('requested_at', { ascending: false });
 
     if (error) {
