@@ -93,15 +93,12 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
+      // First, check if the phone number already exists in either table.
       const existingProvider = await getProviderByPhone(values.phone);
-      if (existingProvider) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.', variant: 'destructive'});
-          setIsLoading(false);
-          return;
-      }
       const existingCustomer = await getCustomerByPhone(values.phone);
-      if (existingCustomer) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است.', variant: 'destructive'});
+
+      if (existingProvider || existingCustomer) {
+          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است.', variant: 'destructive'});
           setIsLoading(false);
           return;
       }
@@ -151,11 +148,7 @@ export default function RegisterForm() {
          console.error("Registration failed:", error);
          let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
          if (error instanceof Error) {
-            if(error.message.includes('duplicate key value violates unique constraint "providers_name_key"')) {
-                errorMessage = 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.';
-            } else {
-                errorMessage = error.message; // Show the actual error message from api.ts
-            }
+            errorMessage = error.message; // Show the actual error message from api.ts
          }
          toast({
             title: 'خطا در ثبت‌نام',

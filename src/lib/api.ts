@@ -160,8 +160,8 @@ export async function createCustomer(userData: { name: string, phone: string }):
         .single();
 
     if (error) {
-        console.error('Error creating customer:', error.message);
-        if (error.code === '23505') { // Unique constraint violation
+        console.error('Error creating customer:', error);
+         if (error.code === '23505') { // Unique constraint violation
              throw new Error('This phone number is already registered.');
         }
         throw new Error('Could not create customer account.');
