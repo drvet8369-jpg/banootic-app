@@ -30,7 +30,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     const { data, error } = await supabase.from('providers').select('*').eq('phone', phone).single();
     if (error && error.code !== 'PGRST116') { // PGRST116: "The result contains 0 rows"
         console.error("Error fetching provider by phone:", error);
-        // Do not throw here, just return null so the login flow can continue
+        throw new Error('Could not fetch provider.');
     }
     return data || null;
 }
