@@ -2,21 +2,18 @@
 
 import { categories, services } from '@/lib/constants';
 import type { Category, Service } from '@/lib/types';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-interface PageProps {
-  params: {
-    category: string;
-  };
-}
+export default function CategoryPage() {
+  const params = useParams<{ category: string }>();
+  const categorySlug = params.category;
 
-export default function CategoryPage({ params }: PageProps) {
-  const category = categories.find((c) => c.slug === params.category);
-  const categoryServices = services.filter((s) => s.categorySlug === params.category);
+  const category = categories.find((c) => c.slug === categorySlug);
+  const categoryServices = services.filter((s) => s.categorySlug === categorySlug);
 
   if (!category) {
     notFound();
