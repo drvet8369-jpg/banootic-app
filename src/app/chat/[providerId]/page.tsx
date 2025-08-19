@@ -27,7 +27,7 @@ interface OtherPersonDetails {
     id: string | number;
     name: string;
     phone: string;
-    profileImage?: { src: string; aiHint?: string };
+    profileimage?: { src: string; aiHint?: string };
 }
 
 
@@ -265,8 +265,8 @@ export default function ChatPage() {
              </Button>
            </Link>
            <Avatar>
-            {otherPersonDetails?.profileImage?.src ? (
-                <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
+            {otherPersonDetails?.profileimage?.src ? (
+                <AvatarImage src={otherPersonDetails.profileimage.src} alt={otherPersonDetails.name} />
             ) : null }
             <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
@@ -293,8 +293,8 @@ export default function ChatPage() {
                   >
                     {!senderIsUser && (
                       <Avatar className="h-8 w-8 select-none">
-                        {otherPersonDetails?.profileImage?.src ? (
-                            <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
+                        {otherPersonDetails?.profileimage?.src ? (
+                            <AvatarImage src={otherPersonDetails.profileimage.src} alt={otherPersonDetails.name} />
                         ) : null }
                         <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>
