@@ -64,7 +64,7 @@ export default function ServiceProvidersPage() {
     <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
         <h1 className="font-headline text-2xl md:text-3xl font-bold">{service.name}</h1>
-        <p className="mt-3 text-base md:text-lg text-foreground font-semibold">
+        <p className="mt-3 text-base text-foreground font-semibold">
           ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی{' '}
           <Link href={`/services/${category.slug}`} className="hover:underline">
             {category.name}
