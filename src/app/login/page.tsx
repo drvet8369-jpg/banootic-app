@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
+import { getProviderByPhone, getCustomerByPhone, createCustomer } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 
 
@@ -65,25 +65,21 @@ export default function LoginPage() {
           accountType: 'provider',
         };
       } else {
-        // Step 2: If not a provider, check if they are a customer.
+        // Step 2: If not a provider, check if they are a known customer.
         const customer = await getCustomerByPhone(values.phone);
         if (customer) {
           userToLogin = customer;
+        } else {
+          // Step 3: If user is completely new, create a new customer account for them automatically.
+          const newCustomer = await createCustomer({
+             name: `کاربر ${values.phone.slice(-4)}`,
+             phone: values.phone
+          });
+          userToLogin = newCustomer;
         }
       }
-
-      // Step 3: If user is not found in either table, guide them to register.
-      if (!userToLogin) {
-        toast({
-          title: 'کاربر یافت نشد',
-          description: 'این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-          variant: 'destructive',
-        });
-        router.push('/register');
-        return;
-      }
-
-      // Step 4: If user is found, log them in.
+      
+      // Step 4: Log the user in.
       login(userToLogin);
 
       toast({
@@ -110,9 +106,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود، شماره تلفن خود را که قبلا با آن ثبت‌نام کرده‌اید، وارد کنید.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -144,9 +140,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            حساب کاربری ندارید؟{" "}
+            هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
+              از اینجا به عنوان هنرمند ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
