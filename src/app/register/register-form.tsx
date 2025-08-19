@@ -242,7 +242,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    <Input placeholder="09" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
