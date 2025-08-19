@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
+import { getProviderByPhone, createCustomer, getCustomerByPhone } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 
 
@@ -55,25 +55,27 @@ export default function LoginPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
-
-        let userToLogin: User;
-
+        let userToLogin: User | null = null;
+        
+        const existingProvider = await getProviderByPhone(values.phone);
         if (existingProvider) {
-          // User is a known provider
           userToLogin = {
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
           };
         } else {
-          // User is a customer
-          userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
+            const existingCustomer = await getCustomerByPhone(values.phone);
+            if(existingCustomer) {
+                userToLogin = existingCustomer;
+            } else {
+                 // If no provider or customer exists, create a new customer
+                const newCustomer = await createCustomer({
+                    name: `کاربر ${values.phone.slice(-4)}`,
+                    phone: values.phone,
+                });
+                userToLogin = newCustomer;
+            }
         }
         
         login(userToLogin);
@@ -83,14 +85,17 @@ export default function LoginPage() {
           description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+        router.push('/');
 
     } catch (error) {
         console.error("Login failed:", error);
+        let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
+        if (error instanceof Error && error.message.includes('already registered')) {
+            errorMessage = 'این شماره تلفن قبلاً ثبت شده است. لطفاً برای ثبت نام به عنوان نوع کاربری دیگر، از شماره دیگری استفاده کنید.'
+        }
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: errorMessage,
             variant: 'destructive'
         });
     } finally {
@@ -99,7 +104,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
@@ -117,7 +122,13 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                      <Input 
+                        placeholder="09xxxxxxxxx" 
+                        {...field} 
+                        disabled={isLoading}
+                        className="text-left dir-ltr placeholder:text-muted-foreground/70"
+                        dir="ltr"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
