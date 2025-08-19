@@ -16,7 +16,7 @@ import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, login } = useAuth();
+  const { user, isLoggedIn, login, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   
   const [provider, setProvider] = useState<Provider | null>(null);
@@ -53,8 +53,10 @@ export default function ProfilePage() {
   }, [user, toast]);
 
   useEffect(() => {
-    loadProviderData();
-  }, [loadProviderData]);
+    if (!isAuthLoading) {
+       loadProviderData();
+    }
+  }, [loadProviderData, isAuthLoading]);
 
 
   const handleEditInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -210,9 +212,13 @@ export default function ProfilePage() {
     }
   };
   
+  if (isAuthLoading || isLoading) {
+    return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+  }
+
   if (!isLoggedIn) {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <User className="w-24 h-24 text-muted-foreground mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">صفحه پروفایل</h1>
             <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
@@ -227,7 +233,7 @@ export default function ProfilePage() {
 
   if (user?.accountType !== 'provider') {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
@@ -240,13 +246,9 @@ export default function ProfilePage() {
      )
   }
   
-  if (isLoading) {
-    return <div className="flex justify-center items-center py-20"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
-  }
-
   if (!provider) {
       return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
              <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
              <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل یافت نشد</h1>
              <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">

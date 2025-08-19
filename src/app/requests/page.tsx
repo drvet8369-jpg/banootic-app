@@ -13,7 +13,7 @@ import { getAgreementsByCustomer, getAllProviders } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerRequestsPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,19 +48,19 @@ export default function CustomerRequestsPage() {
   }, [user, toast]);
 
   useEffect(() => {
-    if (isLoggedIn && user?.accountType === 'customer') {
+    if (!isAuthLoading && isLoggedIn && user?.accountType === 'customer') {
       fetchData();
-    } else {
+    } else if (!isAuthLoading) {
       setIsLoading(false);
     }
-  }, [isLoggedIn, user, fetchData]);
+  }, [isLoggedIn, user, fetchData, isAuthLoading]);
   
   const getProviderName = (phone: string) => {
       const provider = providers.find(p => p.phone === phone);
       return provider?.name || `هنرمند ${phone.slice(-4)}`;
   }
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -152,5 +152,3 @@ export default function CustomerRequestsPage() {
     </div>
   );
 }
-
-    

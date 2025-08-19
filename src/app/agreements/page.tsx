@@ -15,7 +15,7 @@ import { dispatchCrossTabEvent, useCrossTabEventListener } from '@/lib/events';
 
 
 export default function AgreementsPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,12 +42,12 @@ export default function AgreementsPage() {
   }, [user, toast]);
 
   useEffect(() => {
-    if (isLoggedIn && user?.accountType === 'provider') {
+    if (!isAuthLoading && isLoggedIn && user?.accountType === 'provider') {
       fetchAgreements();
-    } else {
+    } else if (!isAuthLoading) {
       setIsLoading(false);
     }
-  }, [isLoggedIn, user, fetchAgreements]);
+  }, [isLoggedIn, user, fetchAgreements, isAuthLoading]);
 
   useCrossTabEventListener('agreements-update', fetchAgreements);
 
@@ -62,7 +62,7 @@ export default function AgreementsPage() {
     }
   };
   
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -177,5 +177,3 @@ export default function AgreementsPage() {
     </div>
   );
 }
-
-    

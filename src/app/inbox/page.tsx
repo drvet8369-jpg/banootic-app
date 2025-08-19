@@ -31,18 +31,22 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client, preventing hydration mismatch for date formatting.
     setIsClient(true);
   }, []);
 
   useEffect(() => {
+    if (isAuthLoading) {
+        setIsLoading(true);
+        return;
+    }
+
     if (!user?.phone) {
       setChats([]);
       setIsLoading(false);
@@ -87,12 +91,12 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.phone]);
+  }, [user?.phone, isAuthLoading]);
 
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
@@ -100,7 +104,7 @@ export default function InboxPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>

@@ -17,6 +17,7 @@ export interface User {
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
+  isLoading: boolean; // Add loading state
   login: (userData: User) => void;
   logout: () => void;
 }
@@ -27,6 +28,7 @@ const USER_STORAGE_KEY = 'banotic-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const router = useRouter();
 
   // On initial load, try to hydrate the user from localStorage.
@@ -38,35 +40,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
-      // Clean up corrupted data
       localStorage.removeItem(USER_STORAGE_KEY);
+    } finally {
+      setIsLoading(false); // Finished loading
     }
   }, []);
 
   const login = (userData: User) => {
+    setIsLoading(true);
     try {
-      // Ensure accountType is always set
       const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
       setUser(userToSave);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
+    setIsLoading(true); // Set loading to true before redirecting
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
-      // Redirect to home page for a better user experience
       router.push('/');
+      // No need to set loading to false here, as the page will change
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
+       setIsLoading(false); // Set to false only if there's an error
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
