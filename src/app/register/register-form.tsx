@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -242,7 +241,13 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09" {...field} disabled={isLoading} />
+                     <Input 
+                        placeholder="xxxxxxx 09" 
+                        {...field} 
+                        disabled={isLoading}
+                        className="text-left dir-ltr placeholder:text-muted-foreground/70"
+                        dir="ltr"
+                      />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
