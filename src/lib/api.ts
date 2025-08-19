@@ -101,7 +101,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
               service_slug: providerData.service_slug,
               rating: 0, 
               reviews_count: 0,
-              profileImage: providerData.profileImage,
+              profileimage: providerData.profileImage, // Correct column name
               portfolio: providerData.portfolio
             }
         ])
@@ -179,7 +179,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
-        .update({ profileImage: profileImage })
+        .update({ profileimage: profileImage }) // Corrected column name to lowercase 'profileimage'
         .eq('phone', phone)
         .select()
         .single();
