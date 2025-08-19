@@ -244,13 +244,13 @@ export default function ProviderProfilePage() {
             <Card className="flex flex-col w-full overflow-hidden h-full">
                 <div className="p-6 flex flex-col items-center text-center bg-muted/30">
                     <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-                    {provider.profileImage && provider.profileImage.src ? (
+                    {provider.profileimage && provider.profileimage.src ? (
                         <Image
-                        src={provider.profileImage.src}
+                        src={provider.profileimage.src}
                         alt={provider.name}
                         fill
                         className="object-cover"
-                        data-ai-hint={provider.profileImage.aiHint}
+                        data-ai-hint={provider.profileimage.aiHint}
                         />
                     ) : (
                         <div className="bg-muted w-full h-full flex items-center justify-center">

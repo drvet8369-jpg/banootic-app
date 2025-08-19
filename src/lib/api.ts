@@ -101,7 +101,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
               service_slug: providerData.service_slug,
               rating: 0, 
               reviews_count: 0,
-              profileimage: providerData.profileImage, // Corrected column name
+              profileimage: providerData.profileimage,
               portfolio: providerData.portfolio
             }
         ])

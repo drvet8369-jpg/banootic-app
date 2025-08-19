@@ -28,7 +28,7 @@ export interface Provider {
   service_slug: Service['slug']; // Matches DB column
   rating: number;
   reviews_count: number; // Matches DB column
-  profileImage: PortfolioItem;
+  profileimage: PortfolioItem; // Corrected to match database column name
   portfolio: PortfolioItem[];
 }
 
