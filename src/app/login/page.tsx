@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone, getCustomerByPhone, createCustomer } from '@/lib/api';
+import { getProviders } from '@/lib/data';
 import type { User } from '@/context/AuthContext';
 
 
@@ -36,7 +36,6 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
-
 
 export default function LoginPage() {
   const { toast } = useToast();
@@ -53,42 +52,30 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    let userToLogin: User | null = null;
-
     try {
-      // Step 1: Check if the user is a known provider (from DB or default data).
-      const provider = await getProviderByPhone(values.phone);
-      if (provider) {
-        userToLogin = {
-          name: provider.name,
-          phone: provider.phone,
-          accountType: 'provider',
-        };
-      } else {
-        // Step 2: If not a provider, check if they are a known customer.
-        const customer = await getCustomerByPhone(values.phone);
-        if (customer) {
-          userToLogin = customer;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
+
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
         } else {
-          // Step 3: If user is completely new, create a new customer account for them automatically.
-          const newCustomerName = `کاربر ${values.phone.slice(-4)}`;
-          try {
-            const newCustomer = await createCustomer({ name: newCustomerName, phone: values.phone });
-            userToLogin = newCustomer;
-          } catch (e: any) {
-            // Handle race condition or other errors during creation, but still log the user in locally.
-            if (e.message.includes('Supabase is not configured')) {
-               console.warn("Running in offline mode. Creating temporary customer account.");
-               userToLogin = { name: newCustomerName, phone: values.phone, accountType: 'customer' };
-            } else {
-              throw e; // Re-throw other errors
-            }
-          }
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
         }
-      }
-      
-      // Step 4: Log the user in.
-      if (userToLogin) {
+        
         login(userToLogin);
 
         toast({
@@ -98,25 +85,21 @@ export default function LoginPage() {
         
         const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
         router.push(destination);
-      } else {
-         throw new Error("Could not identify or create user.");
-      }
 
     } catch (error) {
-      console.error("Login process failed:", error);
-      toast({
-        title: 'خطا در ورود',
-        description: 'مشکلی در فرآیند ورود پیش آمده است، لطفاً دوباره تلاش کنید.',
-        variant: 'destructive',
-      });
+        console.error("Login failed:", error);
+        toast({
+            title: 'خطا در ورود',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   }
 
-
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
@@ -134,13 +117,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="09xxxxxxxxx" 
-                        {...field} 
-                        disabled={isLoading}
-                        className="text-left dir-ltr placeholder:text-muted-foreground/70"
-                        dir="ltr"
-                      />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -155,7 +132,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center text-sm">
             هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              از اینجا به عنوان هنرمند ثبت‌نام کنید
+              از اینجا ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
