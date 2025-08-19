@@ -1,72 +1,81 @@
 
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
+import { Buffer } from 'buffer';
 
-// Ensure environment variables are loaded and present.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL and Anon Key must be provided in environment variables.');
+let supabase: SupabaseClient;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn(`
+  ****************************************************************
+  ** WARNING: Supabase environment variables are not set.       **
+  ** Database features will be disabled.                        **
+  ** Please set NEXT_PUBLIC_SUPABASE_URL and                     **
+  ** SUPABASE_SERVICE_ROLE_KEY in your .env file.                 **
+  ****************************************************************
+  `);
+  // Create a dummy client to avoid crashing the app
+  supabase = {
+    from: () => ({
+      select: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
+      insert: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
+      update: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
+      delete: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
+    }),
+    storage: {
+      from: () => ({
+        upload: async () => ({ error: { message: 'Supabase not configured' } }),
+        remove: async () => ({ error: { message: 'Supabase not configured' } }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      })
+    }
+  } as unknown as SupabaseClient;
+} else {
+  supabase = createClient(supabaseUrl, supabaseKey);
 }
 
-// Create a single, reusable Supabase client instance.
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const BUCKET_NAME = 'provider-images';
+
+// Helper function to handle potential Supabase errors
+async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
+    const { data, error } = await request;
+    if (error) {
+        console.error(errorMessage, error.message);
+        throw new Error(`${errorMessage} Error: ${error.message}`);
+    }
+    return data as T;
+}
+
 
 // ========== Provider Functions ==========
 
-/**
- * Fetches all providers from the database.
- */
 export async function getAllProviders(): Promise<Provider[]> {
-    const { data, error } = await supabase.from('providers').select('*');
-    if (error) {
-        console.error("Error fetching all providers:", error.message);
-        throw new Error("Could not fetch providers.");
-    }
-    return data || [];
+    return handleSupabaseRequest(
+        supabase.from('providers').select('*'),
+        "Could not fetch providers."
+    );
 }
 
-/**
- * Fetches all providers within a specific category slug.
- */
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    const { data, error } = await supabase
-        .from('providers')
-        .select('*')
-        .eq('category_slug', categorySlug);
-    
-    if (error) {
-        console.error("Error fetching providers by category:", error.message);
-        throw new Error("Could not fetch providers for this category.");
-    }
-    return data || [];
+    return handleSupabaseRequest(
+        supabase.from('providers').select('*').eq('category_slug', categorySlug),
+        "Could not fetch providers for this category."
+    );
 }
 
-/**
- * Fetches all providers for a specific service slug.
- */
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
-    const { data, error } = await supabase
-        .from('providers')
-        .select('*')
-        .eq('service_slug', serviceSlug);
-
-    if (error) {
-        console.error("Error fetching providers by service slug:", error.message);
-        throw new Error("Could not fetch providers for this service.");
-    }
-    return data || [];
+     return handleSupabaseRequest(
+        supabase.from('providers').select('*').eq('service_slug', serviceSlug),
+        "Could not fetch providers for this service."
+    );
 }
 
-
-/**
- * Fetches a single provider by their phone number.
- * Returns null if no provider is found or an error occurs.
- */
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const { data, error } = await supabase
         .from('providers')
@@ -76,151 +85,129 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
     if (error) {
         console.error("Error fetching provider by phone:", error);
-        // Do not throw an error here, just return null so the UI can handle 'not found'
         return null;
     }
-    
-    return data || null;
+    return data;
 }
 
-
-/**
- * Creates a new provider in the database.
- */
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
-    const { data, error } = await supabase
-        .from('providers')
-        .insert([
-            { 
-              name: providerData.name,
-              service: providerData.service,
-              location: providerData.location,
-              phone: providerData.phone,
-              bio: providerData.bio,
-              category_slug: providerData.category_slug,
-              service_slug: providerData.service_slug,
-              rating: 0, 
-              reviews_count: 0,
-              profileimage: providerData.profileimage,
-              portfolio: providerData.portfolio
-            }
-        ])
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error creating provider:", error.message);
-        // Rethrow the original Supabase error for more detailed debugging.
-        throw error;
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase
+            .from('providers')
+            .insert([
+                { 
+                  name: providerData.name,
+                  service: providerData.service,
+                  location: providerData.location,
+                  phone: providerData.phone,
+                  bio: providerData.bio,
+                  category_slug: providerData.category_slug,
+                  service_slug: providerData.service_slug,
+                  rating: 0, 
+                  reviews_count: 0,
+                  profileimage: providerData.profileimage,
+                  portfolio: providerData.portfolio
+                }
+            ])
+            .select()
+            .single(),
+        "Error creating provider."
+    );
 }
 
-/**
- * Updates a provider's core details (name, service, bio).
- */
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
-    const { data, error } = await supabase
-        .from('providers')
-        .update(details)
-        .eq('phone', phone)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error("Error updating provider details:", error.message);
-        throw new Error("Could not update provider details.");
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase
+            .from('providers')
+            .update(details)
+            .eq('phone', phone)
+            .select()
+            .single(),
+        "Could not update provider details."
+    );
 }
 
-/**
- * Appends a new item to a provider's portfolio.
- */
-export async function addPortfolioItem(phone: string, newItem: PortfolioItem): Promise<Provider> {
-    const { data: currentProvider, error: fetchError } = await supabase
-        .from('providers')
-        .select('portfolio')
-        .eq('phone', phone)
-        .single();
+async function uploadImageFromBase64(base64Data: string, phone: string): Promise<string> {
+    if (!base64Data) throw new Error("No image data provided for upload.");
 
-    if (fetchError || !currentProvider) {
-        console.error("Error fetching provider to add portfolio:", fetchError?.message);
-        throw new Error("Could not find provider to update portfolio.");
-    }
+    const mimeType = base64Data.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
+    const fileExtension = mimeType.split('/')[1] || 'jpg';
+    const base64String = base64Data.split(';base64,').pop();
+
+    if (!base64String) throw new Error('Invalid base64 string');
+
+    const fileBuffer = Buffer.from(base64String, 'base64');
+    const filePath = `${phone}/${Date.now()}.${fileExtension}`;
+    
+    const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, fileBuffer, { contentType: mimeType, upsert: true });
+
+    if (uploadError) throw new Error(`Failed to upload image: ${uploadError.message}`);
+
+    const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(filePath);
+
+    if (!publicUrlData) throw new Error('Could not get public URL for the uploaded file.');
+
+    return publicUrlData.publicUrl;
+}
+
+export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
+    const imageUrl = await uploadImageFromBase64(base64Data, phone);
+    const newItem: PortfolioItem = { src: imageUrl, aiHint };
+
+    const currentProvider = await handleSupabaseRequest(
+      supabase.from('providers').select('portfolio').eq('phone', phone).single(),
+      "Could not find provider to update portfolio."
+    );
     
     const updatedPortfolio = [...(currentProvider.portfolio || []), newItem];
 
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio: updatedPortfolio })
-        .eq('phone', phone)
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error adding portfolio item:", error.message);
-        throw new Error("Could not add portfolio item.");
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', phone).select().single(),
+        "Could not add portfolio item to database."
+    );
 }
 
-/**
- * Removes an item from a provider's portfolio by its index.
- */
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
-    const { data: currentProvider, error: fetchError } = await supabase
-        .from('providers')
-        .select('portfolio')
-        .eq('phone', phone)
-        .single();
+    const currentProvider = await handleSupabaseRequest(
+        supabase.from('providers').select('portfolio').eq('phone', phone).single(),
+        "Could not find provider or portfolio item to delete."
+    );
+    if (!currentProvider.portfolio[itemIndex]) throw new Error("Item index out of bounds.");
 
-    if (fetchError || !currentProvider) {
-        console.error("Error fetching provider to delete portfolio:", fetchError?.message);
-        throw new Error("Could not find provider to update portfolio.");
-    }
-
-    const updatedPortfolio = (currentProvider.portfolio || []).filter((_: any, index: number) => index !== itemIndex);
-
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio: updatedPortfolio })
-        .eq('phone', phone)
-        .select()
-        .single();
+    const itemToDelete = currentProvider.portfolio[itemIndex];
+    const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
     
-    if (error) {
-        console.error("Error deleting portfolio item:", error.message);
-        throw new Error("Could not delete portfolio item.");
+    if (filePath) {
+      await handleSupabaseRequest(
+        supabase.storage.from(BUCKET_NAME).remove([filePath]),
+        "Failed to delete from storage, but proceeding to update DB:"
+      );
     }
-    return data;
+
+    const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
+
+    return handleSupabaseRequest(
+      supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', phone).select().single(),
+      "Could not delete portfolio item from database."
+    );
 }
 
+export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
+    const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, phone) : '';
+    const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
 
-/**
- * Updates a provider's profile image.
- */
-export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ profileimage: profileImage })
-        .eq('phone', phone)
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error updating profile image:", error.message);
-        throw new Error("Could not update profile image.");
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase.from('providers').update({ profileimage: newProfileImage }).eq('phone', phone).select().single(),
+        "Could not update profile image in database."
+    );
 }
 
 // ========== Customer Functions ==========
 
-/**
- * Fetches a single customer by their phone number.
- * Returns null if no customer is found or an error occurs.
- */
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const { data, error } = await supabase
         .from("customers")
@@ -232,116 +219,59 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         console.error("Error fetching customer by phone:", error);
         return null;
     }
-    
-    return data || null;
+    return data as User | null;
 }
 
-
-/**
- * Creates a new customer in the database.
- */
 export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
-    const { data, error } = await supabase
+     const { data, error } = await supabase
         .from('customers')
-        .insert([{
-            name: userData.name,
-            phone: userData.phone,
-            account_type: 'customer'
-        }])
+        .insert([{ name: userData.name, phone: userData.phone, account_type: 'customer' }])
         .select('name, phone, accountType:account_type')
         .single();
 
     if (error) {
-        console.error('Error creating customer:', error);
-         if (error.code === '23505') { // Unique constraint violation
-             throw new Error('This phone number is already registered.');
-        }
+        if (error.code === '23505') throw new Error('This phone number is already registered.');
         throw new Error('Could not create customer account.');
     }
-    
     return data as User;
 }
 
 // ========== Review Functions ==========
 
-/**
- * Fetches all reviews for a specific provider.
- */
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
-    const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('provider_id', providerId)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Error fetching reviews:", error.message);
-        return [];
-    }
-    return data || [];
+    return handleSupabaseRequest(
+        supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false }),
+        "Could not fetch reviews."
+    );
 }
 
-/**
- * Adds a new review for a provider and updates the provider's average rating.
- */
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
-    const { data, error } = await supabase
-        .from('reviews')
-        .insert([{
-          provider_id: reviewData.provider_id,
-          author_name: reviewData.author_name,
-          rating: reviewData.rating,
-          comment: reviewData.comment
-        }])
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error adding review:", error.message);
-        throw new Error("Could not add review.");
-    }
-    
-    // After adding the review, recalculate and update the provider's rating.
+    const newReview = await handleSupabaseRequest(
+        supabase.from('reviews').insert([reviewData]).select().single(),
+        "Could not add review."
+    );
     await updateProviderRating(reviewData.provider_id);
-
-    return data;
+    return newReview;
 }
 
-/**
- * Recalculates and updates a provider's average rating and review count.
- * This is a private helper function.
- */
 async function updateProviderRating(providerId: number) {
-    const { data: reviews, error: reviewsError } = await supabase
-        .from('reviews')
-        .select('rating')
-        .eq('provider_id', providerId);
-
-    if (reviewsError) {
-        console.error("Error fetching reviews for rating update:", reviewsError.message);
-        return;
-    }
+    const reviews = await handleSupabaseRequest(
+      supabase.from('reviews').select('rating').eq('provider_id', providerId),
+      "Could not fetch reviews for rating update."
+    );
 
     const reviewsCount = reviews.length;
-    const totalRating = reviews.reduce((acc, r) => acc + r.rating, 0);
+    const totalRating = reviews.reduce((acc: number, r: {rating: number}) => acc + r.rating, 0);
     const newAverageRating = reviewsCount > 0 ? parseFloat((totalRating / reviewsCount).toFixed(1)) : 0;
     
-    const { error: updateError } = await supabase
-        .from('providers')
-        .update({ rating: newAverageRating, reviews_count: reviewsCount })
-        .eq('id', providerId);
-    
-    if (updateError) {
-        console.error("Error updating provider rating:", updateError.message);
-    }
+    await handleSupabaseRequest(
+      supabase.from('providers').update({ rating: newAverageRating, reviews_count: reviewsCount }).eq('id', providerId),
+      "Could not update provider rating."
+    );
 }
-
 
 // ========== Agreement Functions ==========
 
-/**
- * Creates a new agreement request from a customer to a provider.
- */
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
     const agreementData = {
         provider_phone: provider.phone,
@@ -350,68 +280,29 @@ export async function createAgreement(provider: Provider, customer: User): Promi
         status: 'pending' as const,
     };
     
-    const { data, error } = await supabase
-        .from('agreements')
-        .insert([agreementData])
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error creating agreement:", error.message);
-        throw error;
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase.from('agreements').insert([agreementData]).select().single(),
+        "Error creating agreement."
+    );
 }
 
-/**
- * Fetches all agreements for a specific provider.
- */
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
-    const { data, error } = await supabase
-        .from('agreements')
-        .select('*')
-        .eq('provider_phone', providerPhone)
-        .order('requested_at', { ascending: false });
-    
-    if (error) {
-        console.error("Error fetching provider agreements:", error.message);
-        return [];
-    }
-    return data || [];
+    return handleSupabaseRequest(
+        supabase.from('agreements').select('*').eq('provider_phone', providerPhone).order('requested_at', { ascending: false }),
+        "Could not fetch provider agreements."
+    );
 }
 
-/**
- * Fetches all agreements initiated by a specific customer.
- */
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
-    const { data, error } = await supabase
-        .from('agreements')
-        .select('*')
-        .eq('customer_phone', customerPhone)
-        .order('requested_at', { ascending: false });
-
-    if (error) {
-        console.error("Error fetching customer agreements:", error.message);
-        return [];
-    }
-    return data || [];
+    return handleSupabaseRequest(
+        supabase.from('agreements').select('*').eq('customer_phone', customerPhone).order('requested_at', { ascending: false }),
+        "Could not fetch customer agreements."
+    );
 }
 
-
-/**
- * Confirms an agreement, updating its status and timestamp.
- */
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    const { data, error } = await supabase
-        .from('agreements')
-        .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
-        .eq('id', agreementId)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error("Error confirming agreement:", error.message);
-        throw new Error("Could not confirm agreement.");
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single(),
+        "Could not confirm agreement."
+    );
 }

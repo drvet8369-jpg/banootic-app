@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -10,8 +11,8 @@ import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XC
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Provider, PortfolioItem } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, addPortfolioItem, deletePortfolioItem as apiDeletePortfolioItem, updateProviderProfileImage } from '@/lib/api';
+import type { Provider } from '@/lib/types';
+import { getProviderByPhone, updateProviderDetails, addPortfolioItem, deletePortfolioItem, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -132,7 +133,8 @@ export default function ProfilePage() {
             const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
             callback(compressedDataUrl);
           } else {
-            callback(imageSrc);
+             setIsSaving(false);
+             toast({title: 'خطا', description: 'خطا در فشرده‌سازی تصویر.', variant: 'destructive'})
           }
         };
         img.src = imageSrc;
@@ -144,11 +146,10 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
-  const handleAddPortfolioItem = async (imageSrc: string) => {
+  const handleAddPortfolioFile = async (base64Data: string) => {
     if (!user) return;
-    const newItem: PortfolioItem = { src: imageSrc, aiHint: 'new work' };
     try {
-      const updatedProvider = await addPortfolioItem(user.phone, newItem);
+      const updatedProvider = await addPortfolioItem(user.phone, base64Data, 'new work');
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (error) {
@@ -158,12 +159,12 @@ export default function ProfilePage() {
     }
   };
 
-  const deletePortfolioItem = async (itemIndex: number) => {
+  const handleDeletePortfolioItem = async (itemIndex: number) => {
     if (!provider || !user || user.phone !== provider.phone) return;
     
     setIsSaving(true);
     try {
-      const updatedProvider = await apiDeletePortfolioItem(user.phone, itemIndex);
+      const updatedProvider = await deletePortfolioItem(user.phone, itemIndex);
       setProvider(updatedProvider);
       toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (error) {
@@ -173,10 +174,10 @@ export default function ProfilePage() {
     }
   };
   
-  const handleProfilePictureChange = async (newImageSrc: string) => {
+  const handleProfilePictureFileChange = async (base64Data: string) => {
       if (!user) return;
       try {
-        const updatedProvider = await updateProviderProfileImage(user.phone, { src: newImageSrc, aiHint: 'woman portrait' });
+        const updatedProvider = await updateProviderProfileImage(user.phone, base64Data, 'woman portrait');
         setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } catch (error) {
@@ -190,7 +191,8 @@ export default function ProfilePage() {
     if(!user) return;
     setIsSaving(true);
     try {
-      const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', aiHint: 'woman portrait' });
+      // Pass an empty string to signify deletion
+      const updatedProvider = await updateProviderProfileImage(user.phone, '', 'woman portrait');
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } catch (error) {
@@ -314,14 +316,14 @@ export default function ProfilePage() {
                   <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
-                    onChange={(e) => handleFileChange(e, handleAddPortfolioItem)}
+                    onChange={(e) => handleFileChange(e, handleAddPortfolioFile)}
                     className="hidden"
                     accept="image/*"
                   />
                    <input
                     type="file"
                     ref={profilePicInputRef}
-                    onChange={(e) => handleFileChange(e, handleProfilePictureChange)}
+                    onChange={(e) => handleFileChange(e, handleProfilePictureFileChange)}
                     className="hidden"
                     accept="image/*"
                   />
@@ -348,7 +350,7 @@ export default function ProfilePage() {
                                         variant="destructive"
                                         size="icon"
                                         className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                        onClick={() => deletePortfolioItem(index)}
+                                        onClick={() => handleDeletePortfolioItem(index)}
                                         aria-label={`حذف نمونه کار ${index + 1}`}
                                     >
                                         <Trash2 className="w-4 h-4" />
