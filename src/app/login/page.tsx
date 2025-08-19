@@ -126,7 +126,7 @@ export default function LoginPage() {
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="xxxxxxx 09" 
+                        placeholder="09xxxxxxxxx" 
                         {...field} 
                         disabled={isLoading}
                         className="text-left dir-ltr placeholder:text-muted-foreground/70"
