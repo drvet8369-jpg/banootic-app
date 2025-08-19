@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation';
 import { getAllProviders, getAgreementsByProvider } from '@/lib/api';
 import { calculateProviderScore } from '@/lib/ranking';
 import type { Provider } from '@/lib/types';
-import { categories } from '@/lib/constants';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
@@ -15,11 +14,9 @@ type ProviderWithScore = Provider & { score: number };
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const categorySlug = searchParams.get('category');
-
+  
   const [searchResults, setSearchResults] = useState<ProviderWithScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [pageTitle, setPageTitle] = useState('برترین هنرمندان');
 
   const performSearchAndRank = useCallback(async () => {
     setIsLoading(true);
@@ -38,18 +35,7 @@ export default function SearchPage() {
         
         let filteredResults = providersWithScores;
 
-        // 1. Filter by category if a category slug is present
-        if (categorySlug) {
-            filteredResults = filteredResults.filter(provider => provider.categorySlug === categorySlug);
-            const category = categories.find(c => c.slug === categorySlug);
-            setPageTitle(category ? `هنرمندان ${category.name}` : 'نتایج جستجو');
-        } else if (query) {
-             setPageTitle('نتایج جستجو');
-        } else {
-            setPageTitle('برترین هنرمندان');
-        }
-        
-        // 2. Filter by search query if a query is present
+        // Filter by search query if a query is present
         if (query) {
             const lowercasedQuery = query.toLowerCase();
             filteredResults = filteredResults
@@ -71,7 +57,7 @@ export default function SearchPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [query, categorySlug]);
+  }, [query]);
 
   useEffect(() => {
     performSearchAndRank();
@@ -82,14 +68,14 @@ export default function SearchPage() {
     <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">
-            {pageTitle}
+            {query ? 'نتایج جستجو' : 'برترین هنرمندان'}
         </h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             نتایج برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
         ) : (
-          !categorySlug && <p className="mt-3 text-lg text-muted-foreground">
+          <p className="mt-3 text-lg text-muted-foreground">
             لیست هنرمندان بر اساس امتیاز و فعالیت در پلتفرم مرتب شده است.
           </p>
         )}
@@ -111,10 +97,7 @@ export default function SearchPage() {
           <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
           <p className="text-muted-foreground mt-2">
-            {query 
-              ? "هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید."
-              : "هنوز هیچ هنرمندی در این دسته‌بندی ثبت‌نام نکرده است."
-            }
+            هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید.
           </p>
         </div>
       )}
