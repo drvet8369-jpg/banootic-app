@@ -1,4 +1,3 @@
-
 'use client';
 
 import { services, categories } from '@/lib/constants';
@@ -64,8 +63,8 @@ export default function ServiceProvidersPage() {
   return (
     <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
-        <p className="mt-3 text-lg text-foreground font-semibold">
+        <h1 className="font-headline text-2xl md:text-3xl font-bold">{service.name}</h1>
+        <p className="mt-3 text-base md:text-lg text-foreground font-semibold">
           ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی{' '}
           <Link href={`/services/${category.slug}`} className="hover:underline">
             {category.name}

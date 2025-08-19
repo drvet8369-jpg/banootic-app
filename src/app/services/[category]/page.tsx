@@ -58,7 +58,7 @@ export default function CategoryPage() {
 
             {categoryServices.length > 0 ? (
               <>
-                <h2 className="text-2xl font-headline font-bold text-center mb-8">مرور خدمات در این دسته‌بندی</h2>
+                <h2 className="text-xl font-headline font-bold text-center mb-8">مرور خدمات در این دسته‌بندی</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {categoryServices.map((service) => (
                     <Link href={`/services/${category.slug}/${service.slug}`} key={service.slug}>
