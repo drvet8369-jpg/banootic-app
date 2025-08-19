@@ -56,7 +56,7 @@ export default function LoginPage() {
     let userToLogin: User | null = null;
 
     try {
-      // Step 1: Check if the user is a provider.
+      // Step 1: Check if the user is a known provider (from DB or default data).
       const provider = await getProviderByPhone(values.phone);
       if (provider) {
         userToLogin = {
@@ -71,23 +71,36 @@ export default function LoginPage() {
           userToLogin = customer;
         } else {
           // Step 3: If user is completely new, create a new customer account for them automatically.
-          const newCustomer = await createCustomer({
-             name: `کاربر ${values.phone.slice(-4)}`,
-             phone: values.phone
-          });
-          userToLogin = newCustomer;
+          const newCustomerName = `کاربر ${values.phone.slice(-4)}`;
+          try {
+            const newCustomer = await createCustomer({ name: newCustomerName, phone: values.phone });
+            userToLogin = newCustomer;
+          } catch (e: any) {
+            // Handle race condition or other errors during creation, but still log the user in locally.
+            if (e.message.includes('Supabase is not configured')) {
+               console.warn("Running in offline mode. Creating temporary customer account.");
+               userToLogin = { name: newCustomerName, phone: values.phone, accountType: 'customer' };
+            } else {
+              throw e; // Re-throw other errors
+            }
+          }
         }
       }
       
       // Step 4: Log the user in.
-      login(userToLogin);
+      if (userToLogin) {
+        login(userToLogin);
 
-      toast({
-        title: 'ورود با موفقیت انجام شد!',
-        description: `خوش آمدید ${userToLogin.name}!`,
-      });
-
-      router.push('/');
+        toast({
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید ${userToLogin.name}!`,
+        });
+        
+        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
+      } else {
+         throw new Error("Could not identify or create user.");
+      }
 
     } catch (error) {
       console.error("Login process failed:", error);
