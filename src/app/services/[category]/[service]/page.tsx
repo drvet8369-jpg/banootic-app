@@ -2,7 +2,7 @@
 'use client';
 
 import { services, categories } from '@/lib/constants';
-import { getAllProviders } from '@/lib/api';
+import { getProvidersByServiceSlug } from '@/lib/api';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -29,10 +29,9 @@ export default function ServiceProvidersPage() {
     setCategory(foundCategory || null);
     setService(foundService || null);
       
-    if (foundCategory && foundService) {
+    if (foundService) {
       try {
-        const allProviders = await getAllProviders();
-        const foundProviders = allProviders.filter((p) => p.service_slug === serviceSlug);
+        const foundProviders = await getProvidersByServiceSlug(serviceSlug);
         setServiceProviders(foundProviders);
       } catch (error) {
         console.error("Failed to fetch providers for service page:", error);

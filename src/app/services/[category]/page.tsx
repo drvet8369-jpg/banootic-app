@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function CategoryPage() {
     const params = useParams<{ category: string }>();
-    const categorySlug = params.category;
+    const categorySlug = params.category as string;
     
     const [category, setCategory] = useState<Category | null>(null);
     const [categoryServices, setCategoryServices] = useState<Service[]>([]);
@@ -57,7 +57,7 @@ export default function CategoryPage() {
                 </Button>
             </div>
 
-            {categoryServices.length > 0 && (
+            {categoryServices.length > 0 ? (
               <>
                 <h2 className="text-2xl font-headline font-bold text-center mb-8">مرور خدمات در این دسته‌بندی</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -73,6 +73,10 @@ export default function CategoryPage() {
                   ))}
                 </div>
               </>
+            ) : (
+                <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">هنوز هیچ خدماتی در این دسته‌بندی ثبت نشده است.</p>
+                </div>
             )}
         </div>
     );

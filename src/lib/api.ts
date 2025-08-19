@@ -46,6 +46,22 @@ export async function getProvidersByCategory(categorySlug: string): Promise<Prov
     return data || [];
 }
 
+/**
+ * Fetches all providers for a specific service slug.
+ */
+export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
+    const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('service_slug', serviceSlug);
+
+    if (error) {
+        console.error("Error fetching providers by service slug:", error.message);
+        throw new Error("Could not fetch providers for this service.");
+    }
+    return data || [];
+}
+
 
 /**
  * Fetches a single provider by their phone number.
@@ -71,7 +87,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 /**
  * Creates a new provider in the database.
  */
-export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviewsCount'>): Promise<Provider> {
+export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
         .insert([
@@ -81,10 +97,10 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
               location: providerData.location,
               phone: providerData.phone,
               bio: providerData.bio,
-              category_slug: providerData.categorySlug,
-              service_slug: providerData.serviceSlug,
+              category_slug: providerData.category_slug,
+              service_slug: providerData.service_slug,
               rating: 0, 
-              reviewsCount: 0,
+              reviews_count: 0,
               profileImage: providerData.profileImage,
               portfolio: providerData.portfolio
             }
@@ -223,12 +239,12 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 /**
  * Adds a new review for a provider and updates the provider's average rating.
  */
-export async function addReview(reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<Review> {
+export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
     const { data, error } = await supabase
         .from('reviews')
         .insert([{
-          provider_id: reviewData.providerId,
-          author_name: reviewData.authorName,
+          provider_id: reviewData.provider_id,
+          author_name: reviewData.author_name,
           rating: reviewData.rating,
           comment: reviewData.comment
         }])
@@ -241,7 +257,7 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'createdAt'>): P
     }
     
     // After adding the review, recalculate and update the provider's rating.
-    await updateProviderRating(reviewData.providerId);
+    await updateProviderRating(reviewData.provider_id);
 
     return data;
 }
