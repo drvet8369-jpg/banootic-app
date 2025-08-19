@@ -2,7 +2,7 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
-import type { Provider, Review, Agreement } from './types';
+import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 
 // Ensure environment variables are loaded and present.
@@ -135,30 +135,51 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 }
 
 /**
- * Updates a provider's entire portfolio.
+ * Appends a new item to a provider's portfolio.
  */
-export async function updateProviderPortfolio(phone: string, portfolio: any[]): Promise<Provider> {
+export async function addPortfolioItem(phone: string, newItem: PortfolioItem): Promise<Provider> {
     const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio })
-        .eq('phone', phone)
+        .rpc('append_to_portfolio', {
+            provider_phone: phone,
+            new_item: newItem
+        })
         .select()
         .single();
 
     if (error) {
-        console.error("Error updating portfolio:", error.message);
-        throw new Error("Could not update portfolio.");
+        console.error("Error adding portfolio item:", error.message);
+        throw new Error("Could not add portfolio item.");
     }
     return data;
 }
 
 /**
+ * Removes an item from a provider's portfolio by its index.
+ */
+export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
+    const { data, error } = await supabase
+        .rpc('remove_from_portfolio', {
+            provider_phone: phone,
+            item_index: itemIndex
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error deleting portfolio item:", error.message);
+        throw new Error("Could not delete portfolio item.");
+    }
+    return data;
+}
+
+
+/**
  * Updates a provider's profile image.
  */
-export async function updateProviderProfileImage(phone: string, profileImage: any): Promise<Provider> {
+export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
-        .update({ profileImage })
+        .update({ profileImage: profileImage })
         .eq('phone', phone)
         .select()
         .single();

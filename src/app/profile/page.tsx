@@ -10,8 +10,8 @@ import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XC
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Provider } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
+import type { Provider, PortfolioItem } from '@/lib/types';
+import { getProviderByPhone, updateProviderDetails, addPortfolioItem, deletePortfolioItem as apiDeletePortfolioItem, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -144,11 +144,11 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
-  const addPortfolioItem = async (imageSrc: string) => {
-    if (!user || !provider) return;
-    const newPortfolio = [...(provider.portfolio || []), { src: imageSrc, aiHint: 'new work' }];
+  const handleAddPortfolioItem = async (imageSrc: string) => {
+    if (!user) return;
+    const newItem: PortfolioItem = { src: imageSrc, aiHint: 'new work' };
     try {
-      const updatedProvider = await updateProviderPortfolio(user.phone, newPortfolio);
+      const updatedProvider = await addPortfolioItem(user.phone, newItem);
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (error) {
@@ -160,12 +160,10 @@ export default function ProfilePage() {
 
   const deletePortfolioItem = async (itemIndex: number) => {
     if (!provider || !user || user.phone !== provider.phone) return;
-
-    const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
     
     setIsSaving(true);
     try {
-      const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
+      const updatedProvider = await apiDeletePortfolioItem(user.phone, itemIndex);
       setProvider(updatedProvider);
       toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (error) {
@@ -316,7 +314,7 @@ export default function ProfilePage() {
                   <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
-                    onChange={(e) => handleFileChange(e, addPortfolioItem)}
+                    onChange={(e) => handleFileChange(e, handleAddPortfolioItem)}
                     className="hidden"
                     accept="image/*"
                   />
