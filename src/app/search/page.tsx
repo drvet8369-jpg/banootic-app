@@ -75,7 +75,7 @@ export default function SearchPage() {
   return (
     <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">
+        <h1 className="font-headline text-3xl md:text-4xl font-bold">
             {query ? 'نتایج جستجو' : (categoryName ? `هنرمندان در دسته‌ی ${categoryName}` : 'برترین هنرمندان')}
         </h1>
         {query ? (
