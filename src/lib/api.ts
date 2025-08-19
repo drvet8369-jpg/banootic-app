@@ -101,7 +101,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
               service_slug: providerData.service_slug,
               rating: 0, 
               reviews_count: 0,
-              profileimage: providerData.profileImage, // Correct column name
+              profileimage: providerData.profileImage, // Corrected column name
               portfolio: providerData.portfolio
             }
         ])
@@ -138,11 +138,23 @@ export async function updateProviderDetails(phone: string, details: { name: stri
  * Appends a new item to a provider's portfolio.
  */
 export async function addPortfolioItem(phone: string, newItem: PortfolioItem): Promise<Provider> {
+    const { data: currentProvider, error: fetchError } = await supabase
+        .from('providers')
+        .select('portfolio')
+        .eq('phone', phone)
+        .single();
+
+    if (fetchError || !currentProvider) {
+        console.error("Error fetching provider to add portfolio:", fetchError?.message);
+        throw new Error("Could not find provider to update portfolio.");
+    }
+    
+    const updatedPortfolio = [...(currentProvider.portfolio || []), newItem];
+
     const { data, error } = await supabase
-        .rpc('append_to_portfolio', {
-            provider_phone: phone,
-            new_item: newItem
-        })
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('phone', phone)
         .select()
         .single();
 
@@ -157,14 +169,26 @@ export async function addPortfolioItem(phone: string, newItem: PortfolioItem): P
  * Removes an item from a provider's portfolio by its index.
  */
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
-    const { data, error } = await supabase
-        .rpc('remove_from_portfolio', {
-            provider_phone: phone,
-            item_index: itemIndex
-        })
-        .select()
+    const { data: currentProvider, error: fetchError } = await supabase
+        .from('providers')
+        .select('portfolio')
+        .eq('phone', phone)
         .single();
 
+    if (fetchError || !currentProvider) {
+        console.error("Error fetching provider to delete portfolio:", fetchError?.message);
+        throw new Error("Could not find provider to update portfolio.");
+    }
+
+    const updatedPortfolio = (currentProvider.portfolio || []).filter((_: any, index: number) => index !== itemIndex);
+
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('phone', phone)
+        .select()
+        .single();
+    
     if (error) {
         console.error("Error deleting portfolio item:", error.message);
         throw new Error("Could not delete portfolio item.");
@@ -179,7 +203,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
-        .update({ profileimage: profileImage }) // Corrected column name to lowercase 'profileimage'
+        .update({ profileimage: profileImage })
         .eq('phone', phone)
         .select()
         .single();
