@@ -11,6 +11,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let supabase: SupabaseClient;
 
+const DUMMY_ERROR_MESSAGE = 'Supabase not configured';
+
 if (!supabaseUrl || !supabaseKey) {
   console.warn(`
   ****************************************************************
@@ -25,20 +27,20 @@ if (!supabaseUrl || !supabaseKey) {
       eq: () => dummyRequest,
       order: () => dummyRequest,
       select: () => dummyRequest,
-      insert: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
-      update: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
-      delete: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
-      maybeSingle: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      single: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      then: (resolve: any) => resolve({ data: [], error: { message: 'Supabase not configured' } })
+      insert: async () => ({ data: [], error: { message: DUMMY_ERROR_MESSAGE } }),
+      update: async () => ({ data: [], error: { message: DUMMY_ERROR_MESSAGE } }),
+      delete: async () => ({ data: [], error: { message: DUMMY_ERROR_MESSAGE } }),
+      maybeSingle: async () => ({ data: null, error: { message: DUMMY_ERROR_MESSAGE } }),
+      single: async () => ({ data: null, error: { message: DUMMY_ERROR_MESSAGE } }),
+      then: (resolve: any) => resolve({ data: [], error: { message: DUMMY_ERROR_MESSAGE } })
   };
 
   supabase = {
     from: () => dummyRequest,
     storage: {
       from: () => ({
-        upload: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-        remove: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+        upload: async () => ({ data: null, error: { message: DUMMY_ERROR_MESSAGE } }),
+        remove: async () => ({ data: null, error: { message: DUMMY_ERROR_MESSAGE } }),
         getPublicUrl: () => ({ data: { publicUrl: '' } }),
       })
     }
@@ -53,6 +55,11 @@ const BUCKET_NAME = 'provider-images';
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
     if (error) {
+        // Don't throw an error if Supabase is just not configured, return empty data instead.
+        if (error.message === DUMMY_ERROR_MESSAGE) {
+            console.warn(`Supabase request failed: ${errorMessage} - ${error.message}`);
+            return (Array.isArray(data) ? [] : null) as T;
+        }
         console.error(errorMessage, error.message);
         throw new Error(`${errorMessage} Error: ${error.message}`);
     }
@@ -64,7 +71,7 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 
 export async function getAllProviders(): Promise<Provider[]> {
     return handleSupabaseRequest(
-        supabase.from('providers').select('*'),
+        supabase.from('providers').select('*').order('name', { ascending: true }),
         "Could not fetch providers."
     );
 }
@@ -90,7 +97,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         .eq('phone', phone)
         .maybeSingle();
 
-    if (error && error.message !== 'Supabase not configured') {
+    if (error && error.message !== DUMMY_ERROR_MESSAGE) {
         console.error("Error fetching provider by phone:", error);
         return null;
     }
@@ -222,7 +229,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         .eq("phone", phone)
         .maybeSingle();
 
-    if (error && error.message !== 'Supabase not configured') {
+    if (error && error.message !== DUMMY_ERROR_MESSAGE) {
         console.error("Error fetching customer by phone:", error);
         return null;
     }
@@ -237,6 +244,10 @@ export async function createCustomer(userData: { name: string, phone: string }):
         .single();
 
     if (error) {
+        if (error.message === DUMMY_ERROR_MESSAGE) {
+            console.warn(`Supabase request failed: Could not create customer - ${error.message}`);
+            return { ...userData, accountType: 'customer' };
+        }
         if (error.code === '23505') throw new Error('This phone number is already registered.');
         throw new Error('Could not create customer account.');
     }
@@ -266,6 +277,8 @@ async function updateProviderRating(providerId: number) {
       supabase.from('reviews').select('rating').eq('provider_id', providerId),
       "Could not fetch reviews for rating update."
     );
+
+    if (!reviews) return;
 
     const reviewsCount = reviews.length;
     const totalRating = reviews.reduce((acc: number, r: {rating: number}) => acc + r.rating, 0);
