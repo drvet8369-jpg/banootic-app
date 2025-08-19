@@ -1,4 +1,3 @@
-
 'use client';
 
 import { categories, services } from '@/lib/constants';
@@ -50,7 +49,7 @@ export default function CategoryPage() {
     return (
         <div className="py-12 md:py-20 flex-grow">
             <div className="text-center mb-12">
-                <h1 className="font-headline text-4xl md:text-5xl font-bold">{category.name}</h1>
+                <h1 className="font-headline text-3xl font-bold">{category.name}</h1>
                 <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">{category.description}</p>
                  <Button asChild size="lg" className="mt-8">
                     <Link href={`/search?category=${category.slug}`}>مشاهده تمام هنرمندان این دسته</Link>
