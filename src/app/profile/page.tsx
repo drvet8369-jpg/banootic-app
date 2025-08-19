@@ -191,7 +191,6 @@ export default function ProfilePage() {
     if(!user) return;
     setIsSaving(true);
     try {
-      // Pass an empty string to signify deletion
       const updatedProvider = await updateProviderProfileImage(user.phone, '', 'woman portrait');
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
@@ -366,19 +365,19 @@ export default function ProfilePage() {
              <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
                 {mode === 'editing' ? (
                     <>
-                         <Button onClick={handleSaveChanges} className="w-full flex-1">
+                         <Button onClick={handleSaveChanges} className="w-full flex-1" disabled={isSaving}>
                             <Save className="w-4 h-4 ml-2" />
                             ذخیره تغییرات
                         </Button>
-                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1">
+                         <Button onClick={handleEditProfilePicClick} variant="outline" className="w-full flex-1" disabled={isSaving}>
                             <Camera className="w-4 h-4 ml-2" />
                             تغییر عکس پروفایل
                         </Button>
-                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1">
+                        <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1" disabled={isSaving}>
                             <Trash2 className="w-4 h-4 ml-2" />
                             حذف عکس پروفایل
                         </Button>
-                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto">
+                        <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto" disabled={isSaving}>
                             <XCircle className="w-4 h-4 ml-2" />
                             لغو
                         </Button>
