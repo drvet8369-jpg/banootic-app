@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement, getAgreementsByProvider, updateProviderPortfolio } from '@/lib/api';
+import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement, getAgreementsByProvider } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, ThumbsUp, Trash2 } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, ThumbsUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -162,7 +162,7 @@ export default function ProviderProfilePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    setIsLoading(true);
+    // No need to set loading here, parent does it.
     try {
         const foundProvider = await getProviderByPhone(providerPhone);
         setProvider(foundProvider);
@@ -184,6 +184,7 @@ export default function ProviderProfilePage() {
   }, [providerPhone]);
 
   useEffect(() => {
+    setIsLoading(true);
     loadData();
   }, [loadData]);
   
@@ -208,21 +209,6 @@ export default function ProviderProfilePage() {
       setIsRequestingAgreement(false);
     }
   };
-
-  const deletePortfolioItem = async (itemIndex: number) => {
-    if (!provider || !user || user.phone !== provider.phone) return;
-
-    const updatedPortfolio = provider.portfolio.filter((_, index) => index !== itemIndex);
-    
-    try {
-      const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
-      setProvider(updatedProvider);
-      toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
-    } catch (error) {
-      toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
-    }
-  };
-
 
   if (isLoading) {
     return (
@@ -275,33 +261,20 @@ export default function ProviderProfilePage() {
                         <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 {provider.portfolio.map((item, index) => (
-                                    <div className="group relative" key={`${provider.id}-portfolio-${index}`}>
-                                        <DialogTrigger asChild>
-                                            <div 
-                                                className="w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                                                onClick={() => setSelectedImage(item.src)}
-                                            >
-                                                <Image
-                                                    src={item.src}
-                                                    alt={`نمونه کار ${index + 1}`}
-                                                    fill
-                                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                                    data-ai-hint={item.aiHint}
-                                                />
-                                            </div>
-                                        </DialogTrigger>
-                                        {isOwnerViewing && (
-                                            <Button
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                onClick={(e) => { e.stopPropagation(); deletePortfolioItem(index); }}
-                                                aria-label={`حذف نمونه کار ${index + 1}`}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
-                                    </div>
+                                    <DialogTrigger asChild key={`${provider.id}-portfolio-${index}`}>
+                                        <div 
+                                            className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setSelectedImage(item.src)}
+                                        >
+                                            <Image
+                                                src={item.src}
+                                                alt={`نمونه کار ${index + 1}`}
+                                                fill
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                data-ai-hint={item.aiHint}
+                                            />
+                                        </div>
+                                    </DialogTrigger>
                                 ))}
                             </div>
                            
@@ -393,5 +366,3 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
-
-    
