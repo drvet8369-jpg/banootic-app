@@ -21,17 +21,24 @@ if (!supabaseUrl || !supabaseKey) {
   ****************************************************************
   `);
   // Create a dummy client to avoid crashing the app
-  supabase = {
-    from: () => ({
-      select: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
+  const dummyRequest = {
+      eq: () => dummyRequest,
+      order: () => dummyRequest,
+      select: () => dummyRequest,
       insert: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
       update: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
       delete: async () => ({ data: [], error: { message: 'Supabase not configured' } }),
-    }),
+      maybeSingle: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+      single: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+      then: (resolve: any) => resolve({ data: [], error: { message: 'Supabase not configured' } })
+  };
+
+  supabase = {
+    from: () => dummyRequest,
     storage: {
       from: () => ({
-        upload: async () => ({ error: { message: 'Supabase not configured' } }),
-        remove: async () => ({ error: { message: 'Supabase not configured' } }),
+        upload: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+        remove: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
         getPublicUrl: () => ({ data: { publicUrl: '' } }),
       })
     }
@@ -83,7 +90,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         .eq('phone', phone)
         .maybeSingle();
 
-    if (error) {
+    if (error && error.message !== 'Supabase not configured') {
         console.error("Error fetching provider by phone:", error);
         return null;
     }
@@ -215,7 +222,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         .eq("phone", phone)
         .maybeSingle();
 
-    if (error) {
+    if (error && error.message !== 'Supabase not configured') {
         console.error("Error fetching customer by phone:", error);
         return null;
     }
