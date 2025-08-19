@@ -8,6 +8,7 @@ import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
+import { categories } from '@/lib/constants';
 
 // Extend the Provider type to include the score for sorting purposes
 type ProviderWithScore = Provider & { score: number };
@@ -15,7 +16,7 @@ type ProviderWithScore = Provider & { score: number };
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const category = searchParams.get('category');
+  const categorySlug = searchParams.get('category');
   
   const [searchResults, setSearchResults] = useState<ProviderWithScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,8 +25,8 @@ export default function SearchPage() {
     setIsLoading(true);
     try {
         // Fetch providers: either all, or filtered by category.
-        const initialProviders = category 
-            ? await getProvidersByCategory(category) 
+        const initialProviders = categorySlug 
+            ? await getProvidersByCategory(categorySlug) 
             : await getAllProviders();
         
         // Fetch confirmed agreement counts for all fetched providers and calculate scores
@@ -62,24 +63,26 @@ export default function SearchPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [query, category]);
+  }, [query, categorySlug]);
 
   useEffect(() => {
     performSearchAndRank();
   }, [performSearchAndRank]);
+
+  const categoryName = categorySlug ? categories.find(c => c.slug === categorySlug)?.name : '';
 
 
   return (
     <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">
-            {query ? 'نتایج جستجو' : (category ? `هنرمندان در دسته‌ی ${category}` : 'برترین هنرمندان')}
+            {query ? 'نتایج جستجو' : (categoryName ? `هنرمندان در دسته‌ی ${categoryName}` : 'برترین هنرمندان')}
         </h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             نتایج برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
-        ) : !category ? (
+        ) : !categorySlug ? (
           <p className="mt-3 text-lg text-muted-foreground">
             لیست هنرمندان بر اساس امتیاز و فعالیت در پلتفرم مرتب شده است.
           </p>

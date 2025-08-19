@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -33,7 +34,7 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <CardDescription className="text-base">{provider.service}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center justify-center p-4 pt-0">
-          <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+          <StarRating rating={provider.rating} reviewsCount={provider.reviews_count} readOnly />
         </CardContent>
          <CardFooter className="p-4 mt-auto border-t">
            <Button asChild className="w-full font-bold">

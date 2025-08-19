@@ -1,3 +1,4 @@
+
 import type { Provider } from './types';
 
 /**
@@ -14,7 +15,7 @@ export const calculateProviderScore = (provider: Provider, confirmedAgreementsCo
 
     // Base score: A provider with 0 reviews but a 5-star rating shouldn't rank high.
     // So we use the number of reviews to give weight to the rating.
-    const baseScore = (provider.rating * RATING_WEIGHT) * (provider.reviewsCount * REVIEWS_WEIGHT);
+    const baseScore = (provider.rating * RATING_WEIGHT) * (provider.reviews_count * REVIEWS_WEIGHT);
     
     // Add bonus for each confirmed agreement
     const agreementScore = confirmedAgreementsCount * AGREEMENT_BONUS;

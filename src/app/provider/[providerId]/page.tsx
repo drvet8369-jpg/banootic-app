@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
@@ -52,15 +53,15 @@ const ReviewCard = ({ review }: { review: Review }) => (
   <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
     <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 text-center w-24">
       <Avatar className="h-10 w-10">
-        <AvatarFallback>{review.authorName.substring(0, 2)}</AvatarFallback>
+        <AvatarFallback>{review.author_name.substring(0, 2)}</AvatarFallback>
       </Avatar>
-      <span className="font-bold text-sm sm:mt-1">{review.authorName}</span>
+      <span className="font-bold text-sm sm:mt-1">{review.author_name}</span>
     </div>
     <div className="flex-grow">
       <div className="flex items-center justify-between mb-2">
         <StarRating rating={review.rating} size="sm" readOnly />
         <p className="text-xs text-muted-foreground flex-shrink-0">
-          {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: faIR })}
+          {formatDistanceToNow(new Date(review.created_at), { addSuffix: true, locale: faIR })}
         </p>
       </div>
       <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
@@ -90,7 +91,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     try {
         if (!user) throw new Error("User not found");
         await addReview({
-            providerId,
+            providerId: providerId,
             authorName: user.name,
             rating,
             comment,
@@ -162,7 +163,6 @@ export default function ProviderProfilePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    // No need to set loading here, parent does it.
     try {
         const foundProvider = await getProviderByPhone(providerPhone);
         setProvider(foundProvider);
@@ -245,7 +245,7 @@ export default function ProviderProfilePage() {
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
                     <div className="mt-4 flex flex-col sm:flex-row items-center gap-x-6 gap-y-2">
-                        <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                        <StarRating rating={provider.rating} reviewsCount={provider.reviews_count} readOnly />
                         <div className="flex items-center gap-2 text-muted-foreground font-semibold">
                             <ThumbsUp className="w-5 h-5 text-green-500" />
                             <span>{confirmedAgreementsCount} توافق موفق</span>

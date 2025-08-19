@@ -23,22 +23,20 @@ export default function ServiceProvidersPage() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
 
-    // Find category and service info from static constants
     const foundCategory = categories.find((c) => c.slug === categorySlug);
     const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
-
+    
     setCategory(foundCategory || null);
     setService(foundService || null);
       
     if (foundCategory && foundService) {
       try {
         const allProviders = await getAllProviders();
-        // Correctly filter providers based on ONLY the serviceSlug from the URL.
-        const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+        const foundProviders = allProviders.filter((p) => p.service_slug === serviceSlug);
         setServiceProviders(foundProviders);
       } catch (error) {
         console.error("Failed to fetch providers for service page:", error);
-        setServiceProviders([]); // Set to empty on error
+        setServiceProviders([]);
       }
     } else {
       setServiceProviders([]);

@@ -37,7 +37,7 @@ export async function getProvidersByCategory(categorySlug: string): Promise<Prov
     const { data, error } = await supabase
         .from('providers')
         .select('*')
-        .eq('categorySlug', categorySlug);
+        .eq('category_slug', categorySlug);
     
     if (error) {
         console.error("Error fetching providers by category:", error.message);
@@ -75,7 +75,19 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
     const { data, error } = await supabase
         .from('providers')
         .insert([
-            { ...providerData, rating: 0, reviewsCount: 0 }
+            { 
+              name: providerData.name,
+              service: providerData.service,
+              location: providerData.location,
+              phone: providerData.phone,
+              bio: providerData.bio,
+              category_slug: providerData.categorySlug,
+              service_slug: providerData.serviceSlug,
+              rating: 0, 
+              reviewsCount: 0,
+              profileImage: providerData.profileImage,
+              portfolio: providerData.portfolio
+            }
         ])
         .select()
         .single();
@@ -198,8 +210,8 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
     const { data, error } = await supabase
         .from('reviews')
         .select('*')
-        .eq('providerId', providerId)
-        .order('createdAt', { ascending: false });
+        .eq('provider_id', providerId)
+        .order('created_at', { ascending: false });
 
     if (error) {
         console.error("Error fetching reviews:", error.message);
@@ -214,7 +226,12 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 export async function addReview(reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<Review> {
     const { data, error } = await supabase
         .from('reviews')
-        .insert([reviewData])
+        .insert([{
+          provider_id: reviewData.providerId,
+          author_name: reviewData.authorName,
+          rating: reviewData.rating,
+          comment: reviewData.comment
+        }])
         .select()
         .single();
 
@@ -237,7 +254,7 @@ async function updateProviderRating(providerId: number) {
     const { data: reviews, error: reviewsError } = await supabase
         .from('reviews')
         .select('rating')
-        .eq('providerId', providerId);
+        .eq('provider_id', providerId);
 
     if (reviewsError) {
         console.error("Error fetching reviews for rating update:", reviewsError.message);
@@ -250,7 +267,7 @@ async function updateProviderRating(providerId: number) {
     
     const { error: updateError } = await supabase
         .from('providers')
-        .update({ rating: newAverageRating, reviewsCount: reviewsCount })
+        .update({ rating: newAverageRating, reviews_count: reviewsCount })
         .eq('id', providerId);
     
     if (updateError) {

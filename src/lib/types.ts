@@ -18,37 +18,35 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number; // This will now be the Supabase auto-generated ID
+  id: number;
   name: string;
   service: string; 
   location: string;
-  phone: string; // Keep as a unique identifier for now
+  phone: string;
   bio: string;
-  categorySlug: Category['slug'];
-  serviceSlug: Service['slug'];
+  category_slug: Category['slug']; // Matches DB column
+  service_slug: Service['slug']; // Matches DB column
   rating: number;
-  reviewsCount: number;
+  reviews_count: number; // Matches DB column
   profileImage: PortfolioItem;
   portfolio: PortfolioItem[];
 }
 
 export interface Review {
-  id: number; // This will now be the Supabase auto-generated ID
-  providerId: number; // Foreign key to Provider.id
-  authorName: string;
+  id: number;
+  provider_id: number; // Matches DB column
+  author_name: string;
   rating: number;
   comment: string;
-  createdAt: string; // Supabase returns ISO String for timestamps
+  created_at: string; // Matches DB column
 }
 
 export interface Agreement {
-  id: number; // Supabase ID
+  id: number;
   provider_phone: string;
   customer_phone: string;
   customer_name: string;
   status: 'pending' | 'confirmed' | 'rejected';
-  requested_at: string; // Supabase returns snake_case
-  confirmed_at?: string | null; // Supabase returns snake_case
+  requested_at: string;
+  confirmed_at?: string | null;
 }
-
-    
