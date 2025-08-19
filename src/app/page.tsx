@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -38,7 +39,7 @@ export default function Home() {
           {categories.map((category) => {
             const Icon = iconMap[category.slug];
             return (
-              <Link href={`/services/${category.slug}`} key={category.id}>
+              <Link href={`/search?category=${category.slug}`} key={category.id}>
                 <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
                   <CardHeader className="items-center">
                     {Icon && <Icon className="w-20 h-20 mb-4 text-accent" />}

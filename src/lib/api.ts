@@ -31,6 +31,23 @@ export async function getAllProviders(): Promise<Provider[]> {
 }
 
 /**
+ * Fetches all providers within a specific category slug.
+ */
+export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
+    const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('categorySlug', categorySlug);
+    
+    if (error) {
+        console.error("Error fetching providers by category:", error.message);
+        throw new Error("Could not fetch providers for this category.");
+    }
+    return data || [];
+}
+
+
+/**
  * Fetches a single provider by their phone number.
  * Returns null if no provider is found or an error occurs.
  */
@@ -320,5 +337,3 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     }
     return data;
 }
-
-    

@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getAllProviders, getAgreementsByProvider } from '@/lib/api';
+import { getAllProviders, getProvidersByCategory, getAgreementsByProvider } from '@/lib/api';
 import { calculateProviderScore } from '@/lib/ranking';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
@@ -14,6 +15,7 @@ type ProviderWithScore = Provider & { score: number };
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
+  const category = searchParams.get('category');
   
   const [searchResults, setSearchResults] = useState<ProviderWithScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,11 +23,14 @@ export default function SearchPage() {
   const performSearchAndRank = useCallback(async () => {
     setIsLoading(true);
     try {
-        const allProviders = await getAllProviders();
+        // Fetch providers: either all, or filtered by category.
+        const initialProviders = category 
+            ? await getProvidersByCategory(category) 
+            : await getAllProviders();
         
-        // Fetch confirmed agreement counts for all providers and calculate scores
+        // Fetch confirmed agreement counts for all fetched providers and calculate scores
         const providersWithScores = await Promise.all(
-            allProviders.map(async (provider) => {
+            initialProviders.map(async (provider) => {
                 const agreements = await getAgreementsByProvider(provider.phone);
                 const confirmedCount = agreements.filter(a => a.status === 'confirmed').length;
                 const score = calculateProviderScore(provider, confirmedCount);
@@ -35,7 +40,7 @@ export default function SearchPage() {
         
         let filteredResults = providersWithScores;
 
-        // Filter by search query if a query is present
+        // Further filter by search query if a query is present
         if (query) {
             const lowercasedQuery = query.toLowerCase();
             filteredResults = filteredResults
@@ -57,7 +62,7 @@ export default function SearchPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [query]);
+  }, [query, category]);
 
   useEffect(() => {
     performSearchAndRank();
@@ -68,17 +73,17 @@ export default function SearchPage() {
     <div className="py-12 md:py-20 flex-grow">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">
-            {query ? 'نتایج جستجو' : 'برترین هنرمندان'}
+            {query ? 'نتایج جستجو' : (category ? `هنرمندان در دسته‌ی ${category}` : 'برترین هنرمندان')}
         </h1>
         {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
             نتایج برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
           </p>
-        ) : (
+        ) : !category ? (
           <p className="mt-3 text-lg text-muted-foreground">
             لیست هنرمندان بر اساس امتیاز و فعالیت در پلتفرم مرتب شده است.
           </p>
-        )}
+        ) : null}
       </div>
 
       {isLoading ? (
@@ -97,7 +102,7 @@ export default function SearchPage() {
           <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
           <p className="text-muted-foreground mt-2">
-            هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید.
+            هیچ ارائه‌دهنده‌ای با معیارهای شما مطابقت نداشت.
           </p>
         </div>
       )}
