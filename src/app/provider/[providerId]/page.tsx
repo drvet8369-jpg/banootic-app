@@ -91,8 +91,8 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
     try {
         if (!user) throw new Error("User not found");
         await addReview({
-            providerId: providerId,
-            authorName: user.name,
+            provider_id: providerId,
+            author_name: user.name,
             rating,
             comment,
         });
@@ -222,6 +222,22 @@ export default function ProviderProfilePage() {
     notFound();
   }
 
+  const CallButton = () => (
+    <Button asChild className="w-full" variant="secondary">
+      {isLoggedIn ? (
+        <a href={`tel:${provider.phone}`}>
+          <Phone className="w-4 h-4 ml-2" />
+          تماس
+        </a>
+      ) : (
+        <Link href="/login">
+          <Phone className="w-4 h-4 ml-2" />
+          تماس
+        </Link>
+      )}
+    </Button>
+  );
+
   return (
     <div className="py-12 md:py-20 flex justify-center">
         <div className="max-w-2xl w-full">
@@ -313,12 +329,7 @@ export default function ProviderProfilePage() {
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
-                    </Button>
+                    <CallButton />
                     {isLoggedIn && user?.accountType === 'customer' && (
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
