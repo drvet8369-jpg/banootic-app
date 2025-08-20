@@ -29,61 +29,23 @@ if (isSupabaseConfigured) {
             }
         });
     } catch (error) {
-        console.error("Supabase client creation failed:", error);
-        // In case of an error during creation (like invalid URL format), we fall back.
-        supabase = createDummyClient();
+        console.error("Supabase client creation failed due to invalid URL or key:", error);
     }
 } else {
     console.warn(`
   ****************************************************************
   ** WARNING: Supabase environment variables are not set.       **
-  **             Please check your .env file.                   **
   **             Falling back to local data mode.               **
   ****************************************************************
   `);
-  supabase = createDummyClient();
 }
-
-function createDummyClient(): SupabaseClient {
-    return new Proxy({}, {
-        get(target, prop) {
-            if (prop === 'from') {
-                return () => ({
-                    select: () => ({
-                        eq: () => ({
-                            maybeSingle: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured.', code: 'NO_CONFIG' } })
-                        }),
-                        order: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured.', code: 'NO_CONFIG' } })
-                    }),
-                    insert: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured.', code: 'NO_CONFIG' } }),
-                    update: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured.', code: 'NO_CONFIG' } })
-                });
-            }
-            if (prop === 'storage') {
-                 return {
-                    from: () => ({
-                        upload: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured.', code: 'NO_CONFIG' } }),
-                        getPublicUrl: () => ({ data: { publicUrl: 'https://placehold.co/400x400.png' } }),
-                        remove: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured.', code: 'NO_CONFIG' } })
-                    })
-                 }
-            }
-            return () => Promise.resolve({ data: null, error: { message: `Supabase not configured. Cannot call ${String(prop)}`, code: 'NO_CONFIG' } });
-        }
-    }) as any;
-}
-
 
 // ========== Helper Function for Clean Error Handling ==========
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
     if (error) {
-        // Log all errors except the intentional 'NO_CONFIG' one for fallback mode
-        if (error.code !== 'NO_CONFIG') {
-            console.error(`${errorMessage}:`, error);
-        }
-        // Throw a user-friendly error for actual database issues
-        throw new Error(`A database error occurred. Please try again later.`);
+        console.error(`${errorMessage}:`, error);
+        throw new Error(`A database error occurred. Please try again later. Details: ${error.message}`);
     }
     return data as T;
 }
@@ -95,6 +57,8 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
         console.log(`DEV MODE: Falling back to local data for provider: ${normalizedPhone}`);
+        // Simulate a delay to mimic network request
+        await new Promise(resolve => setTimeout(resolve, 300));
         return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizedPhone) || null;
     }
     
@@ -173,7 +137,8 @@ export async function updateProviderDetails(phone: string, details: { name: stri
     if (!isSupabaseConfigured) {
         console.warn("DEV_MODE: Skipping provider update.");
         const provider = await getProviderByPhone(phone);
-        return { ...provider!, ...details };
+        if (!provider) throw new Error("Provider not found in local data for update.");
+        return { ...provider, ...details };
     }
     const normalizedPhone = normalizePhoneNumber(phone);
     const request = supabase.from('providers').update(details).eq('phone', normalizedPhone).select().single();
@@ -262,10 +227,10 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
+    // In local mode, there's no customer data, so we always return null.
+    // The login logic will then correctly assume the user doesn't exist.
     if (!isSupabaseConfigured) {
         console.warn("DEV_MODE: Supabase not configured, cannot fetch customer.");
-        // This is a placeholder for local development without a database
-        // In a real scenario, you might want to return a specific mock user or null
         return null;
     }
     
