@@ -28,6 +28,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
 import { getProviderByPhone, createProvider, getCustomerByPhone, createCustomer } from '@/lib/api';
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -37,8 +38,10 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: 'نام باید حداقل ۲ حرف داشته باشد.',
   }),
-  phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+  phone: z.string().min(10, {
+    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
+  }).max(14, {
+    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
   }),
   location: z.string().optional(),
   categorySlug: z.string().optional(),
@@ -103,9 +106,21 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
+    const normalizedPhone = normalizePhoneNumber(values.phone);
+
+    if (!normalizedPhone.match(/^09\d{9}$/)) {
+        toast({
+            title: 'خطا',
+            description: 'فرمت شماره تلفن وارد شده صحیح نیست. مثال: 09123456789',
+            variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+    }
+    
     try {
-      const existingProvider = await getProviderByPhone(values.phone);
-      const existingCustomer = await getCustomerByPhone(values.phone);
+      const existingProvider = await getProviderByPhone(normalizedPhone);
+      const existingCustomer = await getCustomerByPhone(normalizedPhone);
 
       if (existingProvider || existingCustomer) {
           toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.', variant: 'destructive'});
@@ -120,7 +135,7 @@ export default function RegisterForm() {
         
         const newProviderData = {
           name: values.name,
-          phone: values.phone,
+          phone: normalizedPhone,
           service: selectedService?.name || 'خدمت جدید',
           location: values.location || 'ارومیه',
           bio: values.bio || '',
@@ -138,7 +153,7 @@ export default function RegisterForm() {
       } else {
         const createdCustomer = await createCustomer({ 
             name: values.name, 
-            phone: values.phone,
+            phone: normalizedPhone,
             account_type: 'customer' // Correctly passing the account type
         });
         userToLogin = createdCustomer;

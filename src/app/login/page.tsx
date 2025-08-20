@@ -29,11 +29,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
-  phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+  phone: z.string().min(10, {
+    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
+  }).max(14, {
+    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
   }),
 });
 
@@ -52,11 +55,23 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    const normalizedPhone = normalizePhoneNumber(values.phone);
+    
+    if (!normalizedPhone.match(/^09\d{9}$/)) {
+        toast({
+            title: 'خطا',
+            description: 'فرمت شماره تلفن وارد شده صحیح نیست. مثال: 09123456789',
+            variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
         let userToLogin: User | null = null;
         
         // 1. Check if the user is a registered provider
-        const existingProvider = await getProviderByPhone(values.phone);
+        const existingProvider = await getProviderByPhone(normalizedPhone);
         if (existingProvider) {
           userToLogin = {
             name: existingProvider.name,
@@ -65,7 +80,7 @@ export default function LoginPage() {
           };
         } else {
             // 2. If not a provider, check if they are an existing customer
-            const existingCustomer = await getCustomerByPhone(values.phone);
+            const existingCustomer = await getCustomerByPhone(normalizedPhone);
             if(existingCustomer) {
                 userToLogin = existingCustomer;
             }

@@ -5,6 +5,7 @@ import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
 import { defaultProviders } from './data';
+import { normalizePhoneNumber } from './utils';
 
 // --- Supabase Client Initialization ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -66,7 +67,17 @@ export async function getAllProviders(): Promise<Provider[]> {
         "Could not fetch providers.",
         [] // Return empty array if not configured
     );
-    return providers.length > 0 ? providers : defaultProviders;
+    // If database is empty, seed it with default data for a better first-time experience.
+    if (providers.length === 0) {
+        console.log("Database is empty. Seeding with default provider data...");
+        const { error: seedError } = await supabase.from('providers').insert(defaultProviders);
+        if (seedError) {
+            console.error("Failed to seed database:", seedError.message);
+            return defaultProviders; // Fallback to local data on seed failure
+        }
+        return defaultProviders;
+    }
+    return providers;
 }
 
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
@@ -88,11 +99,12 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
-        return defaultProviders.find(p => p.phone === phone) || null;
+        return defaultProviders.find(p => p.phone === normalizedPhone) || null;
     }
     const provider = await handleSupabaseRequest(
-        supabase.from('providers').select('*').eq('phone', phone).maybeSingle(),
+        supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle(),
         "Error fetching provider by phone",
         null
     );
@@ -100,13 +112,17 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 }
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
+    const dataToInsert = {
+      ...providerData,
+      phone: normalizePhoneNumber(providerData.phone),
+    };
     if (!isSupabaseConfigured) {
         console.log("SIMULATING PROVIDER CREATION");
         const newId = Math.floor(Math.random() * 10000);
-        return { ...providerData, id: newId, rating: 0, reviews_count: 0 } as Provider;
+        return { ...dataToInsert, id: newId, rating: 0, reviews_count: 0 } as Provider;
     }
     return handleSupabaseRequest(
-        supabase.from('providers').insert([{ ...providerData, rating: 0, reviews_count: 0 }]).select().single(),
+        supabase.from('providers').insert([{ ...dataToInsert, rating: 0, reviews_count: 0 }]).select().single(),
         "Error creating provider.",
         {} as Provider
     );
@@ -114,20 +130,22 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
 
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
-      console.log("SIMULATING PROVIDER UPDATE", {phone, details});
-      const provider = await getProviderByPhone(phone);
+      console.log("SIMULATING PROVIDER UPDATE", {phone: normalizedPhone, details});
+      const provider = await getProviderByPhone(normalizedPhone);
       if (!provider) throw new Error("Provider not found for simulation");
       return {...provider, ...details};
     }
     return handleSupabaseRequest(
-        supabase.from('providers').update(details).eq('phone', phone).select().single(),
+        supabase.from('providers').update(details).eq('phone', normalizedPhone).select().single(),
         "Could not update provider details.",
         {} as Provider
     );
 }
 
 async function uploadImageFromBase64(base64Data: string, phone: string): Promise<string> {
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
         console.log("SIMULATING IMAGE UPLOAD");
         return "https://placehold.co/400x400.png";
@@ -141,7 +159,7 @@ async function uploadImageFromBase64(base64Data: string, phone: string): Promise
     if (!base64String) throw new Error('Invalid base64 string');
 
     const fileBuffer = Buffer.from(base64String, 'base64');
-    const filePath = `${phone}/${Date.now()}.${fileExtension}`;
+    const filePath = `${normalizedPhone}/${Date.now()}.${fileExtension}`;
     
     await handleSupabaseRequest(
         supabase.storage.from(BUCKET_NAME).upload(filePath, fileBuffer, { contentType: mimeType, upsert: true }),
@@ -156,36 +174,38 @@ async function uploadImageFromBase64(base64Data: string, phone: string): Promise
 }
 
 export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
         console.log("SIMULATING ADD PORTFOLIO ITEM");
-        const provider = await getProviderByPhone(phone);
+        const provider = await getProviderByPhone(normalizedPhone);
         if(!provider) throw new Error("Provider not found for simulation");
         provider.portfolio.push({ src: 'https://placehold.co/400x400.png', aiHint });
         return provider;
     }
-    const imageUrl = await uploadImageFromBase64(base64Data, phone);
+    const imageUrl = await uploadImageFromBase64(base64Data, normalizedPhone);
     const newItem: PortfolioItem = { src: imageUrl, aiHint };
 
-    const {data: currentProvider} = await supabase.from('providers').select('portfolio').eq('phone', phone).single();
+    const {data: currentProvider} = await supabase.from('providers').select('portfolio').eq('phone', normalizedPhone).single();
     const updatedPortfolio = [...(currentProvider?.portfolio || []), newItem];
 
     return handleSupabaseRequest(
-        supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', phone).select().single(),
+        supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single(),
         "Could not add portfolio item to database.",
         {} as Provider
     );
 }
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
+    const normalizedPhone = normalizePhoneNumber(phone);
      if (!isSupabaseConfigured) {
         console.log("SIMULATING DELETE PORTFOLIO ITEM");
-        const provider = await getProviderByPhone(phone);
+        const provider = await getProviderByPhone(normalizedPhone);
         if(!provider) throw new Error("Provider not found for simulation");
         provider.portfolio.splice(itemIndex, 1);
         return provider;
     }
 
-    const { data: currentProvider } = await supabase.from('providers').select('portfolio').eq('phone', phone).single();
+    const { data: currentProvider } = await supabase.from('providers').select('portfolio').eq('phone', normalizedPhone).single();
     if (!currentProvider || !currentProvider.portfolio || !currentProvider.portfolio[itemIndex]) {
         throw new Error("Provider or portfolio item not found.");
     }
@@ -204,25 +224,26 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
 
     return handleSupabaseRequest(
-      supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', phone).select().single(),
+      supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single(),
       "Could not delete portfolio item from database.",
       {} as Provider
     );
 }
 
 export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
         console.log("SIMULATING UPDATE PROFILE IMAGE");
-        const provider = await getProviderByPhone(phone);
+        const provider = await getProviderByPhone(normalizedPhone);
         if(!provider) throw new Error("Provider not found for simulation");
         provider.profileimage.src = base64Data || 'https://placehold.co/400x400.png';
         return provider;
     }
-    const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, phone) : '';
+    const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, normalizedPhone) : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
 
     return handleSupabaseRequest(
-        supabase.from('providers').update({ profileimage: newProfileImage }).eq('phone', phone).select().single(),
+        supabase.from('providers').update({ profileimage: newProfileImage }).eq('phone', normalizedPhone).select().single(),
         "Could not update profile image in database.",
         {} as Provider
     );
@@ -231,12 +252,13 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
+    const normalizedPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) return null;
     return handleSupabaseRequest(
         supabase
             .from("customers")
             .select("name, phone, accountType:account_type")
-            .eq("phone", phone)
+            .eq("phone", normalizedPhone)
             .maybeSingle(),
         "Error fetching customer by phone",
         null
@@ -245,13 +267,17 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
 
 
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
+    const dataToInsert = {
+      ...userData,
+      phone: normalizePhoneNumber(userData.phone),
+    };
     if (!isSupabaseConfigured) {
-        console.log("SIMULATING CUSTOMER CREATION", userData);
-        return { ...userData, accountType: 'customer' };
+        console.log("SIMULATING CUSTOMER CREATION", dataToInsert);
+        return { ...dataToInsert, accountType: 'customer' };
     }
      const { data, error } = await supabase
         .from('customers')
-        .insert([{ name: userData.name, phone: userData.phone, account_type: 'customer' }])
+        .insert([dataToInsert])
         .select('name, phone, accountType:account_type')
         .single();
 
@@ -313,20 +339,22 @@ async function updateProviderRating(providerId: number) {
 // ========== Agreement Functions ==========
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
+    const normalizedProviderPhone = normalizePhoneNumber(provider.phone);
+    const normalizedCustomerPhone = normalizePhoneNumber(customer.phone);
     if (!isSupabaseConfigured) {
         console.log("SIMULATING AGREEMENT CREATION");
         return {
             id: Math.floor(Math.random() * 10000),
-            provider_phone: provider.phone,
-            customer_phone: customer.phone,
+            provider_phone: normalizedProviderPhone,
+            customer_phone: normalizedCustomerPhone,
             customer_name: customer.name,
             status: 'pending',
             requested_at: new Date().toISOString(),
         }
     }
     const agreementData = {
-        provider_phone: provider.phone,
-        customer_phone: customer.phone,
+        provider_phone: normalizedProviderPhone,
+        customer_phone: normalizedCustomerPhone,
         customer_name: customer.name,
         status: 'pending' as const,
     };
@@ -339,16 +367,18 @@ export async function createAgreement(provider: Provider, customer: User): Promi
 }
 
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
+    const normalizedPhone = normalizePhoneNumber(providerPhone);
     return handleSupabaseRequest(
-        supabase.from('agreements').select('*').eq('provider_phone', providerPhone).order('requested_at', { ascending: false }),
+        supabase.from('agreements').select('*').eq('provider_phone', normalizedPhone).order('requested_at', { ascending: false }),
         "Could not fetch provider agreements.",
         []
     );
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
+    const normalizedPhone = normalizePhoneNumber(customerPhone);
     return handleSupabaseRequest(
-        supabase.from('agreements').select('*').eq('customer_phone', customerPhone).order('requested_at', { ascending: false }),
+        supabase.from('agreements').select('*').eq('customer_phone', normalizedPhone).order('requested_at', { ascending: false }),
         "Could not fetch customer agreements.",
         []
     );
