@@ -5,7 +5,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
-import { defaultProviders, defaultCustomers } from './data';
+import { defaultProviders } from './data';
 import { normalizePhoneNumber } from './utils';
 
 // --- Supabase Client Initialization (Centralized & Robust) ---
@@ -37,7 +37,7 @@ if (isSupabaseConfigured) {
     console.warn(`
   ****************************************************************
   ** WARNING: Supabase environment variables are not set.       **
-  **             Falling back to local data mode.               **
+  **             Falling back to local data mode for Providers. **
   ****************************************************************
   `);
 }
@@ -227,16 +227,16 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
-    console.log(`[getCustomerByPhone] Searching for customer with phone: ${normalizedPhone}`);
+    console.log(`[getCustomerByPhone] Attempting to find customer with phone: ${normalizedPhone}`);
 
+    // If supabase is not configured, there's no way to find a customer.
+    // Unlike providers, we don't have a default static list for customers.
     if (!supabase) {
-        console.warn(`[getCustomerByPhone] DEV MODE: Falling back to local data.`);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const customer = defaultCustomers.find(c => normalizePhoneNumber(c.phone) === normalizedPhone) || null;
-        console.log(`[getCustomerByPhone] DEV MODE: Found customer:`, customer);
-        return customer;
+        console.warn("DEV_MODE: Supabase not configured, cannot fetch customer. Returning null.");
+        return null;
     }
     
+    console.log("[getCustomerByPhone] Querying Supabase...");
     const { data, error } = await supabase
         .from("customers")
         .select("name, phone, account_type")
@@ -244,17 +244,16 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         .maybeSingle();
 
     if (error) {
-        console.error(`[getCustomerByPhone] Supabase error:`, error);
-        return null;
+        console.error(`[getCustomerByPhone] Supabase error for phone ${normalizedPhone}:`, error);
+        return null; // Return null on error to signal failure
     }
     
-    console.log(`[getCustomerByPhone] Supabase returned data:`, data);
-
     if (!data) {
-        console.log(`[getCustomerByPhone] No customer found in database.`);
+        console.log(`[getCustomerByPhone] No customer found in database for phone ${normalizedPhone}.`);
         return null;
     }
     
+    console.log(`[getCustomerByPhone] Found data:`, data);
     const user: User = {
       name: data.name,
       phone: data.phone,
@@ -268,10 +267,8 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
     if (!supabase) {
         console.warn("DEV_MODE: Skipping customer creation, returning mock object.");
-        const newUser = { ...userData, accountType: 'customer' as const };
-        // Add to default customers so they can be found in dev mode
-        defaultCustomers.push(newUser);
-        return newUser;
+        // We return a mock user, but it won't be persisted.
+        return { ...userData, accountType: 'customer' };
     }
 
     const dataToInsert = {
@@ -389,5 +386,3 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return handleSupabaseRequest(request, "Could not confirm agreement.");
 }
-
-    
