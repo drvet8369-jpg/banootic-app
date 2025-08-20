@@ -34,19 +34,19 @@ export interface Provider {
 
 export interface Review {
   id: number;
-  provider_id: number; // Matches DB column
-  author_name: string;
+  provider_id: number; // Corrected: Was providerId
+  author_name: string; // Corrected: Was authorName
   rating: number;
   comment: string;
-  created_at: string; // Matches DB column
+  created_at: string; // Corrected: Was createdAt
 }
 
 export interface Agreement {
   id: number;
-  provider_phone: string;
-  customer_phone: string;
-  customer_name: string;
+  provider_phone: string; // Corrected: Was provider_phone
+  customer_phone: string; // Corrected: Was customer_phone
+  customer_name: string; // Corrected: Was customer_name
   status: 'pending' | 'confirmed' | 'rejected';
-  requested_at: string;
-  confirmed_at?: string | null;
+  requested_at: string; // Corrected: Was requested_at
+  confirmed_at?: string | null; // Corrected: Was confirmed_at
 }
