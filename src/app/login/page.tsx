@@ -53,7 +53,6 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        // This is a small delay to simulate network latency for better UX
         await new Promise(resolve => setTimeout(resolve, 500));
         
         let userToLogin: User | null = null;
@@ -92,7 +91,8 @@ export default function LoginPage() {
           description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        router.push('/');
+        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
 
     } catch (error) {
         console.error("Login failed:", error);
