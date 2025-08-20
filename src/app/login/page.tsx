@@ -69,44 +69,42 @@ export default function LoginPage() {
     }
 
     try {
-        let userToLogin: User | null = null;
-        
         // Step 1: Check if the user is a provider
         const provider = await getProviderByPhone(normalizedPhone);
 
         if (provider) {
-            userToLogin = {
+            const userToLogin: User = {
                 name: provider.name,
                 phone: provider.phone,
                 accountType: 'provider',
             };
-        } else {
-            // Step 2: If not a provider, check if they are a customer
-            const customer = await getCustomerByPhone(normalizedPhone);
-            if (customer) {
-                userToLogin = customer;
-            }
-        }
-        
-        // Step 3: Final decision based on whether a user was found
-        if (userToLogin) {
             login(userToLogin);
-
             toast({
               title: 'ورود با موفقیت انجام شد!',
               description: `خوش آمدید ${userToLogin.name}!`,
             });
-            
-            const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-            router.push(destination);
-        } else {
-            // User was not found in either table
-            toast({
-                title: 'کاربر یافت نشد',
-                description: 'این شماره تلفن در سیستم ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-                variant: 'destructive',
-            });
+            router.push('/profile');
+            return;
         }
+
+        // Step 2: If not a provider, check if they are a customer
+        const customer = await getCustomerByPhone(normalizedPhone);
+        if (customer) {
+            login(customer);
+            toast({
+              title: 'ورود با موفقیت انجام شد!',
+              description: `خوش آمدید ${customer.name}!`,
+            });
+            router.push('/');
+            return;
+        }
+        
+        // Step 3: User was not found in either table
+        toast({
+            title: 'کاربر یافت نشد',
+            description: 'این شماره تلفن در سیستم ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+            variant: 'destructive',
+        });
 
     } catch (error) {
         console.error("Login failed:", error);

@@ -8,38 +8,41 @@ import { Buffer } from 'buffer';
 import { defaultProviders } from './data';
 import { normalizePhoneNumber } from './utils';
 
-// --- Supabase Client Initialization (Centralized) ---
+// --- Supabase Client Initialization (Centralized & Robust) ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'images';
 
 let supabase: SupabaseClient;
 
-const isSupabaseConfigured = supabaseUrl && supabaseKey;
+// Check if the environment variables are actually set and not just placeholders.
+const isSupabaseConfigured = 
+  supabaseUrl && supabaseUrl !== "YOUR_SUPABASE_URL" &&
+  supabaseKey && supabaseKey !== "YOUR_SUPABASE_SERVICE_ROLE_KEY";
 
 if (isSupabaseConfigured) {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    }
-  });
+    supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        }
+    });
 } else {
-  console.error(`
+    console.warn(`
   ****************************************************************
-  ** CRITICAL: Supabase environment variables are not set.      **
-  ** Database features will be disabled.                        **
+  ** WARNING: Supabase environment variables are not set.       **
+  **             Please check your .env file.                   **
+  **             Falling back to local data mode.               **
   ****************************************************************
   `);
-  // Create a dummy client to avoid crashing the app if Supabase is not configured.
+  // Create a dummy client to avoid crashing the app when it's not configured.
   const dummyClient: any = new Proxy({}, {
     get(target, prop) {
-      if (prop === 'from') {
-        return () => dummyClient;
-      }
       return () => {
-        console.error(`Supabase is not configured. Cannot perform operation: ${String(prop)}`);
-        return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } });
+        const errorMsg = `Supabase is not configured. Cannot perform operation: ${String(prop)}. Check your server environment variables.`;
+        console.warn(errorMsg);
+        // Return a shape that handleSupabaseRequest expects
+        return Promise.resolve({ data: null, error: { message: errorMsg, code: 'NO_CONFIG' } });
       }
     }
   });
@@ -47,12 +50,15 @@ if (isSupabaseConfigured) {
 }
 
 
-// --- Helper Function for Clean Error Handling ---
+// ========== Helper Function for Clean Error Handling ==========
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T | null> {
     const { data, error } = await request;
     if (error) {
-        console.error(errorMessage, error);
-        throw new Error(`${errorMessage} Reason: ${error.message}`);
+        // Don't throw for 'not configured' error, as we have a fallback.
+        if (error.code === 'NO_CONFIG') return null;
+        
+        console.error(`${errorMessage}:`, error);
+        throw new Error(`A database error occurred. Please try again later.`);
     }
     return data;
 }
@@ -61,19 +67,18 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 // ========== Provider Functions ==========
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) {
+        return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizePhoneNumber(phone)) || null;
+    }
     const normalizedPhone = normalizePhoneNumber(phone);
-    const { data, error } = await supabase
+    
+    const request = supabase
         .from('providers')
         .select('*')
         .eq('phone', normalizedPhone)
         .maybeSingle();
 
-    if (error) {
-        console.error("Error fetching provider by phone:", error.message);
-        throw new Error(`Failed to fetch provider: ${error.message}`);
-    }
-    return data;
+    return handleSupabaseRequest(request, "Error fetching provider by phone");
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
@@ -82,46 +87,21 @@ export async function getAllProviders(): Promise<Provider[]> {
     const request = supabase.from('providers').select('*').order('name', { ascending: true });
     const providers = await handleSupabaseRequest(request, "Could not fetch providers.");
 
-    if (providers && providers.length > 0) {
-        return providers as Provider[];
-    }
-    
-    // If database is empty, seed it with default data.
-    console.log("Database is empty or fetch failed. Seeding with default provider data...");
-    const seedData = defaultProviders.map(p => ({
-      id: p.id,
-      name: p.name,
-      service: p.service,
-      location: p.location,
-      phone: p.phone,
-      bio: p.bio,
-      category_slug: p.category_slug,
-      service_slug: p.service_slug,
-      rating: p.rating,
-      reviews_count: p.reviews_count,
-      profileimage: p.profileimage,
-      portfolio: p.portfolio,
-    }));
-
-    const { error: seedError } = await supabase.from('providers').insert(seedData);
-    if (seedError) {
-        console.error("Failed to seed database:", seedError.message);
-        return defaultProviders; 
-    }
-    
-    // Fetch again after seeding
-    const seededProviders = await handleSupabaseRequest(supabase.from('providers').select('*').order('name', { ascending: true }), "Could not fetch providers after seeding.");
-    return (seededProviders as Provider[]) || defaultProviders;
+    return (providers as Provider[]) || [];
 }
 
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!isSupabaseConfigured) {
+        return defaultProviders.filter(p => p.category_slug === categorySlug);
+    }
      const request = supabase.from('providers').select('*').eq('category_slug', categorySlug);
      return (await handleSupabaseRequest(request, "Could not fetch providers for this category.")) || [];
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!isSupabaseConfigured) {
+       return defaultProviders.filter(p => p.service_slug === serviceSlug);
+    }
      const request = supabase.from('providers').select('*').eq('service_slug', serviceSlug);
      return (await handleSupabaseRequest(request, "Could not fetch providers for this service.")) || [];
 }
@@ -176,6 +156,7 @@ async function uploadImageFromBase64(base64Data: string, phone: string, folder: 
 }
 
 export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
+    if (!isSupabaseConfigured) throw new Error("Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = await uploadImageFromBase64(base64Data, normalizedPhone, 'portfolio');
     const newItem: PortfolioItem = { src: imageUrl, aiHint };
@@ -190,6 +171,7 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 }
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
+    if (!isSupabaseConfigured) throw new Error("Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
@@ -198,14 +180,13 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     }
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
-    if (isSupabaseConfigured) {
-        const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
-        if (filePath && !filePath.startsWith('https://placehold.co')) {
-          await handleSupabaseRequest(
-              supabase.storage.from(BUCKET_NAME).remove([filePath]),
-              "Failed to delete image from storage."
-          );
-        }
+
+    const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
+    if (filePath && !filePath.startsWith('https://placehold.co')) {
+      await handleSupabaseRequest(
+          supabase.storage.from(BUCKET_NAME).remove([filePath]),
+          "Failed to delete image from storage."
+      );
     }
 
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
@@ -217,6 +198,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 }
 
 export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
+    if (!isSupabaseConfigured) throw new Error("Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, normalizedPhone, 'profile') : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
@@ -230,7 +212,7 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) return null; // In fallback mode, there are no default customers.
     const normalizedPhone = normalizePhoneNumber(phone);
     
     const { data, error } = await supabase
