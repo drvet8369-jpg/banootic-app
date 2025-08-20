@@ -7,6 +7,20 @@ import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
 import { normalizePhoneNumber } from './utils';
 
+// Default data for development when Supabase is not connected
+const defaultProviders: Provider[] = [
+  // Beauty
+  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', category_slug: 'beauty', service_slug: 'manicure-pedicure', rating: 4.8, reviews_count: 45, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [] },
+  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', category_slug: 'beauty', service_slug: 'haircut-coloring', rating: 4.9, reviews_count: 62, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
+  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه، استادان', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', category_slug: 'beauty', service_slug: 'facial-treatment', rating: 4.7, reviews_count: 30, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'skincare' }, portfolio: [] },
+];
+
+const defaultCustomers: User[] = [
+    { name: 'مژگان جودکی', phone: '09121111111', accountType: 'customer' },
+    { name: 'علی رضایی', phone: '09122222222', accountType: 'customer' },
+];
+
+
 // --- Supabase Client Initialization (Centralized & Robust) ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -50,36 +64,51 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 export type UserRole = 'customer' | 'provider';
 
 export async function loginUser(phone: string, role: UserRole): Promise<{ success: boolean; user?: User; message?: string }> {
-  const cleanPhone = normalizePhoneNumber(phone);
-  if (!isSupabaseConfigured) {
-      console.warn("DEV_MODE: Supabase not configured. Login will fail.");
-      return { success: false, message: "پایگاه داده پیکربندی نشده است." };
-  }
+    const cleanPhone = normalizePhoneNumber(phone);
 
-  const tableName = role === 'provider' ? 'providers' : 'customers';
+    if (!isSupabaseConfigured) {
+        console.warn(`DEV_MODE: Supabase not configured. Using local data for login. Role: ${role}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        let foundUser: User | undefined;
+        if (role === 'provider') {
+            foundUser = defaultProviders.find(p => p.phone === cleanPhone);
+        } else {
+            foundUser = defaultCustomers.find(c => c.phone === cleanPhone);
+        }
 
-  const { data, error } = await supabase!
-    .from(tableName)
-    .select('*')
-    .eq('phone', cleanPhone)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-        return { success: false, message: 'کاربری با این مشخصات یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' };
+        if (foundUser) {
+            return { success: true, user: { ...foundUser, accountType: role } };
+        } else {
+            return { success: false, message: 'کاربری یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' };
+        }
     }
-    console.error(`Supabase login error for role ${role}:`, error);
-    return { success: false, message: 'خطا در اتصال به پایگاه داده' };
-  }
 
-  return { success: true, user: { ...data, accountType: role } };
+    const tableName = role === 'provider' ? 'providers' : 'customers';
+    const { data, error } = await supabase!
+        .from(tableName)
+        .select('*')
+        .eq('phone', cleanPhone)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') { // Standard Supabase error code for "0 rows returned"
+            return { success: false, message: 'کاربری با این مشخصات یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' };
+        }
+        console.error(`Supabase login error for role ${role}:`, error);
+        return { success: false, message: 'خطا در اتصال به پایگاه داده' };
+    }
+
+    return { success: true, user: { ...data, accountType: role } };
 }
+
 
 export async function checkIfUserExists(phone: string): Promise<boolean> {
     const cleanPhone = normalizePhoneNumber(phone);
     if (!isSupabaseConfigured) {
-        console.warn("DEV_MODE: Supabase not configured. Assuming user does not exist.");
-        return false;
+        console.warn("DEV_MODE: Supabase not configured. Checking local data for user existence.");
+        const providerExists = defaultProviders.some(p => p.phone === cleanPhone);
+        const customerExists = defaultCustomers.some(c => c.phone === cleanPhone);
+        return providerExists || customerExists;
     }
     
     const [providerRes, customerRes] = await Promise.all([
@@ -99,16 +128,21 @@ export async function checkIfUserExists(phone: string): Promise<boolean> {
 // ========== Provider Functions ==========
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
-    if (!isSupabaseConfigured) return null;
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return defaultProviders.find(p => p.phone === normalizedPhone) || null;
+    }
+    
     return handleSupabaseRequest(
-        supabase!.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle(),
+        supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle(),
         "Error fetching provider by phone"
     );
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!isSupabaseConfigured) return defaultProviders;
+
     const { data, error } = await supabase!.from('providers').select('*').order('name', { ascending: true });
     if(error) {
         console.error("Could not fetch providers.", error);
@@ -118,7 +152,9 @@ export async function getAllProviders(): Promise<Provider[]> {
 }
 
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!isSupabaseConfigured) {
+        return defaultProviders.filter(p => p.category_slug === categorySlug);
+    }
      const { data, error } = await supabase!.from('providers').select('*').eq('category_slug', categorySlug);
      if(error) {
         console.error("Could not fetch providers for this category.", error);
@@ -128,7 +164,9 @@ export async function getProvidersByCategory(categorySlug: string): Promise<Prov
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!isSupabaseConfigured) {
+       return defaultProviders.filter(p => p.service_slug === serviceSlug);
+    }
      const { data, error } = await supabase!.from('providers').select('*').eq('service_slug', serviceSlug);
      if (error) {
         console.error("Could not fetch providers for this service.", error);
@@ -139,7 +177,16 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot create provider.");
+    if (!isSupabaseConfigured) {
+       console.warn("DEV_MODE: Skipping provider creation, returning mock object.");
+       const newProvider = { 
+           id: Date.now(), 
+           rating: 0, 
+           reviews_count: 0, 
+           ...providerData 
+        };
+       return newProvider;
+    }
 
     const dataToInsert = {
       ...providerData,
@@ -152,14 +199,22 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
 
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot update provider.");
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping provider update.");
+        const provider = await getProviderByPhone(normalizedPhone);
+        if (!provider) throw new Error("Provider not found in local data for update.");
+        return { ...provider, ...details };
+    }
     const request = supabase!.from('providers').update(details).eq('phone', normalizedPhone).select().single();
     return handleSupabaseRequest(request, "Could not update provider details.");
 }
 
 async function uploadImageFromBase64(base64Data: string, phone: string, folder: 'portfolio' | 'profile'): Promise<string> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot upload image.");
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping image upload, returning placeholder.");
+        return "https://placehold.co/400x400.png";
+    }
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!base64Data) throw new Error("No image data provided for upload.");
 
@@ -184,8 +239,8 @@ async function uploadImageFromBase64(base64Data: string, phone: string, folder: 
 }
 
 export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Cannot add portfolio item: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) throw new Error("Cannot add portfolio item: Database not configured");
     const imageUrl = await uploadImageFromBase64(base64Data, normalizedPhone, 'portfolio');
     const newItem: PortfolioItem = { src: imageUrl, aiHint };
 
@@ -199,8 +254,8 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 }
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Cannot delete portfolio item: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) throw new Error("Cannot delete portfolio item: Database not configured");
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider || !currentProvider.portfolio || !currentProvider.portfolio[itemIndex]) {
@@ -208,7 +263,6 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     }
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
-
     if (itemToDelete.src && supabaseUrl && itemToDelete.src.includes(supabaseUrl)) {
         const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
         if (filePath) {
@@ -220,14 +274,13 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     }
 
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
-
     const request = supabase!.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
     return handleSupabaseRequest(request, "Could not delete portfolio item from database.");
 }
 
 export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Cannot update profile image: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) throw new Error("Cannot update profile image: Database not configured");
     const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, normalizedPhone, 'profile') : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
 
@@ -238,11 +291,18 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot create customer.");
+    const normalizedPhone = normalizePhoneNumber(userData.phone);
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping customer creation, returning mock object.");
+        const newUser = { ...userData, phone: normalizedPhone, accountType: 'customer' as const };
+        // In a real local dev setup, you might push this to a local array
+        // For now, just return it.
+        return newUser;
+    }
 
     const dataToInsert = {
       ...userData,
-      phone: normalizePhoneNumber(userData.phone),
+      phone: normalizedPhone,
     };
     
     const request = supabase!
@@ -256,7 +316,7 @@ export async function createCustomer(userData: { name: string, phone: string, ac
     return {
       name: data.name,
       phone: data.phone,
-      accountType: data.account_type as 'customer' | 'provider'
+      accountType: data.account_type as 'customer'
     };
 }
 
@@ -273,7 +333,10 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 }
 
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot add review.");
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping review creation.");
+        return { id: Date.now(), created_at: new Date().toISOString(), ...reviewData };
+    }
     
     const request = supabase!.from('reviews').insert([reviewData]).select().single();
     const newReview = await handleSupabaseRequest(request, "Could not add review.");
@@ -304,7 +367,10 @@ async function updateProviderRating(providerId: number) {
 // ========== Agreement Functions ==========
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot create agreement.");
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping agreement creation.");
+        return { id: Date.now(), provider_phone: provider.phone, customer_phone: customer.phone, customer_name: customer.name, status: 'pending', requested_at: new Date().toISOString() };
+    }
     const normalizedProviderPhone = normalizePhoneNumber(provider.phone);
     const normalizedCustomerPhone = normalizePhoneNumber(customer.phone);
     const agreementData = {
@@ -341,7 +407,11 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured. Cannot confirm agreement.");
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping agreement confirmation.");
+        // This is a mock response, may need adjustment based on what the calling code expects
+        return { id: agreementId, status: 'confirmed' } as Agreement;
+    }
     const request = supabase!.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return handleSupabaseRequest(request, "Could not confirm agreement.");
 }
