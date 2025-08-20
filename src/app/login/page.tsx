@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -71,19 +72,19 @@ export default function LoginPage() {
         let userToLogin: User | null = null;
         
         // Step 1: Check if the user is a provider
-        const existingProvider = await getProviderByPhone(normalizedPhone);
+        const provider = await getProviderByPhone(normalizedPhone);
 
-        if (existingProvider) {
+        if (provider) {
             userToLogin = {
-                name: existingProvider.name,
-                phone: existingProvider.phone,
+                name: provider.name,
+                phone: provider.phone,
                 accountType: 'provider',
             };
         } else {
             // Step 2: If not a provider, check if they are a customer
-            const existingCustomer = await getCustomerByPhone(normalizedPhone);
-            if (existingCustomer) {
-                userToLogin = existingCustomer;
+            const customer = await getCustomerByPhone(normalizedPhone);
+            if (customer) {
+                userToLogin = customer;
             }
         }
         
