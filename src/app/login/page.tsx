@@ -53,7 +53,8 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // This is a small delay to simulate network latency for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         let userToLogin: User | null = null;
         
