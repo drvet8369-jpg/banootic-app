@@ -57,6 +57,7 @@ export default function LoginPage() {
         
         let userToLogin: User | null = null;
         
+        // 1. Check if the user is a registered provider
         const existingProvider = await getProviderByPhone(values.phone);
         if (existingProvider) {
           userToLogin = {
@@ -65,11 +66,12 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
+            // 2. If not a provider, check if they are an existing customer
             const existingCustomer = await getCustomerByPhone(values.phone);
             if(existingCustomer) {
                 userToLogin = existingCustomer;
             } else {
-                 // If no provider or customer exists, create a new customer
+                 // 3. Only if they are neither a provider nor a customer, create a new customer
                 const newCustomer = await createCustomer({
                     name: `کاربر ${values.phone.slice(-4)}`,
                     phone: values.phone,
@@ -78,6 +80,10 @@ export default function LoginPage() {
             }
         }
         
+        if (!userToLogin) {
+            throw new Error("Could not log in or create user.");
+        }
+
         login(userToLogin);
 
         toast({
