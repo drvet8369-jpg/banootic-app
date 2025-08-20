@@ -92,20 +92,18 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 // ========== Provider Functions ==========
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
-    if (!isSupabaseConfigured) {
-        console.log(`DEV MODE: Falling back to local data for provider: ${phone}`);
-        return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizePhoneNumber(phone)) || null;
-    }
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) {
+        console.log(`DEV MODE: Falling back to local data for provider: ${normalizedPhone}`);
+        return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizedPhone) || null;
+    }
     
-    const request = supabase
+    const { data, error } = await supabase
         .from('providers')
         .select('*')
         .eq('phone', normalizedPhone)
         .maybeSingle();
 
-    // No need to wrap in handleSupabaseRequest if we want to return null on error gracefully
-     const { data, error } = await request;
     if (error) {
         console.error(`Error fetching provider by phone ${normalizedPhone}:`, error);
         return null;
@@ -263,11 +261,13 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
-     if (!isSupabaseConfigured) {
-        console.warn("DEV_MODE: Supabase not configured, cannot fetch customer.");
-        return null; 
-    }
     const normalizedPhone = normalizePhoneNumber(phone);
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Supabase not configured, cannot fetch customer.");
+        // This is a placeholder for local development without a database
+        // In a real scenario, you might want to return a specific mock user or null
+        return null;
+    }
     
     const { data, error } = await supabase
         .from("customers")
