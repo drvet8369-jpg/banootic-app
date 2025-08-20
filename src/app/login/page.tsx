@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone, createCustomer, getCustomerByPhone } from '@/lib/api';
+import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 
 
@@ -53,8 +53,6 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
         let userToLogin: User | null = null;
         
         // 1. Check if the user is a registered provider
@@ -70,18 +68,18 @@ export default function LoginPage() {
             const existingCustomer = await getCustomerByPhone(values.phone);
             if(existingCustomer) {
                 userToLogin = existingCustomer;
-            } else {
-                 // 3. Only if they are neither a provider nor a customer, create a new customer
-                const newCustomer = await createCustomer({
-                    name: `کاربر ${values.phone.slice(-4)}`,
-                    phone: values.phone,
-                });
-                userToLogin = newCustomer;
             }
         }
         
+        // 3. If user is neither a provider nor a customer, show an error.
         if (!userToLogin) {
-            throw new Error("Could not log in or create user.");
+            toast({
+                title: 'کاربر یافت نشد',
+                description: 'این شماره تلفن در سیستم ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+                variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
         }
 
         login(userToLogin);
@@ -96,13 +94,9 @@ export default function LoginPage() {
 
     } catch (error) {
         console.error("Login failed:", error);
-        let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
-        if (error instanceof Error && error.message.includes('already registered')) {
-            errorMessage = 'این شماره تلفن قبلاً ثبت شده است. لطفاً برای ثبت نام به عنوان نوع کاربری دیگر، از شماره دیگری استفاده کنید.'
-        }
         toast({
             title: 'خطا در ورود',
-            description: errorMessage,
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -114,9 +108,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+             شماره تلفن خود را برای ورود وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,7 +142,7 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
+            حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
               از اینجا ثبت‌نام کنید
             </Link>
