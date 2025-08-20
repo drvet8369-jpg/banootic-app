@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,8 +28,9 @@ import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
-import { getProviderByPhone, createProvider, getCustomerByPhone, createCustomer } from '@/lib/api';
+import { createProvider, createCustomer, checkIfUserExists } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/utils';
+import type { Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -119,10 +121,9 @@ export default function RegisterForm() {
     }
     
     try {
-      const existingProvider = await getProviderByPhone(normalizedPhone);
-      const existingCustomer = await getCustomerByPhone(normalizedPhone);
-
-      if (existingProvider || existingCustomer) {
+      const userAlreadyExists = await checkIfUserExists(normalizedPhone);
+      
+      if (userAlreadyExists) {
           toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.', variant: 'destructive'});
           setIsLoading(false);
           return;
@@ -154,7 +155,7 @@ export default function RegisterForm() {
         const createdCustomer = await createCustomer({ 
             name: values.name, 
             phone: normalizedPhone,
-            account_type: 'customer' // Correctly passing the account type
+            account_type: 'customer'
         });
         userToLogin = createdCustomer;
       }
@@ -173,7 +174,7 @@ export default function RegisterForm() {
          console.error("Registration failed:", error);
          let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
          if (error instanceof Error) {
-            errorMessage = error.message.includes('23505') ? 'این شماره تلفن قبلاً ثبت شده است.' : error.message;
+            errorMessage = error.message;
          }
          toast({
             title: 'خطا در ثبت‌نام',
