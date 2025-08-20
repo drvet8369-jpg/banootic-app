@@ -83,11 +83,7 @@ export default function LoginPage() {
             // Step 2: If not a provider, check if they are a customer
             const existingCustomer = await getCustomerByPhone(normalizedPhone);
             if (existingCustomer) {
-                userToLogin = {
-                    name: existingCustomer.name,
-                    phone: existingCustomer.phone,
-                    accountType: 'customer',
-                };
+                userToLogin = existingCustomer;
             }
         }
         
