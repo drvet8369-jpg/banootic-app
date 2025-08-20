@@ -5,7 +5,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
-import { defaultProviders } from './data';
+import { defaultProviders, defaultCustomers } from './data';
 import { normalizePhoneNumber } from './utils';
 
 // --- Supabase Client Initialization (Centralized & Robust) ---
@@ -13,12 +13,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'images';
 
-let supabase: SupabaseClient;
+let supabase: SupabaseClient | null = null;
 
 // Check if the environment variables are actually set and not just placeholders.
 const isSupabaseConfigured = 
-  supabaseUrl && supabaseUrl !== "YOUR_SUPABASE_URL" &&
-  supabaseKey && supabaseKey !== "YOUR_SUPABASE_SERVICE_ROLE_KEY";
+  supabaseUrl && !supabaseUrl.startsWith("YOUR_") &&
+  supabaseKey && !supabaseKey.startsWith("YOUR_");
 
 if (isSupabaseConfigured) {
     try {
@@ -28,8 +28,10 @@ if (isSupabaseConfigured) {
                 autoRefreshToken: false,
             }
         });
+        console.log("Supabase client initialized successfully.");
     } catch (error) {
         console.error("Supabase client creation failed due to invalid URL or key:", error);
+        supabase = null; // Ensure supabase is null on failure
     }
 } else {
     console.warn(`
@@ -42,10 +44,13 @@ if (isSupabaseConfigured) {
 
 // ========== Helper Function for Clean Error Handling ==========
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
+    if (!supabase) {
+        throw new Error("Supabase is not configured. Cannot make a database request.");
+    }
     const { data, error } = await request;
     if (error) {
         console.error(`${errorMessage}:`, error);
-        throw new Error(`A database error occurred. Please try again later. Details: ${error.message}`);
+        throw new Error(`A database error occurred. Details: ${error.message}`);
     }
     return data as T;
 }
@@ -55,28 +60,20 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.log(`DEV MODE: Falling back to local data for provider: ${normalizedPhone}`);
-        // Simulate a delay to mimic network request
         await new Promise(resolve => setTimeout(resolve, 300));
         return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizedPhone) || null;
     }
     
-    const { data, error } = await supabase
-        .from('providers')
-        .select('*')
-        .eq('phone', normalizedPhone)
-        .maybeSingle();
-
-    if (error) {
-        console.error(`Error fetching provider by phone ${normalizedPhone}:`, error);
-        return null;
-    }
-    return data;
+    return handleSupabaseRequest(
+        supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle(),
+        "Error fetching provider by phone"
+    );
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
-    if (!isSupabaseConfigured) return defaultProviders;
+    if (!supabase) return defaultProviders;
 
     const { data, error } = await supabase.from('providers').select('*').order('name', { ascending: true });
     if(error) {
@@ -87,7 +84,7 @@ export async function getAllProviders(): Promise<Provider[]> {
 }
 
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         return defaultProviders.filter(p => p.category_slug === categorySlug);
     }
      const { data, error } = await supabase.from('providers').select('*').eq('category_slug', categorySlug);
@@ -99,7 +96,7 @@ export async function getProvidersByCategory(categorySlug: string): Promise<Prov
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
        return defaultProviders.filter(p => p.service_slug === serviceSlug);
     }
      const { data, error } = await supabase.from('providers').select('*').eq('service_slug', serviceSlug);
@@ -112,7 +109,7 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
        const newProvider = { 
            id: Date.now(), 
            rating: 0, 
@@ -134,7 +131,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
 
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.warn("DEV_MODE: Skipping provider update.");
         const provider = await getProviderByPhone(phone);
         if (!provider) throw new Error("Provider not found in local data for update.");
@@ -146,7 +143,7 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 }
 
 async function uploadImageFromBase64(base64Data: string, phone: string, folder: 'portfolio' | 'profile'): Promise<string> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.warn("DEV_MODE: Skipping image upload, returning placeholder.");
         return "https://placehold.co/400x400.png";
     }
@@ -174,7 +171,7 @@ async function uploadImageFromBase64(base64Data: string, phone: string, folder: 
 }
 
 export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Cannot add portfolio item: Database not configured");
+    if (!supabase) throw new Error("Cannot add portfolio item: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = await uploadImageFromBase64(base64Data, normalizedPhone, 'portfolio');
     const newItem: PortfolioItem = { src: imageUrl, aiHint };
@@ -189,7 +186,7 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 }
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Cannot delete portfolio item: Database not configured");
+    if (!supabase) throw new Error("Cannot delete portfolio item: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
@@ -199,12 +196,15 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
 
-    const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
-    if (filePath && !filePath.startsWith('https://placehold.co')) {
-      await handleSupabaseRequest(
-          supabase.storage.from(BUCKET_NAME).remove([filePath]),
-          "Failed to delete image from storage."
-      );
+    // Check if the URL is from Supabase storage before attempting to delete
+    if (itemToDelete.src && supabaseUrl && itemToDelete.src.includes(supabaseUrl)) {
+        const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
+        if (filePath) {
+            await handleSupabaseRequest(
+                supabase.storage.from(BUCKET_NAME).remove([filePath]),
+                "Failed to delete image from storage."
+            );
+        }
     }
 
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
@@ -214,7 +214,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 }
 
 export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Cannot update profile image: Database not configured");
+    if (!supabase) throw new Error("Cannot update profile image: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, normalizedPhone, 'profile') : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
@@ -227,11 +227,14 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
-    // In local mode, there's no customer data, so we always return null.
-    // The login logic will then correctly assume the user doesn't exist.
-    if (!isSupabaseConfigured) {
-        console.warn("DEV_MODE: Supabase not configured, cannot fetch customer.");
-        return null;
+    console.log(`[getCustomerByPhone] Searching for customer with phone: ${normalizedPhone}`);
+
+    if (!supabase) {
+        console.warn(`[getCustomerByPhone] DEV MODE: Falling back to local data.`);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const customer = defaultCustomers.find(c => normalizePhoneNumber(c.phone) === normalizedPhone) || null;
+        console.log(`[getCustomerByPhone] DEV MODE: Found customer:`, customer);
+        return customer;
     }
     
     const { data, error } = await supabase
@@ -241,24 +244,34 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
         .maybeSingle();
 
     if (error) {
-        console.error(`Error fetching customer by phone ${normalizedPhone}:`, error);
+        console.error(`[getCustomerByPhone] Supabase error:`, error);
         return null;
     }
     
-    if (!data) return null;
+    console.log(`[getCustomerByPhone] Supabase returned data:`, data);
+
+    if (!data) {
+        console.log(`[getCustomerByPhone] No customer found in database.`);
+        return null;
+    }
     
-    return {
+    const user: User = {
       name: data.name,
       phone: data.phone,
       accountType: data.account_type as 'customer' | 'provider'
     };
+    console.log(`[getCustomerByPhone] Successfully mapped to user object:`, user);
+    return user;
 }
 
 
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.warn("DEV_MODE: Skipping customer creation, returning mock object.");
-        return { ...userData, accountType: 'customer' };
+        const newUser = { ...userData, accountType: 'customer' as const };
+        // Add to default customers so they can be found in dev mode
+        defaultCustomers.push(newUser);
+        return newUser;
     }
 
     const dataToInsert = {
@@ -284,7 +297,7 @@ export async function createCustomer(userData: { name: string, phone: string, ac
 // ========== Review Functions ==========
 
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!supabase) return [];
     const { data, error } = await supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
     if (error) {
         console.error("Could not fetch reviews.", error);
@@ -294,7 +307,7 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 }
 
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.warn("DEV_MODE: Skipping review creation.");
         return { id: Date.now(), created_at: new Date().toISOString(), ...reviewData };
     }
@@ -307,7 +320,7 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): 
 }
 
 async function updateProviderRating(providerId: number) {
-    if (!isSupabaseConfigured) return;
+    if (!supabase) return;
     const { data: reviews, error } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
 
     if (error || !reviews) {
@@ -328,7 +341,7 @@ async function updateProviderRating(providerId: number) {
 // ========== Agreement Functions ==========
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.warn("DEV_MODE: Skipping agreement creation.");
         return { id: Date.now(), provider_phone: provider.phone, customer_phone: customer.phone, customer_name: customer.name, status: 'pending', requested_at: new Date().toISOString() };
     }
@@ -346,7 +359,7 @@ export async function createAgreement(provider: Provider, customer: User): Promi
 }
 
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!supabase) return [];
     const normalizedPhone = normalizePhoneNumber(providerPhone);
     const { data, error } = await supabase.from('agreements').select('*').eq('provider_phone', normalizedPhone).order('requested_at', { ascending: false });
     if(error) {
@@ -357,7 +370,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!supabase) return [];
     const normalizedPhone = normalizePhoneNumber(customerPhone);
     const { data, error } = await supabase.from('agreements').select('*').eq('customer_phone', normalizedPhone).order('requested_at', { ascending: false });
     if (error) {
@@ -368,10 +381,13 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
         console.warn("DEV_MODE: Skipping agreement confirmation.");
-        return {} as Agreement;
+        // This is a mock response, may need adjustment based on what the calling code expects
+        return { id: agreementId, status: 'confirmed' } as Agreement;
     }
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return handleSupabaseRequest(request, "Could not confirm agreement.");
 }
+
+    

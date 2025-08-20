@@ -1,4 +1,5 @@
-import type { Provider } from './types';
+
+import type { Provider, User } from './types';
 
 // This file is re-introduced to provide default seed data for development and testing.
 // The API layer will use this data as a fallback if the database is empty.
@@ -44,3 +45,10 @@ export const defaultProviders: Provider[] = [
   { id: 19, name: 'هنر چرم لیلا', service: 'چرم‌دوزی', location: 'ارومیه، همافر', phone: '09000000019', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', category_slug: 'handicrafts', service_slug: 'leather-crafts', rating: 4.9, reviews_count: 58, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'leather goods' }, portfolio: [] },
   { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', category_slug: 'handicrafts', service_slug: 'candles-soaps', rating: 4.8, reviews_count: 72, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'candle maker' }, portfolio: [] },
 ];
+
+export const defaultCustomers: User[] = [
+  { name: 'مشتری آزمایشی', phone: '09120000000', accountType: 'customer' },
+  { name: 'مژگان جودکی', phone: '09112223333', accountType: 'customer'}
+];
+
+    
