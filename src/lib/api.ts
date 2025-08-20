@@ -5,7 +5,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
-import { defaultProviders } from './data';
 import { normalizePhoneNumber } from './utils';
 
 // --- Supabase Client Initialization (Centralized & Robust) ---
@@ -15,10 +14,20 @@ const BUCKET_NAME = 'images';
 
 let supabase: SupabaseClient | null = null;
 
-// Check if the environment variables are actually set and not just placeholders.
 const isSupabaseConfigured = 
   supabaseUrl && !supabaseUrl.startsWith("YOUR_") &&
   supabaseKey && !supabaseKey.startsWith("YOUR_");
+
+const defaultProviders: Provider[] = [
+  // This is a sample provider for DEV mode.
+  { id: 1, name: 'هنرمند پیش‌فرض', service: 'خدمات نمونه', location: 'ارومیه', phone: '09111111111', bio: 'این یک پروفایل نمونه برای حالت توسعه است.', category_slug: 'beauty', service_slug: 'manicure-pedicure', rating: 5, reviews_count: 1, profileimage: { src: '', aiHint: 'woman portrait' }, portfolio: [] },
+];
+
+const defaultCustomers: User[] = [
+    // This is a sample customer for DEV mode, for "مژگان جودکی".
+    { name: 'مژگان جودکی', phone: '09121111111', accountType: 'customer' }
+];
+
 
 if (isSupabaseConfigured) {
     try {
@@ -31,18 +40,17 @@ if (isSupabaseConfigured) {
         console.log("Supabase client initialized successfully.");
     } catch (error) {
         console.error("Supabase client creation failed due to invalid URL or key:", error);
-        supabase = null; // Ensure supabase is null on failure
+        supabase = null;
     }
 } else {
     console.warn(`
   ****************************************************************
   ** WARNING: Supabase environment variables are not set.       **
-  **             Falling back to local data mode for Providers. **
+  **             Falling back to local data mode.               **
   ****************************************************************
   `);
 }
 
-// ========== Helper Function for Clean Error Handling ==========
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     if (!supabase) {
         throw new Error("Supabase is not configured. Cannot make a database request.");
@@ -55,14 +63,10 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
     return data as T;
 }
 
-
-// ========== Provider Functions ==========
-
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!supabase) {
         console.log(`DEV MODE: Falling back to local data for provider: ${normalizedPhone}`);
-        await new Promise(resolve => setTimeout(resolve, 300));
         return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizedPhone) || null;
     }
     
@@ -71,6 +75,40 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         "Error fetching provider by phone"
     );
 }
+
+export async function getCustomerByPhone(phone: string): Promise<User | null> {
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!supabase) {
+        console.log(`DEV MODE: Falling back to local data for customer: ${normalizedPhone}`);
+        return defaultCustomers.find(c => normalizePhoneNumber(c.phone) === normalizedPhone) || null;
+    }
+    
+    console.log(`[getCustomerByPhone] Querying Supabase for phone: ${normalizedPhone}`);
+    const { data, error } = await supabase
+        .from("customers")
+        .select("name, phone, account_type")
+        .eq("phone", normalizedPhone)
+        .maybeSingle();
+
+    if (error) {
+        console.error(`Error fetching customer by phone ${normalizedPhone}:`, error);
+        return null;
+    }
+    
+    if (!data) {
+        console.log(`[getCustomerByPhone] No customer found for phone ${normalizedPhone}.`);
+        return null;
+    }
+    
+    console.log(`[getCustomerByPhone] Found data:`, data);
+    return {
+      name: data.name,
+      phone: data.phone,
+      accountType: data.account_type as 'customer'
+    };
+}
+
+// All other functions remain the same...
 
 export async function getAllProviders(): Promise<Provider[]> {
     if (!supabase) return defaultProviders;
@@ -107,7 +145,6 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
      return data || [];
 }
 
-
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
     if (!supabase) {
        const newProvider = { 
@@ -128,7 +165,6 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
     const request = supabase.from('providers').insert([{ ...dataToInsert, rating: 0, reviews_count: 0 }]).select().single();
     return handleSupabaseRequest(request, "Error creating provider.");
 }
-
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
     if (!supabase) {
@@ -196,12 +232,11 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
 
-    // Check if the URL is from Supabase storage before attempting to delete
-    if (itemToDelete.src && supabaseUrl && itemToDelete.src.includes(supabaseUrl)) {
+    if (supabaseUrl && itemToDelete.src && itemToDelete.src.includes(supabaseUrl)) {
         const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
         if (filePath) {
             await handleSupabaseRequest(
-                supabase.storage.from(BUCKET_NAME).remove([filePath]),
+                supabase!.storage.from(BUCKET_NAME).remove([filePath]),
                 "Failed to delete image from storage."
             );
         }
@@ -223,51 +258,9 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     return handleSupabaseRequest(request, "Could not update profile image in database.");
 }
 
-// ========== Customer Functions ==========
-
-export async function getCustomerByPhone(phone: string): Promise<User | null> {
-    const normalizedPhone = normalizePhoneNumber(phone);
-    console.log(`[getCustomerByPhone] Attempting to find customer with phone: ${normalizedPhone}`);
-
-    // If supabase is not configured, there's no way to find a customer.
-    // Unlike providers, we don't have a default static list for customers.
-    if (!supabase) {
-        console.warn("DEV_MODE: Supabase not configured, cannot fetch customer. Returning null.");
-        return null;
-    }
-    
-    console.log("[getCustomerByPhone] Querying Supabase...");
-    const { data, error } = await supabase
-        .from("customers")
-        .select("name, phone, account_type")
-        .eq("phone", normalizedPhone)
-        .maybeSingle();
-
-    if (error) {
-        console.error(`[getCustomerByPhone] Supabase error for phone ${normalizedPhone}:`, error);
-        return null; // Return null on error to signal failure
-    }
-    
-    if (!data) {
-        console.log(`[getCustomerByPhone] No customer found in database for phone ${normalizedPhone}.`);
-        return null;
-    }
-    
-    console.log(`[getCustomerByPhone] Found data:`, data);
-    const user: User = {
-      name: data.name,
-      phone: data.phone,
-      accountType: data.account_type as 'customer' | 'provider'
-    };
-    console.log(`[getCustomerByPhone] Successfully mapped to user object:`, user);
-    return user;
-}
-
-
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
     if (!supabase) {
         console.warn("DEV_MODE: Skipping customer creation, returning mock object.");
-        // We return a mock user, but it won't be persisted.
         return { ...userData, accountType: 'customer' };
     }
 
@@ -290,8 +283,6 @@ export async function createCustomer(userData: { name: string, phone: string, ac
       accountType: data.account_type as 'customer' | 'provider'
     };
 }
-
-// ========== Review Functions ==========
 
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
     if (!supabase) return [];
@@ -334,8 +325,6 @@ async function updateProviderRating(providerId: number) {
         "Could not update provider rating."
     );
 }
-
-// ========== Agreement Functions ==========
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
     if (!supabase) {
@@ -380,7 +369,6 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
     if (!supabase) {
         console.warn("DEV_MODE: Skipping agreement confirmation.");
-        // This is a mock response, may need adjustment based on what the calling code expects
         return { id: agreementId, status: 'confirmed' } as Agreement;
     }
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
