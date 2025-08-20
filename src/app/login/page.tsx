@@ -70,45 +70,52 @@ export default function LoginPage() {
     try {
         let userToLogin: User | null = null;
         
+        // Step 1: Check if the user is a provider
         const existingProvider = await getProviderByPhone(normalizedPhone);
+
         if (existingProvider) {
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
+            userToLogin = {
+                name: existingProvider.name,
+                phone: existingProvider.phone,
+                accountType: 'provider',
+            };
         } else {
+            // Step 2: If not a provider, check if they are a customer
             const existingCustomer = await getCustomerByPhone(normalizedPhone);
-            if(existingCustomer) {
-                userToLogin = existingCustomer;
+            if (existingCustomer) {
+                userToLogin = {
+                    name: existingCustomer.name,
+                    phone: existingCustomer.phone,
+                    accountType: 'customer',
+                };
             }
         }
         
-        if (!userToLogin) {
+        // Step 3: Final decision based on whether a user was found
+        if (userToLogin) {
+            login(userToLogin);
+
+            toast({
+              title: 'ورود با موفقیت انجام شد!',
+              description: `خوش آمدید ${userToLogin.name}!`,
+            });
+            
+            const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+            router.push(destination);
+        } else {
+            // User was not found in either table
             toast({
                 title: 'کاربر یافت نشد',
                 description: 'این شماره تلفن در سیستم ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
                 variant: 'destructive',
             });
-            setIsLoading(false);
-            return;
         }
-
-        login(userToLogin);
-
-        toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}!`,
-        });
-        
-        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
 
     } catch (error) {
         console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی در ارتباط با سرور پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
