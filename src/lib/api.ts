@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -59,6 +58,9 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 // ========== Provider Functions ==========
 
 export async function getAllProviders(): Promise<Provider[]> {
+    if (!isSupabaseConfigured) {
+        return defaultProviders;
+    }
     const providers = await handleSupabaseRequest(
         supabase.from('providers').select('*').order('name', { ascending: true }),
         "Could not fetch providers.",
@@ -86,13 +88,15 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
+    if (!isSupabaseConfigured) {
+        return defaultProviders.find(p => p.phone === phone) || null;
+    }
     const provider = await handleSupabaseRequest(
         supabase.from('providers').select('*').eq('phone', phone).maybeSingle(),
         "Error fetching provider by phone",
         null
     );
-    // If DB is not configured or provider not found, check default data
-    return provider || defaultProviders.find(p => p.phone === phone) || null;
+    return provider;
 }
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
@@ -104,7 +108,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
     return handleSupabaseRequest(
         supabase.from('providers').insert([{ ...providerData, rating: 0, reviews_count: 0 }]).select().single(),
         "Error creating provider.",
-        {} as Provider // This won't be reached if configured
+        {} as Provider
     );
 }
 
@@ -124,7 +128,10 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 }
 
 async function uploadImageFromBase64(base64Data: string, phone: string): Promise<string> {
-    if (!isSupabaseConfigured) throw new Error("Cannot upload image: Supabase is not configured.");
+    if (!isSupabaseConfigured) {
+        console.log("SIMULATING IMAGE UPLOAD");
+        return "https://placehold.co/400x400.png";
+    }
     if (!base64Data) throw new Error("No image data provided for upload.");
 
     const mimeType = base64Data.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
@@ -186,7 +193,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     const itemToDelete = currentProvider.portfolio[itemIndex];
     const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
     
-    if (filePath) {
+    if (filePath && !filePath.startsWith('https://placehold.co')) {
       await handleSupabaseRequest(
         supabase.storage.from(BUCKET_NAME).remove([filePath]),
         "Failed to delete from storage, but proceeding to update DB.",
@@ -224,6 +231,7 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
+    if (!isSupabaseConfigured) return null;
     return handleSupabaseRequest(
         supabase.from("customers").select("name, phone, accountType:account_type").eq("phone", phone).maybeSingle(),
         "Error fetching customer by phone",
@@ -231,7 +239,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
     );
 }
 
-export async function createCustomer(userData: { name: string, phone: string }): Promise<User> {
+export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
     if (!isSupabaseConfigured) {
         console.log("SIMULATING CUSTOMER CREATION", userData);
         return { ...userData, accountType: 'customer' };

@@ -108,7 +108,7 @@ export default function RegisterForm() {
       const existingCustomer = await getCustomerByPhone(values.phone);
 
       if (existingProvider || existingCustomer) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است.', variant: 'destructive'});
+          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.', variant: 'destructive'});
           setIsLoading(false);
           return;
       }
@@ -124,9 +124,9 @@ export default function RegisterForm() {
           service: selectedService?.name || 'خدمت جدید',
           location: values.location || 'ارومیه',
           bio: values.bio || '',
-          categorySlug: values.categorySlug as any,
-          serviceSlug: values.serviceSlug,
-          profileImage: { src: '', aiHint: 'woman portrait' },
+          category_slug: values.categorySlug as any,
+          service_slug: values.serviceSlug,
+          profileimage: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
         const createdProvider = await createProvider(newProviderData);
@@ -139,6 +139,7 @@ export default function RegisterForm() {
         const createdCustomer = await createCustomer({ 
             name: values.name, 
             phone: values.phone,
+            account_type: 'customer' // Correctly passing the account type
         });
         userToLogin = createdCustomer;
       }
@@ -147,7 +148,7 @@ export default function RegisterForm() {
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        description: `خوش آمدید ${userToLogin.name}!`,
       });
       
       const destination = values.accountType === 'provider' ? '/profile' : '/';
@@ -157,7 +158,7 @@ export default function RegisterForm() {
          console.error("Registration failed:", error);
          let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
          if (error instanceof Error) {
-            errorMessage = error.message;
+            errorMessage = error.message.includes('23505') ? 'این شماره تلفن قبلاً ثبت شده است.' : error.message;
          }
          toast({
             title: 'خطا در ثبت‌نام',
