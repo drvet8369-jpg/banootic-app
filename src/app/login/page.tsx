@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,9 +26,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
+import { loginUser, UserRole } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 import { normalizePhoneNumber } from '@/lib/utils';
 
@@ -37,6 +39,9 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
   }).max(14, {
     message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
+  }),
+  role: z.enum(['customer', 'provider'], {
+      required_error: 'لطفاً نقش خود را انتخاب کنید.'
   }),
 });
 
@@ -50,6 +55,7 @@ export default function LoginPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       phone: '',
+      role: 'customer'
     },
   });
 
@@ -68,48 +74,29 @@ export default function LoginPage() {
     }
 
     try {
-        // Step 1: Check if the user is a provider
-        const provider = await getProviderByPhone(normalizedPhone);
+        const result = await loginUser(normalizedPhone, values.role as UserRole);
 
-        if (provider) {
-            const userToLogin: User = {
-                name: provider.name,
-                phone: provider.phone,
-                accountType: 'provider',
-            };
-            login(userToLogin);
+        if (result.success && result.user) {
+            login(result.user as User);
             toast({
               title: 'ورود با موفقیت انجام شد!',
-              description: `خوش آمدید ${userToLogin.name}!`,
+              description: `خوش آمدید ${result.user.name}!`,
             });
-            router.push('/profile');
-            return;
-        }
-
-        // Step 2: If not a provider, check if they are a customer
-        const customer = await getCustomerByPhone(normalizedPhone);
-        if (customer) {
-            login(customer);
-            toast({
-              title: 'ورود با موفقیت انجام شد!',
-              description: `خوش آمدید ${customer.name}!`,
+            const destination = result.user.accountType === 'provider' ? '/profile' : '/';
+            router.push(destination);
+        } else {
+             toast({
+                title: 'خطا در ورود',
+                description: result.message || 'کاربر یافت نشد. لطفاً ابتدا ثبت‌نام کنید.',
+                variant: 'destructive',
             });
-            router.push('/');
-            return;
         }
-        
-        // Step 3: User was not found in either table
-        toast({
-            title: 'کاربر یافت نشد',
-            description: 'این شماره تلفن در سیستم ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-            variant: 'destructive',
-        });
-
     } catch (error) {
         console.error("Login failed:", error);
+        const errorMessage = error instanceof Error ? error.message : 'مشکلی در ارتباط با سرور پیش آمده است.';
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی در ارتباط با سرور پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: errorMessage,
             variant: 'destructive'
         });
     } finally {
@@ -123,12 +110,48 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-             شماره تلفن خود را برای ورود وارد کنید.
+             ابتدا نقش و سپس شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+               <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>نقش خود را انتخاب کنید:</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex items-center space-x-4 space-x-reverse"
+                          disabled={isLoading}
+                        >
+                          <FormItem className="flex items-center space-x-2 space-x-reverse">
+                            <FormControl>
+                              <RadioGroupItem value="customer" id="role-customer" />
+                            </FormControl>
+                            <FormLabel htmlFor="role-customer" className="font-normal cursor-pointer">
+                              مشتری
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-x-reverse">
+                            <FormControl>
+                              <RadioGroupItem value="provider" id="role-provider" />
+                            </FormControl>
+                            <FormLabel htmlFor="role-provider" className="font-normal cursor-pointer">
+                              هنرمند
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
               <FormField
                 control={form.control}
                 name="phone"

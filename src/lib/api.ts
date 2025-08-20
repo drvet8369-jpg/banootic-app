@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -16,6 +17,7 @@ const defaultCustomers: User[] = [
     // This is a sample customer for DEV mode, for "مژگان جودکی".
     { name: 'مژگان جودکی', phone: '09121111111', accountType: 'customer' }
 ];
+
 
 // --- Supabase Client Initialization (Centralized & Robust) ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -64,17 +66,62 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
     return data as T;
 }
 
+// ========== NEW UNIFIED LOGIN FUNCTION ==========
 
-// ========== Provider Functions ==========
+export type UserRole = 'customer' | 'provider';
+
+export async function loginUser(phone: string, role: UserRole) {
+  const cleanPhone = normalizePhoneNumber(phone);
+  const tableName = role === 'provider' ? 'providers' : 'customers';
+
+  // Fallback for DEV mode
+  if (!supabase) {
+    console.log(`DEV MODE: Attempting to log in ${role} with phone ${cleanPhone} from local data.`);
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+    const userList = role === 'provider' ? defaultProviders : defaultCustomers;
+    const user = userList.find(u => normalizePhoneNumber(u.phone) === cleanPhone);
+
+    if (user) {
+        return { success: true, user: { ...user, accountType: role } };
+    }
+    return { success: false, message: 'کاربری در حالت توسعه یافت نشد' };
+  }
+
+  // Production logic
+  const { data, error } = await supabase
+    .from(tableName)
+    .select('*')
+    .eq('phone', cleanPhone)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') { // "single()" row not found
+        console.log(`Login attempt for ${role} with phone ${cleanPhone}: Not found.`);
+        return { success: false, message: 'کاربری با این مشخصات یافت نشد' };
+    }
+    console.error('Supabase login error:', error);
+    return { success: false, message: 'خطا در اتصال به پایگاه داده' };
+  }
+
+  if (!data) {
+    return { success: false, message: 'کاربری یافت نشد' };
+  }
+
+  // Ensure the accountType is correctly set for the auth context
+  return { success: true, user: { ...data, accountType: role } };
+}
+
+
+// ========== Provider Functions (Kept for other functionalities) ==========
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!supabase) {
         console.log(`DEV MODE: Falling back to local data for provider: ${normalizedPhone}`);
+        await new Promise(resolve => setTimeout(resolve, 300));
         return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizedPhone) || null;
     }
     
-    console.log(`[getProviderByPhone] Querying Supabase for phone: ${normalizedPhone}`);
     return handleSupabaseRequest(
         supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle(),
         "Error fetching provider by phone"
@@ -125,8 +172,9 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
            reviews_count: 0, 
            ...providerData 
         };
-       console.log("DEV_MODE: Skipping provider creation, returning mock object.", newProvider);
-       return newProvider;
+       defaultProviders.push(newProvider as any);
+       console.log("DEV_MODE: Skipping provider creation, saving to local array.", newProvider);
+       return newProvider as any;
     }
 
     const dataToInsert = {
@@ -205,8 +253,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
 
-    // Check if the URL is from Supabase storage before attempting to delete
-    if (supabaseUrl && itemToDelete.src && itemToDelete.src.includes(supabaseUrl)) {
+    if (itemToDelete.src && supabaseUrl && itemToDelete.src.includes(supabaseUrl)) {
         const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
         if (filePath) {
             await handleSupabaseRequest(
@@ -234,42 +281,9 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
 // ========== Customer Functions ==========
 
-export async function getCustomerByPhone(phone: string): Promise<User | null> {
-    const normalizedPhone = normalizePhoneNumber(phone);
-    if (!supabase) {
-        console.log(`DEV MODE: Falling back to local data for customer: ${normalizedPhone}`);
-        return defaultCustomers.find(c => normalizePhoneNumber(c.phone) === normalizedPhone) || null;
-    }
-    
-    console.log(`[getCustomerByPhone] Querying Supabase for phone: ${normalizedPhone}`);
-    const { data, error } = await supabase
-        .from("customers")
-        .select("name, phone, account_type")
-        .eq("phone", normalizedPhone)
-        .maybeSingle();
-
-    if (error) {
-        console.error(`Error fetching customer by phone ${normalizedPhone}:`, error);
-        return null;
-    }
-    
-    if (!data) {
-        console.log(`[getCustomerByPhone] No customer found for phone ${normalizedPhone}.`);
-        return null;
-    }
-    
-    console.log(`[getCustomerByPhone] Found data:`, data);
-    return {
-      name: data.name,
-      phone: data.phone,
-      accountType: data.account_type as 'customer'
-    };
-}
-
-
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
     if (!supabase) {
-        console.warn("DEV_MODE: Skipping customer creation, returning mock object.");
+        console.warn("DEV_MODE: Skipping customer creation, saving to local array.");
         const newCustomer = { ...userData, accountType: 'customer' as const };
         defaultCustomers.push(newCustomer);
         return newCustomer;
@@ -291,7 +305,7 @@ export async function createCustomer(userData: { name: string, phone: string, ac
     return {
       name: data.name,
       phone: data.phone,
-      accountType: data.account_type as 'customer'
+      accountType: data.account_type as 'customer' | 'provider'
     };
 }
 
