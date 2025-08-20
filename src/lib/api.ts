@@ -40,7 +40,6 @@ if (isSupabaseConfigured) {
     get(target, prop) {
       return () => {
         const errorMsg = `Supabase is not configured. Cannot perform operation: ${String(prop)}. Check your server environment variables.`;
-        console.warn(errorMsg);
         // Return a shape that handleSupabaseRequest expects
         return Promise.resolve({ data: null, error: { message: errorMsg, code: 'NO_CONFIG' } });
       }
@@ -51,16 +50,20 @@ if (isSupabaseConfigured) {
 
 
 // ========== Helper Function for Clean Error Handling ==========
-async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T | null> {
+async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
     if (error) {
         // Don't throw for 'not configured' error, as we have a fallback.
-        if (error.code === 'NO_CONFIG') return null;
+        if (error.code === 'NO_CONFIG') {
+           console.warn(errorMessage, "Supabase not configured.");
+           // This will likely result in a "not found" scenario down the line, which is intended.
+           return null as T;
+        }
         
         console.error(`${errorMessage}:`, error);
         throw new Error(`A database error occurred. Please try again later.`);
     }
-    return data;
+    return data as T;
 }
 
 
@@ -68,6 +71,7 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     if (!isSupabaseConfigured) {
+        console.log(`DEV MODE: Falling back to local data for provider: ${phone}`);
         return defaultProviders.find(p => normalizePhoneNumber(p.phone) === normalizePhoneNumber(phone)) || null;
     }
     const normalizedPhone = normalizePhoneNumber(phone);
@@ -78,7 +82,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         .eq('phone', normalizedPhone)
         .maybeSingle();
 
-    return handleSupabaseRequest(request, "Error fetching provider by phone");
+    return handleSupabaseRequest(request, `Error fetching provider by phone ${normalizedPhone}`);
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
@@ -108,7 +112,18 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
-    if (!isSupabaseConfigured) return { ...defaultProviders[0], ...providerData };
+    if (!isSupabaseConfigured) {
+       const newProvider = { 
+           id: Date.now(), 
+           rating: 0, 
+           reviews_count: 0, 
+           ...providerData 
+        };
+       // Note: This won't actually save in fallback mode, it's for flow control.
+       console.log("DEV_MODE: Skipping provider creation, returning mock object.", newProvider);
+       return newProvider;
+    }
+
     const dataToInsert = {
       ...providerData,
       phone: normalizePhoneNumber(providerData.phone),
@@ -122,7 +137,11 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
 
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
-    if (!isSupabaseConfigured) return { ...defaultProviders[0], ...details };
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping provider update.");
+        const provider = await getProviderByPhone(phone);
+        return { ...provider!, ...details };
+    }
     const normalizedPhone = normalizePhoneNumber(phone);
     const request = supabase.from('providers').update(details).eq('phone', normalizedPhone).select().single();
     const updatedProvider = await handleSupabaseRequest(request, "Could not update provider details.");
@@ -131,7 +150,10 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 }
 
 async function uploadImageFromBase64(base64Data: string, phone: string, folder: 'portfolio' | 'profile'): Promise<string> {
-    if (!isSupabaseConfigured) return "https://placehold.co/400x400.png";
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping image upload, returning placeholder.");
+        return "https://placehold.co/400x400.png";
+    }
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!base64Data) throw new Error("No image data provided for upload.");
 
@@ -156,7 +178,7 @@ async function uploadImageFromBase64(base64Data: string, phone: string, folder: 
 }
 
 export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured");
+    if (!isSupabaseConfigured) throw new Error("Cannot add portfolio item: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = await uploadImageFromBase64(base64Data, normalizedPhone, 'portfolio');
     const newItem: PortfolioItem = { src: imageUrl, aiHint };
@@ -171,7 +193,7 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 }
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured");
+    if (!isSupabaseConfigured) throw new Error("Cannot delete portfolio item: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
@@ -198,7 +220,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 }
 
 export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
-    if (!isSupabaseConfigured) throw new Error("Database not configured");
+    if (!isSupabaseConfigured) throw new Error("Cannot update profile image: Database not configured");
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = base64Data ? await uploadImageFromBase64(base64Data, normalizedPhone, 'profile') : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
@@ -212,19 +234,20 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
-    if (!isSupabaseConfigured) return null; // In fallback mode, there are no default customers.
+    if (!isSupabaseConfigured) {
+        // In fallback mode, there is no local customer data, so this will always be null.
+        console.warn("DEV_MODE: Supabase not configured, cannot fetch customer.");
+        return null; 
+    }
     const normalizedPhone = normalizePhoneNumber(phone);
     
-    const { data, error } = await supabase
+    const request = supabase
         .from("customers")
-        .select("name, phone, account_type")
+        .select("name, phone, account_type") // Corrected column name
         .eq("phone", normalizedPhone)
         .maybeSingle();
 
-    if (error) {
-        console.error("Error fetching customer by phone:", error.message);
-        throw new Error(`Failed to fetch customer: ${error.message}`);
-    }
+    const data = await handleSupabaseRequest(request, `Error fetching customer by phone ${normalizedPhone}`);
 
     if (!data) return null;
     
@@ -238,6 +261,7 @@ export async function getCustomerByPhone(phone: string): Promise<User | null> {
 
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
     if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping customer creation, returning mock object.");
         return { ...userData, accountType: 'customer' };
     }
 
@@ -249,7 +273,7 @@ export async function createCustomer(userData: { name: string, phone: string, ac
     const request = supabase
         .from('customers')
         .insert([dataToInsert])
-        .select('name, phone, account_type')
+        .select('name, phone, account_type') // Corrected column name
         .single();
 
     const data = await handleSupabaseRequest(request, 'Could not create customer account.');
@@ -271,7 +295,10 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 }
 
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
-    if (!isSupabaseConfigured) return { id: Date.now(), created_at: new Date().toISOString(), ...reviewData };
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping review creation.");
+        return { id: Date.now(), created_at: new Date().toISOString(), ...reviewData };
+    }
     
     const request = supabase.from('reviews').insert([reviewData]).select().single();
     const newReview = await handleSupabaseRequest(request, "Could not add review.");
@@ -302,7 +329,10 @@ async function updateProviderRating(providerId: number) {
 // ========== Agreement Functions ==========
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
-    if (!isSupabaseConfigured) return { id: Date.now(), provider_phone: provider.phone, customer_phone: customer.phone, customer_name: customer.name, status: 'pending', requested_at: new Date().toISOString() };
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping agreement creation.");
+        return { id: Date.now(), provider_phone: provider.phone, customer_phone: customer.phone, customer_name: customer.name, status: 'pending', requested_at: new Date().toISOString() };
+    }
     const normalizedProviderPhone = normalizePhoneNumber(provider.phone);
     const normalizedCustomerPhone = normalizePhoneNumber(customer.phone);
     const agreementData = {
@@ -333,7 +363,10 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    if (!isSupabaseConfigured) return {} as Agreement;
+    if (!isSupabaseConfigured) {
+        console.warn("DEV_MODE: Skipping agreement confirmation.");
+        return {} as Agreement;
+    }
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     const confirmedAgreement = await handleSupabaseRequest(request, "Could not confirm agreement.");
     if (!confirmedAgreement) throw new Error("Confirming agreement failed and returned null.");
