@@ -70,7 +70,6 @@ export default function LoginPage() {
     try {
         let userToLogin: User | null = null;
         
-        // 1. Check if the user is a registered provider
         const existingProvider = await getProviderByPhone(normalizedPhone);
         if (existingProvider) {
           userToLogin = {
@@ -79,15 +78,12 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-            // 2. If not a provider, check if they are an existing customer
             const existingCustomer = await getCustomerByPhone(normalizedPhone);
             if(existingCustomer) {
-                // This was the missing part: Assign the found customer to userToLogin
                 userToLogin = existingCustomer;
             }
         }
         
-        // 3. If user is neither a provider nor a customer, show an error.
         if (!userToLogin) {
             toast({
                 title: 'کاربر یافت نشد',
