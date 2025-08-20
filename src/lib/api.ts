@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -253,7 +254,7 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     const normalizedPhone = normalizePhoneNumber(phone);
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) return null; // Simplified: just return null if not configured
     return handleSupabaseRequest(
         supabase
             .from("customers")
