@@ -231,7 +231,6 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 // ========== Customer Functions ==========
 
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
-    if (!isSupabaseConfigured) return null;
     return handleSupabaseRequest(
         supabase.from("customers").select("name, phone, accountType:account_type").eq("phone", phone).maybeSingle(),
         "Error fetching customer by phone",
