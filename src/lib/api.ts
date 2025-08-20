@@ -13,6 +13,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let supabase: SupabaseClient;
+const BUCKET_NAME = 'images';
 
 // A simple flag to check if Supabase is configured, to avoid crashing the app.
 const isSupabaseConfigured = supabaseUrl && supabaseKey;
@@ -32,6 +33,7 @@ if (isSupabaseConfigured) {
   ** missing. Database features will be disabled.               **
   ****************************************************************
   `);
+  // Create a dummy client to avoid crashing the app if Supabase is not configured.
   const dummyClient: any = new Proxy({}, {
     get(target, prop) {
       if (prop === 'from') {
@@ -50,7 +52,6 @@ if (isSupabaseConfigured) {
 // --- Helper Function for Clean Error Handling ---
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
-
     if (error) {
         console.error(errorMessage, error);
         throw new Error(`${errorMessage} Reason: ${error.message}`);
@@ -84,7 +85,7 @@ export async function getAllProviders(): Promise<Provider[]> {
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
     if (!isSupabaseConfigured) return [];
     return handleSupabaseRequest(
-        supabase.from('providers').eq('category_slug', categorySlug).select('*'),
+        supabase.from('providers').select('*').eq('category_slug', categorySlug),
         "Could not fetch providers for this category."
     );
 }
@@ -92,7 +93,7 @@ export async function getProvidersByCategory(categorySlug: string): Promise<Prov
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
     if (!isSupabaseConfigured) return [];
      return handleSupabaseRequest(
-        supabase.from('providers').eq('service_slug', serviceSlug).select('*'),
+        supabase.from('providers').select('*').eq('service_slug', serviceSlug),
         "Could not fetch providers for this service."
     );
 }
@@ -100,10 +101,17 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     if (!isSupabaseConfigured) return null;
     const normalizedPhone = normalizePhoneNumber(phone);
-    return handleSupabaseRequest(
-        supabase.from('providers').eq('phone', normalizedPhone).select('*').maybeSingle(),
-        "Error fetching provider by phone"
-    );
+    const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('phone', normalizedPhone)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error fetching provider by phone", error);
+        throw new Error(`Error fetching provider by phone: ${error.message}`);
+    }
+    return data;
 }
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
@@ -221,21 +229,24 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 export async function getCustomerByPhone(phone: string): Promise<User | null> {
     if (!isSupabaseConfigured) return null;
     const normalizedPhone = normalizePhoneNumber(phone);
-    const result = await handleSupabaseRequest(
-        supabase
-            .from("customers")
-            .eq("phone", normalizedPhone)
-            .select("name, phone, account_type")
-            .maybeSingle(),
-        "Error fetching customer by phone"
-    );
+    
+    const { data, error } = await supabase
+        .from("customers")
+        .select("name, phone, account_type")
+        .eq("phone", normalizedPhone)
+        .maybeSingle();
 
-    if (!result) return null;
+    if (error) {
+        console.error("Error fetching customer by phone", error);
+        throw new Error(`Error fetching customer by phone: ${error.message}`);
+    }
+
+    if (!data) return null;
     
     return {
-      name: result.name,
-      phone: result.phone,
-      accountType: result.account_type as 'customer' | 'provider'
+      name: data.name,
+      phone: data.phone,
+      accountType: data.account_type as 'customer' | 'provider'
     };
 }
 
@@ -276,7 +287,7 @@ export async function createCustomer(userData: { name: string, phone: string, ac
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
     if (!isSupabaseConfigured) return [];
     return handleSupabaseRequest(
-        supabase.from('reviews').eq('provider_id', providerId).select('*').order('created_at', { ascending: false }),
+        supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false }),
         "Could not fetch reviews."
     );
 }
@@ -337,7 +348,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
     if (!isSupabaseConfigured) return [];
     const normalizedPhone = normalizePhoneNumber(providerPhone);
     return handleSupabaseRequest(
-        supabase.from('agreements').eq('provider_phone', normalizedPhone).select('*').order('requested_at', { ascending: false }),
+        supabase.from('agreements').select('*').eq('provider_phone', normalizedPhone).order('requested_at', { ascending: false }),
         "Could not fetch provider agreements."
     );
 }
@@ -346,7 +357,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
     if (!isSupabaseConfigured) return [];
     const normalizedPhone = normalizePhoneNumber(customerPhone);
     return handleSupabaseRequest(
-        supabase.from('agreements').eq('customer_phone', normalizedPhone).select('*').order('requested_at', { ascending: false }),
+        supabase.from('agreements').select('*').eq('customer_phone', normalizedPhone).order('requested_at', { ascending: false }),
         "Could not fetch customer agreements."
     );
 }
