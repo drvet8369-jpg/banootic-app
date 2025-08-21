@@ -28,7 +28,7 @@ interface OtherPersonDetails {
     id: string | number;
     name: string;
     phone: string;
-    profile_image?: { src: string; aiHint?: string };
+    profile_image?: { src: string; ai_hint?: string };
 }
 
 

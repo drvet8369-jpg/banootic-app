@@ -112,7 +112,7 @@ export async function checkIfUserExists(phone: string): Promise<boolean> {
 
 
 // ========== DATA CREATION FUNCTIONS ==========
-export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
+export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image'>): Promise<Provider> {
     const supabase = requireSupabase();
     const dataToInsert = { 
         ...providerData, 
@@ -210,24 +210,38 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
     return await handleSupabaseRequest(request, "Could not add portfolio item to database.");
 }
 
+async function deleteImageFromStorage(imageUrl: string): Promise<void> {
+    const supabase = requireSupabase();
+    const supabaseBucketUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/`;
+
+    if (imageUrl && imageUrl.startsWith(supabaseBucketUrl)) {
+        const filePath = imageUrl.substring(supabaseBucketUrl.length);
+        try {
+            await handleSupabaseRequest(
+              supabase.storage.from(BUCKET_NAME).remove([filePath]),
+              "Failed to delete old image from storage. It might not exist."
+            );
+        } catch (error) {
+            console.warn(`Could not delete old image from storage, it may have already been deleted: ${filePath}`, error);
+        }
+    }
+}
+
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
     const currentProvider = await getProviderByPhone(normalizedPhone);
+
     if (!currentProvider || !currentProvider.portfolio || !currentProvider.portfolio[itemIndex]) {
         throw new Error("Provider or portfolio item not found for deletion.");
     }
+    
     const itemToDelete = currentProvider.portfolio[itemIndex];
-    const url = process.env.SUPABASE_URL;
-    if (itemToDelete.src && url && itemToDelete.src.includes(url)) {
-        const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
-        if (filePath) {
-            await handleSupabaseRequest(
-              supabase.storage.from(BUCKET_NAME).remove([filePath]), 
-              "Failed to delete image from storage. Proceeding with DB update."
-            );
-        }
-    }
+    
+    // Delete from storage first
+    await deleteImageFromStorage(itemToDelete.src);
+    
+    // Then update the database
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
     const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
     return await handleSupabaseRequest(request, "Could not delete portfolio item from database.");
@@ -236,8 +250,19 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 export async function updateProviderProfileImage(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
+
+    const currentProvider = await getProviderByPhone(normalizedPhone);
+    if (!currentProvider) throw new Error("Provider not found.");
+
+    // Delete the old image from storage if it exists
+    if (currentProvider.profile_image && currentProvider.profile_image.src) {
+        await deleteImageFromStorage(currentProvider.profile_image.src);
+    }
+    
+    // Upload the new image if provided, otherwise set src to empty string
     const imageUrl = base64Data ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
+
     const request = supabase.from('providers').update({ profile_image: newProfileImage }).eq('phone', normalizedPhone).select().single();
     return await handleSupabaseRequest(request, "Could not update profile image in database.");
 }
