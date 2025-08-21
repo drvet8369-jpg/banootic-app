@@ -5,16 +5,14 @@ import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
 import { normalizePhoneNumber } from './utils';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 // --- Supabase Client Initialization ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL; // Changed from NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'images';
 
 let supabase: SupabaseClient | null = null;
+// Check if essential environment variables are set and not placeholder values.
 const isSupabaseConfigured = supabaseUrl && !supabaseUrl.startsWith("YOUR_") && supabaseKey && !supabaseKey.startsWith("YOUR_");
 
 if (isSupabaseConfigured) {
@@ -28,14 +26,18 @@ if (isSupabaseConfigured) {
         supabase = null;
     }
 } else {
-    console.warn("Supabase is not configured in api.ts. Database operations will fail.");
+    console.warn("Supabase is not configured in api.ts. Database operations will fail. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set correctly in your .env file.");
 }
 
 // --- Helper Functions ---
-async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
+const requireSupabase = () => {
     if (!supabase) {
-        throw new Error("Database connection is not configured. Please check your Supabase credentials.");
+        throw new Error("This action requires a configured database and cannot be performed. Please check server logs for Supabase configuration errors.");
     }
+    return supabase;
+}
+
+async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
     if (error) {
         console.error(`${errorMessage}:`, error);
@@ -44,12 +46,6 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
     return data as T;
 }
 
-const requireSupabase = () => {
-    if (!supabase) {
-        throw new Error("This action requires a configured database and cannot be performed. Please check server logs for Supabase configuration errors.");
-    }
-    return supabase;
-}
 
 export type UserRole = 'customer' | 'provider';
 
