@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -6,6 +5,9 @@ import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
 import { normalizePhoneNumber } from './utils';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // --- Supabase Client Initialization ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,18 +22,16 @@ if (isSupabaseConfigured) {
         supabase = createClient(supabaseUrl, supabaseKey, {
             auth: { persistSession: false, autoRefreshToken: false }
         });
-        console.log("Supabase client initialized successfully.");
+        console.log("Supabase client initialized successfully via api.ts.");
     } catch (error) {
-        console.error("Supabase client creation failed.", error);
+        console.error("Supabase client creation failed in api.ts.", error);
         supabase = null;
     }
 } else {
-    console.warn("Supabase is not configured. Database operations will fail.");
+    console.warn("Supabase is not configured in api.ts. Database operations will fail.");
 }
 
 // --- Helper Functions ---
-
-// A robust handler for all Supabase requests to standardize error handling.
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     if (!supabase) {
         throw new Error("Database connection is not configured. Please check your Supabase credentials.");
@@ -39,13 +39,11 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
     const { data, error } = await request;
     if (error) {
         console.error(`${errorMessage}:`, error);
-        // Provide a more user-friendly error message
         throw new Error(`A database error occurred. Please try again later. (Details: ${error.message})`);
     }
     return data as T;
 }
 
-// A wrapper to ensure Supabase is available before proceeding.
 const requireSupabase = () => {
     if (!supabase) {
         throw new Error("This action requires a configured database and cannot be performed. Please check server logs for Supabase configuration errors.");
@@ -55,15 +53,9 @@ const requireSupabase = () => {
 
 export type UserRole = 'customer' | 'provider';
 
-
 // ====================================================================
 // --- PRIMARY AUTHENTICATION FUNCTIONS ---
 // ====================================================================
-
-/**
- * Logs in a user by checking the appropriate table (providers or customers) in the database.
- * This function connects directly to Supabase and does not use local fallback data.
- */
 export async function loginUser(phone: string, role: UserRole): Promise<{ success: boolean; user?: User; message?: string }> {
     const supabase = requireSupabase();
     const cleanPhone = normalizePhoneNumber(phone);
@@ -77,15 +69,12 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
             .single();
 
         if (error) {
-            // "PGRST116" is the code for "0 rows found", which is a valid login failure.
             if (error.code === 'PGRST116') {
                 return { success: false, message: 'کاربری با این شماره تلفن و نقش یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' };
             }
-            // For other errors, throw them to be caught by the outer catch block.
             throw error;
         }
 
-        // If data is found, login is successful.
         if (data) {
             const userData = data as any;
             return { 
@@ -93,8 +82,7 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
                 user: { ...userData, accountType: role } 
             };
         }
-
-        // This case should theoretically not be reached due to .single() throwing an error on no rows.
+        
         return { success: false, message: 'کاربر یافت نشد.' };
 
     } catch (e: any) {
@@ -104,35 +92,28 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
 }
 
 
-/**
- * Checks if a user with the given phone number exists in either the customers or providers table.
- */
 export async function checkIfUserExists(phone: string): Promise<boolean> {
     const supabase = requireSupabase();
     const cleanPhone = normalizePhoneNumber(phone);
 
     try {
-        // Check both tables in parallel to be efficient.
         const [providerRes, customerRes] = await Promise.all([
             supabase.from('providers').select('id', { count: 'exact', head: true }).eq('phone', cleanPhone),
             supabase.from('customers').select('id', { count: 'exact', head: true }).eq('phone', cleanPhone)
         ]);
         
-        // If either query has an error, we should log it and return false.
         if (providerRes.error) console.error("Error checking providers table:", providerRes.error);
         if (customerRes.error) console.error("Error checking customers table:", customerRes.error);
 
-        // A user exists if they are found in either table.
         return (providerRes.count ?? 0) > 0 || (customerRes.count ?? 0) > 0;
     } catch (e: any) {
         console.error(`Error checking user existence for ${cleanPhone}:`, e.message);
-        return false; // Return false on error to prevent blocking registration.
+        return false;
     }
 }
 
 
 // ========== DATA CREATION FUNCTIONS ==========
-
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count'>): Promise<Provider> {
     const supabase = requireSupabase();
     const dataToInsert = { 
@@ -155,7 +136,6 @@ export async function createCustomer(userData: { name: string, phone: string, ac
 
 
 // ========== DATA RETRIEVAL FUNCTIONS ==========
-
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
@@ -189,7 +169,6 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 
 
 // ========== DATA MODIFICATION FUNCTIONS ==========
-
 async function uploadImageFromBase64(phone: string, base64Data: string, folder: 'portfolio' | 'profile'): Promise<string> {
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
@@ -272,7 +251,6 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 
 
 // ========== AGREEMENTS AND REVIEWS ==========
-
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
     const supabase = requireSupabase();
     const request = supabase.from('reviews').insert([reviewData]).select().single();
