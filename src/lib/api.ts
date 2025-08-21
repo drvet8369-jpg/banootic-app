@@ -178,10 +178,13 @@ async function uploadImageFromBase64(phone: string, base64Data: string, folder: 
     
     const mimeType = mimeTypeMatch[1];
     const fileExtension = mimeType.split('/')[1] || 'jpg';
+    
+    // **FIX:** Remove the data URI prefix before converting to a buffer.
     const base64String = base64Data.split(';base64,').pop();
 
     if (!base64String) throw new Error('Could not extract base64 data from string.');
     
+    // **FIX:** Convert the pure base64 string to a Buffer for Supabase upload.
     const fileBuffer = Buffer.from(base64String, 'base64');
     const filePath = `${normalizedPhone}/${folder}/${Date.now()}.${fileExtension}`;
     
@@ -212,17 +215,22 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 
 async function deleteImageFromStorage(imageUrl: string): Promise<void> {
     const supabase = requireSupabase();
+    if (!process.env.SUPABASE_URL) {
+        console.warn("SUPABASE_URL not set, cannot delete image from storage.");
+        return;
+    }
     const supabaseBucketUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/`;
-
+    
+    // Only attempt to delete if it's a Supabase storage URL. Do not delete placeholder images.
     if (imageUrl && imageUrl.startsWith(supabaseBucketUrl)) {
         const filePath = imageUrl.substring(supabaseBucketUrl.length);
         try {
             await handleSupabaseRequest(
               supabase.storage.from(BUCKET_NAME).remove([filePath]),
-              "Failed to delete old image from storage. It might not exist."
+              `Attempting to delete image from storage: ${filePath}`
             );
         } catch (error) {
-            console.warn(`Could not delete old image from storage, it may have already been deleted: ${filePath}`, error);
+            console.warn(`Could not delete old image, it may have been removed already: ${filePath}`, error);
         }
     }
 }
@@ -238,10 +246,8 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
     
-    // Delete from storage first
     await deleteImageFromStorage(itemToDelete.src);
     
-    // Then update the database
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
     const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
     return await handleSupabaseRequest(request, "Could not delete portfolio item from database.");
@@ -254,13 +260,11 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
 
-    // Delete the old image from storage if it exists
     if (currentProvider.profile_image && currentProvider.profile_image.src) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
     
-    // Upload the new image if provided, otherwise set src to empty string
-    const imageUrl = base64Data ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') : '';
+    const imageUrl = base64Data ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') : 'https://placehold.co/400x400.png';
     const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
     const request = supabase.from('providers').update({ profile_image: newProfileImage }).eq('phone', normalizedPhone).select().single();
