@@ -274,7 +274,7 @@ export default function ProfilePage() {
                     alt={provider.name}
                     fill
                     className="object-cover"
-                    data-ai-hint={provider.profile_image.aiHint}
+                    data-ai-hint={provider.profile_image.ai_hint}
                   />
                 ) : (
                    <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -343,7 +343,7 @@ export default function ProfilePage() {
                                         alt={`نمونه کار ${index + 1}`}
                                         fill
                                         className="object-cover"
-                                        data-ai-hint={item.aiHint}
+                                        data-ai-hint={item.ai_hint}
                                     />
                                     <Button
                                         variant="destructive"

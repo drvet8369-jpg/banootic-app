@@ -250,7 +250,7 @@ export default function ProviderProfilePage() {
                         alt={provider.name}
                         fill
                         className="object-cover"
-                        data-ai-hint={provider.profile_image.aiHint}
+                        data-ai-hint={provider.profile_image.ai_hint}
                         />
                     ) : (
                         <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -287,7 +287,7 @@ export default function ProviderProfilePage() {
                                                 alt={`نمونه کار ${index + 1}`}
                                                 fill
                                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                                data-ai-hint={item.aiHint}
+                                                data-ai-hint={item.ai_hint}
                                             />
                                         </div>
                                     </DialogTrigger>

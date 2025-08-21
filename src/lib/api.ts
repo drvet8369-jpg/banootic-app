@@ -199,7 +199,7 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = await uploadImageFromBase64(normalizedPhone, base64Data, 'portfolio');
-    const newItem: PortfolioItem = { src: imageUrl, aiHint };
+    const newItem: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found to add portfolio item.");
@@ -236,7 +236,7 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = base64Data ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') : '';
-    const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
+    const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
     const request = supabase.from('providers').update({ profile_image: newProfileImage }).eq('phone', normalizedPhone).select().single();
     return await handleSupabaseRequest(request, "Could not update profile image in database.");
 }

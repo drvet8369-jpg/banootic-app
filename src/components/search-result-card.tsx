@@ -22,7 +22,7 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
                 alt={provider.name}
                 fill
                 className="object-cover"
-                data-ai-hint={provider.profile_image.aiHint}
+                data-ai-hint={provider.profile_image.ai_hint}
               />
             ) : (
               <div className="bg-muted w-full h-full flex items-center justify-center">

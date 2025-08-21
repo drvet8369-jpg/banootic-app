@@ -14,7 +14,7 @@ export interface Service {
 
 export interface PortfolioItem {
   src: string;
-  aiHint?: string;
+  ai_hint?: string;
 }
 
 export interface Provider {
