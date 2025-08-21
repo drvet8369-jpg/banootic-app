@@ -118,7 +118,8 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
         ...providerData, 
         phone: normalizePhoneNumber(providerData.phone),
         rating: 0, 
-        reviews_count: 0 
+        reviews_count: 0,
+        profile_image: { src: 'https://placehold.co/400x400.png', ai_hint: 'woman portrait' }
     };
     const request = supabase.from('providers').insert([dataToInsert]).select().single();
     return await handleSupabaseRequest(request, "Error creating provider in database.");

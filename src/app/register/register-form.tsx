@@ -142,10 +142,9 @@ export default function RegisterForm() {
           bio: values.bio || '',
           category_slug: values.categorySlug as any,
           service_slug: values.serviceSlug,
-          profile_image: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
-        const createdProvider = await createProvider(newProviderData);
+        const createdProvider = await createProvider(newProviderData as any);
         userToLogin = {
             name: createdProvider.name,
             phone: createdProvider.phone,
