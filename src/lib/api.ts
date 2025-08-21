@@ -45,8 +45,10 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
     try {
         const { data, error } = await request;
         if (error) {
+            // Log the detailed error for server-side debugging
             console.error(`${errorMessage}:`, error);
-            throw new Error(error.message);
+            // Throw the actual Supabase error message to be caught by the caller
+            throw new Error(error.message || 'An unknown Supabase error occurred.');
         }
         if (data === null) {
             // This case can happen for single() requests that find no row.
@@ -54,11 +56,11 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
         }
         return data as T;
     } catch (e: any) {
-        console.error(`Operation failed: ${errorMessage}:`, e.message);
-        // Return a user-friendly generic error. The specific error is logged above.
-        throw new Error(`A database error occurred. Please try again later.`);
+        // Re-throw the specific error message for better client-side feedback
+        throw new Error(e.message);
     }
 }
+
 
 export type UserRole = 'customer' | 'provider';
 
