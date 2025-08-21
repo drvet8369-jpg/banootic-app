@@ -16,8 +16,6 @@ const getSupabaseClient = () => {
         return supabase;
     }
     
-    // This is the critical change: We are now explicitly reading the environment variables
-    // that are guaranteed to be available in the server-side environment of Firebase Studio.
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -50,9 +48,14 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
             console.error(`${errorMessage}:`, error);
             throw new Error(error.message);
         }
+        if (data === null) {
+            // This case can happen for single() requests that find no row.
+            // We'll let the caller handle null, but we shouldn't throw an error here unless there's an actual error object.
+        }
         return data as T;
     } catch (e: any) {
         console.error(`Operation failed: ${errorMessage}:`, e.message);
+        // Return a user-friendly generic error. The specific error is logged above.
         throw new Error(`A database error occurred. Please try again later.`);
     }
 }
@@ -129,7 +132,8 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
         phone: normalizePhoneNumber(providerData.phone),
         rating: 0, 
         reviews_count: 0,
-        profile_image: { src: 'https://placehold.co/400x400.png', ai_hint: 'woman portrait' }
+        profile_image: { src: 'https://placehold.co/400x400.png', ai_hint: 'woman portrait' },
+        portfolio: [],
     };
     const request = supabase.from('providers').insert([dataToInsert]).select().single();
     return await handleSupabaseRequest(request, "Error creating provider in database.");
@@ -178,9 +182,8 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 
 
 // ========== DATA MODIFICATION FUNCTIONS ==========
-async function uploadImageFromBase64(phone: string, base64Data: string, folder: 'portfolio' | 'profile'): Promise<string> {
+async function uploadImageFromBase64(base64Data: string, folder: 'portfolio' | 'profile'): Promise<string> {
     const supabase = getSupabaseClient();
-    const normalizedPhone = normalizePhoneNumber(phone);
     if (!base64Data) throw new Error("No image data provided for upload.");
 
     const mimeTypeMatch = base64Data.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/);
@@ -190,11 +193,11 @@ async function uploadImageFromBase64(phone: string, base64Data: string, folder: 
     const fileExtension = mimeType.split('/')[1] || 'jpg';
     
     const base64String = base64Data.split(';base64,').pop();
-
     if (!base64String) throw new Error('Could not extract base64 data from string.');
     
     const fileBuffer = Buffer.from(base64String, 'base64');
-    const filePath = `${normalizedPhone}/${folder}/${Date.now()}.${fileExtension}`;
+    // Simplified path: All images go into a 'public' folder for simplicity and to avoid permissions issues.
+    const filePath = `public/${folder}-${Date.now()}.${fileExtension}`;
     
     await handleSupabaseRequest(
       supabase.storage.from(BUCKET_NAME).upload(filePath, fileBuffer, { contentType: mimeType, upsert: true }), 
@@ -210,7 +213,7 @@ async function uploadImageFromBase64(phone: string, base64Data: string, folder: 
 export async function addPortfolioItem(phone: string, base64Data: string, aiHint: string): Promise<Provider> {
     const supabase = getSupabaseClient();
     const normalizedPhone = normalizePhoneNumber(phone);
-    const imageUrl = await uploadImageFromBase64(normalizedPhone, base64Data, 'portfolio');
+    const imageUrl = await uploadImageFromBase64(base64Data, 'portfolio');
     const newItem: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
@@ -222,24 +225,28 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 }
 
 async function deleteImageFromStorage(imageUrl: string): Promise<void> {
+    if (!imageUrl || imageUrl.includes('placehold.co')) return;
     const supabase = getSupabaseClient();
     const supabaseUrl = process.env.SUPABASE_URL;
     if (!supabaseUrl) {
         console.warn("SUPABASE_URL not set, cannot delete image from storage.");
         return;
     }
-    const supabaseBucketUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
-    
-    if (imageUrl && imageUrl.startsWith(supabaseBucketUrl)) {
-        const filePath = imageUrl.substring(supabaseBucketUrl.length);
-        try {
-            await handleSupabaseRequest(
-              supabase.storage.from(BUCKET_NAME).remove([filePath]),
-              `Attempting to delete image from storage: ${filePath}`
-            );
-        } catch (error) {
-            console.warn(`Could not delete old image, it may have been removed already: ${filePath}`, error);
-        }
+    // The path is extracted by removing the base storage URL.
+    const pathPrefix = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
+    if (!imageUrl.startsWith(pathPrefix)) {
+        console.warn(`Image URL ${imageUrl} does not match expected bucket structure. Skipping delete.`);
+        return;
+    }
+    const filePath = imageUrl.substring(pathPrefix.length);
+
+    try {
+        await handleSupabaseRequest(
+          supabase.storage.from(BUCKET_NAME).remove([filePath]),
+          `Attempting to delete image from storage: ${filePath}`
+        );
+    } catch (error) {
+        console.warn(`Could not delete old image, it may have been removed already: ${filePath}`, error);
     }
 }
 
@@ -253,7 +260,6 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     }
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
-    
     await deleteImageFromStorage(itemToDelete.src);
     
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
@@ -267,16 +273,17 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
-    if (currentProvider.profile_image && currentProvider.profile_image.src && !currentProvider.profile_image.src.includes('placehold.co')) {
+    if (currentProvider.profile_image && currentProvider.profile_image.src) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
     
     const imageUrl = base64Data 
-        ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') 
+        ? await uploadImageFromBase64(base64Data, 'profile') 
         : 'https://placehold.co/400x400.png';
     
     const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
+    // This is a direct, atomic update, which is much safer.
     const request = supabase
         .from('providers')
         .update({ profile_image: newProfileImage })
@@ -347,5 +354,3 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return await handleSupabaseRequest(request, "Could not confirm agreement.");
 }
-
-    
