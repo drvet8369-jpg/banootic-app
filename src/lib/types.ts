@@ -28,7 +28,7 @@ export interface Provider {
   service_slug: Service['slug']; 
   rating: number;
   reviews_count: number;
-  profileimage: PortfolioItem; 
+  profile_image: PortfolioItem; 
   portfolio: PortfolioItem[];
 }
 

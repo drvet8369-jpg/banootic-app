@@ -13,7 +13,6 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'images';
 
 let supabase: SupabaseClient | null = null;
-// Check if essential environment variables are set and not placeholder values.
 const isSupabaseConfigured = supabaseUrl && !supabaseUrl.startsWith("YOUR_") && supabaseKey && !supabaseKey.startsWith("YOUR_");
 
 if (isSupabaseConfigured) {
@@ -74,10 +73,12 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
 
         if (data) {
             const userData = data as any;
-            return { 
-                success: true, 
-                user: { ...userData, accountType: role } 
+             const user: User = { 
+                name: userData.name,
+                phone: userData.phone,
+                accountType: role
             };
+            return { success: true, user: user };
         }
         
         return { success: false, message: 'کاربر یافت نشد.' };
@@ -216,7 +217,8 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
         throw new Error("Provider or portfolio item not found for deletion.");
     }
     const itemToDelete = currentProvider.portfolio[itemIndex];
-    if (itemToDelete.src && supabaseUrl && itemToDelete.src.includes(supabaseUrl)) {
+    const url = process.env.SUPABASE_URL;
+    if (itemToDelete.src && url && itemToDelete.src.includes(url)) {
         const filePath = itemToDelete.src.split(`${BUCKET_NAME}/`)[1];
         if (filePath) {
             await handleSupabaseRequest(
@@ -235,7 +237,7 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const normalizedPhone = normalizePhoneNumber(phone);
     const imageUrl = base64Data ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') : '';
     const newProfileImage: PortfolioItem = { src: imageUrl, aiHint };
-    const request = supabase.from('providers').update({ profileimage: newProfileImage }).eq('phone', normalizedPhone).select().single();
+    const request = supabase.from('providers').update({ profile_image: newProfileImage }).eq('phone', normalizedPhone).select().single();
     return await handleSupabaseRequest(request, "Could not update profile image in database.");
 }
 

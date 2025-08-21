@@ -142,7 +142,7 @@ export default function RegisterForm() {
           bio: values.bio || '',
           category_slug: values.categorySlug as any,
           service_slug: values.serviceSlug,
-          profileimage: { src: '', aiHint: 'woman portrait' },
+          profile_image: { src: '', aiHint: 'woman portrait' },
           portfolio: [],
         };
         const createdProvider = await createProvider(newProviderData);

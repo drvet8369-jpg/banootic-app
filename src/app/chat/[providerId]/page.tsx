@@ -1,3 +1,4 @@
+
 'use client';
 
 import { getProviderByPhone } from '@/lib/api';
@@ -27,7 +28,7 @@ interface OtherPersonDetails {
     id: string | number;
     name: string;
     phone: string;
-    profileimage?: { src: string; aiHint?: string };
+    profile_image?: { src: string; aiHint?: string };
 }
 
 
@@ -265,8 +266,8 @@ export default function ChatPage() {
              </Button>
            </Link>
            <Avatar>
-            {otherPersonDetails?.profileimage?.src ? (
-                <AvatarImage src={otherPersonDetails.profileimage.src} alt={otherPersonDetails.name} />
+            {otherPersonDetails?.profile_image?.src ? (
+                <AvatarImage src={otherPersonDetails.profile_image.src} alt={otherPersonDetails.name} />
             ) : null }
             <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
@@ -293,8 +294,8 @@ export default function ChatPage() {
                   >
                     {!senderIsUser && (
                       <Avatar className="h-8 w-8 select-none">
-                        {otherPersonDetails?.profileimage?.src ? (
-                            <AvatarImage src={otherPersonDetails.profileimage.src} alt={otherPersonDetails.name} />
+                        {otherPersonDetails?.profile_image?.src ? (
+                            <AvatarImage src={otherPersonDetails.profile_image.src} alt={otherPersonDetails.name} />
                         ) : null }
                         <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>

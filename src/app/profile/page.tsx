@@ -268,13 +268,13 @@ export default function ProfilePage() {
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
              <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-               {provider.profileimage && provider.profileimage.src ? (
+               {provider.profile_image && provider.profile_image.src ? (
                   <Image
-                    src={provider.profileimage.src}
+                    src={provider.profile_image.src}
                     alt={provider.name}
                     fill
                     className="object-cover"
-                    data-ai-hint={provider.profileimage.aiHint}
+                    data-ai-hint={provider.profile_image.aiHint}
                   />
                 ) : (
                    <div className="bg-muted w-full h-full flex items-center justify-center">
