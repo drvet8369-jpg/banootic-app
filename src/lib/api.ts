@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
