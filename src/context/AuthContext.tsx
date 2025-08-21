@@ -17,7 +17,7 @@ export interface User {
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
-  isLoading: boolean; // Add loading state
+  isLoading: boolean;
   login: (userData: User) => void;
   logout: () => void;
 }
@@ -28,11 +28,12 @@ const USER_STORAGE_KEY = 'banotic-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
+    setIsLoading(true);
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUser) {
@@ -42,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to parse user from localStorage on initial load", error);
       localStorage.removeItem(USER_STORAGE_KEY);
     } finally {
-      setIsLoading(false); // Finished loading
+      setIsLoading(false);
     }
   }, []);
 
@@ -60,15 +61,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    setIsLoading(true); // Set loading to true before redirecting
+    setIsLoading(true);
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
       router.push('/');
-      // No need to set loading to false here, as the page will change
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
-       setIsLoading(false); // Set to false only if there's an error
+       setIsLoading(false);
     }
   };
 
