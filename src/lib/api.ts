@@ -179,12 +179,10 @@ async function uploadImageFromBase64(phone: string, base64Data: string, folder: 
     const mimeType = mimeTypeMatch[1];
     const fileExtension = mimeType.split('/')[1] || 'jpg';
     
-    // **FIX:** Remove the data URI prefix before converting to a buffer.
     const base64String = base64Data.split(';base64,').pop();
 
     if (!base64String) throw new Error('Could not extract base64 data from string.');
     
-    // **FIX:** Convert the pure base64 string to a Buffer for Supabase upload.
     const fileBuffer = Buffer.from(base64String, 'base64');
     const filePath = `${normalizedPhone}/${folder}/${Date.now()}.${fileExtension}`;
     
@@ -221,7 +219,6 @@ async function deleteImageFromStorage(imageUrl: string): Promise<void> {
     }
     const supabaseBucketUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/`;
     
-    // Only attempt to delete if it's a Supabase storage URL. Do not delete placeholder images.
     if (imageUrl && imageUrl.startsWith(supabaseBucketUrl)) {
         const filePath = imageUrl.substring(supabaseBucketUrl.length);
         try {
@@ -330,3 +327,5 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return await handleSupabaseRequest(request, "Could not confirm agreement.");
 }
+
+    
