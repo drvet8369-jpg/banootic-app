@@ -13,20 +13,18 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'images';
 
 let supabase: SupabaseClient | null = null;
-const isSupabaseConfigured = supabaseUrl && !supabaseUrl.startsWith("YOUR_") && supabaseKey && !supabaseKey.startsWith("YOUR_");
 
-if (isSupabaseConfigured) {
+if (supabaseUrl && supabaseKey) {
     try {
         supabase = createClient(supabaseUrl, supabaseKey, {
             auth: { persistSession: false, autoRefreshToken: false }
         });
-        console.log("Supabase client initialized successfully via api.ts.");
     } catch (error) {
         console.error("Supabase client creation failed in api.ts.", error);
         supabase = null;
     }
 } else {
-    console.warn("Supabase is not configured in api.ts. Database operations will fail. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set correctly in your .env file.");
+    console.warn("Supabase is not configured in api.ts. Database operations will fail. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set correctly.");
 }
 
 // --- Helper Functions ---
@@ -38,14 +36,17 @@ const requireSupabase = () => {
 }
 
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
-    const { data, error } = await request;
-    if (error) {
-        console.error(`${errorMessage}:`, error);
-        throw new Error(`A database error occurred. Please try again later. (Details: ${error.message})`);
+    try {
+        const { data, error } = await request;
+        if (error) {
+            throw new Error(error.message);
+        }
+        return data as T;
+    } catch (e: any) {
+        console.error(`${errorMessage}:`, e.message);
+        throw new Error(`A database error occurred: ${e.message}`);
     }
-    return data as T;
 }
-
 
 export type UserRole = 'customer' | 'provider';
 
@@ -213,11 +214,12 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 
 async function deleteImageFromStorage(imageUrl: string): Promise<void> {
     const supabase = requireSupabase();
-    if (!process.env.SUPABASE_URL) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!supabaseUrl) {
         console.warn("SUPABASE_URL not set, cannot delete image from storage.");
         return;
     }
-    const supabaseBucketUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/`;
+    const supabaseBucketUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
     
     if (imageUrl && imageUrl.startsWith(supabaseBucketUrl)) {
         const filePath = imageUrl.substring(supabaseBucketUrl.length);
@@ -254,19 +256,31 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
 
+    // First, delete the old image if it exists and is not a placeholder
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
-
-    if (currentProvider.profile_image && currentProvider.profile_image.src) {
+    if (currentProvider.profile_image && currentProvider.profile_image.src && !currentProvider.profile_image.src.includes('placehold.co')) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
     
-    const imageUrl = base64Data ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') : 'https://placehold.co/400x400.png';
+    // Then, upload the new image if provided, otherwise use a placeholder
+    const imageUrl = base64Data 
+        ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') 
+        : 'https://placehold.co/400x400.png';
+    
     const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
-    const request = supabase.from('providers').update({ profile_image: newProfileImage }).eq('phone', normalizedPhone).select().single();
+    // Finally, update only the profile_image column
+    const request = supabase
+        .from('providers')
+        .update({ profile_image: newProfileImage })
+        .eq('phone', normalizedPhone)
+        .select()
+        .single();
+        
     return await handleSupabaseRequest(request, "Could not update profile image in database.");
 }
+
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
     const supabase = requireSupabase();
