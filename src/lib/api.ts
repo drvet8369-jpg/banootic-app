@@ -8,6 +8,7 @@ import { normalizePhoneNumber } from './utils';
 
 // --- Default Data for DEV MODE ---
 const defaultProviders: Provider[] = [
+  // Using phone numbers that are easy to test with
   { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09122222222', bio: 'متخصص در طراحی و هنر ناخن مدرن.', category_slug: 'beauty', service_slug: 'manicure-pedicure', rating: 4.8, reviews_count: 45, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman portrait' }, portfolio: [] },
   { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', category_slug: 'beauty', service_slug: 'haircut-coloring', rating: 4.9, reviews_count: 62, profileimage: { src: 'https://placehold.co/400x400.png', aiHint: 'woman hair' }, portfolio: [] },
 ];
@@ -88,7 +89,8 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
 
         if (error) {
             if (error.code === 'PGRST116') { // "0 rows returned"
-                return { success: false, message: 'کاربری با این مشخصات یافت نشد.' };
+                 console.warn(`Supabase login failed for ${role} ${cleanPhone}, user not found in DB. Falling back to local data.`);
+                 return useLocalData();
             }
             throw error;
         }
