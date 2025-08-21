@@ -7,7 +7,7 @@ import { Buffer } from 'buffer';
 import { normalizePhoneNumber } from './utils';
 
 // --- Supabase Client Initialization ---
-const supabaseUrl = process.env.SUPABASE_URL; // Changed from NEXT_PUBLIC_SUPABASE_URL
+const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'images';
 
