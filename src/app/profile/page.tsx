@@ -44,7 +44,8 @@ export default function ProfilePage() {
                 });
             }
         } catch (error) {
-            toast({ title: "خطا", description: "امکان بارگذاری اطلاعات پروفایل وجود ندارد.", variant: "destructive" });
+            const errorMessage = error instanceof Error ? error.message : "امکان بارگذاری اطلاعات پروفایل وجود ندارد.";
+            toast({ title: "خطا", description: errorMessage, variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -83,7 +84,8 @@ export default function ProfilePage() {
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } catch (error) {
-        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی اطلاعات.', variant: 'destructive' });
+        const errorMessage = error instanceof Error ? error.message : 'خطا در به‌روزرسانی اطلاعات.';
+        toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsSaving(false);
     }
@@ -153,7 +155,8 @@ export default function ProfilePage() {
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (error) {
-       toast({ title: 'خطا', description: 'خطا در افزودن نمونه کار.', variant: 'destructive' });
+       const errorMessage = error instanceof Error ? error.message : 'خطا در افزودن نمونه کار.';
+       toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsSaving(false);
     }
@@ -168,7 +171,8 @@ export default function ProfilePage() {
       setProvider(updatedProvider);
       toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (error) {
-      toast({ title: 'خطا', description: 'خطا در حذف نمونه کار.', variant: 'destructive' });
+      const errorMessage = error instanceof Error ? error.message : 'خطا در حذف نمونه کار.';
+      toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsSaving(false);
     }
@@ -181,7 +185,8 @@ export default function ProfilePage() {
         setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } catch (error) {
-        toast({ title: 'خطا', description: 'خطا در به‌روزرسانی عکس پروفایل.', variant: 'destructive' });
+        const errorMessage = error instanceof Error ? error.message : 'خطا در به‌روزرسانی عکس پروفایل.';
+        toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
       } finally {
         setIsSaving(false);
       }
@@ -195,7 +200,8 @@ export default function ProfilePage() {
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } catch (error) {
-      toast({ title: 'خطا', description: 'خطا در حذف عکس پروفایل.', variant: 'destructive' });
+      const errorMessage = error instanceof Error ? error.message : 'خطا در حذف عکس پروفایل.';
+      toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsSaving(false);
     }
@@ -409,3 +415,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
