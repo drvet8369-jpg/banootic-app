@@ -196,7 +196,6 @@ async function uploadImageFromBase64(base64Data: string, folder: 'portfolio' | '
     if (!base64String) throw new Error('Could not extract base64 data from string.');
     
     const fileBuffer = Buffer.from(base64String, 'base64');
-    // Simplified path: All images go into a 'public' folder for simplicity and to avoid permissions issues.
     const filePath = `public/${folder}-${Date.now()}.${fileExtension}`;
     
     await handleSupabaseRequest(
@@ -232,7 +231,6 @@ async function deleteImageFromStorage(imageUrl: string): Promise<void> {
         console.warn("SUPABASE_URL not set, cannot delete image from storage.");
         return;
     }
-    // The path is extracted by removing the base storage URL.
     const pathPrefix = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
     if (!imageUrl.startsWith(pathPrefix)) {
         console.warn(`Image URL ${imageUrl} does not match expected bucket structure. Skipping delete.`);
@@ -273,6 +271,7 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
+
     if (currentProvider.profile_image && currentProvider.profile_image.src) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
@@ -283,7 +282,6 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     
     const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
-    // This is a direct, atomic update, which is much safer.
     const request = supabase
         .from('providers')
         .update({ profile_image: newProfileImage })
