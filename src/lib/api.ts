@@ -44,7 +44,7 @@ async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error
         return data as T;
     } catch (e: any) {
         console.error(`${errorMessage}:`, e.message);
-        throw new Error(`A database error occurred: ${e.message}`);
+        throw new Error(`A database error occurred. Please try again later. (${e.message})`);
     }
 }
 
@@ -169,6 +169,30 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 
 
 // ========== DATA MODIFICATION FUNCTIONS ==========
+
+/**
+ * DEBUGGING FUNCTION
+ * This function is for testing purposes only to isolate the update issue.
+ * It attempts to update a single, simple text field.
+ */
+export async function testProviderUpdate(phone: string): Promise<Provider> {
+    const supabase = requireSupabase();
+    const normalizedPhone = normalizePhoneNumber(phone);
+    const testBio = `Last test update at ${new Date().toISOString()}`;
+    
+    console.log(`[DEBUG] Attempting to update bio for ${normalizedPhone} to: ${testBio}`);
+
+    const request = supabase
+        .from('providers')
+        .update({ bio: testBio })
+        .eq('phone', normalizedPhone)
+        .select()
+        .single();
+    
+    return await handleSupabaseRequest(request, "[DEBUG] testProviderUpdate failed");
+}
+
+
 async function uploadImageFromBase64(phone: string, base64Data: string, folder: 'portfolio' | 'profile'): Promise<string> {
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
@@ -256,21 +280,18 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const supabase = requireSupabase();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // First, delete the old image if it exists and is not a placeholder
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
     if (currentProvider.profile_image && currentProvider.profile_image.src && !currentProvider.profile_image.src.includes('placehold.co')) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
     
-    // Then, upload the new image if provided, otherwise use a placeholder
     const imageUrl = base64Data 
         ? await uploadImageFromBase64(normalizedPhone, base64Data, 'profile') 
         : 'https://placehold.co/400x400.png';
     
     const newProfileImage: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
-    // Finally, update only the profile_image column
     const request = supabase
         .from('providers')
         .update({ profile_image: newProfileImage })
@@ -341,5 +362,3 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return await handleSupabaseRequest(request, "Could not confirm agreement.");
 }
-
-    
