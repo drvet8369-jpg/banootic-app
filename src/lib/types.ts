@@ -38,15 +38,12 @@ export interface Review {
   author_name: string;
   rating: number;
   comment: string;
-  created_at: string;
+  created_at: string; // ISO String format
 }
 
-export interface Agreement {
-  id: number;
-  provider_phone: string;
-  customer_phone: string;
-  customer_name: string;
-  status: 'pending' | 'confirmed' | 'rejected';
-  requested_at: string;
-  confirmed_at?: string | null;
+export interface Message {
+  text: string;
+  senderId: string;
+  receiverId?: string;
+  createdAt: string; // Using string for simplicity, can be Date object
 }

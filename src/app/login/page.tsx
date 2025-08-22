@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,12 +25,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { loginUser, UserRole } from '@/lib/api';
+import { loginUser } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 import { normalizePhoneNumber } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 const formSchema = z.object({
@@ -40,8 +39,8 @@ const formSchema = z.object({
   }).max(14, {
     message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
   }),
-  role: z.enum(['customer', 'provider'], {
-      required_error: 'لطفاً نقش خود را انتخاب کنید.'
+  accountType: z.enum(['customer', 'provider'], {
+    required_error: 'لطفاً نوع حساب کاربری خود را انتخاب کنید.',
   }),
 });
 
@@ -55,7 +54,7 @@ export default function LoginPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       phone: '',
-      role: 'customer'
+      accountType: 'customer',
     },
   });
 
@@ -74,7 +73,7 @@ export default function LoginPage() {
     }
 
     try {
-        const result = await loginUser(normalizedPhone, values.role as UserRole);
+        const result = await loginUser(normalizedPhone, values.accountType);
 
         if (result.success && result.user) {
             login(result.user as User);
@@ -108,50 +107,14 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود</CardTitle>
           <CardDescription>
-             ابتدا نقش و سپس شماره تلفن خود را وارد کنید.
+            برای ورود به حساب کاربری، شماره تلفن و نوع حساب خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-               <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>نقش خود را انتخاب کنید:</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex items-center space-x-4 space-x-reverse"
-                          disabled={isLoading}
-                        >
-                          <FormItem className="flex items-center space-x-2 space-x-reverse">
-                            <FormControl>
-                              <RadioGroupItem value="customer" id="role-customer" />
-                            </FormControl>
-                            <FormLabel htmlFor="role-customer" className="font-normal cursor-pointer">
-                              مشتری
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-x-reverse">
-                            <FormControl>
-                              <RadioGroupItem value="provider" id="role-provider" />
-                            </FormControl>
-                            <FormLabel htmlFor="role-provider" className="font-normal cursor-pointer">
-                              هنرمند
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
               <FormField
                 control={form.control}
                 name="phone"
@@ -171,6 +134,44 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="accountType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>نوع حساب کاربری:</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex items-center space-x-4"
+                        dir="rtl"
+                        disabled={isLoading}
+                      >
+                        <FormItem className="flex items-center space-x-2 space-x-reverse space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="customer" id="customer-login" />
+                          </FormControl>
+                          <FormLabel htmlFor="customer-login" className="font-normal cursor-pointer">
+                           مشتری
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-x-reverse space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="provider" id="provider-login" />
+                          </FormControl>
+                          <FormLabel htmlFor="provider-login" className="font-normal cursor-pointer">
+                            هنرمند
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 ورود
@@ -180,7 +181,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center text-sm">
             حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
+              ایجاد حساب جدید
             </Link>
           </div>
         </CardContent>

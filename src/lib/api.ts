@@ -6,20 +6,20 @@ import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
 import { normalizePhoneNumber } from './utils';
-import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '@/lib/supabase/keys';
 
 // --- Supabase Client Initialization ---
 const BUCKET_NAME = 'images';
 
-// This function now ALWAYS creates a new client using the keys from the dedicated keys.ts file.
-// This is the definitive fix to ensure the service role is always used for server-side operations.
+// This function now ALWAYS creates a new client using the keys from the server's environment variables.
+// This is the definitive fix to ensure the service role is always used for server-side operations
+// without requiring manual file edits.
 const getSupabaseClient = (): SupabaseClient => {
-    const supabaseUrl = SUPABASE_URL;
-    const supabaseKey = SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("YOUR_SUPABASE_URL_HERE")) {
-        console.error("Supabase credentials are not set in src/lib/supabase/keys.ts");
-        throw new Error("Database is not configured. Please set your credentials in the keys.ts file.");
+    if (!supabaseUrl || !supabaseKey) {
+        console.error("Supabase credentials are not available in server environment variables.");
+        throw new Error("Database is not configured on the server.");
     }
     
     return createClient(supabaseUrl, supabaseKey, {
@@ -36,7 +36,7 @@ const getSupabaseClient = (): SupabaseClient => {
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
     if (error) {
-        console.error(`${errorMessage}:`, error);
+        console.error(`${errorMessage}:`, error.message);
         // Throw the actual Supabase error message to be caught by the caller for better debugging
         throw new Error(error.message || 'An unknown Supabase error occurred.');
     }
@@ -210,7 +210,8 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 async function deleteImageFromStorage(imageUrl: string): Promise<void> {
     if (!imageUrl || imageUrl.includes('placehold.co')) return;
     const supabase = getSupabaseClient();
-    const supabaseUrl = SUPABASE_URL;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!supabaseUrl) return;
     
     const pathPrefix = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
     if (!imageUrl.startsWith(pathPrefix)) {

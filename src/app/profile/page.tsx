@@ -218,12 +218,12 @@ export default function ProfilePage() {
   };
   
   if (isAuthLoading || isLoading) {
-    return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+    return <div className="flex justify-center items-center py-20"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   }
 
   if (!isLoggedIn) {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
             <User className="w-24 h-24 text-muted-foreground mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">صفحه پروفایل</h1>
             <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
@@ -238,7 +238,7 @@ export default function ProfilePage() {
 
   if (user?.accountType !== 'provider') {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
@@ -253,7 +253,7 @@ export default function ProfilePage() {
   
   if (!provider) {
       return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
              <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
              <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل یافت نشد</h1>
              <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
@@ -264,8 +264,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full py-12 md:py-20 space-y-8 flex justify-center">
-      <Card className="w-full max-w-4xl relative">
+    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
+      <Card className="relative">
          {isSaving && (
             <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center rounded-lg">
                 <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -332,7 +332,7 @@ export default function ProfilePage() {
                     className="hidden"
                     accept="image/*"
                   />
-                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6">
+                   <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6" disabled={isSaving || mode === 'editing'}>
                         <PlusCircle className="w-5 h-5 ml-2" />
                         افزودن نمونه کار جدید
                    </Button>
@@ -357,6 +357,7 @@ export default function ProfilePage() {
                                         className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                         onClick={() => handleDeletePortfolioItem(index)}
                                         aria-label={`حذف نمونه کار ${index + 1}`}
+                                        disabled={isSaving || mode === 'editing'}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
@@ -364,7 +365,7 @@ export default function ProfilePage() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-xs text-center text-muted-foreground mt-4">هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                        <p className="text-xs text-center text-muted-foreground mt-4">هنوز نمونه کاری اضافه نکرده‌اید. برای مدیریت نمونه‌کارها، روی دکمه ویرایش اطلاعات کلیک نکنید.</p>
                     )}
                 </div>
             </CardContent>

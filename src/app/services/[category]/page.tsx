@@ -49,7 +49,7 @@ export default function CategoryPage() {
     return (
         <div className="py-12 md:py-20 flex-grow">
             <div className="text-center mb-12">
-                <h1 className="font-headline text-3xl font-bold">{category.name}</h1>
+                <h1 className="font-headline text-4xl md:text-5xl font-bold">{category.name}</h1>
                 <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">{category.description}</p>
                  <Button asChild size="lg" className="mt-8">
                     <Link href={`/search?category=${category.slug}`}>مشاهده تمام هنرمندان این دسته</Link>
@@ -58,7 +58,7 @@ export default function CategoryPage() {
 
             {categoryServices.length > 0 ? (
               <>
-                <h2 className="text-xl font-headline font-bold text-center mb-8">مرور خدمات در این دسته‌بندی</h2>
+                <h2 className="text-2xl font-headline font-bold text-center mb-8">مرور خدمات در این دسته‌بندی</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {categoryServices.map((service) => (
                     <Link href={`/services/${category.slug}/${service.slug}`} key={service.slug}>
