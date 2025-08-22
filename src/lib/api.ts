@@ -147,9 +147,36 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 // --- DATA MODIFICATION FUNCTIONS (REWRITTEN FOR STABILITY) ---
 // ====================================================================
 
+async function deleteFileFromStorage(imageUrl: string | null | undefined): Promise<void> {
+    if (!imageUrl || imageUrl.includes('placehold.co')) {
+        return; // Do not attempt to delete placeholders
+    }
+
+    try {
+        const supabase = createServerClient();
+        const url = new URL(imageUrl);
+        const filePath = url.pathname.split('/images/')[1];
+
+        if (filePath) {
+            const { error: storageError } = await supabase.storage.from('images').remove([filePath]);
+            if (storageError) {
+                console.error("Could not delete file from storage:", storageError.message);
+            }
+        }
+    } catch (e) {
+        console.error("Error parsing or deleting file from storage:", e);
+    }
+}
+
+
 export async function addPortfolioItem(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
     const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
+
+    if (!imageUrl || !imageUrl.startsWith('http')) {
+        throw new Error("آدرس تصویر برای افزودن به نمونه کار نامعتبر است.");
+    }
+    
     const newItem: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
     const { data: currentProvider, error: fetchError } = await supabase
@@ -209,18 +236,9 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
         console.error("DeletePortfolioItem - Update Error:", updateError.message);
         throw new Error("خطا در حذف نمونه کار از پایگاه داده.");
     }
-
-    if (itemToDelete.src && !itemToDelete.src.includes('placehold.co')) {
-        try {
-            const path = new URL(itemToDelete.src).pathname.split('/images/')[1];
-            if (path) {
-                const { error: storageError } = await supabase.storage.from('images').remove([path]);
-                if (storageError) console.error("Could not delete file from storage:", storageError.message);
-            }
-        } catch(e) {
-            console.error("Error parsing or deleting file from storage:", e);
-        }
-    }
+    
+    // After successfully updating the database, delete the file from storage.
+    await deleteFileFromStorage(itemToDelete?.src);
     
     return updatedProvider;
 }
@@ -241,11 +259,15 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     }
     
     const oldImageSrc = currentProvider.profile_image?.src;
-    const newProfileImage: PortfolioItem = { 
-        src: imageUrl || 'https://placehold.co/400x400.png', 
-        ai_hint: aiHint 
-    };
-
+    
+    let newProfileImage: PortfolioItem;
+    if (imageUrl && imageUrl.startsWith('http')) {
+        newProfileImage = { src: imageUrl, ai_hint: aiHint };
+    } else {
+        // This handles the deletion case (empty string passed for imageUrl)
+        newProfileImage = { src: 'https://placehold.co/400x400.png', ai_hint: 'woman portrait' };
+    }
+    
     const { data: updatedProvider, error: updateError } = await supabase
         .from('providers')
         .update({ profile_image: newProfileImage })
@@ -258,16 +280,8 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
         throw new Error("خطا در به‌روزرسانی عکس پروفایل در پایگاه داده.");
     }
     
-    if (oldImageSrc && !oldImageSrc.includes('placehold.co')) {
-         try {
-            const path = new URL(oldImageSrc).pathname.split('/images/')[1];
-            if (path) {
-                await supabase.storage.from('images').remove([path]);
-            }
-        } catch(e) {
-            console.error("Error parsing or deleting old profile image from storage:", e);
-        }
-    }
+    // After successfully updating the database, delete the old file from storage.
+    await deleteFileFromStorage(oldImageSrc);
     
     return updatedProvider;
 }
