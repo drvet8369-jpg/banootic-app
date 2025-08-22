@@ -18,13 +18,15 @@ export async function POST(request: Request) {
         const supabase = createClient();
         
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const filePath = `public/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        // Sanitize file name and make it unique
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const filePath = `public/${Date.now()}-${sanitizedFileName}`;
         
         const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
             .upload(filePath, fileBuffer, {
                 contentType: file.type,
-                upsert: true,
+                upsert: false, // Set to false to avoid overwriting files with the same name
             });
 
         if (uploadError) {
