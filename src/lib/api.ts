@@ -6,21 +6,10 @@ import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { normalizePhoneNumber } from './utils';
 
-// --- Helper Functions ---
-async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
-    const { data, error } = await request;
-    if (error) {
-        console.error(`${errorMessage}:`, error.message);
-        throw new Error(error.message || 'An unknown Supabase error occurred.');
-    }
-    return data as T;
-}
-
-
 export type UserRole = 'customer' | 'provider';
 
 // ====================================================================
-// --- PRIMARY AUTHENTICATION FUNCTIONS ---
+// --- PRIMARY AUTHENTICATION & CREATION FUNCTIONS ---
 // ====================================================================
 export async function loginUser(phone: string, role: UserRole): Promise<{ success: boolean; user?: User; message?: string }> {
     const supabase = createServerClient();
@@ -59,7 +48,6 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
     }
 }
 
-
 export async function checkIfUserExists(phone: string): Promise<boolean> {
     const supabase = createServerClient();
     const cleanPhone = normalizePhoneNumber(phone);
@@ -80,8 +68,6 @@ export async function checkIfUserExists(phone: string): Promise<boolean> {
     }
 }
 
-
-// ========== DATA CREATION FUNCTIONS ==========
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image'>): Promise<Provider> {
     const supabase = createServerClient();
     const dataToInsert = { 
@@ -92,144 +78,214 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
         profile_image: { src: 'https://placehold.co/400x400.png', ai_hint: 'woman portrait' },
         portfolio: [],
     };
-    const request = supabase.from('providers').insert([dataToInsert]).select().single();
-    return await handleSupabaseRequest(request, "Error creating provider in database.");
+    const { data, error } = await supabase.from('providers').insert([dataToInsert]).select().single();
+    if (error) {
+        console.error("Error creating provider:", error.message);
+        throw new Error("خطا در ایجاد حساب کاربری هنرمند.");
+    }
+    return data;
 }
 
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
     const supabase = createServerClient();
     const dataToInsert = { ...userData, phone: normalizePhoneNumber(userData.phone) };
-    const request = supabase.from('customers').insert([dataToInsert]).select('name, phone, account_type').single();
-    const data = await handleSupabaseRequest(request, 'Could not create customer account.');
+    const { data, error } = await supabase.from('customers').insert([dataToInsert]).select('name, phone, account_type').single();
+    
+    if (error) {
+        console.error('Error creating customer:', error.message);
+        throw new Error("خطا در ایجاد حساب کاربری مشتری.");
+    }
+
     return { name: data.name, phone: data.phone, accountType: data.account_type as 'customer' };
 }
 
-
-// ========== DATA RETRIEVAL FUNCTIONS ==========
+// ====================================================================
+// --- DATA RETRIEVAL FUNCTIONS ---
+// ====================================================================
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
-    const request = supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle();
-    return await handleSupabaseRequest(request, "Error fetching provider by phone");
+    const { data, error } = await supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle();
+    if (error) {
+        console.error("Error fetching provider by phone:", error.message);
+        throw new Error("امکان بارگذاری اطلاعات هنرمند وجود ندارد.");
+    }
+    return data;
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
     const supabase = createServerClient();
-    const request = supabase.from('providers').select('*').order('name', { ascending: true });
-    return await handleSupabaseRequest(request, "Could not fetch providers.");
-}
-
-export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    const supabase = createServerClient();
-    const request = supabase.from('providers').select('*').eq('category_slug', categorySlug);
-    return await handleSupabaseRequest(request, "Could not fetch providers for this category.");
+    const { data, error } = await supabase.from('providers').select('*').order('name', { ascending: true });
+    if (error) {
+        console.error("Could not fetch providers:", error.message);
+        throw new Error("امکان بارگذاری لیست هنرمندان وجود ندارد.");
+    }
+    return data || [];
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
     const supabase = createServerClient();
-    const request = supabase.from('providers').select('*').eq('service_slug', serviceSlug);
-    return await handleSupabaseRequest(request, "Could not fetch providers for this service.");
+    const { data, error } = await supabase.from('providers').select('*').eq('service_slug', serviceSlug);
+    if (error) {
+        console.error("Could not fetch providers for this service:", error.message);
+        throw new Error("امکان بارگذاری لیست هنرمندان برای این سرویس وجود ندارد.");
+    }
+    return data || [];
 }
 
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
     const supabase = createServerClient();
-    const request = supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
-    return await handleSupabaseRequest(request, "Could not fetch reviews.");
+    const { data, error } = await supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
+    if (error) {
+        console.error("Could not fetch reviews:", error.message);
+        throw new Error("امکان بارگذاری نظرات وجود ندارد.");
+    }
+    return data || [];
 }
 
-
-// ========== DATA MODIFICATION FUNCTIONS ==========
+// ====================================================================
+// --- DATA MODIFICATION FUNCTIONS (REWRITTEN FOR STABILITY) ---
+// ====================================================================
 
 export async function addPortfolioItem(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
     const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const newItem: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
-    const currentProvider = await getProviderByPhone(normalizedPhone);
-    if (!currentProvider) throw new Error("Provider not found to add portfolio item.");
+    const { data: currentProvider, error: fetchError } = await supabase
+        .from('providers')
+        .select('portfolio')
+        .eq('phone', normalizedPhone)
+        .single();
+    
+    if (fetchError || !currentProvider) {
+        console.error("AddPortfolioItem - Fetch Error:", fetchError?.message);
+        throw new Error("هنرمند برای افزودن نمونه کار یافت نشد.");
+    }
 
     const updatedPortfolio = [...(currentProvider.portfolio || []), newItem];
-    const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
-    return await handleSupabaseRequest(request, "Could not add portfolio item to database.");
-}
+    
+    const { data: updatedProvider, error: updateError } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('phone', normalizedPhone)
+        .select()
+        .single();
 
+    if (updateError) {
+        console.error("AddPortfolioItem - Update Error:", updateError.message);
+        throw new Error("خطا در افزودن نمونه کار به پایگاه داده.");
+    }
+    
+    return updatedProvider;
+}
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
     const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
-    const currentProvider = await getProviderByPhone(normalizedPhone);
 
-    if (!currentProvider || !currentProvider.portfolio || !currentProvider.portfolio[itemIndex]) {
-        throw new Error("Provider or portfolio item not found for deletion.");
+    const { data: currentProvider, error: fetchError } = await supabase
+        .from('providers')
+        .select('portfolio')
+        .eq('phone', normalizedPhone)
+        .single();
+
+    if (fetchError || !currentProvider || !currentProvider.portfolio || !currentProvider.portfolio[itemIndex]) {
+        console.error("DeletePortfolioItem - Fetch Error:", fetchError?.message);
+        throw new Error("هنرمند یا نمونه کار برای حذف یافت نشد.");
     }
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
-    
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
     
-    // Optional: Delete the image from storage
-    if (itemToDelete.src && !itemToDelete.src.includes('placehold.co')) {
-        const path = new URL(itemToDelete.src).pathname.split('/images/')[1];
-        if (path) {
-            await supabase.storage.from('images').remove([path]);
-        }
-    }
-    
-    const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
-    
-    return await handleSupabaseRequest(request, "Could not delete portfolio item from database.");
-}
-
-export async function updateProviderProfileImage(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
-    const supabase = createServerClient();
-    const normalizedPhone = normalizePhoneNumber(phone);
-
-    const currentProvider = await getProviderByPhone(normalizedPhone);
-    if (!currentProvider) throw new Error("Provider not found.");
-    
-    const oldImageSrc = currentProvider.profile_image?.src;
-
-    const newImageUrl = imageUrl || 'https://placehold.co/400x400.png';
-    const newProfileImage: PortfolioItem = { src: newImageUrl, ai_hint: aiHint };
-
-    const request = supabase
+    const { data: updatedProvider, error: updateError } = await supabase
         .from('providers')
-        .update({ profile_image: newProfileImage })
+        .update({ portfolio: updatedPortfolio })
         .eq('phone', normalizedPhone)
         .select()
         .single();
-    
-    const updatedProvider = await handleSupabaseRequest(request, "Could not update profile image in database.");
-    
-    // Optional: Delete the old image from storage if it's not a placeholder
-    if (oldImageSrc && !oldImageSrc.includes('placehold.co')) {
-        const path = new URL(oldImageSrc).pathname.split('/images/')[1];
-        if (path) {
-            await supabase.storage.from('images').remove([path]);
+
+    if (updateError) {
+        console.error("DeletePortfolioItem - Update Error:", updateError.message);
+        throw new Error("خطا در حذف نمونه کار از پایگاه داده.");
+    }
+
+    if (itemToDelete.src && !itemToDelete.src.includes('placehold.co')) {
+        try {
+            const path = new URL(itemToDelete.src).pathname.split('/images/')[1];
+            if (path) {
+                const { error: storageError } = await supabase.storage.from('images').remove([path]);
+                if (storageError) console.error("Could not delete file from storage:", storageError.message);
+            }
+        } catch(e) {
+            console.error("Error parsing or deleting file from storage:", e);
         }
     }
     
     return updatedProvider;
 }
 
+export async function updateProviderProfileImage(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
+    const supabase = createServerClient();
+    const normalizedPhone = normalizePhoneNumber(phone);
+    
+    const { data: currentProvider, error: fetchError } = await supabase
+        .from('providers')
+        .select('profile_image')
+        .eq('phone', normalizedPhone)
+        .single();
+    
+    if (fetchError || !currentProvider) {
+        console.error("UpdateProfileImage - Fetch Error:", fetchError?.message);
+        throw new Error("هنرمند برای بروزرسانی عکس پروفایل یافت نشد.");
+    }
+    
+    const oldImageSrc = currentProvider.profile_image?.src;
+    const newProfileImage: PortfolioItem = { 
+        src: imageUrl || 'https://placehold.co/400x400.png', 
+        ai_hint: aiHint 
+    };
+
+    const { data: updatedProvider, error: updateError } = await supabase
+        .from('providers')
+        .update({ profile_image: newProfileImage })
+        .eq('phone', normalizedPhone)
+        .select()
+        .single();
+
+    if (updateError) {
+        console.error("UpdateProfileImage - Update Error:", updateError.message);
+        throw new Error("خطا در به‌روزرسانی عکس پروفایل در پایگاه داده.");
+    }
+    
+    if (oldImageSrc && !oldImageSrc.includes('placehold.co')) {
+         try {
+            const path = new URL(oldImageSrc).pathname.split('/images/')[1];
+            if (path) {
+                await supabase.storage.from('images').remove([path]);
+            }
+        } catch(e) {
+            console.error("Error parsing or deleting old profile image from storage:", e);
+        }
+    }
+    
+    return updatedProvider;
+}
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
     const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
-    const request = supabase.from('providers').update(details).eq('phone', normalizedPhone).select().single();
-    return await handleSupabaseRequest(request, "Could not update provider details.");
+    const { data, error } = await supabase.from('providers').update(details).eq('phone', normalizedPhone).select().single();
+    if (error) {
+        console.error("Could not update provider details:", error.message);
+        throw new Error("خطا در به‌روزرسانی اطلاعات هنرمند.");
+    }
+    return data;
 }
 
-
-// ========== AGREEMENTS AND REVIEWS ==========
-export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
-    const supabase = createServerClient();
-    const request = supabase.from('reviews').insert([reviewData]).select().single();
-    const newReview = await handleSupabaseRequest(request, "Could not add review.");
-    await updateProviderRating(reviewData.provider_id);
-    return newReview as Review;
-}
-
+// ====================================================================
+// --- AGREEMENTS AND REVIEWS FUNCTIONS ---
+// ====================================================================
 async function updateProviderRating(providerId: number) {
     const supabase = createServerClient();
     const { data: reviews, error } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
@@ -240,10 +296,22 @@ async function updateProviderRating(providerId: number) {
     const reviewsCount = reviews?.length ?? 0;
     const totalRating = reviews?.reduce((acc: number, r: {rating: number}) => acc + r.rating, 0) ?? 0;
     const newAverageRating = reviewsCount > 0 ? parseFloat((totalRating / reviewsCount).toFixed(1)) : 0;
-    await handleSupabaseRequest(
-      supabase.from('providers').update({ rating: newAverageRating, reviews_count: reviewsCount }).eq('id', providerId), 
-      "Could not update provider rating."
-    );
+    
+    const { error: updateError } = await supabase.from('providers').update({ rating: newAverageRating, reviews_count: reviewsCount }).eq('id', providerId);
+    if (updateError) {
+        console.error("Could not update provider rating:", updateError.message);
+    }
+}
+
+export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
+    const supabase = createServerClient();
+    const { data, error } = await supabase.from('reviews').insert([reviewData]).select().single();
+    if (error) {
+        console.error("Could not add review:", error.message);
+        throw new Error("خطا در ثبت نظر.");
+    }
+    await updateProviderRating(reviewData.provider_id);
+    return data as Review;
 }
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
@@ -254,24 +322,43 @@ export async function createAgreement(provider: Provider, customer: User): Promi
         customer_name: customer.name, 
         status: 'pending' as const 
     };
-    const request = supabase.from('agreements').insert([agreementData]).select().single();
-    return await handleSupabaseRequest(request, "Error creating agreement.");
+    const { data, error } = await supabase.from('agreements').insert([agreementData]).select().single();
+    if (error) {
+        console.error("Error creating agreement:", error.message);
+        if (error.code === '23505') { // Unique constraint violation
+             throw new Error("شما قبلاً یک درخواست برای این هنرمند ثبت کرده‌اید.");
+        }
+        throw new Error("خطا در ایجاد توافق‌نامه.");
+    }
+    return data;
 }
 
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
     const supabase = createServerClient();
-    const request = supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone)).order('requested_at', { ascending: false });
-    return await handleSupabaseRequest(request, "Could not fetch provider agreements.");
+    const { data, error } = await supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone)).order('requested_at', { ascending: false });
+     if (error) {
+        console.error("Could not fetch provider agreements:", error.message);
+        throw new Error("امکان بارگذاری توافق‌های هنرمند وجود ندارد.");
+    }
+    return data || [];
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
     const supabase = createServerClient();
-    const request = supabase.from('agreements').select('*').eq('customer_phone', normalizePhoneNumber(customerPhone)).order('requested_at', { ascending: false });
-    return await handleSupabaseRequest(request, "Could not fetch customer agreements.");
+    const { data, error } = await supabase.from('agreements').select('*').eq('customer_phone', normalizePhoneNumber(customerPhone)).order('requested_at', { ascending: false });
+    if (error) {
+        console.error("Could not fetch customer agreements:", error.message);
+        throw new Error("امکان بارگذاری درخواست‌های شما وجود ندارد.");
+    }
+    return data || [];
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
     const supabase = createServerClient();
-    const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
-    return await handleSupabaseRequest(request, "Could not confirm agreement.");
+    const { data, error } = await supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
+    if (error) {
+        console.error("Could not confirm agreement:", error.message);
+        throw new Error("خطا در تایید توافق‌نامه.");
+    }
+    return data;
 }
