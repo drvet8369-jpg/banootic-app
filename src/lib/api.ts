@@ -1,40 +1,15 @@
-
 'use server';
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createServerClient } from '@/lib/supabase/server';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { normalizePhoneNumber } from './utils';
-
-// --- Supabase Client Initialization ---
-const BUCKET_NAME = 'images';
-
-// This function now ALWAYS creates a new client using the keys from the server's environment variables.
-const getSupabaseClient = (): SupabaseClient => {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-        console.error("Supabase credentials are not available in server environment variables.");
-        throw new Error("Database is not configured on the server.");
-    }
-    
-    return createClient(supabaseUrl, supabaseKey, {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false
-        }
-    });
-};
-
 
 // --- Helper Functions ---
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
     const { data, error } = await request;
     if (error) {
         console.error(`${errorMessage}:`, error.message);
-        // Throw the actual Supabase error message to be caught by the caller for better debugging
         throw new Error(error.message || 'An unknown Supabase error occurred.');
     }
     return data as T;
@@ -47,7 +22,7 @@ export type UserRole = 'customer' | 'provider';
 // --- PRIMARY AUTHENTICATION FUNCTIONS ---
 // ====================================================================
 export async function loginUser(phone: string, role: UserRole): Promise<{ success: boolean; user?: User; message?: string }> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const cleanPhone = normalizePhoneNumber(phone);
     const tableName = role === 'provider' ? 'providers' : 'customers';
 
@@ -85,7 +60,7 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
 
 
 export async function checkIfUserExists(phone: string): Promise<boolean> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const cleanPhone = normalizePhoneNumber(phone);
 
     try {
@@ -107,7 +82,7 @@ export async function checkIfUserExists(phone: string): Promise<boolean> {
 
 // ========== DATA CREATION FUNCTIONS ==========
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image'>): Promise<Provider> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const dataToInsert = { 
         ...providerData, 
         phone: normalizePhoneNumber(providerData.phone),
@@ -121,7 +96,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
 }
 
 export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const dataToInsert = { ...userData, phone: normalizePhoneNumber(userData.phone) };
     const request = supabase.from('customers').insert([dataToInsert]).select('name, phone, account_type').single();
     const data = await handleSupabaseRequest(request, 'Could not create customer account.');
@@ -131,63 +106,41 @@ export async function createCustomer(userData: { name: string, phone: string, ac
 
 // ========== DATA RETRIEVAL FUNCTIONS ==========
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const request = supabase.from('providers').select('*').eq('phone', normalizedPhone).maybeSingle();
     return await handleSupabaseRequest(request, "Error fetching provider by phone");
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('providers').select('*').order('name', { ascending: true });
     return await handleSupabaseRequest(request, "Could not fetch providers.");
 }
 
 export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('providers').select('*').eq('category_slug', categorySlug);
     return await handleSupabaseRequest(request, "Could not fetch providers for this category.");
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('providers').select('*').eq('service_slug', serviceSlug);
     return await handleSupabaseRequest(request, "Could not fetch providers for this service.");
 }
 
 export async function getReviewsByProviderId(providerId: number): Promise<Review[]> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
     return await handleSupabaseRequest(request, "Could not fetch reviews.");
 }
 
 
 // ========== DATA MODIFICATION FUNCTIONS ==========
-async function deleteImageFromStorage(imageUrl: string): Promise<void> {
-    if (!imageUrl || imageUrl.includes('placehold.co')) return;
-    const supabase = getSupabaseClient();
-    const supabaseUrl = process.env.SUPABASE_URL;
-    if (!supabaseUrl) return;
-    
-    const pathPrefix = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
-    if (!imageUrl.startsWith(pathPrefix)) {
-        console.warn(`Image URL ${imageUrl} does not match expected bucket structure. Skipping delete.`);
-        return;
-    }
-    const filePath = imageUrl.substring(pathPrefix.length);
-
-    try {
-        await handleSupabaseRequest(
-          supabase.storage.from(BUCKET_NAME).remove([filePath]),
-          `Attempting to delete image from storage: ${filePath}`
-        );
-    } catch (error) {
-        console.warn(`Could not delete old image, it may have been removed already: ${filePath}`, error);
-    }
-}
 
 export async function addPortfolioItem(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const newItem: PortfolioItem = { src: imageUrl, ai_hint: aiHint };
 
@@ -201,7 +154,7 @@ export async function addPortfolioItem(phone: string, imageUrl: string, aiHint: 
 
 
 export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const currentProvider = await getProviderByPhone(normalizedPhone);
 
@@ -210,7 +163,6 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     }
     
     const itemToDelete = currentProvider.portfolio[itemIndex];
-    await deleteImageFromStorage(itemToDelete.src);
     
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
     const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
@@ -218,15 +170,11 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
 }
 
 export async function updateProviderProfileImage(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
-
-    if (currentProvider.profile_image && currentProvider.profile_image.src && !currentProvider.profile_image.src.includes('placehold.co')) {
-        await deleteImageFromStorage(currentProvider.profile_image.src);
-    }
     
     const newImageUrl = imageUrl || 'https://placehold.co/400x400.png';
     const newProfileImage: PortfolioItem = { src: newImageUrl, ai_hint: aiHint };
@@ -243,7 +191,7 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
 
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const request = supabase.from('providers').update(details).eq('phone', normalizedPhone).select().single();
     return await handleSupabaseRequest(request, "Could not update provider details.");
@@ -252,7 +200,7 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 
 // ========== AGREEMENTS AND REVIEWS ==========
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('reviews').insert([reviewData]).select().single();
     const newReview = await handleSupabaseRequest(request, "Could not add review.");
     await updateProviderRating(reviewData.provider_id);
@@ -260,7 +208,7 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): 
 }
 
 async function updateProviderRating(providerId: number) {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const { data: reviews, error } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
     if (error) {
         console.error("Could not fetch reviews for rating update:", error.message);
@@ -276,7 +224,7 @@ async function updateProviderRating(providerId: number) {
 }
 
 export async function createAgreement(provider: Provider, customer: User): Promise<Agreement> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const agreementData = { 
         provider_phone: normalizePhoneNumber(provider.phone), 
         customer_phone: normalizePhoneNumber(customer.phone), 
@@ -288,19 +236,19 @@ export async function createAgreement(provider: Provider, customer: User): Promi
 }
 
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone)).order('requested_at', { ascending: false });
     return await handleSupabaseRequest(request, "Could not fetch provider agreements.");
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('agreements').select('*').eq('customer_phone', normalizePhoneNumber(customerPhone)).order('requested_at', { ascending: false });
     return await handleSupabaseRequest(request, "Could not fetch customer agreements.");
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    const supabase = getSupabaseClient();
+    const supabase = createServerClient();
     const request = supabase.from('agreements').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', agreementId).select().single();
     return await handleSupabaseRequest(request, "Could not confirm agreement.");
 }

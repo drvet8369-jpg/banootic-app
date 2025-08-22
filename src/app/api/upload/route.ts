@@ -1,24 +1,9 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { Buffer } from 'buffer';
 
-const getSupabaseServiceRoleClient = () => {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-        throw new Error("Supabase credentials for service role are not available.");
-    }
-    
-    return createClient(supabaseUrl, supabaseKey, {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false
-        }
-    });
-};
+const BUCKET_NAME = 'images';
 
 export async function POST(request: Request) {
     try {
@@ -29,11 +14,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
         }
 
-        const supabase = getSupabaseServiceRoleClient();
-        const BUCKET_NAME = 'images';
+        // Use the dedicated server client
+        const supabase = createServerClient();
         
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const filePath = `upload-${Date.now()}-${file.name}`;
+        const filePath = `upload-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
         
         const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
