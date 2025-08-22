@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createServerClient } from '@/lib/supabase/server';
@@ -166,6 +167,15 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
     const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
+    
+    // Optional: Delete the image from storage
+    if (itemToDelete.src) {
+        const fileName = itemToDelete.src.split('/').pop();
+        if (fileName) {
+            await supabase.storage.from('images').remove([fileName]);
+        }
+    }
+    
     return await handleSupabaseRequest(request, "Could not delete portfolio item from database.");
 }
 
@@ -176,6 +186,8 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
     
+    const oldImageSrc = currentProvider.profile_image?.src;
+
     const newImageUrl = imageUrl || 'https://placehold.co/400x400.png';
     const newProfileImage: PortfolioItem = { src: newImageUrl, ai_hint: aiHint };
 
@@ -185,8 +197,18 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
         .eq('phone', normalizedPhone)
         .select()
         .single();
-        
-    return await handleSupabaseRequest(request, "Could not update profile image in database.");
+    
+    const updatedProvider = await handleSupabaseRequest(request, "Could not update profile image in database.");
+    
+    // Optional: Delete the old image from storage if it's not a placeholder
+    if (oldImageSrc && !oldImageSrc.includes('placehold.co')) {
+        const fileName = oldImageSrc.split('/').pop();
+        if (fileName) {
+            await supabase.storage.from('images').remove([fileName]);
+        }
+    }
+    
+    return updatedProvider;
 }
 
 

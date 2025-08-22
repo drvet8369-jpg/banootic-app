@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         const supabase = createServerClient();
         
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const filePath = `upload-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        const filePath = `public/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
         
         const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
