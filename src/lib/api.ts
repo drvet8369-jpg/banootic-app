@@ -9,56 +9,38 @@ import { normalizePhoneNumber } from './utils';
 
 // --- Supabase Client Initialization ---
 const BUCKET_NAME = 'images';
-let supabase: SupabaseClient | null = null;
 
-const getSupabaseClient = () => {
-    if (supabase) {
-        return supabase;
-    }
-    
+// This function now ALWAYS creates a new client, ensuring the service role key is used for every server-side operation.
+// This is the definitive fix for the intermittent RLS issues.
+const getSupabaseClient = (): SupabaseClient => {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (supabaseUrl && supabaseKey) {
-        try {
-            supabase = createClient(supabaseUrl, supabaseKey, {
-                auth: { 
-                    persistSession: false,
-                    autoRefreshToken: false,
-                    detectSessionInUrl: false
-                }
-            });
-            return supabase;
-        } catch (error) {
-            console.error("Supabase client creation failed in api.ts.", error);
-            throw new Error("Database client initialization failed.");
-        }
-    } else {
+    if (!supabaseUrl || !supabaseKey) {
         console.error("Supabase environment variables (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY) are not set.");
         throw new Error("Database is not configured. Please check server environment variables.");
     }
-}
+    
+    // Create and return a new client every time to avoid connection state issues in a serverless environment.
+    return createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+        }
+    });
+};
 
 
 // --- Helper Functions ---
 async function handleSupabaseRequest<T>(request: Promise<{ data: T | null; error: any }>, errorMessage: string): Promise<T> {
-    try {
-        const { data, error } = await request;
-        if (error) {
-            // Log the detailed error for server-side debugging
-            console.error(`${errorMessage}:`, error);
-            // Throw the actual Supabase error message to be caught by the caller
-            throw new Error(error.message || 'An unknown Supabase error occurred.');
-        }
-        if (data === null) {
-            // This case can happen for single() requests that find no row.
-            // We'll let the caller handle null, but we shouldn't throw an error here unless there's an actual error object.
-        }
-        return data as T;
-    } catch (e: any) {
-        // Re-throw the specific error message for better client-side feedback
-        throw new Error(e.message);
+    const { data, error } = await request;
+    if (error) {
+        console.error(`${errorMessage}:`, error);
+        // Throw the actual Supabase error message to be caught by the caller for better debugging
+        throw new Error(error.message || 'An unknown Supabase error occurred.');
     }
+    return data as T;
 }
 
 
@@ -80,7 +62,7 @@ export async function loginUser(phone: string, role: UserRole): Promise<{ succes
             .single();
 
         if (error) {
-            if (error.code === 'PGRST116') {
+            if (error.code === 'PGRST116') { // "No rows found"
                 return { success: false, message: 'کاربری با این شماره تلفن و نقش یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' };
             }
             throw error;
@@ -274,7 +256,8 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
 
-    if (currentProvider.profile_image && currentProvider.profile_image.src) {
+    // Delete the old image from storage if it exists and is not a placeholder
+    if (currentProvider.profile_image && currentProvider.profile_image.src && !currentProvider.profile_image.src.includes('placehold.co')) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
     
@@ -315,7 +298,10 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): 
 async function updateProviderRating(providerId: number) {
     const supabase = getSupabaseClient();
     const { data: reviews, error } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
-    if (error) return console.error("Could not fetch reviews for rating update:", error.message);
+    if (error) {
+        console.error("Could not fetch reviews for rating update:", error.message);
+        return;
+    }
     const reviewsCount = reviews?.length ?? 0;
     const totalRating = reviews?.reduce((acc: number, r: {rating: number}) => acc + r.rating, 0) ?? 0;
     const newAverageRating = reviewsCount > 0 ? parseFloat((totalRating / reviewsCount).toFixed(1)) : 0;
