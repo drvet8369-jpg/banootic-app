@@ -6,22 +6,22 @@ import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { Buffer } from 'buffer';
 import { normalizePhoneNumber } from './utils';
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '@/lib/supabase/keys';
 
 // --- Supabase Client Initialization ---
 const BUCKET_NAME = 'images';
 
-// This function now ALWAYS creates a new client, ensuring the service role key is used for every server-side operation.
-// This is the definitive fix for the intermittent RLS issues.
+// This function now ALWAYS creates a new client using the keys from the dedicated keys.ts file.
+// This is the definitive fix to ensure the service role is always used for server-side operations.
 const getSupabaseClient = (): SupabaseClient => {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = SUPABASE_URL;
+    const supabaseKey = SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
-        console.error("Supabase environment variables (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY) are not set.");
-        throw new Error("Database is not configured. Please check server environment variables.");
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("YOUR_SUPABASE_URL_HERE")) {
+        console.error("Supabase credentials are not set in src/lib/supabase/keys.ts");
+        throw new Error("Database is not configured. Please set your credentials in the keys.ts file.");
     }
     
-    // Create and return a new client every time to avoid connection state issues in a serverless environment.
     return createClient(supabaseUrl, supabaseKey, {
         auth: {
             persistSession: false,
@@ -210,11 +210,8 @@ export async function addPortfolioItem(phone: string, base64Data: string, aiHint
 async function deleteImageFromStorage(imageUrl: string): Promise<void> {
     if (!imageUrl || imageUrl.includes('placehold.co')) return;
     const supabase = getSupabaseClient();
-    const supabaseUrl = process.env.SUPABASE_URL;
-    if (!supabaseUrl) {
-        console.warn("SUPABASE_URL not set, cannot delete image from storage.");
-        return;
-    }
+    const supabaseUrl = SUPABASE_URL;
+    
     const pathPrefix = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/`;
     if (!imageUrl.startsWith(pathPrefix)) {
         console.warn(`Image URL ${imageUrl} does not match expected bucket structure. Skipping delete.`);
@@ -256,7 +253,6 @@ export async function updateProviderProfileImage(phone: string, base64Data: stri
     const currentProvider = await getProviderByPhone(normalizedPhone);
     if (!currentProvider) throw new Error("Provider not found.");
 
-    // Delete the old image from storage if it exists and is not a placeholder
     if (currentProvider.profile_image && currentProvider.profile_image.src && !currentProvider.profile_image.src.includes('placehold.co')) {
         await deleteImageFromStorage(currentProvider.profile_image.src);
     }
