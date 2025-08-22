@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         const BUCKET_NAME = 'images';
         
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const filePath = `public/upload-${Date.now()}-${file.name}`;
+        const filePath = `upload-${Date.now()}-${file.name}`;
         
         const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
