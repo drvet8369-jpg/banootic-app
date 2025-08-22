@@ -166,15 +166,16 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
     const itemToDelete = currentProvider.portfolio[itemIndex];
     
     const updatedPortfolio = currentProvider.portfolio.filter((_, index) => index !== itemIndex);
-    const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
     
     // Optional: Delete the image from storage
-    if (itemToDelete.src) {
-        const fileName = itemToDelete.src.split('/').pop();
-        if (fileName) {
-            await supabase.storage.from('images').remove([fileName]);
+    if (itemToDelete.src && !itemToDelete.src.includes('placehold.co')) {
+        const path = new URL(itemToDelete.src).pathname.split('/images/')[1];
+        if (path) {
+            await supabase.storage.from('images').remove([path]);
         }
     }
+    
+    const request = supabase.from('providers').update({ portfolio: updatedPortfolio }).eq('phone', normalizedPhone).select().single();
     
     return await handleSupabaseRequest(request, "Could not delete portfolio item from database.");
 }
@@ -202,9 +203,9 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     
     // Optional: Delete the old image from storage if it's not a placeholder
     if (oldImageSrc && !oldImageSrc.includes('placehold.co')) {
-        const fileName = oldImageSrc.split('/').pop();
-        if (fileName) {
-            await supabase.storage.from('images').remove([fileName]);
+        const path = new URL(oldImageSrc).pathname.split('/images/')[1];
+        if (path) {
+            await supabase.storage.from('images').remove([path]);
         }
     }
     
