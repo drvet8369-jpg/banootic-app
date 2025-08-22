@@ -1,5 +1,5 @@
 
-import { createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server-for-api-route';
 import { NextResponse } from 'next/server';
 import { Buffer } from 'buffer';
 
@@ -14,8 +14,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
         }
 
-        // Use the dedicated server client
-        const supabase = createServerClient();
+        // Use the API route-safe Supabase client which uses the anon key
+        const supabase = createClient();
         
         const fileBuffer = Buffer.from(await file.arrayBuffer());
         const filePath = `public/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
