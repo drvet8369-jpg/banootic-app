@@ -16,6 +16,23 @@ import { getProviderByPhone, updateProviderDetails, addPortfolioItem, deletePort
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+// Helper function to convert a data URL to a File object
+function dataURLtoFile(dataurl: string, filename: string): File | null {
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, {type:mime});
+}
+
+
 export default function ProfilePage() {
   const { user, isLoggedIn, login, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
@@ -102,13 +119,31 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-  const handleImageResizeAndSave = (file: File, callback: (dataUrl: string) => void) => {
+  // Generic function to handle file upload to our API route
+  const uploadFile = async (file: File): Promise<string> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+          throw new Error(result.error || 'خطا در آپلود فایل.');
+      }
+      return result.imageUrl;
+  }
+
+  const handleImageResizeAndUpload = (file: File, callback: (imageUrl: string) => Promise<void>) => {
       setIsSaving(true);
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageSrc = e.target?.result as string;
         const img = document.createElement('img');
-        img.onload = () => {
+        img.onload = async () => {
           const canvas = document.createElement('canvas');
           const MAX_WIDTH = 800;
           const MAX_HEIGHT = 800;
@@ -133,7 +168,20 @@ export default function ProfilePage() {
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
             const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            callback(compressedDataUrl);
+            const imageFile = dataURLtoFile(compressedDataUrl, file.name);
+            if (!imageFile) {
+                toast({title: 'خطا', description: 'خطا در تبدیل تصویر.', variant: 'destructive'})
+                setIsSaving(false);
+                return;
+            }
+            try {
+                const imageUrl = await uploadFile(imageFile);
+                await callback(imageUrl);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در آپلود.';
+                toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive'});
+                setIsSaving(false);
+            }
           } else {
              setIsSaving(false);
              toast({title: 'خطا', description: 'خطا در فشرده‌سازی تصویر.', variant: 'destructive'})
@@ -148,10 +196,10 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
   }
 
-  const handleAddPortfolioFile = async (base64Data: string) => {
+  const handleAddPortfolioFile = async (imageUrl: string) => {
     if (!user) return;
     try {
-      const updatedProvider = await addPortfolioItem(user.phone, base64Data, 'new work');
+      const updatedProvider = await addPortfolioItem(user.phone, imageUrl, 'new work');
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (error) {
@@ -178,10 +226,10 @@ export default function ProfilePage() {
     }
   };
   
-  const handleProfilePictureFileChange = async (base64Data: string) => {
+  const handleProfilePictureFileChange = async (imageUrl: string) => {
       if (!user) return;
       try {
-        const updatedProvider = await updateProviderProfileImage(user.phone, base64Data, 'woman portrait');
+        const updatedProvider = await updateProviderProfileImage(user.phone, imageUrl, 'woman portrait');
         setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } catch (error) {
@@ -193,7 +241,10 @@ export default function ProfilePage() {
   }
 
   const handleDeleteProfilePicture = async () => {
-    if(!user) return;
+    if(!user || !provider?.profile_image?.src || provider.profile_image.src.includes('placehold.co')) {
+       toast({ title: "توجه", description: "عکسی برای حذف وجود ندارد.", variant: "default" });
+       return;
+    }
     setIsSaving(true);
     try {
       const updatedProvider = await updateProviderProfileImage(user.phone, '', 'woman portrait');
@@ -209,10 +260,10 @@ export default function ProfilePage() {
 
   const handleAddPortfolioClick = () => { portfolioFileInputRef.current?.click(); };
   const handleEditProfilePicClick = () => { profilePicInputRef.current?.click(); }
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (dataUrl: string) => void) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (imageUrl: string) => Promise<void>) => {
     const file = event.target.files?.[0];
     if (file) {
-      handleImageResizeAndSave(file, callback);
+      handleImageResizeAndUpload(file, callback);
       event.target.value = '';
     }
   };
@@ -281,6 +332,7 @@ export default function ProfilePage() {
                     fill
                     className="object-cover"
                     data-ai-hint={provider.profile_image.ai_hint}
+                    key={provider.profile_image.src}
                   />
                 ) : (
                    <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -323,14 +375,14 @@ export default function ProfilePage() {
                     ref={portfolioFileInputRef} 
                     onChange={(e) => handleFileChange(e, handleAddPortfolioFile)}
                     className="hidden"
-                    accept="image/*"
+                    accept="image/png, image/jpeg, image/webp"
                   />
                    <input
                     type="file"
                     ref={profilePicInputRef}
                     onChange={(e) => handleFileChange(e, handleProfilePictureFileChange)}
                     className="hidden"
-                    accept="image/*"
+                    accept="image/png, image/jpeg, image/webp"
                   />
                    <Button onClick={handleAddPortfolioClick} size="lg" className="w-full font-bold mb-6" disabled={isSaving || mode === 'editing'}>
                         <PlusCircle className="w-5 h-5 ml-2" />
@@ -341,7 +393,7 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {provider.portfolio.map((item, index) => (
                                 <div 
-                                    key={`portfolio-item-${index}`}
+                                    key={`${item.src}-${index}`}
                                     className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md"
                                 >
                                     <Image
@@ -365,7 +417,7 @@ export default function ProfilePage() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-xs text-center text-muted-foreground mt-4">هنوز نمونه کاری اضافه نکرده‌اید. برای مدیریت نمونه‌کارها، روی دکمه ویرایش اطلاعات کلیک نکنید.</p>
+                        <p className="text-xs text-center text-muted-foreground mt-4">هنوز نمونه کاری اضافه نکرده‌اید.</p>
                     )}
                 </div>
             </CardContent>
