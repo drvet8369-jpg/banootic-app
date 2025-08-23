@@ -15,6 +15,8 @@ import type { Provider } from '@/lib/types';
 import { getProviderByPhone, updateProviderDetails, addPortfolioItem, deletePortfolioItem, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { createClient } from '@/lib/supabase/client';
+
 
 // Helper function to convert a data URL to a File object
 function dataURLtoFile(dataurl: string, filename: string): File | null {
@@ -119,14 +121,24 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-  // Generic function to handle file upload to our API route
+  // This function now securely uploads a file using the user's auth token.
   const uploadFile = async (file: File): Promise<string> => {
+      const supabase = createClient();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+          throw new Error("جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.");
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       
       const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          }
       });
 
       const result = await response.json();
@@ -180,6 +192,7 @@ export default function ProfilePage() {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در آپلود.';
                 toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive'});
+            } finally {
                 setIsSaving(false);
             }
           } else {
@@ -205,8 +218,6 @@ export default function ProfilePage() {
     } catch (error) {
        const errorMessage = error instanceof Error ? error.message : 'خطا در افزودن نمونه کار.';
        toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
-    } finally {
-        setIsSaving(false);
     }
   };
 
@@ -235,8 +246,6 @@ export default function ProfilePage() {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'خطا در به‌روزرسانی عکس پروفایل.';
         toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
-      } finally {
-        setIsSaving(false);
       }
   }
 
