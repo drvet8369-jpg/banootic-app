@@ -125,29 +125,34 @@ export default function ProfilePage() {
 
   const uploadFile = async (file: File): Promise<string> => {
       const supabase = createClient();
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (sessionError || !session) {
+      if (!user) {
           throw new Error("جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.");
       }
-
-      const formData = new FormData();
-      formData.append('file', file);
       
-      const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          }
-      });
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+          });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-          throw new Error(result.error || 'خطا در آپلود فایل.');
+      if (uploadError) {
+          console.error('Supabase Upload Error:', uploadError);
+          throw new Error(uploadError.message);
       }
-      return result.imageUrl;
+
+      const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(filePath);
+
+      if (!publicUrlData?.publicUrl) {
+          throw new Error('Could not get public URL for the uploaded file.');
+      }
+
+      return publicUrlData.publicUrl;
   }
 
   const handleImageResizeAndUpload = (file: File, callback: (imageUrl: string) => Promise<void>) => {
@@ -460,7 +465,7 @@ export default function ProfilePage() {
                         </Button>
                          <Button asChild className="w-full flex-1">
                             <Link href="/inbox">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 2 2h16a2 2 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                                 صندوق ورودی
                             </Link>
                         </Button>
@@ -479,6 +484,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-    
-
-    
