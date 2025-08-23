@@ -1,7 +1,7 @@
 // This file interacts with the Supabase backend.
 // It is designed to be used in 'use client' contexts.
 import type { Provider, Review, Agreement } from './types';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from './supabase/client';
 import type { User as AuthUser } from '@/context/AuthContext';
 
 
@@ -10,10 +10,11 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
   const { data, error } = await supabase
     .from('providers')
     .select('*')
-    .eq('phone', phone)
+    .eq('phone', phone) // Correctly query by the 'phone' column
     .single();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row expected, but 0 rows found"
+  // A "Not Found" error (PGRST116) is expected if the user is not a provider, so we don't throw an error for it.
+  if (error && error.code !== 'PGRST116') {
     console.error('Error fetching provider by phone:', error);
     throw error;
   }
@@ -42,13 +43,19 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
     return data || [];
 }
 
+export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('providers').select('*').eq('category_slug', categorySlug);
+    if (error) {
+        console.error('Error fetching providers by category slug:', error);
+        throw error;
+    }
+    return data || [];
+}
+
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio' | 'created_at' | 'user_id'>): Promise<Provider> {
     const supabase = createClient();
-    
-    // We don't have Supabase Auth users, so we can't link user_id here.
-    // This is a placeholder for if we add full Supabase auth later.
-    
     const { data, error } = await supabase
         .from('providers')
         .insert(providerData)
@@ -80,6 +87,22 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
 
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
     const supabase = createClient();
+    
+    const { data: existingReview, error: fetchError } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('provider_id', reviewData.provider_id)
+        .single();
+        
+    if(fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking for existing review:', fetchError);
+        throw fetchError;
+    }
+
+    if (existingReview) {
+        throw new Error("You have already submitted a review for this provider.");
+    }
+    
     const { data, error } = await supabase
         .from('reviews')
         .insert(reviewData)
@@ -91,7 +114,6 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): 
         throw error;
     }
 
-    // After adding a review, we need to recalculate the provider's average rating.
     await updateProviderRating(reviewData.provider_id);
 
     return data;
@@ -99,8 +121,6 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): 
 
 export async function updateProviderRating(providerId: string): Promise<void> {
     const supabase = createClient();
-
-    // This calls a PostgreSQL function defined in our database.
     const { error } = await supabase.rpc('update_provider_rating', {
         provider_id_param: providerId
     });
@@ -243,3 +263,4 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     if (error) throw error;
     return data;
 }
+    
