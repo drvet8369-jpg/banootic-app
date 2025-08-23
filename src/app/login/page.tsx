@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
+import { getProviderByPhone } from '@/lib/api';
 import type { User } from '@/context/AuthContext';
 
 
@@ -53,16 +53,14 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        const existingProvider = await getProviderByPhone(values.phone);
 
         let userToLogin: User;
 
         if (existingProvider) {
           // User is a known provider
           userToLogin = {
+            id: existingProvider.id,
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
@@ -70,6 +68,7 @@ export default function LoginPage() {
         } else {
           // User is a customer
           userToLogin = {
+            id: values.phone, // For customers, we can use phone as a temporary unique ID
             name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
@@ -98,7 +97,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>

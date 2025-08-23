@@ -4,64 +4,48 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { useRouter } from 'next/navigation';
 
 export interface User {
+  id: string; // Can be provider UUID or customer phone
   name: string;
-  // The user's phone number is their unique ID
   phone: string; 
   accountType: 'customer' | 'provider';
-  // Optional fields for new provider registration context
-  serviceType?: string;
-  bio?: string;
-  service?: string;
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
+  isLoading: boolean;
   login: (userData: User) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// A one-time check to see if we need to clean up localStorage
-const performCleanup = () => {
-    if (typeof window !== 'undefined') {
-        const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix'; // Use a new flag to re-run if needed
-        if (!localStorage.getItem(cleanupFlag)) {
-            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
-            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
-            localStorage.setItem(cleanupFlag, 'true');
-        }
-    }
-};
-
-if (typeof window !== 'undefined') {
-    performCleanup();
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
+    setIsLoading(true);
     try {
-      const storedUser = localStorage.getItem('honarbanoo-user');
+      const storedUser = localStorage.getItem('banotik-user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage on initial load", error);
       // Clean up corrupted data
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banotik-user');
+    } finally {
+        setIsLoading(false);
     }
   }, []);
 
   const login = (userData: User) => {
     try {
-      // Ensure accountType is always set
       const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
-      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      localStorage.setItem('banotik-user', JSON.stringify(userToSave));
       setUser(userToSave);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -70,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('honarbanoo-user');
+      localStorage.removeItem('banotik-user');
       setUser(null);
       // Redirect to home page for a better user experience
       router.push('/');
@@ -80,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

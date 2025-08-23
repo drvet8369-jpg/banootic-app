@@ -23,12 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
+import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
-
+import { getProviderByPhone, createProvider } from '@/lib/api';
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -83,84 +82,67 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const allProviders = getProviders();
-
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Check for existing provider by business name, only if registering as a provider
-      if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
+        const existingProvider = await getProviderByPhone(values.phone);
+        if (existingProvider) {
             toast({
-                title: 'خطا در ثبت‌نام',
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-                variant: 'destructive',
+              title: 'خطا در ثبت‌نام',
+              description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+              variant: 'destructive',
             });
             setIsLoading(false);
             return;
         }
-      }
 
+        let userToLogin: User;
 
-      // This is the user object for the AuthContext
-      const userToLogin: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-        serviceType: values.serviceType,
-        bio: values.bio,
-      };
+        if (values.accountType === 'provider') {
+            const selectedCategory = categories.find(c => c.slug === values.serviceType);
+            const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
+            
+            const newProviderData = {
+              name: values.name,
+              phone: values.phone,
+              service: selectedCategory?.name || 'خدمت جدید',
+              location: 'ارومیه',
+              bio: values.bio || '',
+              category_slug: selectedCategory?.slug || 'beauty',
+              service_slug: firstServiceInCat?.slug || 'manicure-pedicure',
+            };
 
-      // Only create a new provider if the account type is 'provider'
-      if (values.accountType === 'provider') {
-        const selectedCategory = categories.find(c => c.slug === values.serviceType);
-        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
+            const createdProvider = await createProvider(newProviderData);
+
+            userToLogin = {
+                id: createdProvider.id,
+                name: createdProvider.name,
+                phone: createdProvider.phone,
+                accountType: 'provider',
+            };
         
-        const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
-          name: values.name,
-          phone: values.phone,
-          service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
-          bio: values.bio || '',
-          categorySlug: selectedCategory?.slug || 'beauty',
-          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-          rating: 0,
-          reviewsCount: 0,
-          profileImage: { src: '', aiHint: 'woman portrait' },
-          portfolio: [],
-        };
-        
-        saveProviders([...allProviders, newProvider]);
-      }
+        } else {
+             userToLogin = {
+                id: values.phone,
+                name: values.name,
+                phone: values.phone,
+                accountType: 'customer',
+            };
+        }
       
-      login(userToLogin);
+        login(userToLogin);
       
-      toast({
-        title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-      });
+        toast({
+            title: 'ثبت‌نام با موفقیت انجام شد!',
+            description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        });
       
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
-      router.push(destination);
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
 
     } catch (error) {
-         console.error("Registration failed:", error);
-         toast({
+        const errorMessage = error instanceof Error ? error.message : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
+        console.error("Registration failed:", error);
+        toast({
             title: 'خطا در ثبت‌نام',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: errorMessage,
             variant: 'destructive'
         });
     } finally {
