@@ -1,65 +1,43 @@
--- =================================================================
--- ===             جدول کاربران (Providers & Customers)         ===
--- =================================================================
+-- ### POLICIES FOR STORAGE ###
 
--- 1. فعال کردن Row Level Security
-ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+-- 1. پاک کردن پالیسی‌های قدیمی (در صورت وجود)
+DROP POLICY IF EXISTS "Allow public read access to images" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated users to upload images" ON storage.objects;
+DROP POLICY IF EXISTS "Allow user to update their own images" ON storage.objects;
+DROP POLICY IF EXISTS "Allow user to delete their own images" ON storage.objects;
 
--- 2. حذف پالیسی‌های قدیمی (برای جلوگیری از تداخل)
-DROP POLICY IF EXISTS "Authenticated users can view providers" ON public.providers;
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.providers;
-DROP POLICY IF EXISTS "Authenticated users can view customers" ON public.customers;
-DROP POLICY IF EXISTS "Users can create their own customer profile" ON public.customers;
+-- 2. ایجاد پالیسی‌های جدید و کامل برای باکت "images"
 
--- 3. تعریف پالیسی‌های جدید
--- پالیسی برای Providers
-CREATE POLICY "Authenticated users can view providers" ON public.providers FOR SELECT USING (true);
-CREATE POLICY "Users can update their own profile" ON public.providers FOR UPDATE USING (auth.jwt() ->> 'phone' = phone) WITH CHECK (auth.jwt() ->> 'phone' = phone);
+-- پالیسی ۱: به همه اجازه می‌دهد تا عکس‌ها را مشاهده کنند.
+CREATE POLICY "Allow public read access to images"
+ON storage.objects FOR SELECT
+TO public
+USING ( bucket_id = 'images' );
 
--- پالیسی برای Customers
-CREATE POLICY "Authenticated users can view customers" ON public.customers FOR SELECT USING (true);
-CREATE POLICY "Users can create their own customer profile" ON public.customers FOR INSERT WITH CHECK (auth.jwt() ->> 'phone' = phone);
-
-
--- =================================================================
--- ===           فضای ذخیره‌سازی عکس‌ها (Storage - images)        ===
--- =================================================================
-
--- 1. فعال کردن RLS برای Storage
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- 2. حذف پالیسی‌های قدیمی از روی storage.objects
-DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
-DROP POLICY IF EXISTS "Allow authenticated users to upload" ON storage.objects;
-DROP POLICY IF EXISTS "Allow owner to update" ON storage.objects;
-DROP POLICY IF EXISTS "Allow owner to delete" ON storage.objects;
-
--- 3. تعریف پالیسی‌های جدید و کامل برای storage.objects
---  این پالیسی به همه اجازه می‌دهد تا عکس‌های داخل پوشه images را ببینند
-CREATE POLICY "Allow public read access" 
-ON storage.objects FOR SELECT 
-USING (bucket_id = 'images');
-
--- این پالیسی به هر کاربر لاگین شده‌ای اجازه می‌دهد عکس جدیدی آپلود کند
-CREATE POLICY "Allow authenticated users to upload" 
-ON storage.objects FOR INSERT 
+-- پالیسی ۲: به کاربران لاگین‌کرده (authenticated) اجازه می‌دهد عکس جدید آپلود کنند.
+CREATE POLICY "Allow authenticated users to upload images"
+ON storage.objects FOR INSERT
+TO authenticated
 WITH CHECK (
   bucket_id = 'images' AND
   auth.role() = 'authenticated'
 );
 
--- این پالیسی فقط به صاحب عکس اجازه می‌دهد آن را آپدیت کند
-CREATE POLICY "Allow owner to update"
+-- پالیسی ۳: به کاربر اجازه می‌دهد تا عکس‌های خودش را آپدیت کند.
+-- (UID کاربر باید با owner عکس یکی باشد)
+CREATE POLICY "Allow user to update their own images"
 ON storage.objects FOR UPDATE
+TO authenticated
 USING (
   bucket_id = 'images' AND
   auth.uid() = owner
 );
 
--- این پالیسی فقط به صاحب عکس اجازه می‌دهد آن را حذف کند
-CREATE POLICY "Allow owner to delete"
+-- پالیسی ۴: به کاربر اجازه می‌دهد تا عکس‌های خودش را حذف کند.
+-- (UID کاربر باید با owner عکس یکی باشد)
+CREATE POLICY "Allow user to delete their own images"
 ON storage.objects FOR DELETE
+TO authenticated
 USING (
   bucket_id = 'images' AND
   auth.uid() = owner
