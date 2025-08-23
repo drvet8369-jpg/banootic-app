@@ -83,8 +83,8 @@ export default function LoginPage() {
               title: 'ورود با موفقیت انجام شد!',
               description: `خوش آمدید ${userToLogin.name}!`,
             });
-            const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-            router.push(destination);
+            // Always redirect to home page after login for all users.
+            router.push('/');
         } else {
              toast({
                 title: 'کاربر یافت نشد',
