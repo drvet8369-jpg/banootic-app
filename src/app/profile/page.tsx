@@ -116,102 +116,84 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-  const handleImageResizeAndUpload = (file: File, uploadFunction: (file: File) => Promise<void>) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageSrc = e.target?.result as string;
-      const img = document.createElement('img');
-      img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        let width = img.width;
-        let height = img.height;
+  const handleImageResizeAndUpload = (file: File, isProfilePic: boolean) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imageSrc = e.target?.result as string;
+        const img = document.createElement('img');
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = isProfilePic ? 400 : 800;
+          let width = img.width;
+          let height = img.height;
 
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          const imageFile = dataURLtoFile(compressedDataUrl, file.name);
-          if (!imageFile) {
-              toast({title: 'خطا', description: 'خطا در تبدیل تصویر.', variant: 'destructive'})
-              return;
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
           }
-          await uploadFunction(imageFile);
-        } else {
-           toast({title: 'خطا', description: 'خطا در فشرده‌سازی تصویر.', variant: 'destructive'})
-        }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            const imageFile = dataURLtoFile(compressedDataUrl, file.name);
+            if (!imageFile) {
+              toast({title: 'خطا', description: 'خطا در تبدیل تصویر.', variant: 'destructive'});
+              return;
+            }
+            if (isProfilePic) {
+              await uploadProfilePicture(imageFile);
+            } else {
+              await uploadPortfolioImage(imageFile);
+            }
+          }
+        };
+        img.src = imageSrc;
       };
-      img.src = imageSrc;
-    };
-    reader.onerror = () => {
-        toast({title: 'خطا', description: 'خطا در خواندن فایل تصویر.', variant: 'destructive'})
-    }
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
   }
 
-  const uploadAndProcessFile = async (file: File, bucket: 'profile-images' | 'portfolio-images', updateDbFunction: (url: string) => Promise<Provider | void>) => {
-    setIsSaving(true);
-    const supabase = createClient();
-    try {
+  const uploadProfilePicture = async (file: File) => {
+      setIsSaving(true);
+      try {
+        const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            throw new Error("جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.");
+        if (!session) throw new Error('جلسه کاربری معتبر نیست. لطفاً دوباره وارد شوید.');
+
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/upload-profile-pic', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+          },
+          body: formData,
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'خطای سرور در آپلود عکس پروفایل.');
         }
 
-        const userId = session.user.id;
-        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\\-_]/g, '_');
-        const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
+        setProvider(result); // The API returns the full updated provider
+        toast({ title: 'موفق', description: 'عکس پروفایل با موفقیت آپلود شد.' });
 
-        const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
-
-        if (!publicUrl) throw new Error("Could not get public URL for the uploaded file.");
-
-        const updatedProvider = await updateDbFunction(publicUrl);
-        
-        if (updatedProvider) {
-          setProvider(updatedProvider as Provider);
-        }
-        
-        toast({ title: 'موفقیت‌آمیز', description: 'فایل با موفقیت آپلود و ذخیره شد.' });
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در آپلود.';
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'خطای ناشناس در آپلود.';
         toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive' });
-    } finally {
+      } finally {
         setIsSaving(false);
-    }
-  };
+      }
+  }
 
-  const handleAddPortfolioFile = (file: File) => {
-    if (!user) return;
-    const updateDbWithPortfolio = async (url: string) => {
-      if (!provider) return;
-      const newPortfolioItem: PortfolioItem = { src: url, ai_hint: 'new work' };
-      const updatedPortfolio = [...(provider.portfolio || []), newPortfolioItem];
-      return await updateProviderPortfolio(user.phone, updatedPortfolio);
-    };
-    uploadAndProcessFile(file, 'portfolio-images', updateDbWithPortfolio);
-  };
-  
-  const handleProfilePictureFileChange = (file: File) => {
-    if (!user) return;
-    const updateDbWithProfilePic = (url: string) => {
-        return updateProviderProfileImage(user.phone, { src: url, ai_hint: 'woman portrait' });
-    };
-    uploadAndProcessFile(file, 'profile-images', updateDbWithProfilePic);
-  };
+  const uploadPortfolioImage = async (file: File) => {
+      // Placeholder for future implementation
+      toast({title: "در دست ساخت", description: "آپلود نمونه کار به زودی فعال خواهد شد."});
+  }
   
   const handleDeletePortfolioItem = async (itemIndex: number) => {
     if (!provider || !user) return;
@@ -250,7 +232,7 @@ export default function ProfilePage() {
   const onPortfolioFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if(file) {
-      handleImageResizeAndUpload(file, handleAddPortfolioFile);
+      handleImageResizeAndUpload(file, false);
       e.target.value = '';
     }
   }
@@ -258,7 +240,7 @@ export default function ProfilePage() {
   const onProfilePicFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if(file) {
-      handleImageResizeAndUpload(file, handleProfilePictureFileChange);
+      handleImageResizeAndUpload(file, true);
       e.target.value = '';
     }
   }
