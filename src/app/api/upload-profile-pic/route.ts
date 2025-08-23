@@ -21,39 +21,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'شناسه کاربری (شماره تلفن) ارسال نشده است.' }, { status: 400 });
     }
 
-    // Use the admin client with the service_role key for elevated privileges
     const supabaseAdmin = createAdminClient();
 
-    // Create a unique, user-specific path for the file
+    // Use a folder within the 'images' bucket to keep things organized.
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    const filePath = `profile-images/${phone}/${Date.now()}-${sanitizedFileName}`;
+    const filePath = `profile-pics/${phone}/${Date.now()}-${sanitizedFileName}`;
 
-    // Upload the file to Supabase Storage
+    // Upload the file to the correct Supabase Storage bucket: 'images'
     const { error: uploadError } = await supabaseAdmin.storage
-      .from('profile-images')
+      .from('images')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true, // Overwrite file if it exists, useful for re-uploads
+        upsert: true, 
       });
 
     if (uploadError) {
       console.error('Supabase Admin Upload Error:', uploadError);
-      throw new Error('خطا در آپلود فایل به فضای ذخیره‌سازی.');
+      // Provide a more specific error message for easier debugging.
+      throw new Error(`خطا در آپلود فایل به فضای ذخیره سازی: ${uploadError.message}. آیا سطل 'images' وجود دارد و کلید سرویس دسترسی نوشتن دارد؟`);
     }
 
-    // Get the public URL of the uploaded file
+    // Get the public URL of the uploaded file from the correct bucket: 'images'
     const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('profile-images')
+      .from('images')
       .getPublicUrl(filePath);
 
     if (!publicUrl) {
       throw new Error('امکان دریافت آدرس عمومی فایل وجود نداشت.');
     }
     
-    // Prepare the JSON object for the profile_image column
     const newProfileImage = { src: publicUrl, ai_hint: 'woman portrait' };
 
-    // Update the provider's record in the database
     const { data: updatedProvider, error: updateError } = await supabaseAdmin
       .from('providers')
       .update({ profile_image: newProfileImage })
@@ -66,7 +64,6 @@ export async function POST(request: Request) {
       throw new Error('خطا در به‌روزرسانی پروفایل هنرمند.');
     }
 
-    // Return the successfully updated provider data
     return NextResponse.json(updatedProvider);
 
   } catch (error) {
