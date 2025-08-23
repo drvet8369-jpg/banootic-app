@@ -18,7 +18,7 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number;
+  id: string; // Changed to string to match Supabase UUID
   name: string;
   service: string; 
   location: string;
@@ -34,7 +34,7 @@ export interface Provider {
 
 export interface Review {
   id: number;
-  provider_id: number;
+  provider_id: string; // Changed to string to match Provider UUID
   author_name: string;
   rating: number;
   comment: string;
@@ -46,4 +46,14 @@ export interface Message {
   senderId: string;
   receiverId?: string;
   createdAt: string; // Using string for simplicity, can be Date object
+}
+
+export interface Agreement {
+  id: number;
+  provider_phone: string;
+  customer_phone: string;
+  customer_name: string;
+  status: 'pending' | 'confirmed';
+  requested_at: string;
+  confirmed_at: string | null;
 }

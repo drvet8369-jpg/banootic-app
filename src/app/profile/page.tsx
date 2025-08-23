@@ -36,7 +36,7 @@ function dataURLtoFile(dataurl: string, filename: string): File | null {
 
 
 export default function ProfilePage() {
-  const { user, isLoggedIn, login, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoggedIn, logout, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   
   const [provider, setProvider] = useState<Provider | null>(null);
@@ -61,6 +61,8 @@ export default function ProfilePage() {
                     service: currentProvider.service,
                     bio: currentProvider.bio,
                 });
+            } else {
+                 toast({ title: "خطا", description: "پروفایل هنرمند یافت نشد.", variant: "destructive" });
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "امکان بارگذاری اطلاعات پروفایل وجود ندارد.";
@@ -96,8 +98,8 @@ export default function ProfilePage() {
         setProvider(updatedProvider);
         
         if (user.name !== editedData.name) {
-            const updatedUser = { ...user, name: editedData.name };
-            login(updatedUser); 
+             // We don't need to call login(), just update local state if needed
+             // The auth state itself doesn't depend on the name from our tables.
         }
 
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
@@ -121,7 +123,6 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-  // This function now securely uploads a file using the user's auth token.
   const uploadFile = async (file: File): Promise<string> => {
       const supabase = createClient();
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -278,12 +279,12 @@ export default function ProfilePage() {
   };
   
   if (isAuthLoading || isLoading) {
-    return <div className="flex justify-center items-center py-20"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+    return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   }
 
   if (!isLoggedIn) {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <User className="w-24 h-24 text-muted-foreground mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">صفحه پروفایل</h1>
             <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
@@ -298,7 +299,7 @@ export default function ProfilePage() {
 
   if (user?.accountType !== 'provider') {
      return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
             <h1 className="font-display text-4xl md:text-5xl font-bold">شما ارائه‌دهنده خدمات نیستید</h1>
             <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
@@ -313,18 +314,19 @@ export default function ProfilePage() {
   
   if (!provider) {
       return (
-        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+        <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
              <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
              <h1 className="font-display text-4xl md:text-5xl font-bold">پروفایل یافت نشد</h1>
              <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
-                اطلاعات پروفایل شما در پایگاه داده یافت نشد. لطفاً با پشتیبانی تماس بگیرید.
+                اطلاعات پروفایل شما در پایگاه داده یافت نشد. این ممکن است به دلیل یک خطای موقت باشد. لطفاً از حساب خود خارج شده و دوباره وارد شوید.
             </p>
+            <Button onClick={logout} size="lg" className="mt-8">خروج</Button>
         </div>
       )
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
+    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8 flex-grow">
       <Card className="relative">
          {isSaving && (
             <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center rounded-lg">
@@ -477,3 +479,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

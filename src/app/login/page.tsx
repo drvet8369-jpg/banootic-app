@@ -26,9 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { loginUser } from '@/lib/api';
-import type { User } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
@@ -39,26 +37,22 @@ const formSchema = z.object({
   }).max(14, {
     message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
   }),
-  accountType: z.enum(['customer', 'provider'], {
-    required_error: 'لطفاً نوع حساب کاربری خود را انتخاب کنید.',
-  }),
 });
 
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState(1);
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const phoneForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      phone: '',
-      accountType: 'customer',
-    },
+    defaultValues: { phone: '' },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onPhoneSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     const normalizedPhone = normalizePhoneNumber(values.phone);
     
@@ -71,119 +65,125 @@ export default function LoginPage() {
         setIsLoading(false);
         return;
     }
+    
+    setPhone(normalizedPhone);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({
+        phone: `+98${normalizedPhone.substring(1)}`, // Convert to international format for Supabase
+    });
 
-    try {
-        const result = await loginUser(normalizedPhone, values.accountType);
-
-        if (result.success && result.user) {
-            login(result.user as User);
-            toast({
-              title: 'ورود با موفقیت انجام شد!',
-              description: `خوش آمدید ${result.user.name}!`,
-            });
-            const destination = result.user.accountType === 'provider' ? '/profile' : '/';
-            router.push(destination);
-        } else {
-             toast({
-                title: 'خطا در ورود',
-                description: result.message || 'کاربر یافت نشد. لطفاً ابتدا ثبت‌نام کنید.',
-                variant: 'destructive',
-            });
-        }
-    } catch (error) {
-        console.error("Login failed:", error);
-        const errorMessage = error instanceof Error ? error.message : 'مشکلی در ارتباط با سرور پیش آمده است.';
-        toast({
-            title: 'خطا در ورود',
-            description: errorMessage,
-            variant: 'destructive'
-        });
-    } finally {
-        setIsLoading(false);
+    if (error) {
+        toast({ title: 'خطا', description: error.message, variant: 'destructive' });
+    } else {
+        toast({ title: 'کد ارسال شد', description: 'کد تایید یکبار مصرف به شماره شما ارسال شد.' });
+        setStep(2);
     }
+    setIsLoading(false);
   }
+
+  async function onOtpSubmit(e: React.FormEvent) {
+      e.preventDefault();
+      setIsLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.verifyOtp({
+          phone: `+98${phone.substring(1)}`,
+          token: otp,
+          type: 'sms',
+      });
+      
+      if (error) {
+          toast({ title: 'خطا', description: error.message, variant: 'destructive' });
+      } else if (data.session) {
+          // AuthContext's onAuthStateChange will handle fetching profile and setting user state.
+          // We just need to navigate.
+          toast({ title: 'ورود موفق', description: 'شما با موفقیت وارد شدید.' });
+          
+          // Check if user has a profile, if not, redirect to register
+          const { data: profile } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('id', data.user.id)
+            .single();
+
+          const { data: providerProfile } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('id', data.user.id)
+            .single();
+
+          if (!profile && !providerProfile) {
+              router.push('/register');
+          } else {
+              router.push('/');
+          }
+          router.refresh();
+      }
+      setIsLoading(false);
+  }
+
 
   return (
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود به حساب کاربری، شماره تلفن و نوع حساب خود را وارد کنید.
+            {step === 1 
+                ? 'برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.'
+                : 'کد ۶ رقمی ارسال شده به شماره خود را وارد کنید.'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>شماره تلفن</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="09xxxxxxxxx" 
-                        {...field} 
-                        disabled={isLoading}
-                        className="text-left dir-ltr placeholder:text-muted-foreground/70"
-                        dir="ltr"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="accountType"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>نوع حساب کاربری:</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex items-center space-x-4"
-                        dir="rtl"
-                        disabled={isLoading}
-                      >
-                        <FormItem className="flex items-center space-x-2 space-x-reverse space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="customer" id="customer-login" />
-                          </FormControl>
-                          <FormLabel htmlFor="customer-login" className="font-normal cursor-pointer">
-                           مشتری
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 space-x-reverse space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="provider" id="provider-login" />
-                          </FormControl>
-                          <FormLabel htmlFor="provider-login" className="font-normal cursor-pointer">
-                            هنرمند
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ورود
-              </Button>
+          {step === 1 ? (
+             <Form {...phoneForm}>
+                <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-6">
+                  <FormField
+                    control={phoneForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>شماره تلفن</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="09xxxxxxxxx" 
+                            {...field} 
+                            disabled={isLoading}
+                            className="text-left dir-ltr placeholder:text-muted-foreground/70"
+                            dir="ltr"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                     {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                    ارسال کد تایید
+                  </Button>
+                </form>
+             </Form>
+          ) : (
+            <form onSubmit={onOtpSubmit} className="space-y-6">
+                <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="------"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="text-center text-2xl tracking-[1em] font-mono"
+                    maxLength={6}
+                    disabled={isLoading}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading || otp.length < 6}>
+                   {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                   تایید و ورود
+                </Button>
+                <Button variant="link" onClick={() => setStep(1)} disabled={isLoading} className="w-full">
+                    ویرایش شماره تلفن
+                </Button>
             </form>
-          </Form>
-          <div className="mt-4 text-center text-sm">
-            حساب کاربری ندارید؟{" "}
-            <Link href="/register" className="underline">
-              ایجاد حساب جدید
-            </Link>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

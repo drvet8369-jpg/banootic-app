@@ -1,74 +1,63 @@
 
 'use server';
 
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient } from './supabase/server';
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { normalizePhoneNumber } from './utils';
+import { createClient } from '@supabase/supabase-js';
 
-export type UserRole = 'customer' | 'provider';
+// This function is intended to be called from a server component or route handler
+// where cookie-based auth is not straightforward. It uses the service role key for elevated privileges.
+const getSupabaseAdmin = () => {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        console.error("Supabase server credentials for admin client not found.");
+        throw new Error("Server-side admin Supabase credentials are not available.");
+    }
+    
+    return createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+        }
+    });
+};
 
 // ====================================================================
-// --- PRIMARY AUTHENTICATION & CREATION FUNCTIONS ---
+// --- PRIMARY ACCOUNT CREATION FUNCTIONS (Called from Registration form) ---
 // ====================================================================
-export async function loginUser(phone: string, role: UserRole): Promise<{ success: boolean; user?: User; message?: string }> {
-    const supabase = createServerClient();
-    const cleanPhone = normalizePhoneNumber(phone);
-    const tableName = role === 'provider' ? 'providers' : 'customers';
 
-    try {
-        const { data, error } = await supabase
-            .from(tableName)
-            .select('*')
-            .eq('phone', cleanPhone)
-            .single();
+// This function creates a user in the auth.users table but does NOT create a profile.
+// It returns the user object, which the client can use to proceed to profile creation.
+export async function createAuthUser(phone: string): Promise<{ success: boolean; user?: {id: string}; message?: string }> {
+    const supabase = getSupabaseAdmin();
+    const cleanPhone = `+98${normalizePhoneNumber(phone).substring(1)}`;
 
-        if (error) {
-            if (error.code === 'PGRST116') { // "No rows found"
-                return { success: false, message: 'کاربری با این شماره تلفن و نقش یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' };
-            }
-            throw error;
-        }
-
-        if (data) {
-            const userData = data as any;
-             const user: User = { 
-                name: userData.name,
-                phone: userData.phone,
-                accountType: role
-            };
-            return { success: true, user: user };
-        }
-        
-        return { success: false, message: 'کاربر یافت نشد.' };
-
-    } catch (e: any) {
-        console.error(`Login failed for ${role} ${cleanPhone}:`, e.message);
-        return { success: false, message: `خطا در ورود: ${e.message}` };
+    // Check if user already exists in auth.users
+    const { data: existingUser, error: existingUserError } = await supabase.auth.admin.getUserByPhone(cleanPhone);
+    if (existingUser?.user) {
+        return { success: false, message: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.' };
     }
+    
+    const { data, error } = await supabase.auth.admin.createUser({
+        phone: cleanPhone,
+        phone_confirm: true, // Auto-confirm phone number since we control this flow
+    });
+
+    if (error) {
+        console.error(`Auth user creation failed for ${cleanPhone}:`, error.message);
+        return { success: false, message: `خطا در ایجاد کاربر: ${error.message}` };
+    }
+    
+    return { success: true, user: data.user };
 }
 
-export async function checkIfUserExists(phone: string): Promise<boolean> {
-    const supabase = createServerClient();
-    const cleanPhone = normalizePhoneNumber(phone);
 
-    try {
-        const [providerRes, customerRes] = await Promise.all([
-            supabase.from('providers').select('id', { count: 'exact', head: true }).eq('phone', cleanPhone),
-            supabase.from('customers').select('id', { count: 'exact', head: true }).eq('phone', cleanPhone)
-        ]);
-        
-        if (providerRes.error) console.error("Error checking providers table:", providerRes.error);
-        if (customerRes.error) console.error("Error checking customers table:", customerRes.error);
-
-        return (providerRes.count ?? 0) > 0 || (customerRes.count ?? 0) > 0;
-    } catch (e: any) {
-        console.error(`Error checking user existence for ${cleanPhone}:`, e.message);
-        return false;
-    }
-}
-
-export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image'>): Promise<Provider> {
+export async function createProviderProfile(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image'> & { id: string }): Promise<Provider> {
     const supabase = createServerClient();
     const dataToInsert = { 
         ...providerData, 
@@ -80,23 +69,23 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
     };
     const { data, error } = await supabase.from('providers').insert([dataToInsert]).select().single();
     if (error) {
-        console.error("Error creating provider:", error.message);
-        throw new Error("خطا در ایجاد حساب کاربری هنرمند.");
+        console.error("Error creating provider profile:", error.message);
+        throw new Error("خطا در ایجاد پروفایل هنرمند.");
     }
     return data;
 }
 
-export async function createCustomer(userData: { name: string, phone: string, account_type: 'customer' }): Promise<User> {
+export async function createCustomerProfile(userData: { id: string, name: string, phone: string }): Promise<User> {
     const supabase = createServerClient();
     const dataToInsert = { ...userData, phone: normalizePhoneNumber(userData.phone) };
-    const { data, error } = await supabase.from('customers').insert([dataToInsert]).select('name, phone, account_type').single();
+    const { data, error } = await supabase.from('customers').insert([dataToInsert]).select('id, name, phone').single();
     
     if (error) {
-        console.error('Error creating customer:', error.message);
-        throw new Error("خطا در ایجاد حساب کاربری مشتری.");
+        console.error('Error creating customer profile:', error.message);
+        throw new Error("خطا در ایجاد پروفایل مشتری.");
     }
 
-    return { name: data.name, phone: data.phone, accountType: data.account_type as 'customer' };
+    return { id: data.id, name: data.name, phone: data.phone, accountType: 'customer' };
 }
 
 // ====================================================================
@@ -144,18 +133,19 @@ export async function getReviewsByProviderId(providerId: number): Promise<Review
 }
 
 // ====================================================================
-// --- DATA MODIFICATION FUNCTIONS (REWRITTEN FOR STABILITY) ---
+// --- DATA MODIFICATION FUNCTIONS (for authenticated users) ---
 // ====================================================================
 
 async function deleteFileFromStorage(imageUrl: string | null | undefined): Promise<void> {
     if (!imageUrl || imageUrl.includes('placehold.co')) {
-        return; // Do not attempt to delete placeholders
+        return; 
     }
 
     try {
         const supabase = createServerClient();
         const url = new URL(imageUrl);
-        const filePath = url.pathname.split('/images/')[1];
+        // Standard Supabase path: /storage/v1/object/public/images/public/user_id/...
+        const filePath = decodeURIComponent(url.pathname).split('/images/')[1];
 
         if (filePath) {
             const { error: storageError } = await supabase.storage.from('images').remove([filePath]);
@@ -237,7 +227,6 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
         throw new Error("خطا در حذف نمونه کار از پایگاه داده.");
     }
     
-    // After successfully updating the database, delete the file from storage.
     await deleteFileFromStorage(itemToDelete?.src);
     
     return updatedProvider;
@@ -264,7 +253,6 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     if (imageUrl && imageUrl.startsWith('http')) {
         newProfileImage = { src: imageUrl, ai_hint: aiHint };
     } else {
-        // This handles the deletion case (empty string passed for imageUrl)
         newProfileImage = { src: 'https://placehold.co/400x400.png', ai_hint: 'woman portrait' };
     }
     
@@ -280,7 +268,6 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
         throw new Error("خطا در به‌روزرسانی عکس پروفایل در پایگاه داده.");
     }
     
-    // After successfully updating the database, delete the old file from storage.
     await deleteFileFromStorage(oldImageSrc);
     
     return updatedProvider;
@@ -376,3 +363,4 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     }
     return data;
 }
+

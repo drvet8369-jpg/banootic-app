@@ -25,11 +25,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import { createProvider, createCustomer, checkIfUserExists } from '@/lib/api';
+import { createAuthUser, createProviderProfile, createCustomerProfile } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/utils';
-import type { Provider } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -38,11 +37,6 @@ const formSchema = z.object({
   }),
   name: z.string().min(2, {
     message: 'نام باید حداقل ۲ حرف داشته باشد.',
-  }),
-  phone: z.string().min(10, {
-    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
-  }).max(14, {
-    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
   }),
   location: z.string().optional(),
   categorySlug: z.string().optional(),
@@ -87,14 +81,34 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [phone, setPhone] = useState('');
+
+  // Get the phone number from the logged-in Supabase user
+  useEffect(() => {
+    if(isLoggedIn && user) {
+        setPhone(user.phone);
+    } else {
+        const supabase = createClient();
+        const currentUser = supabase.auth.getUser();
+        currentUser.then(({data}) => {
+            if(data.user?.phone) {
+                 setPhone(normalizePhoneNumber(data.user.phone));
+            } else {
+                // If no user is logged in, they shouldn't be on this page.
+                // Redirect them to login.
+                router.push('/login');
+            }
+        })
+    }
+  }, [isLoggedIn, user, router]);
+
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: '',
       accountType: 'customer',
       location: 'ارومیه',
       bio: '',
@@ -107,66 +121,47 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    const normalizedPhone = normalizePhoneNumber(values.phone);
+    const supabase = createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    if (!normalizedPhone.match(/^09\d{9}$/)) {
-        toast({
-            title: 'خطا',
-            description: 'فرمت شماره تلفن وارد شده صحیح نیست. مثال: 09123456789',
-            variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
+    if (!authUser) {
+      toast({ title: 'خطا', description: 'کاربر احراز هویت نشده است. لطفاً دوباره وارد شوید.', variant: 'destructive' });
+      setIsLoading(false);
+      router.push('/login');
+      return;
     }
-    
-    try {
-      const userAlreadyExists = await checkIfUserExists(normalizedPhone);
-      
-      if (userAlreadyExists) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.', variant: 'destructive'});
-          setIsLoading(false);
-          return;
-      }
-      
-      let userToLogin: User;
 
+    try {
       if (values.accountType === 'provider' && values.serviceSlug && values.categorySlug) {
         const selectedService = services.find(s => s.slug === values.serviceSlug);
         
         const newProviderData = {
+          id: authUser.id,
           name: values.name,
-          phone: normalizedPhone,
+          phone: phone,
           service: selectedService?.name || 'خدمت جدید',
           location: values.location || 'ارومیه',
           bio: values.bio || '',
           category_slug: values.categorySlug as any,
           service_slug: values.serviceSlug,
-          portfolio: [],
         };
-        const createdProvider = await createProvider(newProviderData as any);
-        userToLogin = {
-            name: createdProvider.name,
-            phone: createdProvider.phone,
-            accountType: 'provider'
-        };
+        await createProviderProfile(newProviderData);
       } else {
-        const createdCustomer = await createCustomer({ 
+        await createCustomerProfile({ 
+            id: authUser.id,
             name: values.name, 
-            phone: normalizedPhone,
-            account_type: 'customer'
+            phone: phone,
         });
-        userToLogin = createdCustomer;
       }
-      
-      login(userToLogin);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: `خوش آمدید ${userToLogin.name}!`,
+        description: `خوش آمدید ${values.name}!`,
       });
       
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
-      router.push(destination);
+      // Force a refresh of the auth state and redirect
+      router.push('/');
+      router.refresh();
 
     } catch (error) {
          console.error("Registration failed:", error);
@@ -189,6 +184,11 @@ export default function RegisterForm() {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="text-center p-3 bg-muted rounded-md">
+                <p className="font-semibold">شماره تلفن تایید شده:</p>
+                <p className="font-mono text-lg">{phone}</p>
+            </div>
+
             <FormField
               control={form.control}
               name="accountType"
@@ -243,26 +243,6 @@ export default function RegisterForm() {
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
                     <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>شماره تلفن</FormLabel>
-                  <FormControl>
-                     <Input 
-                        placeholder="09xxxxxxxxx" 
-                        {...field} 
-                        disabled={isLoading}
-                        className="text-left dir-ltr placeholder:text-muted-foreground/70"
-                        dir="ltr"
-                      />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -366,15 +346,9 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام
+              تکمیل ثبت‌نام
             </Button>
             
-            <div className="mt-4 text-center text-sm">
-              قبلاً ثبت‌نام کرده‌اید؟{" "}
-              <Link href="/login" className="underline">
-                وارد شوید
-              </Link>
-            </div>
           </form>
         </Form>
       </CardContent>

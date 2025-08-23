@@ -2,78 +2,100 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface User {
+  id: string; // The user's Supabase UUID
   name: string;
-  // The user's phone number is their unique ID
   phone: string; 
   accountType: 'customer' | 'provider';
-  // Optional fields for new provider registration context
-  serviceType?: string;
-  bio?: string;
-  service?: string;
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   isLoading: boolean;
-  login: (userData: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'banotic-user';
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
   const router = useRouter();
 
-  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    setIsLoading(true);
-    try {
-      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setIsLoading(true);
+      if (session) {
+        // User is logged in. Now, fetch their profile details from our tables.
+        const profile = await getUserProfile(session.user);
+        if (profile) {
+          setUser(profile);
+        } else {
+          // This case might happen if a user exists in Supabase auth but not in our tables.
+          // For robustness, log them out.
+          await supabase.auth.signOut();
+          setUser(null);
+        }
+      } else {
+        // User is not logged in.
+        setUser(null);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage on initial load", error);
-      localStorage.removeItem(USER_STORAGE_KEY);
-    } finally {
       setIsLoading(false);
-    }
-  }, []);
+    });
 
-  const login = (userData: User) => {
-    setIsLoading(true);
-    try {
-      const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
-      setUser(userToSave);
-    } catch (error) {
-       console.error("Failed to save user to localStorage", error);
-    } finally {
-      setIsLoading(false);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, supabase.auth]);
+
+  const getUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
+    const { data: providerProfile } = await supabase
+        .from('providers')
+        .select('name, phone')
+        .eq('id', supabaseUser.id)
+        .single();
+    
+    if (providerProfile) {
+        return { id: supabaseUser.id, name: providerProfile.name, phone: providerProfile.phone, accountType: 'provider' };
     }
+    
+    const { data: customerProfile } = await supabase
+        .from('customers')
+        .select('name, phone')
+        .eq('id', supabaseUser.id)
+        .single();
+
+    if (customerProfile) {
+        return { id: supabaseUser.id, name: customerProfile.name, phone: customerProfile.phone, accountType: 'customer' };
+    }
+    
+    console.error("User profile not found in 'providers' or 'customers' table for user ID:", supabaseUser.id);
+    return null;
+  }
+
+  const logout = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setUser(null); // The onAuthStateChange listener will also handle this, but we do it here for immediate UI feedback.
+    router.push('/');
+    router.refresh(); // Force a refresh to clear any cached user-specific data.
+    setIsLoading(false);
   };
 
-  const logout = () => {
-    setIsLoading(true);
-    try {
-      localStorage.removeItem(USER_STORAGE_KEY);
-      setUser(null);
-      router.push('/');
-    } catch (error) {
-       console.error("Failed to remove user from localStorage", error);
-       setIsLoading(false);
-    }
+  const contextValue = {
+    isLoggedIn: !!user,
+    user,
+    isLoading,
+    logout,
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, isLoading, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
