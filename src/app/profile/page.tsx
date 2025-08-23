@@ -12,7 +12,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, addPortfolioItem, deletePortfolioItem, updateProviderProfileImage } from '@/lib/api';
+import { getProviderByPhone, updateProviderDetails, addPortfolioItem as apiAddPortfolioItem, deletePortfolioItem as apiDeletePortfolioItem, updateProviderProfileImage as apiUpdateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
@@ -213,7 +213,7 @@ export default function ProfilePage() {
   const handleAddPortfolioFile = async (imageUrl: string) => {
     if (!user) return;
     try {
-      const updatedProvider = await addPortfolioItem(user.phone, imageUrl, 'new work');
+      const updatedProvider = await apiAddPortfolioItem(user.phone, imageUrl, 'new work');
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (error) {
@@ -227,7 +227,7 @@ export default function ProfilePage() {
     
     setIsSaving(true);
     try {
-      const updatedProvider = await deletePortfolioItem(user.phone, itemIndex);
+      const updatedProvider = await apiDeletePortfolioItem(user.phone, itemIndex);
       setProvider(updatedProvider);
       toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (error) {
@@ -241,7 +241,7 @@ export default function ProfilePage() {
   const handleProfilePictureFileChange = async (imageUrl: string) => {
       if (!user) return;
       try {
-        const updatedProvider = await updateProviderProfileImage(user.phone, imageUrl, 'woman portrait');
+        const updatedProvider = await apiUpdateProviderProfileImage(user.phone, imageUrl, 'woman portrait');
         setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } catch (error) {
@@ -257,7 +257,7 @@ export default function ProfilePage() {
     }
     setIsSaving(true);
     try {
-      const updatedProvider = await updateProviderProfileImage(user.phone, '', 'woman portrait');
+      const updatedProvider = await apiUpdateProviderProfileImage(user.phone, '', 'woman portrait');
       setProvider(updatedProvider);
       toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } catch (error) {
@@ -460,7 +460,7 @@ export default function ProfilePage() {
                         </Button>
                          <Button asChild className="w-full flex-1">
                             <Link href="/inbox">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 2 2h16a2 2 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                                 صندوق ورودی
                             </Link>
                         </Button>
@@ -479,4 +479,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+    
+
     

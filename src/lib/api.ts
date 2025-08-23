@@ -96,12 +96,15 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
     return data || [];
 }
 
-export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' >): Promise<Review> {
+export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'user_id'>): Promise<Review> {
     const supabase = createClient();
+    const {data: {user}} = await supabase.auth.getUser();
+
+    if(!user) throw new Error("User not authenticated to add a review");
     
     const { data, error } = await supabase
         .from('reviews')
-        .insert(reviewData)
+        .insert({...reviewData, user_id: user.id})
         .select()
         .single();
 
@@ -118,12 +121,13 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' >):
 
 export async function updateProviderRating(providerId: string): Promise<void> {
     const supabase = createClient();
+    // This now calls a Supabase function that will be created in the next step.
     const { error } = await supabase.rpc('update_provider_rating', {
-        provider_id_param: providerId
+        p_id: providerId
     });
 
     if (error) {
-        console.error('Error updating provider rating:', error);
+        console.error('Error updating provider rating via RPC:', error);
         throw error;
     }
 }
@@ -297,3 +301,5 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     }
     return data;
 }
+
+    

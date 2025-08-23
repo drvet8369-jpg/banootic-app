@@ -39,10 +39,24 @@ export const createServerComponentClient = () => {
     }
 
     return createClient(supabaseUrl, supabaseAnonKey, {
-        cookies: {
-            get(name: string) {
-                return cookieStore.get(name)?.value;
+        auth: {
+            storage: {
+              getItem: (key) => {
+                const value = cookieStore.get(key)?.value;
+                return value ?? null;
+              },
+              setItem: (key, value) => {
+                cookieStore.set(key, value);
+              },
+              removeItem: (key) => {
+                cookieStore.delete(key);
+              },
             },
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true,
         },
     });
 };
+
+    
