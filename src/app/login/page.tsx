@@ -6,7 +6,8 @@ import * as z from 'zod';
 import Link from "next/link";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,106 +27,143 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
+import { normalizePhoneNumber } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone } from '@/lib/api';
-import type { User } from '@/context/AuthContext';
 
 
-const formSchema = z.object({
+const phoneSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
 
+const otpSchema = z.object({
+  phone: z.string(),
+  token: z.string().min(6, { message: 'کد تایید باید ۶ رقم باشد.' }),
+});
+
+
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [phone, setPhone] = useState('');
+  const supabase = createClient();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      phone: '',
-    },
+  const phoneForm = useForm<z.infer<typeof phoneSchema>>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: { phone: '' },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const otpForm = useForm<z.infer<typeof otpSchema>>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: { phone: '', token: '' },
+  });
+
+
+  async function onPhoneSubmit(values: z.infer<typeof phoneSchema>) {
     setIsLoading(true);
-    try {
-        // Correctly check the database for an existing provider
-        const existingProvider = await getProviderByPhone(values.phone);
+    const normalizedPhone = normalizePhoneNumber(values.phone);
+    setPhone(normalizedPhone);
 
-        let userToLogin: User;
+    const { error } = await supabase.auth.signInWithOtp({
+        phone: `+98${normalizedPhone.substring(1)}`, // Convert to international format
+    });
 
-        if (existingProvider) {
-          // User is a known provider from the database
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          // User is a customer (not found in providers table)
-          userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
-        }
-        
-        login(userToLogin);
-
-        toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
-        });
-        
-        router.push('/');
-
-    } catch (error) {
-        console.error("Login failed:", error);
-        toast({
-            title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
-            variant: 'destructive'
-        });
-    } finally {
-        setIsLoading(false);
+    if (error) {
+        toast({ title: 'خطا', description: error.message, variant: 'destructive' });
+    } else {
+        toast({ title: 'کد تایید ارسال شد', description: 'لطفاً کد ۶ رقمی ارسال شده به شماره خود را وارد کنید.' });
+        setStep('otp');
+        otpForm.setValue('phone', `+98${normalizedPhone.substring(1)}`);
     }
+    setIsLoading(false);
+  }
+
+  async function onOtpSubmit(values: z.infer<typeof otpSchema>) {
+    setIsLoading(true);
+    const { data, error } = await supabase.auth.verifyOtp({
+        phone: values.phone,
+        token: values.token,
+        type: 'sms',
+    });
+
+    if (error) {
+        toast({ title: 'خطا', description: 'کد وارد شده صحیح نیست. لطفاً دوباره تلاش کنید.', variant: 'destructive' });
+    } else {
+         toast({
+            title: 'ورود با موفقیت انجام شد!',
+            description: `خوش آمدید! در حال هدایت شما...`,
+         });
+         // The AuthContext will automatically pick up the new user session
+         router.push('/');
+         router.refresh(); // Force a refresh to update server components
+    }
+    setIsLoading(false);
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+            {step === 'phone' 
+             ? 'برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.'
+             : `کد ۶ رقمی ارسال شده به شماره ${phone} را وارد کنید.`
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>شماره تلفن</FormLabel>
-                    <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ورود
-              </Button>
-            </form>
-          </Form>
+          {step === 'phone' ? (
+            <Form {...phoneForm}>
+              <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
+                <FormField
+                  control={phoneForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>شماره تلفن</FormLabel>
+                      <FormControl>
+                        <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                   {isLoading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <KeyRound className="ml-2 h-4 w-4" />}
+                  ارسال کد تایید
+                </Button>
+              </form>
+            </Form>
+          ) : (
+             <Form {...otpForm}>
+              <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
+                <FormField
+                  control={otpForm.control}
+                  name="token"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>کد تایید</FormLabel>
+                      <FormControl>
+                        <Input placeholder="******" {...field} disabled={isLoading} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                   {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  ورود
+                </Button>
+                <Button variant="link" onClick={() => setStep('phone')} className="w-full">
+                  ویرایش شماره تلفن
+                </Button>
+              </form>
+            </Form>
+          )}
           <div className="mt-4 text-center text-sm">
             هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
