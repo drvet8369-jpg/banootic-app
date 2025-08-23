@@ -7,7 +7,7 @@
 import type { Provider, Review, Agreement, PortfolioItem } from './types';
 import type { User } from '@/context/AuthContext';
 import { normalizePhoneNumber } from './utils';
-// import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // Placeholder functions to avoid breaking imports if this file is referenced.
 // In a real scenario, these would interact with a database.
@@ -35,7 +35,7 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
   console.warn("API function 'addReview' is a placeholder and does not write to a database.");
   // Return a mock response
-  return { ...reviewData, id: Date.now(), created_at: new Date().toISOString() };
+  return { ...reviewData, id: Date.now().toString(), provider_id: 0, created_at: new Date().toISOString() };
 }
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
@@ -58,7 +58,7 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
   throw new Error("API function not implemented.");
 }
 
-export async getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
+export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
     console.warn("API function 'getAgreementsByProvider' is a placeholder and does not fetch from a database.");
     return [];
 }
