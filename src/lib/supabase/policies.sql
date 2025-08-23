@@ -1,44 +1,39 @@
--- ### POLICIES FOR STORAGE ###
+-- =================================================================
+-- === STORAGE POLICIES (برای سطل 'images') ===
+-- =================================================================
+-- این پالیسی‌ها مشخص می‌کنند چه کسی اجازه آپلود، مشاهده، ویرایش و حذف فایل‌ها را دارد.
 
--- 1. پاک کردن پالیسی‌های قدیمی (در صورت وجود)
-DROP POLICY IF EXISTS "Allow public read access to images" ON storage.objects;
-DROP POLICY IF EXISTS "Allow authenticated users to upload images" ON storage.objects;
-DROP POLICY IF EXISTS "Allow user to update their own images" ON storage.objects;
-DROP POLICY IF EXISTS "Allow user to delete their own images" ON storage.objects;
+-- 1. پاک کردن پالیسی‌های قدیمی برای جلوگیری از تداخل
+DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated users to upload" ON storage.objects;
+DROP POLICY IF EXISTS "Allow owner to update their own files" ON storage.objects;
+DROP POLICY IF EXISTS "Allow owner to delete their own files" ON storage.objects;
 
--- 2. ایجاد پالیسی‌های جدید و کامل برای باکت "images"
+-- 2. تعریف پالیسی برای مشاهده عمومی فایل‌ها (Public Read Access)
+-- هر کسی (چه لاگین کرده باشد و چه نکرده باشد) می‌تواند عکس‌ها را ببیند.
+CREATE POLICY "Allow public read access" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'images');
 
--- پالیسی ۱: به همه اجازه می‌دهد تا عکس‌ها را مشاهده کنند.
-CREATE POLICY "Allow public read access to images"
-ON storage.objects FOR SELECT
-TO public
-USING ( bucket_id = 'images' );
+-- 3. تعریف پالیسی برای آپلود فایل توسط کاربران لاگین کرده
+-- فقط کاربرانی که لاگین کرده‌اند (authenticated) می‌توانند فایل جدیدی آپلود کنند.
+CREATE POLICY "Allow authenticated users to upload" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK (bucket_id = 'images');
 
--- پالیسی ۲: به کاربران لاگین‌کرده (authenticated) اجازه می‌دهد عکس جدید آپلود کنند.
-CREATE POLICY "Allow authenticated users to upload images"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'images' AND
-  auth.role() = 'authenticated'
-);
+-- 4. تعریف پالیسی برای آپدیت فایل توسط صاحب آن
+-- یک کاربر فقط زمانی می‌تواند یک فایل را آپدیت کند که صاحب آن فایل باشد.
+-- (owner) همان user_id کاربر لاگین کرده است.
+CREATE POLICY "Allow owner to update their own files" 
+ON storage.objects FOR UPDATE 
+TO authenticated 
+USING (auth.uid() = owner) 
+WITH CHECK (bucket_id = 'images');
 
--- پالیسی ۳: به کاربر اجازه می‌دهد تا عکس‌های خودش را آپدیت کند.
--- (UID کاربر باید با owner عکس یکی باشد)
-CREATE POLICY "Allow user to update their own images"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'images' AND
-  auth.uid() = owner
-);
-
--- پالیسی ۴: به کاربر اجازه می‌دهد تا عکس‌های خودش را حذف کند.
--- (UID کاربر باید با owner عکس یکی باشد)
-CREATE POLICY "Allow user to delete their own images"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'images' AND
-  auth.uid() = owner
-);
+-- 5. تعریف پالیسی برای حذف فایل توسط صاحب آن
+-- یک کاربر فقط زمانی می‌تواند یک فایل را حذف کند که صاحب آن فایل باشد.
+CREATE POLICY "Allow owner to delete their own files" 
+ON storage.objects FOR DELETE 
+TO authenticated 
+USING (auth.uid() = owner);
