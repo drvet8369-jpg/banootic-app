@@ -189,7 +189,7 @@ export async function deletePortfolioItem(phone: string, itemIndex: number): Pro
         try {
             const path = new URL(itemToDelete.src).pathname.replace(/^\/storage\/v1\/object\/public\/images\//, '');
             if(path) {
-              const { error: storageError } = await getClient().storage.from('images').remove([path]);
+              const { error: storageError } = getClient().storage.from('images').remove([path]);
               if (storageError) {
                   console.error('Could not delete old image from storage:', storageError.message);
               }
@@ -242,7 +242,7 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
         try {
             const path = new URL(oldImageSrc).pathname.replace(/^\/storage\/v1\/object\/public\/images\//, '');
             if(path) {
-              const { error: storageError } = await getClient().storage.from('images').remove([path]);
+              const { error: storageError } = getClient().storage.from('images').remove([path]);
               if (storageError) {
                   // This is not a critical error, so we just log it.
                   console.error('Could not delete old image from storage:', storageError.message);
