@@ -124,13 +124,18 @@ export default function ProfilePage() {
   }
 
   const uploadFile = async (file: File): Promise<string> => {
+      // **THE FIX**: Create a new client instance right before the operation.
+      // This ensures it reads the latest auth state from localStorage.
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Now get the session from this fresh client.
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (!session) {
           throw new Error("جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.");
       }
       
+      const user = session.user;
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
       const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
       
@@ -484,3 +489,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
