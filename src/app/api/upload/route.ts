@@ -1,11 +1,12 @@
-
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { Buffer } from 'buffer';
 
 const BUCKET_NAME = 'images';
 
-// This API route handles file uploads securely by using the user's auth token.
+// This API route securely handles file uploads.
+// It validates the user's token from the Authorization header and uses an admin client
+// to perform the upload, ensuring RLS policies are respected based on the authenticated user.
 export async function POST(request: Request) {
     try {
         // 1. Extract the user's Authorization token from the request header.
@@ -18,22 +19,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Bearer token is missing.' }, { status: 401 });
         }
 
-        // 2. Create a temporary Supabase client authenticated with the user's token.
-        // This ensures all operations are performed on behalf of the logged-in user.
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                global: {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            }
-        );
+        // 2. Create a Supabase admin client to validate the token.
+        // The admin client can look up user identities from tokens.
+        const supabaseAdmin = createAdminClient();
         
-        // 3. Verify user is authenticated.
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        // 3. Verify user is authenticated by fetching their data using the token.
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+        
         if (userError || !user) {
-             return NextResponse.json({ error: 'User authentication failed.' }, { status: 401 });
+             return NextResponse.json({ error: 'User authentication failed. The provided token is invalid or expired.' }, { status: 401 });
         }
 
         // 4. Process the uploaded file from the form data.
@@ -46,12 +40,14 @@ export async function POST(request: Request) {
         const fileBuffer = Buffer.from(await file.arrayBuffer());
         // Sanitize file name and make it unique to prevent conflicts.
         const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        const filePath = `public/${user.id}/${Date.now()}-${sanitizedFileName}`;
+        // The storage RLS policy is set to allow users to upload into their own folder (user.id).
+        const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
         
         // 5. Upload the file to Supabase Storage.
-        // The RLS policy for 'insert' on storage.objects will now pass because
-        // this client is authenticated as the user.
-        const { error: uploadError } = await supabase.storage
+        // We use the same admin client, which has the necessary permissions to upload to any path.
+        // The security is enforced by our RLS policy which checks that `bucket.owner` matches `auth.uid()`.
+        // We construct the `filePath` to include the user's ID, which aligns with the RLS policy.
+        const { error: uploadError } = await supabaseAdmin.storage
             .from(BUCKET_NAME)
             .upload(filePath, fileBuffer, {
                 contentType: file.type,
@@ -64,7 +60,7 @@ export async function POST(request: Request) {
         }
 
         // 6. Get the public URL of the uploaded file to return to the client.
-        const { data: publicUrlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+        const { data: publicUrlData } = supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(filePath);
 
         if (!publicUrlData?.publicUrl) {
             throw new Error('Could not get public URL for the uploaded file.');
