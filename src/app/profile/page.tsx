@@ -156,20 +156,18 @@ export default function ProfilePage() {
   }
 
   const uploadProfilePicture = async (file: File) => {
+      if (!user || !user.phone) {
+          toast({ title: 'خطا', description: 'کاربر شناسایی نشد. لطفاً دوباره وارد شوید.', variant: 'destructive'});
+          return;
+      }
       setIsSaving(true);
       try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('جلسه کاربری معتبر نیست. لطفاً دوباره وارد شوید.');
-
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('phone', user.phone); // Send the user's phone as an identifier
         
         const response = await fetch('/api/upload-profile-pic', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.accessToken}`,
-          },
           body: formData,
         });
         
@@ -179,7 +177,7 @@ export default function ProfilePage() {
           throw new Error(result.error || 'خطای سرور در آپلود عکس پروفایل.');
         }
 
-        setProvider(result); // The API returns the full updated provider
+        setProvider(result); // The API returns the full updated provider object
         toast({ title: 'موفق', description: 'عکس پروفایل با موفقیت آپلود شد.' });
 
       } catch (error) {
