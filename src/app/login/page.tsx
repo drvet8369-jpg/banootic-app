@@ -61,7 +61,6 @@ export default function LoginPage() {
         if (existingProvider) {
           // User is a known provider from the database
           userToLogin = {
-            id: existingProvider.id.toString(),
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
@@ -69,7 +68,6 @@ export default function LoginPage() {
         } else {
           // User is a customer (not found in providers table)
           userToLogin = {
-            id: values.phone, // For customers, we can use phone as a temporary unique ID
             name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
             accountType: 'customer',
@@ -80,12 +78,10 @@ export default function LoginPage() {
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}!`,
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
         
-        // Redirect based on user type
-        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+        router.push('/');
 
     } catch (error) {
         console.error("Login failed:", error);
@@ -100,7 +96,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>

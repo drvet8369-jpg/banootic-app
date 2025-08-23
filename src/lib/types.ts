@@ -1,3 +1,4 @@
+import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
   id: number;
@@ -17,24 +18,26 @@ export interface PortfolioItem {
   ai_hint?: string;
 }
 
+// Corrected Provider type to match Supabase schema
 export interface Provider {
-  id: string; // Changed to string to match Supabase UUID
+  id: string; // Changed from number to string for UUID
   name: string;
-  service: string; 
+  service: string;
   location: string;
   phone: string;
   bio: string;
-  category_slug: Category['slug']; 
-  service_slug: Service['slug']; 
+  category_slug: Category['slug']; // Renamed from categorySlug
+  service_slug: Service['slug']; // Renamed from serviceSlug
   rating: number;
-  reviews_count: number;
-  profile_image: PortfolioItem; 
+  reviews_count: number; // Renamed from reviewsCount
+  profile_image: PortfolioItem; // Renamed from profileImage
   portfolio: PortfolioItem[];
 }
 
+// Corrected Review type to match Supabase schema
 export interface Review {
-  id: number;
-  provider_id: string; // Changed to string to match Provider UUID
+  id: string; // Changed from string to match UUID
+  provider_id: string; // Changed from number to string for UUID
   author_name: string;
   rating: number;
   comment: string;
@@ -45,15 +48,5 @@ export interface Message {
   text: string;
   senderId: string;
   receiverId?: string;
-  createdAt: string; // Using string for simplicity, can be Date object
-}
-
-export interface Agreement {
-  id: number;
-  provider_phone: string;
-  customer_phone: string;
-  customer_name: string;
-  status: 'pending' | 'confirmed';
-  requested_at: string;
-  confirmed_at: string | null;
+  createdAt: Timestamp;
 }
