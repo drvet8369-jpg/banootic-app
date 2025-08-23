@@ -124,11 +124,8 @@ export default function ProfilePage() {
   }
 
   const uploadFile = async (file: File): Promise<string> => {
-      // **THE FIX**: Create a new client instance right before the operation.
-      // This ensures it reads the latest auth state from localStorage.
       const supabase = createClient();
       
-      // Now get the session from this fresh client.
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
@@ -330,7 +327,7 @@ export default function ProfilePage() {
              <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
                 اطلاعات پروفایل شما در پایگاه داده یافت نشد. این ممکن است به دلیل یک خطای موقت باشد. لطفاً از حساب خود خارج شده و دوباره وارد شوید.
             </p>
-            <Button onClick={logout} size="lg" className="mt-8">خروج</Button>
+            <Button onClick={() => logout()} size="lg" className="mt-8">خروج</Button>
         </div>
       )
   }
