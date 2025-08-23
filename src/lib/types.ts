@@ -19,6 +19,7 @@ export interface PortfolioItem {
 export interface Provider {
   id: string; 
   user_id: string;
+  created_at: string;
   name: string;
   service: string;
   location: string;
@@ -35,6 +36,7 @@ export interface Provider {
 export interface Customer {
   id: string;
   user_id: string;
+  created_at: string;
   name: string;
   phone: string;
 }
@@ -53,7 +55,6 @@ export interface Agreement {
   id: number;
   provider_id: string;
   provider_phone: string;
-  customer_user_id: string;
   customer_phone: string;
   customer_name: string;
   status: 'pending' | 'confirmed';

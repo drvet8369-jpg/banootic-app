@@ -1,6 +1,5 @@
 import type { Provider, Review, Agreement, Customer } from './types';
 import { createClient } from './supabase/client';
-import type { User as AuthUser } from '@/context/AuthContext';
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   const supabase = createClient();
@@ -10,7 +9,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     .eq('phone', phone)
     .single();
 
-  if (error && error.code !== 'PGRST116') {
+  if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error here.
     console.error('Error fetching provider by phone:', error);
     throw error;
   }
@@ -18,20 +17,49 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 }
 
 export async function getCustomerByPhone(phone: string): Promise<Customer | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('phone', phone)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching customer by phone:', error);
+    throw error;
+  }
+  return data;
+}
+
+export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio' | 'created_at' | 'user_id' >): Promise<Provider> {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('phone', phone)
-      .single();
-  
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching customer by phone:', error);
-      throw error;
+        .from('providers')
+        .insert(providerData)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error("Error creating provider:", error);
+        throw error;
     }
     return data;
 }
 
+export async function createCustomer(customerData: Omit<Customer, 'id' | 'created_at' | 'user_id'>): Promise<Customer> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('customers')
+        .insert(customerData)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error("Error creating customer:", error);
+        throw error;
+    }
+    return data;
+}
 
 export async function getAllProviders(): Promise<Provider[]> {
     const supabase = createClient();
@@ -53,46 +81,6 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
     return data || [];
 }
 
-export async function getProvidersByCategory(categorySlug: string): Promise<Provider[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase.from('providers').select('*').eq('category_slug', categorySlug);
-    if (error) {
-        console.error('Error fetching providers by category slug:', error);
-        throw error;
-    }
-    return data || [];
-}
-
-export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio' >): Promise<Provider> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('providers')
-        .insert(providerData)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error("Error creating provider:", error);
-        throw error;
-    }
-    return data;
-}
-
-export async function createCustomer(customerData: Omit<Customer, 'id'>): Promise<Customer> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('customers')
-        .insert(customerData)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error("Error creating customer:", error);
-        throw error;
-    }
-    return data;
-}
-
 export async function getReviewsByProviderId(providerId: string): Promise<Review[]> {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -108,23 +96,12 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
     return data || [];
 }
 
-export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'author_name'>): Promise<Review> {
+export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' >): Promise<Review> {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User must be logged in to add a review");
-
-    const { data: customer } = await supabase.from('customers').select('name').eq('user_id', user.id).single();
-    if (!customer) throw new Error("Customer profile not found");
     
-    const reviewPayload = {
-      ...reviewData,
-      author_name: customer.name,
-      user_id: user.id,
-    }
-
     const { data, error } = await supabase
         .from('reviews')
-        .insert(reviewPayload)
+        .insert(reviewData)
         .select()
         .single();
 
@@ -141,6 +118,7 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | '
 
 export async function updateProviderRating(providerId: string): Promise<void> {
     const supabase = createClient();
+    // This assumes you have a PostgreSQL function named `update_provider_rating` in your database.
     const { error } = await supabase.rpc('update_provider_rating', {
         provider_id_param: providerId
     });
@@ -166,12 +144,12 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
     return data || [];
 }
 
-export async function getAgreementsByCustomer(customerUserId: string): Promise<Agreement[]> {
+export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('agreements')
         .select('*')
-        .eq('customer_user_id', customerUserId)
+        .eq('customer_phone', customerPhone)
         .order('requested_at', { ascending: false });
 
     if (error) {
@@ -181,14 +159,13 @@ export async function getAgreementsByCustomer(customerUserId: string): Promise<A
     return data || [];
 }
 
-export async function createAgreement(provider: Provider, customer: AuthUser): Promise<Agreement> {
+export async function createAgreement(provider: Provider, customerPhone: string, customerName: string): Promise<Agreement> {
     const supabase = createClient();
     const agreementData = {
         provider_id: provider.id,
         provider_phone: provider.phone,
-        customer_user_id: customer.id,
-        customer_phone: customer.phone,
-        customer_name: customer.name,
+        customer_phone: customerPhone,
+        customer_name: customerName,
     };
 
     const { data, error } = await supabase
@@ -221,67 +198,5 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
         console.error('Error confirming agreement:', error);
         throw error;
     }
-    return data;
-}
-
-export async function updateProviderDetails(userId: string, details: { name: string; service: string; bio: string; }): Promise<Provider> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('providers')
-        .update(details)
-        .eq('user_id', userId)
-        .select()
-        .single();
-    if (error) throw error;
-    return data;
-}
-
-export async function addPortfolioItem(userId: string, imageUrl: string, aiHint: string): Promise<Provider> {
-    const supabase = createClient();
-    const { data: currentProvider, error: fetchError } = await supabase.from('providers').select('portfolio').eq('user_id', userId).single();
-    if (fetchError) throw fetchError;
-
-    const newPortfolio = [...(currentProvider.portfolio || []), { src: imageUrl, ai_hint: aiHint }];
-    
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio: newPortfolio })
-        .eq('user_id', userId)
-        .select()
-        .single();
-    
-    if (error) throw error;
-    return data;
-}
-
-export async function deletePortfolioItem(userId: string, itemIndex: number): Promise<Provider> {
-    const supabase = createClient();
-    const { data: currentProvider, error: fetchError } = await supabase.from('providers').select('portfolio').eq('user_id', userId).single();
-    if (fetchError) throw fetchError;
-
-    const currentPortfolio = currentProvider.portfolio || [];
-    const newPortfolio = currentPortfolio.filter((_, index) => index !== itemIndex);
-
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio: newPortfolio })
-        .eq('user_id', userId)
-        .select()
-        .single();
-        
-    if (error) throw error;
-    return data;
-}
-
-export async function updateProviderProfileImage(userId: string, imageUrl: string, aiHint: string): Promise<Provider> {
-    const supabase = createClient();
-    const profileImage = { src: imageUrl, ai_hint: aiHint };
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ profile_image: profileImage })
-        .eq('user_id', userId)
-        .select()
-        .single();
-    if (error) throw error;
     return data;
 }
