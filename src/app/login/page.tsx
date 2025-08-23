@@ -53,20 +53,21 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+        // Correctly check the database for an existing provider
         const existingProvider = await getProviderByPhone(values.phone);
 
         let userToLogin: User;
 
         if (existingProvider) {
-          // User is a known provider
+          // User is a known provider from the database
           userToLogin = {
-            id: existingProvider.id,
+            id: existingProvider.id.toString(),
             name: existingProvider.name,
             phone: existingProvider.phone,
             accountType: 'provider',
           };
         } else {
-          // User is a customer
+          // User is a customer (not found in providers table)
           userToLogin = {
             id: values.phone, // For customers, we can use phone as a temporary unique ID
             name: `کاربر ${values.phone.slice(-4)}`,
@@ -79,10 +80,12 @@ export default function LoginPage() {
 
         toast({
           title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+          description: `خوش آمدید ${userToLogin.name}!`,
         });
         
-        router.push('/');
+        // Redirect based on user type
+        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
 
     } catch (error) {
         console.error("Login failed:", error);
