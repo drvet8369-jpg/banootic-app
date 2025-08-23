@@ -26,164 +26,114 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
-import { normalizePhoneNumber } from '@/lib/utils';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
+import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
-  phone: z.string().min(10, {
-    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
-  }).max(14, {
-    message: 'لطفاً یک شماره تلفن معتبر وارد کنید.',
+  phone: z.string().regex(/^09\d{9}$/, {
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
 
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
 
-  const phoneForm = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { phone: '' },
+    defaultValues: {
+      phone: '',
+    },
   });
 
-  async function onPhoneSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const normalizedPhone = normalizePhoneNumber(values.phone);
-    
-    if (!normalizedPhone.match(/^09\d{9}$/)) {
+    try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
+
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
+
         toast({
-            title: 'خطا',
-            description: 'فرمت شماره تلفن وارد شده صحیح نیست. مثال: 09123456789',
-            variant: 'destructive',
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
+        
+        router.push('/');
+
+    } catch (error) {
+        console.error("Login failed:", error);
+        toast({
+            title: 'خطا در ورود',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
+    } finally {
         setIsLoading(false);
-        return;
     }
-    
-    setPhone(normalizedPhone);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-        phone: `+98${normalizedPhone.substring(1)}`, // Convert to international format for Supabase
-    });
-
-    if (error) {
-        toast({ title: 'خطا', description: error.message, variant: 'destructive' });
-    } else {
-        toast({ title: 'کد ارسال شد', description: 'کد تایید یکبار مصرف به شماره شما ارسال شد.' });
-        setStep(2);
-    }
-    setIsLoading(false);
   }
-
-  async function onOtpSubmit(e: React.FormEvent) {
-      e.preventDefault();
-      setIsLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.verifyOtp({
-          phone: `+98${phone.substring(1)}`,
-          token: otp,
-          type: 'sms',
-      });
-      
-      if (error) {
-          toast({ title: 'خطا', description: error.message, variant: 'destructive' });
-      } else if (data.session) {
-          // AuthContext's onAuthStateChange will handle fetching profile and setting user state.
-          // We just need to navigate.
-          toast({ title: 'ورود موفق', description: 'شما با موفقیت وارد شدید.' });
-          
-          // Check if user has a profile, if not, redirect to register
-          const { data: profile } = await supabase
-            .from('customers')
-            .select('id')
-            .eq('id', data.user.id)
-            .single();
-
-          const { data: providerProfile } = await supabase
-            .from('providers')
-            .select('id')
-            .eq('id', data.user.id)
-            .single();
-
-          if (!profile && !providerProfile) {
-              router.push('/register');
-          } else {
-              router.push('/');
-          }
-          router.refresh();
-      }
-      setIsLoading(false);
-  }
-
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            {step === 1 
-                ? 'برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.'
-                : 'کد ۶ رقمی ارسال شده به شماره خود را وارد کنید.'
-            }
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 1 ? (
-             <Form {...phoneForm}>
-                <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-6">
-                  <FormField
-                    control={phoneForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>شماره تلفن</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="09xxxxxxxxx" 
-                            {...field} 
-                            disabled={isLoading}
-                            className="text-left dir-ltr placeholder:text-muted-foreground/70"
-                            dir="ltr"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                     {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                    ارسال کد تایید
-                  </Button>
-                </form>
-             </Form>
-          ) : (
-            <form onSubmit={onOtpSubmit} className="space-y-6">
-                <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="------"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    className="text-center text-2xl tracking-[1em] font-mono"
-                    maxLength={6}
-                    disabled={isLoading}
-                />
-                <Button type="submit" className="w-full" disabled={isLoading || otp.length < 6}>
-                   {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                   تایید و ورود
-                </Button>
-                <Button variant="link" onClick={() => setStep(1)} disabled={isLoading} className="w-full">
-                    ویرایش شماره تلفن
-                </Button>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>شماره تلفن</FormLabel>
+                    <FormControl>
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                ورود
+              </Button>
             </form>
-          )}
+          </Form>
+          <div className="mt-4 text-center text-sm">
+            هنرمند هستید؟{" "}
+            <Link href="/register" className="underline">
+              از اینجا ثبت‌نام کنید
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

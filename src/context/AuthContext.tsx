@@ -2,100 +2,85 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface User {
-  id: string; // The user's Supabase UUID
   name: string;
+  // The user's phone number is their unique ID
   phone: string; 
   accountType: 'customer' | 'provider';
+  // Optional fields for new provider registration context
+  serviceType?: string;
+  bio?: string;
+  service?: string;
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
-  isLoading: boolean;
-  logout: () => Promise<void>;
+  login: (userData: User) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// A one-time check to see if we need to clean up localStorage
+const performCleanup = () => {
+    if (typeof window !== 'undefined') {
+        const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix'; // Use a new flag to re-run if needed
+        if (!localStorage.getItem(cleanupFlag)) {
+            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
+            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
+            localStorage.setItem(cleanupFlag, 'true');
+        }
+    }
+};
+
+if (typeof window !== 'undefined') {
+    performCleanup();
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
   const router = useRouter();
 
+  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setIsLoading(true);
-      if (session) {
-        // User is logged in. Now, fetch their profile details from our tables.
-        const profile = await getUserProfile(session.user);
-        if (profile) {
-          setUser(profile);
-        } else {
-          // This case might happen if a user exists in Supabase auth but not in our tables.
-          // For robustness, log them out.
-          await supabase.auth.signOut();
-          setUser(null);
-        }
-      } else {
-        // User is not logged in.
-        setUser(null);
+    try {
+      const storedUser = localStorage.getItem('honarbanoo-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-      setIsLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase, supabase.auth]);
-
-  const getUserProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
-    const { data: providerProfile } = await supabase
-        .from('providers')
-        .select('name, phone')
-        .eq('id', supabaseUser.id)
-        .single();
-    
-    if (providerProfile) {
-        return { id: supabaseUser.id, name: providerProfile.name, phone: providerProfile.phone, accountType: 'provider' };
+    } catch (error) {
+      console.error("Failed to parse user from localStorage on initial load", error);
+      // Clean up corrupted data
+      localStorage.removeItem('honarbanoo-user');
     }
-    
-    const { data: customerProfile } = await supabase
-        .from('customers')
-        .select('name, phone')
-        .eq('id', supabaseUser.id)
-        .single();
+  }, []);
 
-    if (customerProfile) {
-        return { id: supabaseUser.id, name: customerProfile.name, phone: customerProfile.phone, accountType: 'customer' };
+  const login = (userData: User) => {
+    try {
+      // Ensure accountType is always set
+      const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
+      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      setUser(userToSave);
+    } catch (error) {
+       console.error("Failed to save user to localStorage", error);
     }
-    
-    console.error("User profile not found in 'providers' or 'customers' table for user ID:", supabaseUser.id);
-    return null;
-  }
-
-  const logout = async () => {
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    setUser(null); // The onAuthStateChange listener will also handle this, but we do it here for immediate UI feedback.
-    router.push('/');
-    router.refresh(); // Force a refresh to clear any cached user-specific data.
-    setIsLoading(false);
   };
 
-  const contextValue = {
-    isLoggedIn: !!user,
-    user,
-    isLoading,
-    logout,
+  const logout = () => {
+    try {
+      localStorage.removeItem('honarbanoo-user');
+      setUser(null);
+      // Redirect to home page for a better user experience
+      router.push('/');
+    } catch (error) {
+       console.error("Failed to remove user from localStorage", error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
