@@ -1,4 +1,5 @@
-import type { Provider, Review, Agreement, Customer } from './types';
+
+import type { Provider, Review, Agreement, Customer, PortfolioItem } from './types';
 import { createClient } from './supabase/client';
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
@@ -121,7 +122,6 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | '
 
 export async function updateProviderRating(providerId: string): Promise<void> {
     const supabase = createClient();
-    // This now calls a Supabase function that will be created in the next step.
     const { error } = await supabase.rpc('update_provider_rating', {
         p_id: providerId
     });
@@ -220,77 +220,27 @@ export async function updateProviderDetails(phone: string, details: { name: stri
     return data;
 }
 
-export async function addPortfolioItem(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
+export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
     const supabase = createClient();
-    // 1. Fetch the current portfolio
-    const { data: providerData, error: fetchError } = await supabase
-        .from('providers')
-        .select('portfolio')
-        .eq('phone', phone)
-        .single();
-    if (fetchError || !providerData) {
-        console.error("Error fetching provider's portfolio:", fetchError);
-        throw new Error("Could not fetch provider to add portfolio item.");
-    }
-
-    // 2. Add the new item to the existing array
-    const currentPortfolio = providerData.portfolio || [];
-    const updatedPortfolio = [...currentPortfolio, { src: imageUrl, ai_hint: aiHint }];
-
-    // 3. Update the provider with the new portfolio array
     const { data, error } = await supabase
         .from('providers')
-        .update({ portfolio: updatedPortfolio })
+        .update({ portfolio: portfolio })
         .eq('phone', phone)
         .select()
         .single();
     
     if (error) {
-        console.error('Error adding portfolio item:', error);
-        throw new Error('خطا در افزودن نمونه کار به پروفایل.');
+        console.error('Error updating portfolio:', error);
+        throw new Error('خطا در به‌روزرسانی نمونه کارها.');
     }
     return data;
 }
 
-export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
+export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
     const supabase = createClient();
-    // 1. Fetch current portfolio
-    const { data: providerData, error: fetchError } = await supabase
-        .from('providers')
-        .select('portfolio')
-        .eq('phone', phone)
-        .single();
-    if (fetchError || !providerData) {
-        console.error("Error fetching provider's portfolio for deletion:", fetchError);
-        throw new Error("Could not fetch provider to delete portfolio item.");
-    }
-
-    // 2. Filter out the item to delete
-    const currentPortfolio = providerData.portfolio || [];
-    const updatedPortfolio = currentPortfolio.filter((_, index) => index !== itemIndex);
-
-    // 3. Update the provider record
     const { data, error } = await supabase
         .from('providers')
-        .update({ portfolio: updatedPortfolio })
-        .eq('phone', phone)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error deleting portfolio item:', error);
-        throw new Error('خطا در حذف نمونه کار.');
-    }
-    return data;
-}
-
-export async function updateProviderProfileImage(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
-    const supabase = createClient();
-    const newProfileImage = { src: imageUrl, ai_hint: aiHint };
-
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ profile_image: newProfileImage })
+        .update({ profile_image: profileImage })
         .eq('phone', phone)
         .select()
         .single();
@@ -301,5 +251,3 @@ export async function updateProviderProfileImage(phone: string, imageUrl: string
     }
     return data;
 }
-
-    

@@ -11,14 +11,13 @@ import { MapPin, User, AlertTriangle, PlusCircle, Trash2, Camera, Edit, Save, XC
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Provider } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, addPortfolioItem as apiAddPortfolioItem, deletePortfolioItem as apiDeletePortfolioItem, updateProviderProfileImage as apiUpdateProviderProfileImage } from '@/lib/api';
+import type { Provider, PortfolioItem } from '@/lib/types';
+import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 
-
-// Helper function to convert a data URL to a File object
+// Helper to convert a data URL to a File object for uploading
 function dataURLtoFile(dataurl: string, filename: string): File | null {
     const arr = dataurl.split(',');
     if (arr.length < 2) return null;
@@ -96,12 +95,6 @@ export default function ProfilePage() {
     try {
         const updatedProvider = await updateProviderDetails(user.phone, editedData);
         setProvider(updatedProvider);
-        
-        if (user.name !== editedData.name) {
-             // We don't need to call login(), just update local state if needed
-             // The auth state itself doesn't depend on the name from our tables.
-        }
-
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } catch (error) {
@@ -123,167 +116,155 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-  const uploadFile = async (file: File): Promise<string> => {
-      const supabase = createClient();
-      
-      const { data: { session } } = await supabase.auth.getSession();
+  const handleImageResizeAndUpload = (file: File, uploadFunction: (file: File) => Promise<void>) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageSrc = e.target?.result as string;
+      const img = document.createElement('img');
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        let width = img.width;
+        let height = img.height;
 
-      if (!session) {
-          throw new Error("جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.");
-      }
-      
-      const user = session.user;
-      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\\-_]/g, '_');
-      const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-          .from('images')
-          .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-          });
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
 
-      if (uploadError) {
-          console.error('Supabase Upload Error:', uploadError);
-          throw new Error(uploadError.message);
-      }
-
-      const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(filePath);
-
-      if (!publicUrlData?.publicUrl) {
-          throw new Error('Could not get public URL for the uploaded file.');
-      }
-
-      return publicUrlData.publicUrl;
-  }
-
-  const handleImageResizeAndUpload = (file: File, callback: (imageUrl: string) => Promise<void>) => {
-      setIsSaving(true);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageSrc = e.target?.result as string;
-        const img = document.createElement('img');
-        img.onload = async () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          const imageFile = dataURLtoFile(compressedDataUrl, file.name);
+          if (!imageFile) {
+              toast({title: 'خطا', description: 'خطا در تبدیل تصویر.', variant: 'destructive'})
+              return;
           }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            const imageFile = dataURLtoFile(compressedDataUrl, file.name);
-            if (!imageFile) {
-                toast({title: 'خطا', description: 'خطا در تبدیل تصویر.', variant: 'destructive'})
-                setIsSaving(false);
-                return;
-            }
-            try {
-                const imageUrl = await uploadFile(imageFile);
-                await callback(imageUrl);
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در آپلود.';
-                toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive'});
-            } finally {
-                setIsSaving(false);
-            }
-          } else {
-             setIsSaving(false);
-             toast({title: 'خطا', description: 'خطا در فشرده‌سازی تصویر.', variant: 'destructive'})
-          }
-        };
-        img.src = imageSrc;
+          await uploadFunction(imageFile);
+        } else {
+           toast({title: 'خطا', description: 'خطا در فشرده‌سازی تصویر.', variant: 'destructive'})
+        }
       };
-      reader.onerror = () => {
-          setIsSaving(false);
-          toast({title: 'خطا', description: 'خطا در خواندن فایل تصویر.', variant: 'destructive'})
-      }
-      reader.readAsDataURL(file);
+      img.src = imageSrc;
+    };
+    reader.onerror = () => {
+        toast({title: 'خطا', description: 'خطا در خواندن فایل تصویر.', variant: 'destructive'})
+    }
+    reader.readAsDataURL(file);
   }
 
-  const handleAddPortfolioFile = async (imageUrl: string) => {
-    if (!user) return;
+  const uploadAndProcessFile = async (file: File, bucket: 'profile-images' | 'portfolio-images', updateDbFunction: (url: string) => Promise<Provider | void>) => {
+    setIsSaving(true);
+    const supabase = createClient();
     try {
-      const updatedProvider = await apiAddPortfolioItem(user.phone, imageUrl, 'new work');
-      setProvider(updatedProvider);
-      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            throw new Error("جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.");
+        }
+
+        const userId = session.user.id;
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\\-_]/g, '_');
+        const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
+
+        if (!publicUrl) throw new Error("Could not get public URL for the uploaded file.");
+
+        const updatedProvider = await updateDbFunction(publicUrl);
+        
+        if (updatedProvider) {
+          setProvider(updatedProvider as Provider);
+        }
+        
+        toast({ title: 'موفقیت‌آمیز', description: 'فایل با موفقیت آپلود و ذخیره شد.' });
     } catch (error) {
-       const errorMessage = error instanceof Error ? error.message : 'خطا در افزودن نمونه کار.';
-       toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
+        const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص در آپلود.';
+        toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
     }
   };
 
+  const handleAddPortfolioFile = (file: File) => {
+    if (!user) return;
+    const updateDbWithPortfolio = async (url: string) => {
+      if (!provider) return;
+      const newPortfolioItem: PortfolioItem = { src: url, ai_hint: 'new work' };
+      const updatedPortfolio = [...(provider.portfolio || []), newPortfolioItem];
+      return await updateProviderPortfolio(user.phone, updatedPortfolio);
+    };
+    uploadAndProcessFile(file, 'portfolio-images', updateDbWithPortfolio);
+  };
+  
+  const handleProfilePictureFileChange = (file: File) => {
+    if (!user) return;
+    const updateDbWithProfilePic = (url: string) => {
+        return updateProviderProfileImage(user.phone, { src: url, ai_hint: 'woman portrait' });
+    };
+    uploadAndProcessFile(file, 'profile-images', updateDbWithProfilePic);
+  };
+  
   const handleDeletePortfolioItem = async (itemIndex: number) => {
-    if (!provider || !user || user.phone !== provider.phone) return;
-    
+    if (!provider || !user) return;
     setIsSaving(true);
     try {
-      const updatedProvider = await apiDeletePortfolioItem(user.phone, itemIndex);
-      setProvider(updatedProvider);
-      toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+        const updatedPortfolio = (provider.portfolio || []).filter((_, index) => index !== itemIndex);
+        const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
+        setProvider(updatedProvider);
+        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'خطا در حذف نمونه کار.';
-      toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
+        const errorMessage = error instanceof Error ? error.message : 'خطا در حذف نمونه کار.';
+        toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  const handleDeleteProfilePicture = async () => {
+    if (!user || !provider?.profile_image?.src) {
+        toast({ title: "توجه", description: "عکسی برای حذف وجود ندارد.", variant: "default" });
+        return;
+    }
+    setIsSaving(true);
+    try {
+        const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', ai_hint: '' });
+        setProvider(updatedProvider);
+        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'خطا در حذف عکس پروفایل.';
+        toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsSaving(false);
     }
   };
   
-  const handleProfilePictureFileChange = async (imageUrl: string) => {
-      if (!user) return;
-      try {
-        const updatedProvider = await apiUpdateProviderProfileImage(user.phone, imageUrl, 'woman portrait');
-        setProvider(updatedProvider);
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'خطا در به‌روزرسانی عکس پروفایل.';
-        toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
-      }
+  const onPortfolioFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if(file) {
+      handleImageResizeAndUpload(file, handleAddPortfolioFile);
+      e.target.value = '';
+    }
   }
-
-  const handleDeleteProfilePicture = async () => {
-    if(!user || !provider?.profile_image?.src || provider.profile_image.src.includes('placehold.co')) {
-       toast({ title: "توجه", description: "عکسی برای حذف وجود ندارد.", variant: "default" });
-       return;
+  
+  const onProfilePicFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if(file) {
+      handleImageResizeAndUpload(file, handleProfilePictureFileChange);
+      e.target.value = '';
     }
-    setIsSaving(true);
-    try {
-      const updatedProvider = await apiUpdateProviderProfileImage(user.phone, '', 'woman portrait');
-      setProvider(updatedProvider);
-      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'خطا در حذف عکس پروفایل.';
-      toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
-    } finally {
-        setIsSaving(false);
-    }
-  };
+  }
 
   const handleAddPortfolioClick = () => { portfolioFileInputRef.current?.click(); };
   const handleEditProfilePicClick = () => { profilePicInputRef.current?.click(); }
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, callback: (imageUrl: string) => Promise<void>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleImageResizeAndUpload(file, callback);
-      event.target.value = '';
-    }
-  };
   
   if (isAuthLoading || isLoading) {
     return <div className="flex justify-center items-center py-20 flex-grow"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
@@ -391,14 +372,14 @@ export default function ProfilePage() {
                   <input 
                     type="file" 
                     ref={portfolioFileInputRef} 
-                    onChange={(e) => handleFileChange(e, handleAddPortfolioFile)}
+                    onChange={onPortfolioFileSelected}
                     className="hidden"
                     accept="image/png, image/jpeg, image/webp"
                   />
                    <input
                     type="file"
                     ref={profilePicInputRef}
-                    onChange={(e) => handleFileChange(e, handleProfilePictureFileChange)}
+                    onChange={onProfilePicFileSelected}
                     className="hidden"
                     accept="image/png, image/jpeg, image/webp"
                   />
