@@ -31,7 +31,7 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
   return data;
 }
 
-export async function createProvider(providerData: Omit<Provider, 'id' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio' | 'created_at' | 'user_id' >): Promise<Provider> {
+export async function createProvider(providerData: Partial<Provider>): Promise<Provider> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('providers')
@@ -46,7 +46,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'rating
     return data;
 }
 
-export async function createCustomer(customerData: Omit<Customer, 'id' | 'created_at' | 'user_id'>): Promise<Customer> {
+export async function createCustomer(customerData: Partial<Customer>): Promise<Customer> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('customers')
@@ -118,7 +118,6 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' >):
 
 export async function updateProviderRating(providerId: string): Promise<void> {
     const supabase = createClient();
-    // This assumes you have a PostgreSQL function named `update_provider_rating` in your database.
     const { error } = await supabase.rpc('update_provider_rating', {
         provider_id_param: providerId
     });
@@ -159,13 +158,13 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
     return data || [];
 }
 
-export async function createAgreement(provider: Provider, customerPhone: string, customerName: string): Promise<Agreement> {
+export async function createAgreement(provider: Provider, user: { phone: string, name: string }): Promise<Agreement> {
     const supabase = createClient();
     const agreementData = {
         provider_id: provider.id,
         provider_phone: provider.phone,
-        customer_phone: customerPhone,
-        customer_name: customerName,
+        customer_phone: user.phone,
+        customer_name: user.name,
     };
 
     const { data, error } = await supabase
@@ -197,6 +196,104 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     if (error) {
         console.error('Error confirming agreement:', error);
         throw error;
+    }
+    return data;
+}
+
+export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string }): Promise<Provider> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('providers')
+        .update(details)
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating provider details:', error);
+        throw new Error('خطا در به‌روزرسانی اطلاعات هنرمند.');
+    }
+    return data;
+}
+
+export async function addPortfolioItem(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
+    const supabase = createClient();
+    // 1. Fetch the current portfolio
+    const { data: providerData, error: fetchError } = await supabase
+        .from('providers')
+        .select('portfolio')
+        .eq('phone', phone)
+        .single();
+    if (fetchError || !providerData) {
+        console.error("Error fetching provider's portfolio:", fetchError);
+        throw new Error("Could not fetch provider to add portfolio item.");
+    }
+
+    // 2. Add the new item to the existing array
+    const currentPortfolio = providerData.portfolio || [];
+    const updatedPortfolio = [...currentPortfolio, { src: imageUrl, ai_hint: aiHint }];
+
+    // 3. Update the provider with the new portfolio array
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('phone', phone)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error adding portfolio item:', error);
+        throw new Error('خطا در افزودن نمونه کار به پروفایل.');
+    }
+    return data;
+}
+
+export async function deletePortfolioItem(phone: string, itemIndex: number): Promise<Provider> {
+    const supabase = createClient();
+    // 1. Fetch current portfolio
+    const { data: providerData, error: fetchError } = await supabase
+        .from('providers')
+        .select('portfolio')
+        .eq('phone', phone)
+        .single();
+    if (fetchError || !providerData) {
+        console.error("Error fetching provider's portfolio for deletion:", fetchError);
+        throw new Error("Could not fetch provider to delete portfolio item.");
+    }
+
+    // 2. Filter out the item to delete
+    const currentPortfolio = providerData.portfolio || [];
+    const updatedPortfolio = currentPortfolio.filter((_, index) => index !== itemIndex);
+
+    // 3. Update the provider record
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error deleting portfolio item:', error);
+        throw new Error('خطا در حذف نمونه کار.');
+    }
+    return data;
+}
+
+export async function updateProviderProfileImage(phone: string, imageUrl: string, aiHint: string): Promise<Provider> {
+    const supabase = createClient();
+    const newProfileImage = { src: imageUrl, ai_hint: aiHint };
+
+    const { data, error } = await supabase
+        .from('providers')
+        .update({ profile_image: newProfileImage })
+        .eq('phone', phone)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating profile image:', error);
+        throw new Error('خطا در به‌روزرسانی عکس پروفایل.');
     }
     return data;
 }
