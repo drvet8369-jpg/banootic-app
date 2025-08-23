@@ -136,7 +136,7 @@ export default function ProfilePage() {
       }
       
       const user = session.user;
-      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\\-_]/g, '_');
       const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
       
       const { error: uploadError } = await supabase.storage
@@ -489,5 +489,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
