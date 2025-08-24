@@ -1,89 +1,99 @@
--- First, drop the existing function and its dependencies if it exists, to avoid errors on re-run.
-DROP FUNCTION IF EXISTS get_user_conversations(p_user_id uuid);
-
--- Then, drop the policies if they exist.
-DROP POLICY IF EXISTS "Users can view their own messages" ON public.messages;
+-- Drop existing objects to ensure a clean slate
+DROP FUNCTION IF EXISTS public.get_user_conversations(p_user_id uuid);
 DROP POLICY IF EXISTS "Users can insert their own messages" ON public.messages;
+DROP POLICY IF EXISTS "Users can view their own messages" ON public.messages;
 
--- Drop the table if it exists
-DROP TABLE IF EXISTS public.messages;
-
--- Create the messages table
-CREATE TABLE public.messages (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    content text,
-    sender_id uuid,
-    receiver_id uuid, -- Corrected typo from reciever_id to receiver_id
-    chat_id text NOT NULL
+-- Create the messages table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.messages (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    chat_id text NOT NULL,
+    sender_id uuid NOT NULL REFERENCES auth.users(id),
+    receiver_id uuid NOT NULL REFERENCES auth.users(id),
+    content text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Set up Primary Key
-ALTER TABLE ONLY public.messages
-    ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
+-- Create index for faster lookups
+CREATE INDEX IF NOT EXISTS messages_chat_id_idx ON public.messages (chat_id);
+CREATE INDEX IF NOT EXISTS messages_sender_id_idx ON public.messages (sender_id);
+CREATE INDEX IF NOT EXISTS messages_receiver_id_idx ON public.messages (receiver_id);
 
--- Set up Foreign Keys to the users table
-ALTER TABLE ONLY public.messages
-    ADD CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id) ON DELETE CASCADE;
-ALTER TABLE ONLY public.messages
-    ADD CONSTRAINT messages_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.users(id) ON DELETE SET NULL;
-
--- Enable Row Level Security
+-- Enable RLS on the messages table
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
--- Create Policies for RLS
-CREATE POLICY "Users can view their own messages" ON public.messages FOR SELECT
-    USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+-- Policy: Users can insert their own messages
+CREATE POLICY "Users can insert their own messages"
+ON public.messages FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = sender_id);
 
-CREATE POLICY "Users can insert their own messages" ON public.messages FOR INSERT
-    WITH CHECK (auth.uid() = sender_id);
+-- Policy: Users can view their own messages
+CREATE POLICY "Users can view their own messages"
+ON public.messages FOR SELECT
+TO authenticated
+USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 
--- Create a function to get all conversations for a user
-CREATE OR REPLACE FUNCTION get_user_conversations(p_user_id uuid)
-RETURNS TABLE(
+
+-- Function to get all conversations for a user
+create or replace function public.get_user_conversations(p_user_id uuid)
+returns table(
     chat_id text,
     other_user_id uuid,
     other_user_name text,
     other_user_phone text,
     last_message_content text,
-    last_message_at timestamp with time zone,
-    unread_count bigint
+    last_message_at timestamptz
 )
-AS $$
-BEGIN
-    RETURN QUERY
-    WITH ranked_messages AS (
-        SELECT 
-            m.*,
-            ROW_NUMBER() OVER(PARTITION BY m.chat_id ORDER BY m.created_at DESC) as rn
-        FROM messages m
-        WHERE m.sender_id = p_user_id OR m.receiver_id = p_user_id
+language plpgsql
+security definer
+as $$
+begin
+    return query
+    with all_users as (
+        -- Combine providers and customers into a single view
+        select id, name, phone from public.providers
+        union
+        select id, name, phone from public.customers
     ),
-    last_messages AS (
-        SELECT *
-        FROM ranked_messages
-        WHERE rn = 1
+    last_messages as (
+        -- Get the last message for each conversation involving the current user
+        select
+            m.chat_id,
+            m.content,
+            m.created_at,
+            m.sender_id,
+            m.receiver_id,
+            row_number() over (partition by m.chat_id order by m.created_at desc) as rn
+        from
+            public.messages m
+        where
+            m.sender_id = p_user_id or m.receiver_id = p_user_id
     )
-    SELECT 
+    select
         lm.chat_id,
-        CASE
-            WHEN lm.sender_id = p_user_id THEN lm.receiver_id
-            ELSE lm.sender_id
-        END AS other_user_id,
-        COALESCE(p.name, c.name, 'کاربر حذف شده') AS other_user_name,
-        COALESCE(p.phone, c.phone) AS other_user_phone,
-        lm.content AS last_message_content,
-        lm.created_at AS last_message_at,
-        (SELECT COUNT(*) FROM messages m2 WHERE m2.chat_id = lm.chat_id AND m2.receiver_id = p_user_id AND m2.is_read = false) AS unread_count
-    FROM last_messages lm
-    LEFT JOIN providers p ON p.user_id = (CASE WHEN lm.sender_id = p_user_id THEN lm.receiver_id ELSE lm.sender_id END)
-    LEFT JOIN customers c ON c.user_id = (CASE WHEN lm.sender_id = p_user_id THEN lm.receiver_id ELSE lm.sender_id END)
-    ORDER BY lm.created_at DESC;
-END;
-$$ language plpgsql security definer;
-
--- Additionally, add the is_read column to the messages table
-ALTER TABLE public.messages ADD COLUMN is_read boolean DEFAULT false;
-
--- Create an index on chat_id for faster lookups
-CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON public.messages(chat_id);
+        -- Determine the other user's ID
+        case
+            when lm.sender_id = p_user_id then lm.receiver_id
+            else lm.sender_id
+        end as other_user_id,
+        -- Get other user's name
+        u.name as other_user_name,
+        -- Get other user's phone
+        u.phone as other_user_phone,
+        lm.content as last_message_content,
+        lm.created_at as last_message_at
+    from
+        last_messages lm
+    -- Join with our combined user view to get the other user's details
+    join all_users u on u.id = (
+        case
+            when lm.sender_id = p_user_id then lm.receiver_id
+            else lm.sender_id
+        end
+    )
+    where
+        lm.rn = 1
+    order by
+        lm.created_at desc;
+end;
+$$;
