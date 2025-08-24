@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
-import { getAllProviders } from '@/lib/api';
 import type { Provider } from '@/lib/types';
 
 
@@ -51,7 +50,7 @@ export default function InboxPage() {
     const { data, error } = await supabase.rpc('get_user_conversations', { p_user_phone: user.phone });
 
     if (error) {
-      console.error("Error fetching conversations:", error);
+      console.error("Error fetching conversations:", JSON.stringify(error, null, 2));
       setIsLoading(false);
       return;
     }
