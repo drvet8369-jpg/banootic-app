@@ -1,3 +1,4 @@
+
 export interface Category {
   id: number;
   name: string;
@@ -55,6 +56,7 @@ export interface Agreement {
   id: number;
   provider_id: string;
   provider_phone: string;
+  customer_id: string;
   customer_phone: string;
   customer_name: string;
   status: 'pending' | 'confirmed';
@@ -62,4 +64,11 @@ export interface Agreement {
   confirmed_at: string | null;
 }
 
-    
+export interface Message {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+}

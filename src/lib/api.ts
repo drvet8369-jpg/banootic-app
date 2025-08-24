@@ -1,12 +1,13 @@
+
 'use server';
 
-import type { Provider, Review, Agreement, Customer, PortfolioItem } from './types';
+import type { Provider, Review, Agreement, Customer, PortfolioItem, Message } from './types';
 import { createAdminClient } from './supabase/server';
 import { normalizePhoneNumber } from './utils';
 
-// Helper to get the Supabase client.
-// This is now the ONLY place where we decide which client to use.
 const supabase = createAdminClient();
+
+// --- Provider & Customer Functions ---
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   const normalizedPhone = normalizePhoneNumber(phone);
@@ -16,7 +17,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     .eq('phone', normalizedPhone)
     .single();
   
-  if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error here.
+  if (error && error.code !== 'PGRST116') {
     console.error('Error fetching provider by phone:', error);
     throw new Error('خطا در ارتباط با پایگاه داده برای یافتن هنرمند.');
   }
@@ -40,12 +41,11 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
     return data as Customer | null;
 }
 
-
 export async function createProvider(providerData: Omit<Provider, 'id' | 'user_id' | 'created_at' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio'>): Promise<Provider> {
     const { data: newUser, error: userError } = await supabase.from('users').insert({ name: providerData.name, account_type: 'provider', phone: providerData.phone }).select().single();
     if(userError) {
       console.error("Error creating user for provider:", userError);
-      if (userError.code === '23505') { // unique constraint violation
+      if (userError.code === '23505') {
         throw new Error('کاربری با این شماره تلفن یا نام کاربری از قبل وجود دارد.');
       }
       throw new Error("خطا در ایجاد کاربر اولیه برای هنرمند.");
@@ -118,6 +118,9 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
     return data || [];
 }
 
+
+// --- Review Functions ---
+
 export async function getReviewsByProviderId(providerId: string): Promise<Review[]> {
     const { data, error } = await supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
      if (error) {
@@ -155,7 +158,9 @@ export async function updateProviderRating(providerId: string): Promise<void> {
     }
 }
 
-// Agreement Functions
+
+// --- Agreement Functions ---
+
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
     const { data, error } = await supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone));
     if (error) {
@@ -211,6 +216,9 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
     return data;
 }
 
+
+// --- Provider Profile Update Functions ---
+
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string }): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')
@@ -254,4 +262,35 @@ export async function updateProviderProfileImage(phone: string, profileImage: Po
         throw new Error('خطا در به‌روزرسانی عکس پروفایل.');
     }
     return data;
+}
+
+
+// --- Chat Functions ---
+
+export async function getMessages(chatId: string): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching messages:', error);
+    throw new Error('خطا در دریافت پیام‌ها.');
+  }
+  return data || [];
+}
+
+export async function sendMessage(messageData: Omit<Message, 'id' | 'created_at'>): Promise<Message> {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert(messageData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error sending message:', error);
+    throw new Error('خطا در ارسال پیام.');
+  }
+  return data;
 }
