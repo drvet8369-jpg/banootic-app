@@ -141,7 +141,11 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): 
 }
 
 export async function updateProviderRating(providerId: string): Promise<void> {
-    const providerReviews = await getReviewsByProviderId(providerId);
+    const { data: providerReviews, error: reviewError } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
+    if(reviewError) {
+        console.error(`Error fetching reviews for rating update on provider ${providerId}:`, reviewError);
+        return;
+    }
     
     const reviews_count = providerReviews.length;
     const rating = reviews_count > 0 

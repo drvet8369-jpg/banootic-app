@@ -67,8 +67,8 @@ export interface Agreement {
 export interface Message {
   id: string;
   chat_id: string;
-  sender_id: string;
-  receiver_id: string;
+  sender_phone: string;
+  receiver_phone: string;
   content: string;
   created_at: string;
 }

@@ -18,9 +18,8 @@ import type { Provider } from '@/lib/types';
 
 interface Conversation {
   chat_id: string;
-  other_user_id: string;
-  other_user_name: string;
   other_user_phone: string;
+  other_user_name: string;
   other_user_avatar?: string;
   last_message_content: string;
   last_message_at: string;
@@ -49,28 +48,15 @@ export default function InboxPage() {
     if (!user) return;
     setIsLoading(true);
     
-    // Fetch all providers to map phone numbers to names/avatars
-    const providers = await getAllProviders();
-    const providerMap = new Map<string, Provider>(providers.map(p => [p.phone, p]));
-
-    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
+    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_phone: user.phone });
 
     if (error) {
       console.error("Error fetching conversations:", error);
       setIsLoading(false);
       return;
     }
-    
-    const mappedConversations = data.map((convo: any) => {
-      const otherUserProvider = providerMap.get(convo.other_user_phone);
-      return {
-        ...convo,
-        other_user_name: otherUserProvider?.name || `کاربر ${convo.other_user_phone.slice(-4)}`,
-        other_user_avatar: otherUserProvider?.profile_image?.src,
-      }
-    });
 
-    setConversations(mappedConversations);
+    setConversations(data || []);
     setIsLoading(false);
   }, [user, supabase]);
 
@@ -84,17 +70,16 @@ export default function InboxPage() {
 
   // Real-time listener for new messages to update the inbox
   useEffect(() => {
+    if (!user) return;
     const channel = supabase
       .channel('inbox-listener')
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
-        table: 'messages' 
+        table: 'messages',
+        filter: `receiver_phone=eq.${user.phone}`
       }, (payload) => {
-          // Re-fetch conversations if a new message arrives that involves the current user
-          if (user && (payload.new.sender_id === user.id || payload.new.receiver_id === user.id)) {
-            fetchConversations();
-          }
+          fetchConversations();
       })
       .subscribe();
 

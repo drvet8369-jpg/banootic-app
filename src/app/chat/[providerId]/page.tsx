@@ -68,9 +68,8 @@ export default function ChatPage() {
   }, [fetchMessages, chatId]);
 
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || !user) return;
     
-    // Real-time listener for incoming messages from the other user
     const channel = supabase.channel(`chat_${chatId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
@@ -80,9 +79,7 @@ export default function ChatPage() {
        }, 
        (payload) => {
          const newMessage = payload.new as Message;
-         // Only add the message if it's not from the current user
-         // to avoid duplicates from the handleSubmit optimistic update.
-         if (newMessage.sender_id !== user?.id) {
+         if (newMessage.sender_phone !== user.phone) {
            setMessages((currentMessages) => [...currentMessages, newMessage]);
          }
       })
@@ -91,7 +88,7 @@ export default function ChatPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId, supabase, user?.id]);
+  }, [chatId, supabase, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -109,10 +106,12 @@ export default function ChatPage() {
         if (provider) {
           setOtherPersonDetails(provider);
         } else {
+          // This case handles when a provider messages a customer who isn't a provider themselves
+          // We can create a temporary object for display
           setOtherPersonDetails({
             id: otherPersonPhone,
-            user_id: '', // Not available for customers without DB table
-            name: `مشتری ${otherPersonPhone.slice(-4)}`,
+            user_id: '', 
+            name: `کاربر ${otherPersonPhone.slice(-4)}`,
             phone: otherPersonPhone
           });
         }
@@ -133,19 +132,33 @@ export default function ChatPage() {
     if (!content || isSending || !otherPersonDetails || !user || !chatId) return;
 
     setIsSending(true);
+    
+    // Optimistic UI update
+    const tempUiMessage: Message = {
+      id: Date.now().toString(), // Temporary ID
+      chat_id: chatId,
+      sender_phone: user.phone,
+      receiver_phone: otherPersonDetails.phone,
+      content,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((currentMessages) => [...currentMessages, tempUiMessage]);
     setNewMessage('');
     
     try {
-        const sentMessage = await sendMessage({
+        await sendMessage({
           chat_id: chatId,
-          sender_id: user.id,
-          receiver_id: otherPersonDetails.user_id,
+          sender_phone: user.phone,
+          receiver_phone: otherPersonDetails.phone,
           content,
         });
-        // Optimistically update the UI with the sent message
-        setMessages((currentMessages) => [...currentMessages, sentMessage]);
+        // On success, we can optionally re-fetch or rely on the real-time subscription
+        // For simplicity, we'll let the subscription handle any updates from the DB
+        // to avoid duplicates, and our optimistic update is good enough for the sender.
     } catch(error) {
         toast({ title: 'خطا در ارسال', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
+        // Revert optimistic update on failure
+        setMessages((currentMessages) => currentMessages.filter(m => m.id !== tempUiMessage.id));
         setNewMessage(content); // Put message back in input box on error
     } finally {
         setIsSending(false);
@@ -196,7 +209,7 @@ export default function ChatPage() {
             </div>
           ) : (
             messages.map((message) => {
-              const senderIsUser = message.sender_id === user.id;
+              const senderIsUser = message.sender_phone === user.phone;
               return (
                 <div key={message.id} className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}>
                   {!senderIsUser && (
