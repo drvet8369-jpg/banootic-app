@@ -25,9 +25,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
-import { createProvider, createCustomer } from '@/lib/api';
-import { createClient } from '@/lib/supabase/client';
-import { normalizePhoneNumber } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import type { AppUser } from '@/context/AuthContext';
+import { createProvider, createCustomer, getProviderByPhone, getCustomerByPhone } from '@/lib/api';
+
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -39,7 +40,6 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  password: z.string().min(6, { message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.' }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
@@ -65,15 +65,14 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       phone: '',
-      password: '',
       accountType: 'customer',
       bio: '',
     },
@@ -83,73 +82,81 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    const normalizedPhone = normalizePhoneNumber(values.phone);
-    const email = `${normalizedPhone}@banotik.app`; // Create a dummy email
-
-    const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password: values.password,
-        options: {
-            data: {
-                name: values.name,
-                phone: normalizedPhone,
-                account_type: values.accountType
-            }
-        }
-    });
-
-    if (signUpError) {
-        toast({ title: 'خطا در ثبت‌نام', description: signUpError.message, variant: 'destructive' });
-        setIsLoading(false);
-        return;
-    }
-    
-    if (!user) {
-        toast({ title: 'خطا', description: 'کاربری ایجاد نشد، لطفاً دوباره تلاش کنید.', variant: 'destructive' });
-        setIsLoading(false);
-        return;
-    }
-
     try {
+        const existingProvider = await getProviderByPhone(values.phone);
+        if (existingProvider) {
+          toast({
+            title: 'خطا',
+            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const existingCustomer = await getCustomerByPhone(values.phone);
+         if (existingCustomer) {
+            toast({
+                title: 'خطا',
+                description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است. لطفاً وارد شوید.',
+                variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+        }
+      
+        let userToLogin: AppUser | null = null;
+
         if (values.accountType === 'provider') {
             const selectedCategory = categories.find(c => c.slug === values.serviceType);
             const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
             
-            await createProvider({
-              user_id: user.id,
+            const newProvider = await createProvider({
               name: values.name,
-              phone: normalizedPhone,
+              phone: values.phone,
               service: selectedCategory?.name || 'خدمت جدید',
               location: 'ارومیه',
               bio: values.bio || '',
               category_slug: selectedCategory?.slug || 'beauty',
               service_slug: firstServiceInCat?.slug || 'manicure-pedicure',
             });
-        } else {
-             await createCustomer({
-                user_id: user.id,
+
+            userToLogin = {
+                id: newProvider.user_id, // Assuming createProvider returns the full provider object
+                name: newProvider.name,
+                phone: newProvider.phone,
+                accountType: 'provider'
+            };
+
+        } else { // Customer
+             const newCustomer = await createCustomer({
                 name: values.name,
-                phone: normalizedPhone,
+                phone: values.phone,
              });
+             userToLogin = {
+                id: newCustomer.user_id,
+                name: newCustomer.name,
+                phone: newCustomer.phone,
+                accountType: 'customer'
+             }
         }
+      
+        login(userToLogin);
       
         toast({
             title: 'ثبت‌نام با موفقیت انجام شد!',
             description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
         });
-        
-        // After successful profile creation, we can redirect.
-        // The AuthContext will pick up the new session automatically.
+      
         const destination = values.accountType === 'provider' ? '/profile' : '/';
         router.push(destination);
-        router.refresh();
 
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'مشکلی در ایجاد پروفایل شما پیش آمد.';
-        console.error("Profile creation failed:", error);
-        toast({
-            title: 'خطا در ساخت پروفایل',
-            description: errorMessage,
+         const err = error as Error;
+         console.error("Registration failed:", err);
+         toast({
+            title: 'خطا در ثبت‌نام',
+            description: err.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -203,9 +210,9 @@ export default function RegisterForm() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>نام کامل</FormLabel>
+                  <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "نام کسب و کار یا نام خودتان" : "نام و نام خانوادگی"} {...field} disabled={isLoading} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -224,20 +231,6 @@ export default function RegisterForm() {
                   <FormMessage />
                 </FormItem>
               )}
-            />
-
-             <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>رمز عبور</FormLabel>
-                    <FormControl>
-                    <Input type="password" placeholder="حداقل ۶ کاراکتر" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
             />
 
             {accountType === 'provider' && (
@@ -292,7 +285,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام و ایجاد حساب
+              ثبت‌نام
             </Button>
             
             <div className="mt-4 text-center text-sm">

@@ -2,252 +2,234 @@
 import type { Provider, Review, Agreement, Customer, PortfolioItem } from './types';
 import { createClient } from './supabase/client';
 
-export async function getProviderByPhone(phone: string): Promise<Provider | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('providers')
-    .select('*')
-    .eq('phone', phone)
-    .single();
+// This is a placeholder for a real user creation logic.
+// In a real app, this would involve Supabase Auth.
+const FAKE_USER_ID_COUNTER = 'fake_user_id_counter';
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error here.
-    console.error('Error fetching provider by phone:', error);
-    throw error;
-  }
-  return data;
+function getNextUserId() {
+    if (typeof window === 'undefined') return Math.random().toString(36).substring(2);
+    let counter = parseInt(localStorage.getItem(FAKE_USER_ID_COUNTER) || '100');
+    counter++;
+    localStorage.setItem(FAKE_USER_ID_COUNTER, counter.toString());
+    return `user_${counter}`;
+}
+
+
+export async function getProviderByPhone(phone: string): Promise<Provider | null> {
+  const providers = getProviders();
+  return providers.find(p => p.phone === phone) || null;
 }
 
 export async function getCustomerByPhone(phone: string): Promise<Customer | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('customers')
-    .select('*')
-    .eq('phone', phone)
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching customer by phone:', error);
-    throw error;
-  }
-  return data;
+    // In this local storage version, a customer is just a user who isn't a provider.
+    // We'll simulate this by checking if they are NOT in the providers list.
+    // A real implementation would query a 'customers' table.
+    const providers = getProviders();
+    if (providers.some(p => p.phone === phone)) {
+        return null; // They are a provider, not just a customer.
+    }
+    // For now, we don't have a separate customer list, so if they exist, they exist via AuthContext.
+    // This function becomes a check: "Is this phone number registered as a provider?"
+    // A more robust implementation is needed for a real customer table.
+    return null; 
 }
 
+
 export async function createProvider(providerData: Partial<Provider>): Promise<Provider> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('providers')
-        .insert(providerData)
-        .select()
-        .single();
+    const allProviders = getProviders();
+    const newId = allProviders.length > 0 ? Math.max(...allProviders.map(p => typeof p.id === 'number' ? p.id : 0)) + 1 : 1;
     
-    if (error) {
-        console.error("Error creating provider:", error);
-        throw error;
-    }
-    return data;
+    const newProvider: Provider = {
+        id: newId,
+        user_id: getNextUserId(),
+        name: providerData.name || '',
+        phone: providerData.phone || '',
+        service: providerData.service || '',
+        location: providerData.location || 'ارومیه',
+        bio: providerData.bio || '',
+        category_slug: providerData.category_slug || 'beauty',
+        service_slug: providerData.service_slug || 'manicure-pedicure',
+        rating: 0,
+        reviews_count: 0,
+        profile_image: { src: '', ai_hint: 'woman portrait' },
+        portfolio: [],
+        created_at: new Date().toISOString(),
+    };
+
+    saveProviders([...allProviders, newProvider]);
+    return newProvider;
 }
 
 export async function createCustomer(customerData: Partial<Customer>): Promise<Customer> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('customers')
-        .insert(customerData)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error("Error creating customer:", error);
-        throw error;
-    }
-    return data;
+    // In our simplified local storage model, creating a "customer" doesn't
+    // require saving them to a separate list. Their existence is managed
+    // by the AuthContext. This function mainly provides a consistent API
+    // and returns the expected user object.
+     const newCustomer: Customer = {
+        id: getNextUserId(),
+        user_id: getNextUserId(),
+        created_at: new Date().toISOString(),
+        name: customerData.name || '',
+        phone: customerData.phone || ''
+    };
+    return newCustomer;
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase.from('providers').select('*');
-    if (error) {
-        console.error('Error fetching all providers:', error);
-        throw error;
-    }
-    return data || [];
+    return getProviders();
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase.from('providers').select('*').eq('service_slug', serviceSlug);
-    if (error) {
-        console.error('Error fetching providers by service slug:', error);
-        throw error;
-    }
-    return data || [];
+    const allProviders = getProviders();
+    return allProviders.filter(p => p.service_slug === serviceSlug);
 }
 
-export async function getReviewsByProviderId(providerId: string): Promise<Review[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('provider_id', providerId)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching reviews:', error);
-        throw error;
-    }
-    return data || [];
+export async function getReviewsByProviderId(providerId: number | string): Promise<Review[]> {
+    const allReviews = getReviews();
+    // Ensure consistent type comparison
+    return allReviews.filter(r => r.provider_id.toString() === providerId.toString());
 }
 
-export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'user_id'>): Promise<Review> {
-    const supabase = createClient();
-    const {data: {user}} = await supabase.auth.getUser();
-
-    if(!user) throw new Error("User not authenticated to add a review");
-    
-    const { data, error } = await supabase
-        .from('reviews')
-        .insert({...reviewData, user_id: user.id})
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error adding review:', error);
-        if (error.code === '23505') { // Unique constraint violation
-             throw new Error("You have already submitted a review for this provider.");
-        }
-        throw error;
-    }
+export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'user_id' | 'author_name'> & { author_name: string }): Promise<Review> {
+    const allReviews = getReviews();
+    const newReview: Review = {
+        ...reviewData,
+        id: Date.now().toString(),
+        user_id: getNextUserId(), // Simulate a user ID
+        created_at: new Date().toISOString(),
+    };
+    const updatedReviews = [...allReviews, newReview];
+    saveReviews(updatedReviews);
     await updateProviderRating(reviewData.provider_id);
-    return data;
+    return newReview;
 }
 
-export async function updateProviderRating(providerId: string): Promise<void> {
-    const supabase = createClient();
-    const { error } = await supabase.rpc('update_provider_rating', {
-        p_id: providerId
-    });
+export async function updateProviderRating(providerId: number | string): Promise<void> {
+    const providerReviews = await getReviewsByProviderId(providerId);
+    if (providerReviews.length === 0) return;
 
-    if (error) {
-        console.error('Error updating provider rating via RPC:', error);
-        throw error;
+    const totalRating = providerReviews.reduce((acc, r) => acc + r.rating, 0);
+    const newAverageRating = parseFloat((totalRating / providerReviews.length).toFixed(1));
+    
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.id.toString() === providerId.toString());
+
+    if (providerIndex > -1) {
+        allProviders[providerIndex].rating = newAverageRating;
+        allProviders[providerIndex].reviews_count = providerReviews.length;
+        saveProviders(allProviders);
     }
 }
 
+// Dummy storage implementation
+const PROVIDERS_STORAGE_KEY = 'banotik-providers';
+const REVIEWS_STORAGE_KEY = 'banotik-reviews';
+const AGREEMENTS_STORAGE_KEY = 'banotik-agreements';
+
+const getFromStorage = <T>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (e) {
+        console.error(`Error reading from localStorage key “${key}”:`, e);
+        return defaultValue;
+    }
+};
+
+const saveToStorage = <T>(key: string, value: T): void => {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+        console.error(`Error writing to localStorage key “${key}”:`, e);
+    }
+};
+
+const getProviders = (): Provider[] => getFromStorage<Provider[]>(PROVIDERS_STORAGE_KEY, []);
+const saveProviders = (providers: Provider[]) => saveToStorage<Provider[]>(PROVIDERS_STORAGE_KEY, providers);
+const getReviews = (): Review[] => getFromStorage<Review[]>(REVIEWS_STORAGE_KEY, []);
+const saveReviews = (reviews: Review[]) => saveToStorage<Review[]>(REVIEWS_STORAGE_KEY, reviews);
+const getAgreements = (): Agreement[] => getFromStorage<Agreement[]>(AGREEMENTS_STORAGE_KEY, []);
+const saveAgreements = (agreements: Agreement[]) => saveToStorage<Agreement[]>(AGREEMENTS_STORAGE_KEY, agreements);
+
+
+// Agreement Functions
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('agreements')
-        .select('*')
-        .eq('provider_phone', providerPhone)
-        .order('requested_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching agreements by provider:', error);
-        throw error;
-    }
-    return data || [];
+    return getAgreements().filter(a => a.provider_phone === providerPhone);
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('agreements')
-        .select('*')
-        .eq('customer_phone', customerPhone)
-        .order('requested_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching agreements by customer:', error);
-        throw error;
-    }
-    return data || [];
+    return getAgreements().filter(a => a.customer_phone === customerPhone);
 }
 
 export async function createAgreement(provider: Provider, user: { phone: string, name: string }): Promise<Agreement> {
-    const supabase = createClient();
-    const agreementData = {
+    const allAgreements = getAgreements();
+    
+    const existing = allAgreements.find(a => a.provider_phone === provider.phone && a.customer_phone === user.phone);
+    if(existing) {
+        throw new Error('شما قبلاً یک درخواست برای این هنرمند ثبت کرده‌اید.');
+    }
+
+    const newAgreement: Agreement = {
+        id: allAgreements.length > 0 ? Math.max(...allAgreements.map(a => a.id)) + 1 : 1,
         provider_id: provider.id,
         provider_phone: provider.phone,
         customer_phone: user.phone,
         customer_name: user.name,
+        status: 'pending',
+        requested_at: new Date().toISOString(),
+        confirmed_at: null,
     };
-
-    const { data, error } = await supabase
-        .from('agreements')
-        .insert(agreementData)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating agreement:', error);
-        if (error.code === '23505') {
-            throw new Error('شما قبلاً یک درخواست برای این هنرمند ثبت کرده‌اید.');
-        }
-        throw error;
-    }
-
-    return data;
+    saveAgreements([...allAgreements, newAgreement]);
+    return newAgreement;
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('agreements')
-        .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
-        .eq('id', agreementId)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error('Error confirming agreement:', error);
-        throw error;
+    const allAgreements = getAgreements();
+    const agreementIndex = allAgreements.findIndex(a => a.id === agreementId);
+
+    if (agreementIndex === -1) {
+        throw new Error("Agreement not found");
     }
-    return data;
+    
+    const updatedAgreement = {
+        ...allAgreements[agreementIndex],
+        status: 'confirmed' as const,
+        confirmed_at: new Date().toISOString(),
+    };
+
+    allAgreements[agreementIndex] = updatedAgreement;
+    saveAgreements(allAgreements);
+    return updatedAgreement;
 }
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string }): Promise<Provider> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('providers')
-        .update(details)
-        .eq('phone', phone)
-        .select()
-        .single();
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.phone === phone);
+    if (providerIndex === -1) throw new Error("Provider not found");
 
-    if (error) {
-        console.error('Error updating provider details:', error);
-        throw new Error('خطا در به‌روزرسانی اطلاعات هنرمند.');
-    }
-    return data;
+    allProviders[providerIndex] = { ...allProviders[providerIndex], ...details };
+    saveProviders(allProviders);
+    return allProviders[providerIndex];
 }
 
 export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ portfolio: portfolio })
-        .eq('phone', phone)
-        .select()
-        .single();
+    const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.phone === phone);
+    if (providerIndex === -1) throw new Error("Provider not found");
     
-    if (error) {
-        console.error('Error updating portfolio:', error);
-        throw new Error('خطا در به‌روزرسانی نمونه کارها.');
-    }
-    return data;
+    allProviders[providerIndex].portfolio = portfolio;
+    saveProviders(allProviders);
+    return allProviders[providerIndex];
 }
 
 export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('providers')
-        .update({ profile_image: profileImage })
-        .eq('phone', phone)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error updating profile image:', error);
-        throw new Error('خطا در به‌روزرسانی عکس پروفایل.');
-    }
-    return data;
+     const allProviders = getProviders();
+    const providerIndex = allProviders.findIndex(p => p.phone === phone);
+    if (providerIndex === -1) throw new Error("Provider not found");
+    
+    allProviders[providerIndex].profile_image = profileImage;
+    saveProviders(allProviders);
+    return allProviders[providerIndex];
 }

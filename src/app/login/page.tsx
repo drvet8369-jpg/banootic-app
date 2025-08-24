@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
-import type { User } from '@/context/AuthContext';
+import type { AppUser } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -53,9 +53,8 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        let userToLogin: User | null = null;
+        let userToLogin: AppUser | null = null;
 
-        // 1. Check if the user is a provider
         const existingProvider = await getProviderByPhone(values.phone);
         if (existingProvider) {
           userToLogin = {
@@ -65,7 +64,6 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          // 2. If not a provider, check if they are a customer
           const existingCustomer = await getCustomerByPhone(values.phone);
           if (existingCustomer) {
             userToLogin = {
@@ -83,7 +81,6 @@ export default function LoginPage() {
               title: 'ورود با موفقیت انجام شد!',
               description: `خوش آمدید ${userToLogin.name}!`,
             });
-            // Always redirect to home page after login for all users.
             router.push('/');
         } else {
              toast({

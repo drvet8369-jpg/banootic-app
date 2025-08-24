@@ -2,11 +2,11 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import type { User as AuthUser } from '@supabase/supabase-js';
+import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
+import type { Provider } from '@/lib/types';
 
 export interface AppUser {
-  id: string; // This is the UUID from auth.users
+  id: string; // This is the user_id from the DB
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
@@ -17,7 +17,7 @@ interface AuthContextType {
   user: AppUser | null;
   isLoading: boolean;
   login: (userData: AppUser) => void;
-  logout: () => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,59 +26,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setIsLoading(true);
-      if (session && session.user) {
-        const appUser: AppUser = {
-          id: session.user.id,
-          name: session.user.user_metadata.name,
-          phone: session.user.user_metadata.phone,
-          accountType: session.user.user_metadata.account_type,
-        };
-        setUser(appUser);
-      } else {
-        setUser(null);
+    try {
+      const storedUser = localStorage.getItem('banotik-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-      setIsLoading(false);
-    });
-
-    // Check initial state
-     const checkInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && session.user) {
-             const appUser: AppUser = {
-                id: session.user.id,
-                name: session.user.user_metadata.name,
-                phone: session.user.user_metadata.phone,
-                accountType: session.user.user_metadata.account_type,
-             };
-             setUser(appUser);
-        }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      localStorage.removeItem('banotik-user');
+    } finally {
         setIsLoading(false);
-     };
-
-     checkInitialSession();
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    }
   }, []);
 
 
   const login = (userData: AppUser) => {
-    // This function is now mostly a placeholder as onAuthStateChange handles the state.
-    // It could be used for manually setting state if needed, but we'll rely on the listener.
-    setUser(userData);
+    try {
+      localStorage.setItem('banotik-user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+       console.error("Failed to save user to localStorage", error);
+    }
   };
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push('/');
-    router.refresh(); // Force a refresh to clear all state
+  const logout = () => {
+    try {
+      localStorage.removeItem('banotik-user');
+      setUser(null);
+      router.push('/');
+      // Full page reload to ensure all state is cleared
+      window.location.href = '/'; 
+    } catch (error) {
+       console.error("Failed to remove user from localStorage", error);
+    }
   };
 
   return (
