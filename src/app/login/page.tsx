@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,7 +64,7 @@ export default function LoginPage() {
             .eq('phone', normalizedPhone)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an actual db error
+        if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
             throw error;
         }
         

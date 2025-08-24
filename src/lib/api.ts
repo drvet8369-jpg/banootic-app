@@ -41,20 +41,25 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
     return data as Customer | null;
 }
 
-export async function createProvider(providerData: Omit<Provider, 'id' | 'user_id' | 'created_at' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio'>): Promise<Provider> {
-    const { data: newUser, error: userError } = await supabase.from('users').insert({ name: providerData.name, account_type: 'provider', phone: providerData.phone }).select().single();
+export async function createProvider(providerData: Omit<Provider, 'id' | 'user_id' | 'created_at' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio'> & { name: string, phone: string, account_type: 'provider' }): Promise<Provider> {
+    const { data: newUser, error: userError } = await supabase.from('users').insert({ name: providerData.name, account_type: 'provider', phone: normalizePhoneNumber(providerData.phone) }).select().single();
     if(userError) {
       console.error("Error creating user for provider:", userError);
-      if (userError.code === '23505') {
-        throw new Error('کاربری با این شماره تلفن یا نام کاربری از قبل وجود دارد.');
+      if (userError.code === '23505') { // unique_violation on users table
+        throw new Error('کاربری با این شماره تلفن از قبل وجود دارد.');
       }
       throw new Error("خطا در ایجاد کاربر اولیه برای هنرمند.");
     }
 
     const providerInput = {
-      ...providerData,
       user_id: newUser.id,
-      phone: normalizePhoneNumber(providerData.phone)
+      name: providerData.name,
+      phone: normalizePhoneNumber(providerData.phone),
+      service: providerData.service,
+      location: providerData.location,
+      bio: providerData.bio,
+      category_slug: providerData.category_slug,
+      service_slug: providerData.service_slug,
     };
 
     const { data: newProvider, error: providerError } = await supabase
@@ -65,18 +70,24 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'user_i
     
     if (providerError) {
         console.error("Error creating provider profile:", providerError);
+        // Attempt to clean up the user we just created if provider profile fails
+        await supabase.from('users').delete().eq('id', newUser.id);
+        if (providerError.code === '23505') { // unique_violation on providers table
+            throw new Error('یک هنرمند با این شماره تلفن یا نام کاربری از قبل وجود دارد.');
+        }
         throw new Error('خطا در ساخت پروفایل هنرمند.');
     }
 
     return newProvider;
 }
 
-export async function createCustomer(customerData: Omit<Customer, 'id' | 'user_id' | 'created_at'>): Promise<Customer> {
-     const { data: newUser, error: userError } = await supabase.from('users').insert({ name: customerData.name, account_type: 'customer', phone: customerData.phone }).select().single();
+export async function createCustomer(customerData: {name: string, phone: string}): Promise<Customer> {
+     const normalizedPhone = normalizePhoneNumber(customerData.phone);
+     const { data: newUser, error: userError } = await supabase.from('users').insert({ name: customerData.name, account_type: 'customer', phone: normalizedPhone }).select().single();
      if(userError) {
         console.error("Error creating user for customer:", userError);
         if (userError.code === '23505') {
-            throw new Error('کاربری با این شماره تلفن یا نام کاربری از قبل وجود دارد.');
+            throw new Error('کاربری با این شماره تلفن از قبل وجود دارد.');
         }
         throw new Error("خطا در ایجاد کاربر اولیه برای مشتری.");
     }
@@ -84,7 +95,7 @@ export async function createCustomer(customerData: Omit<Customer, 'id' | 'user_i
     const customerInput = {
       user_id: newUser.id,
       name: customerData.name,
-      phone: normalizePhoneNumber(customerData.phone),
+      phone: normalizedPhone,
     };
 
     const { data: newCustomer, error: customerError } = await supabase
@@ -95,6 +106,8 @@ export async function createCustomer(customerData: Omit<Customer, 'id' | 'user_i
 
     if(customerError) {
        console.error("Error creating customer profile:", customerError);
+       // Attempt to clean up the user we just created
+       await supabase.from('users').delete().eq('id', newUser.id);
        throw new Error("خطا در ساخت پروفایل مشتری.");
     }
     return newCustomer;
