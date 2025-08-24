@@ -1,3 +1,4 @@
+
 'use client';
 
 import { getProviderByPhone } from '@/lib/api';
@@ -19,7 +20,7 @@ interface Message {
   id: string;
   text: string;
   senderId: string;
-  createdAt: string; // Using ISO string for localStorage
+  createdAt: string; 
   isEdited?: boolean;
 }
 
@@ -48,11 +49,6 @@ export default function ChatPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
-  const getChatId = useCallback((phone1?: string, phone2?: string) => {
-    if (!phone1 || !phone2) return null;
-    return [phone1, phone2].sort().join('_');
-  }, []);
-  
   const getInitials = (name: string) => {
     if (!name) return '?';
     const names = name.split(' ');
@@ -96,30 +92,15 @@ export default function ChatPage() {
         }
         setOtherPersonDetails(details);
         
-        const chatId = getChatId(user.phone, details.phone);
-        if (chatId) {
-          try {
-              const storedMessages = localStorage.getItem(`chat_${chatId}`);
-              if (storedMessages) {
-                  setMessages(JSON.parse(storedMessages));
-              }
-
-              const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-              if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-                  allChats[chatId].participants[user.phone].unreadCount = 0;
-                  localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-              }
-          } catch(e) {
-              console.error("Failed to load/update chat from localStorage", e);
-          }
-        }
+        // Removed localStorage logic. The chat will start empty.
+        setMessages([]);
         
         setIsLoading(false);
     }
     
     setupChat();
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast]);
 
 
   if (!isLoggedIn || !user) {
@@ -157,9 +138,6 @@ export default function ChatPage() {
   const handleSaveEdit = () => {
     if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
 
-    const chatId = getChatId(user.phone, otherPersonDetails.phone);
-    if (!chatId) return;
-
     const updatedMessages = messages.map(msg => {
       if (msg.id === editingMessageId) {
         return { ...msg, text: editingText.trim(), isEdited: true };
@@ -168,19 +146,11 @@ export default function ChatPage() {
     });
 
     setMessages(updatedMessages);
-    localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
-
-    const lastMessage = updatedMessages[updatedMessages.length - 1];
-    if (lastMessage.id === editingMessageId) {
-        const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-        if (allChats[chatId]) {
-            allChats[chatId].lastMessage = editingText.trim();
-            localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-        }
-    }
-
+    
+    // Removed localStorage logic
+    
     handleCancelEdit();
-    toast({ title: 'پیام ویرایش شد.' });
+    toast({ title: 'پیام (به صورت نمایشی) ویرایش شد.' });
   };
 
 
@@ -191,6 +161,7 @@ export default function ChatPage() {
     
     setIsSending(true);
     
+    // This is just a temporary UI update. No data is saved.
     const tempUiMessage: Message = {
       id: Date.now().toString(),
       text: text,
@@ -202,55 +173,16 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setNewMessage('');
 
-    const chatId = getChatId(user.phone, otherPersonDetails.phone);
-    if (chatId) {
-        try {
-            const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-            const currentChat = allChats[chatId] || {
-                id: chatId,
-                members: [user.phone, otherPersonDetails.phone],
-                participants: {
-                    [user.phone]: { name: user.name, unreadCount: 0 },
-                    [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
-                }
-            };
-            
-            currentChat.lastMessage = text;
-            currentChat.updatedAt = new Date().toISOString();
-
-            const receiverPhone = otherPersonDetails.phone;
-            if (currentChat.participants[receiverPhone]) {
-                currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
-            } else {
-                 currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
-            }
-
-            if (!currentChat.participants[user.phone]) {
-                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
-            }
-
-            allChats[chatId] = currentChat;
-            
-            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
-            localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-        } catch(e) {
-            console.error("Failed to save to localStorage", e);
-            toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
-        }
-    }
+    // Removed localStorage logic
    
     setTimeout(() => {
         setIsSending(false);
+        toast({title: "پیام ارسال نشد", description: "سیستم چت به پایگاه داده متصل نیست.", variant: "destructive"})
     }, 500);
   };
 
   const getHeaderLink = () => {
     if (user.accountType === 'provider') return '/inbox';
-    try {
-      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
-      if (userChats.length > 0) return '/inbox';
-    } catch (e) { /* ignore */ }
     return '/'; 
   }
 
@@ -272,14 +204,14 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم (موقتی)'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
             {messages.length === 0 && !isLoading && (
               <div className="text-center text-muted-foreground p-8">
-                <p>پیام‌ها به صورت موقت در مرورگر شما ذخیره می‌شوند.</p>
-                <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
+                <p>این یک گفتگوی جدید است. اولین پیام را ارسال کنید.</p>
+                <p className="text-xs mt-2">(پیام‌ها هنوز در پایگاه داده ذخیره نمی‌شوند)</p>
               </div>
             )}
             {messages.map((message) => {
