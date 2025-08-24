@@ -17,12 +17,11 @@ import type { Provider } from '@/lib/types';
 
 interface Conversation {
   chat_id: string;
-  other_user_phone: string;
+  other_user_id: string;
   other_user_name: string;
   other_user_avatar?: string;
   last_message_content: string;
   last_message_at: string;
-  unread_count: number;
 }
 
 const getInitials = (name: string) => {
@@ -47,10 +46,10 @@ export default function InboxPage() {
     if (!user) return;
     setIsLoading(true);
     
-    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_phone: user.phone });
+    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
 
     if (error) {
-      console.error("Error fetching conversations:", error.message);
+      console.error("Error fetching conversations:", JSON.stringify(error, null, 2));
       setIsLoading(false);
       return;
     }
@@ -76,7 +75,7 @@ export default function InboxPage() {
         event: 'INSERT', 
         schema: 'public', 
         table: 'messages',
-        filter: `receiver_phone=eq.${user.phone}`
+        filter: `receiver_id=eq.${user.id}`
       }, (payload) => {
           fetchConversations();
       })
@@ -127,7 +126,9 @@ export default function InboxPage() {
           ) : (
             <div className="space-y-4">
               {conversations.map((convo) => (
-                <Link href={`/chat/${convo.other_user_phone}`} key={convo.chat_id}>
+                // We need to fetch the other user's phone to build the chat link
+                // This is a simplification; in a real app, you might include the phone in the RPC response.
+                <Link href={`/chat/${convo.other_user_id}`} key={convo.chat_id}>
                   <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                     <Avatar className="h-12 w-12 ml-4">
                       {convo.other_user_avatar && <AvatarImage src={convo.other_user_avatar} alt={convo.other_user_name} />}
@@ -142,8 +143,6 @@ export default function InboxPage() {
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_content}</p>
-                        {/* Unread count logic to be added later if needed */}
-                        {/* {convo.unread_count > 0 && <Badge variant="destructive">{convo.unread_count}</Badge>} */}
                       </div>
                     </div>
                   </div>

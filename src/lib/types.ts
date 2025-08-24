@@ -55,8 +55,8 @@ export interface Review {
 export interface Agreement {
   id: number;
   provider_id: string;
-  provider_phone: string;
   customer_id: string;
+  provider_phone: string;
   customer_phone: string;
   customer_name: string;
   status: 'pending' | 'confirmed';
@@ -67,8 +67,8 @@ export interface Agreement {
 export interface Message {
   id: string;
   chat_id: string;
-  sender_phone: string;
-  receiver_phone: string;
+  sender_id: string;
+  receiver_id: string;
   content: string;
   created_at: string;
 }

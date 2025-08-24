@@ -16,7 +16,7 @@ import type { Message, Provider } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 
 interface OtherPersonDetails {
-    id: string | number;
+    id: string;
     user_id: string;
     name: string;
     phone: string;
@@ -37,9 +37,9 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const getChatId = useCallback((userPhone?: string, otherPhone?: string) => {
-    if (!userPhone || !otherPhone) return null;
-    return [userPhone, otherPhone].sort().join('_');
+  const getChatId = useCallback((userId?: string, otherId?: string) => {
+    if (!userId || !otherId) return null;
+    return [userId, otherId].sort().join('_');
   }, []);
 
   const getInitials = (name: string) => {
@@ -49,7 +49,7 @@ export default function ChatPage() {
     return name.substring(0, 2);
   };
 
-  const chatId = getChatId(user?.phone, otherPersonPhone);
+  const chatId = getChatId(user?.id, otherPersonDetails?.user_id);
 
   const fetchMessages = useCallback(async () => {
     if (!chatId) return;
@@ -79,7 +79,8 @@ export default function ChatPage() {
        }, 
        (payload) => {
          const newMessage = payload.new as Message;
-         if (newMessage.sender_phone !== user.phone) {
+         // Only add the message if it's not from the current user, to avoid duplicates from optimistic update.
+         if (newMessage.sender_id !== user.id) {
            setMessages((currentMessages) => [...currentMessages, newMessage]);
          }
       })
@@ -102,18 +103,13 @@ export default function ChatPage() {
       }
       
       try {
+        // We always fetch provider details as they are the primary recipients.
         const provider = await getProviderByPhone(otherPersonPhone);
         if (provider) {
           setOtherPersonDetails(provider);
         } else {
-          // This case handles when a provider messages a customer who isn't a provider themselves
-          // We can create a temporary object for display
-          setOtherPersonDetails({
-            id: otherPersonPhone,
-            user_id: '', 
-            name: `کاربر ${otherPersonPhone.slice(-4)}`,
-            phone: otherPersonPhone
-          });
+            // This case is unlikely if entry is from profile, but good for robustness.
+            toast({ title: "خطا", description: "هنرمند مورد نظر یافت نشد.", variant: "destructive"});
         }
       } catch (error) {
         toast({ title: "خطا", description: "امکان بارگذاری اطلاعات کاربر وجود ندارد.", variant: "destructive"});
@@ -135,8 +131,8 @@ export default function ChatPage() {
     
     const messagePayload = {
       chat_id: chatId,
-      sender_phone: user.phone,
-      receiver_phone: otherPersonDetails.phone,
+      sender_id: user.id,
+      receiver_id: otherPersonDetails.user_id,
       content,
     };
 
@@ -151,6 +147,7 @@ export default function ChatPage() {
     
     try {
         await sendMessage(messagePayload);
+        // We don't need to refetch, the real-time subscription will handle updates from the other user.
     } catch(error) {
         toast({ title: 'خطا در ارسال', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
         // Revert optimistic update on failure
@@ -205,7 +202,7 @@ export default function ChatPage() {
             </div>
           ) : (
             messages.map((message) => {
-              const senderIsUser = message.sender_phone === user.phone;
+              const senderIsUser = message.sender_id === user.id;
               return (
                 <div key={message.id} className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}>
                   {!senderIsUser && (
@@ -228,8 +225,8 @@ export default function ChatPage() {
         </CardContent>
         <div className="p-4 border-t bg-background shrink-0">
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
-            <Input type="text" placeholder="پیام خود را بنویسید..." className="flex-1" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} disabled={isSending || isLoading} />
-            <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading}>
+            <Input type="text" placeholder="پیام خود را بنویسید..." className="flex-1" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} disabled={isSending || isLoading || !otherPersonDetails} />
+            <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !otherPersonDetails}>
               {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
             </Button>
           </form>
