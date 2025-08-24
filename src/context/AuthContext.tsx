@@ -2,12 +2,13 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export interface AppUser {
   id: string; // This is the user_id from the DB (UUID)
   name: string;
   phone: string; 
-  accountType: 'customer' | 'provider';
+  account_type: 'customer' | 'provider';
 }
 
 interface AuthContextType {
@@ -19,20 +20,23 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const LOCAL_STORAGE_KEY = 'banotik-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('banotik-user'); // CORRECTED KEY
+      const storedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('banotik-user'); // Clean up corrupted data with the correct key
+      // Clean up corrupted data
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     } finally {
         setIsLoading(false);
     }
@@ -41,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: AppUser) => {
     try {
-      localStorage.setItem('banotik-user', JSON.stringify(userData));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
        console.error("Failed to save user to localStorage", error);
@@ -50,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      localStorage.removeItem('banotik-user');
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
       setUser(null);
       // Using window.location.href forces a full page reload, clearing all states
       // and ensuring a clean logout experience across the app.

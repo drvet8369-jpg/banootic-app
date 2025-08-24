@@ -29,6 +29,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { AppUser } from '@/context/AuthContext';
 import { createCustomer, createProvider } from '@/lib/api';
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -85,6 +86,7 @@ export default function RegisterForm() {
     setIsLoading(true);
     try {
         let userToLogin: AppUser | null = null;
+        const normalizedPhone = normalizePhoneNumber(values.phone);
 
         if (values.accountType === 'provider') {
             const selectedCategory = categories.find(c => c.slug === values.serviceType);
@@ -92,7 +94,7 @@ export default function RegisterForm() {
             
             const newProvider = await createProvider({
               name: values.name,
-              phone: values.phone,
+              phone: normalizedPhone,
               account_type: 'provider',
               service: selectedCategory?.name || 'خدمت جدید',
               location: 'ارومیه',
@@ -105,20 +107,20 @@ export default function RegisterForm() {
                 id: newProvider.user_id,
                 name: newProvider.name,
                 phone: newProvider.phone,
-                accountType: 'provider'
+                account_type: 'provider'
             };
 
         } else {
              const newCustomer = await createCustomer({
                  name: values.name,
-                 phone: values.phone,
+                 phone: normalizedPhone,
              });
 
              userToLogin = {
                 id: newCustomer.user_id,
                 name: newCustomer.name,
                 phone: newCustomer.phone,
-                accountType: 'customer'
+                account_type: 'customer'
              }
         }
       
