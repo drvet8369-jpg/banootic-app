@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 import type { AppUser } from '@/context/AuthContext';
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -53,9 +54,10 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+        const normalizedPhone = normalizePhoneNumber(values.phone);
         let userToLogin: AppUser | null = null;
 
-        const existingProvider = await getProviderByPhone(values.phone);
+        const existingProvider = await getProviderByPhone(normalizedPhone);
         if (existingProvider) {
           userToLogin = {
             id: existingProvider.user_id,
@@ -64,7 +66,7 @@ export default function LoginPage() {
             accountType: 'provider',
           };
         } else {
-          const existingCustomer = await getCustomerByPhone(values.phone);
+          const existingCustomer = await getCustomerByPhone(normalizedPhone);
           if (existingCustomer) {
             userToLogin = {
               id: existingCustomer.user_id,
@@ -103,7 +105,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود</CardTitle>

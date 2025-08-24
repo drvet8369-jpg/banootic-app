@@ -28,6 +28,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { AppUser } from '@/context/AuthContext';
 import { createProvider, createCustomer, getProviderByPhone, getCustomerByPhone } from '@/lib/api';
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -83,7 +84,9 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-        const existingProvider = await getProviderByPhone(values.phone);
+        const normalizedPhone = normalizePhoneNumber(values.phone);
+        // Check if user already exists
+        const existingProvider = await getProviderByPhone(normalizedPhone);
         if (existingProvider) {
           toast({
             title: 'خطا',
@@ -94,7 +97,7 @@ export default function RegisterForm() {
           return;
         }
 
-        const existingCustomer = await getCustomerByPhone(values.phone);
+        const existingCustomer = await getCustomerByPhone(normalizedPhone);
          if (existingCustomer) {
             toast({
                 title: 'خطا',
@@ -113,7 +116,7 @@ export default function RegisterForm() {
             
             const newProvider = await createProvider({
               name: values.name,
-              phone: values.phone,
+              phone: normalizedPhone,
               service: selectedCategory?.name || 'خدمت جدید',
               location: 'ارومیه',
               bio: values.bio || '',
@@ -122,7 +125,7 @@ export default function RegisterForm() {
             });
 
             userToLogin = {
-                id: newProvider.user_id, // Assuming createProvider returns the full provider object
+                id: newProvider.user_id,
                 name: newProvider.name,
                 phone: newProvider.phone,
                 accountType: 'provider'
@@ -131,7 +134,7 @@ export default function RegisterForm() {
         } else { // Customer
              const newCustomer = await createCustomer({
                 name: values.name,
-                phone: values.phone,
+                phone: normalizedPhone,
              });
              userToLogin = {
                 id: newCustomer.user_id,
@@ -145,11 +148,10 @@ export default function RegisterForm() {
       
         toast({
             title: 'ثبت‌نام با موفقیت انجام شد!',
-            description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+            description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
       
-        const destination = values.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+        router.push('/');
 
     } catch (error) {
          const err = error as Error;
