@@ -133,28 +133,24 @@ export default function ChatPage() {
 
     setIsSending(true);
     
-    // Optimistic UI update
-    const tempUiMessage: Message = {
-      id: Date.now().toString(), // Temporary ID
+    const messagePayload = {
       chat_id: chatId,
       sender_phone: user.phone,
       receiver_phone: otherPersonDetails.phone,
       content,
+    };
+
+    // Optimistic UI update
+    const tempUiMessage: Message = {
+      ...messagePayload,
+      id: Date.now().toString(), // Temporary ID
       created_at: new Date().toISOString(),
     };
     setMessages((currentMessages) => [...currentMessages, tempUiMessage]);
     setNewMessage('');
     
     try {
-        await sendMessage({
-          chat_id: chatId,
-          sender_phone: user.phone,
-          receiver_phone: otherPersonDetails.phone,
-          content,
-        });
-        // On success, we can optionally re-fetch or rely on the real-time subscription
-        // For simplicity, we'll let the subscription handle any updates from the DB
-        // to avoid duplicates, and our optimistic update is good enough for the sender.
+        await sendMessage(messagePayload);
     } catch(error) {
         toast({ title: 'خطا در ارسال', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
         // Revert optimistic update on failure
