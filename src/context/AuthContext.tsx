@@ -4,6 +4,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+// The user object shape, mirroring the 'users' table in Supabase
 export interface AppUser {
   id: string; // This is the user_id from the DB (UUID)
   name: string;
@@ -20,6 +21,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Define the storage key as a constant to prevent typos
 const LOCAL_STORAGE_KEY = 'banotik-user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -29,22 +32,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
     try {
+      // **THE FIX**: Use the correct constant key to read from localStorage.
       const storedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      // Clean up corrupted data
+      console.error("Failed to parse user from localStorage on initial load", error);
+      // Clean up potentially corrupted data
       localStorage.removeItem(LOCAL_STORAGE_KEY);
     } finally {
         setIsLoading(false);
     }
   }, []);
 
-
   const login = (userData: AppUser) => {
     try {
+      // Use the correct constant key to save to localStorage.
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
@@ -54,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
+      // Use the correct constant key to remove from localStorage.
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       setUser(null);
       // Using window.location.href forces a full page reload, clearing all states
