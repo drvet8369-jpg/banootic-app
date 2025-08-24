@@ -20,6 +20,7 @@ interface Conversation {
   other_user_id: string;
   other_user_name: string;
   other_user_avatar?: string;
+  other_user_phone: string; // Add phone number here
   last_message_content: string;
   last_message_at: string;
 }
@@ -126,9 +127,7 @@ export default function InboxPage() {
           ) : (
             <div className="space-y-4">
               {conversations.map((convo) => (
-                // We need to fetch the other user's phone to build the chat link
-                // This is a simplification; in a real app, you might include the phone in the RPC response.
-                <Link href={`/chat/${convo.other_user_id}`} key={convo.chat_id}>
+                <Link href={`/chat/${convo.other_user_phone}`} key={convo.chat_id}>
                   <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                     <Avatar className="h-12 w-12 ml-4">
                       {convo.other_user_avatar && <AvatarImage src={convo.other_user_avatar} alt={convo.other_user_name} />}
