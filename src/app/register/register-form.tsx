@@ -27,8 +27,8 @@ import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import type { AppUser } from '@/context/AuthContext';
-import { createProvider, createCustomer, getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 
 const formSchema = z.object({
@@ -68,6 +68,7 @@ export default function RegisterForm() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -85,59 +86,87 @@ export default function RegisterForm() {
     setIsLoading(true);
     try {
         const normalizedPhone = normalizePhoneNumber(values.phone);
-        // Check if user already exists
-        const existingProvider = await getProviderByPhone(normalizedPhone);
-        if (existingProvider) {
+        
+        // Check if user already exists in the central users table
+        const { data: existingUser, error: checkError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('phone', normalizedPhone)
+            .single();
+
+        if (checkError && checkError.code !== 'PGRST116') { // Don't throw on "no rows found"
+            throw checkError;
+        }
+
+        if (existingUser) {
           toast({
             title: 'خطا',
-            description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+            description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.',
             variant: 'destructive',
           });
           setIsLoading(false);
           return;
         }
-
-        const existingCustomer = await getCustomerByPhone(normalizedPhone);
-         if (existingCustomer) {
-            toast({
-                title: 'خطا',
-                description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است. لطفاً وارد شوید.',
-                variant: 'destructive',
-            });
-            setIsLoading(false);
-            return;
-        }
       
+        // 1. Create a record in the central `users` table
+        const { data: newUser, error: userError } = await supabase
+            .from('users')
+            .insert({ 
+                name: values.name, 
+                account_type: values.accountType, 
+                phone: normalizedPhone 
+            })
+            .select()
+            .single();
+        
+        if (userError) throw userError;
+
         let userToLogin: AppUser | null = null;
 
+        // 2. If provider, create a record in the `providers` table
         if (values.accountType === 'provider') {
             const selectedCategory = categories.find(c => c.slug === values.serviceType);
             const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
             
-            const newProvider = await createProvider({
-              name: values.name,
-              phone: normalizedPhone,
-              service: selectedCategory?.name || 'خدمت جدید',
-              location: 'ارومیه',
-              bio: values.bio || '',
-              category_slug: selectedCategory?.slug || 'beauty',
-              service_slug: firstServiceInCat?.slug || 'manicure-pedicure',
-            });
+            const { data: newProvider, error: providerError } = await supabase
+                .from('providers')
+                .insert({
+                  user_id: newUser.id,
+                  name: values.name,
+                  phone: normalizedPhone,
+                  service: selectedCategory?.name || 'خدمت جدید',
+                  location: 'ارومیه',
+                  bio: values.bio || '',
+                  category_slug: selectedCategory?.slug || 'beauty',
+                  service_slug: firstServiceInCat?.slug || 'manicure-pedicure',
+                })
+                .select()
+                .single();
+
+            if (providerError) throw providerError;
 
             userToLogin = {
-                id: newProvider.user_id,
+                id: newUser.id,
                 name: newProvider.name,
                 phone: newProvider.phone,
                 accountType: 'provider'
             };
 
-        } else { // Customer
-             const newCustomer = await createCustomer({
-                name: values.name,
-                phone: normalizedPhone,
-             });
+        } else { // 3. If customer, create a record in the `customers` table
+             const { data: newCustomer, error: customerError } = await supabase
+                .from('customers')
+                .insert({
+                    user_id: newUser.id,
+                    name: values.name,
+                    phone: normalizedPhone,
+                })
+                .select()
+                .single();
+            
+             if (customerError) throw customerError;
+
              userToLogin = {
-                id: newCustomer.user_id,
+                id: newUser.id,
                 name: newCustomer.name,
                 phone: newCustomer.phone,
                 accountType: 'customer'
@@ -148,17 +177,22 @@ export default function RegisterForm() {
       
         toast({
             title: 'ثبت‌نام با موفقیت انجام شد!',
-            description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+            description: `خوش آمدید ${userToLogin.name}!`,
         });
       
-        router.push('/');
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
 
     } catch (error) {
-         const err = error as Error;
+         const err = error as any;
          console.error("Registration failed:", err);
+         const errorMessage = err.message.includes('unique constraint') 
+            ? 'کاربری با این شماره تلفن از قبل وجود دارد.'
+            : (err.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.');
+
          toast({
             title: 'خطا در ثبت‌نام',
-            description: err.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: errorMessage,
             variant: 'destructive'
         });
     } finally {

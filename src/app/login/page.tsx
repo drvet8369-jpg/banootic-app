@@ -27,9 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 import type { AppUser } from '@/context/AuthContext';
 import { normalizePhoneNumber } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 
 const formSchema = z.object({
@@ -43,6 +43,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,35 +56,33 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
         const normalizedPhone = normalizePhoneNumber(values.phone);
-        let userToLogin: AppUser | null = null;
+        
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('phone', normalizedPhone)
+            .single();
 
-        const existingProvider = await getProviderByPhone(normalizedPhone);
-        if (existingProvider) {
-          userToLogin = {
-            id: existingProvider.user_id,
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          const existingCustomer = await getCustomerByPhone(normalizedPhone);
-          if (existingCustomer) {
-            userToLogin = {
-              id: existingCustomer.user_id,
-              name: existingCustomer.name,
-              phone: existingCustomer.phone,
-              accountType: 'customer',
-            };
-          }
+        if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an actual db error
+            throw error;
         }
         
-        if (userToLogin) {
+        if (user) {
+            const userToLogin: AppUser = {
+                id: user.id,
+                name: user.name,
+                phone: user.phone,
+                accountType: user.account_type as 'provider' | 'customer',
+            };
             login(userToLogin);
             toast({
               title: 'ورود با موفقیت انجام شد!',
               description: `خوش آمدید ${userToLogin.name}!`,
             });
-            router.push('/');
+            
+            const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+            router.push(destination);
+
         } else {
              toast({
                 title: 'کاربر یافت نشد',
@@ -93,10 +92,11 @@ export default function LoginPage() {
         }
 
     } catch (error) {
-        console.error("Login failed:", error);
+        const err = error as Error;
+        console.error("Login failed:", err);
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: err.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {

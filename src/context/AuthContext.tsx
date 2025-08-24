@@ -2,11 +2,9 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
-import type { Provider } from '@/lib/types';
 
 export interface AppUser {
-  id: string; // This is the user_id from the DB
+  id: string; // This is the user_id from the DB (UUID)
   name: string;
   phone: string; 
   accountType: 'customer' | 'provider';
@@ -55,8 +53,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem('banotik-user');
       setUser(null);
-      router.push('/');
-      // Full page reload to ensure all state is cleared
+      // Using window.location.href forces a full page reload, clearing all states
+      // and ensuring a clean logout experience across the app.
       window.location.href = '/'; 
     } catch (error) {
        console.error("Failed to remove user from localStorage", error);
