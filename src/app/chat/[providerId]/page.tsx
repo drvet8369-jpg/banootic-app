@@ -70,6 +70,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!chatId) return;
     
+    // Real-time listener for incoming messages from the other user
     const channel = supabase.channel(`chat_${chatId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
@@ -78,14 +79,19 @@ export default function ChatPage() {
         filter: `chat_id=eq.${chatId}`
        }, 
        (payload) => {
-        setMessages((currentMessages) => [...currentMessages, payload.new as Message]);
+         const newMessage = payload.new as Message;
+         // Only add the message if it's not from the current user
+         // to avoid duplicates from the handleSubmit optimistic update.
+         if (newMessage.sender_id !== user?.id) {
+           setMessages((currentMessages) => [...currentMessages, newMessage]);
+         }
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId, supabase]);
+  }, [chatId, supabase, user?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -130,12 +136,14 @@ export default function ChatPage() {
     setNewMessage('');
     
     try {
-        await sendMessage({
+        const sentMessage = await sendMessage({
           chat_id: chatId,
           sender_id: user.id,
           receiver_id: otherPersonDetails.user_id,
           content,
         });
+        // Optimistically update the UI with the sent message
+        setMessages((currentMessages) => [...currentMessages, sentMessage]);
     } catch(error) {
         toast({ title: 'خطا در ارسال', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
         setNewMessage(content); // Put message back in input box on error
