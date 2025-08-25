@@ -1,7 +1,10 @@
-
 // This script is used to seed the database with initial data.
 // It is intended to be run manually from the command line.
 // Usage: npm run db:seed
+
+// Load environment variables from .env file
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env' });
 
 import { createAdminClient } from './supabase/server';
 import { categories, services } from './constants';
@@ -34,7 +37,7 @@ async function seedDatabase() {
   // 1. Check if users table already has data
   const { data: existingUsers, error: checkError } = await supabase.from('users').select('id').limit(1);
   if (checkError) {
-    console.error('Error checking for existing data:', checkError);
+    console.error('Error checking for existing data:', checkError.message);
     return;
   }
 
@@ -54,7 +57,7 @@ async function seedDatabase() {
   // 3. Insert users
   const { error: userError } = await supabase.from('users').insert(usersToInsert);
   if (userError) {
-    console.error('Error seeding users:', userError);
+    console.error('Error seeding users:', userError.message);
     return;
   }
   console.log(`Successfully seeded ${usersToInsert.length} users.`);
@@ -79,7 +82,7 @@ async function seedDatabase() {
   // 5. Insert providers
   const { error: providerError } = await supabase.from('providers').insert(providersToInsert);
    if (providerError) {
-    console.error('Error seeding providers:', providerError);
+    console.error('Error seeding providers:', providerError.message);
     return;
   }
   console.log(`Successfully seeded ${providersToInsert.length} providers.`);
@@ -94,7 +97,7 @@ async function seedDatabase() {
   // 7. Insert customers
   const { error: customerError } = await supabase.from('customers').insert(customersToInsert);
   if (customerError) {
-    console.error('Error seeding customers:', customerError);
+    console.error('Error seeding customers:', customerError.message);
     return;
   }
   console.log(`Successfully seeded ${customersToInsert.length} customers.`);
