@@ -96,11 +96,14 @@ export default function LoginPage() {
         router.push(destination);
 
     } catch (error) {
-        const err = error as Error;
-        console.error("Login failed:", err);
+        let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
+        if (error && typeof error === 'object' && 'message' in error) {
+            errorMessage = String(error.message);
+        }
+        console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: err.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: errorMessage,
             variant: 'destructive'
         });
     } finally {
