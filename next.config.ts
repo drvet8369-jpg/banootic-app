@@ -18,6 +18,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Harmless comment to trigger a server restart and load .env variables.
-
 export default nextConfig;
