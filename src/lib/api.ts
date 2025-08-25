@@ -143,7 +143,7 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
     return data || [];
 }
 
-export async function addReview(reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review> {
+export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'author_name'> & {user_id: string, author_name: string}): Promise<Review> {
     const { data: newReview, error } = await supabase.from('reviews').insert(reviewData).select().single();
     if(error){
         console.error('Error adding review:', error);

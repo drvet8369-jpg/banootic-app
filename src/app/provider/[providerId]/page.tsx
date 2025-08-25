@@ -69,14 +69,14 @@ const ReviewCard = ({ review }: { review: Review }) => (
   </div>
 );
 
-const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
+const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isLoggedIn || user?.accountType !== 'customer') {
+  if (!isLoggedIn || user?.account_type !== 'customer') {
     return null;
   }
 
@@ -92,6 +92,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
         if (!user) throw new Error("User not found");
         await addReview({
             provider_id: providerId,
+            user_id: user.id,
             author_name: user.name,
             rating,
             comment,
@@ -330,7 +331,7 @@ export default function ProviderProfilePage() {
                         </Link>
                     </Button>
                     <CallButton />
-                    {isLoggedIn && user?.accountType === 'customer' && (
+                    {isLoggedIn && user?.account_type === 'customer' && (
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
                              <Button className="w-full bg-accent hover:bg-accent/90">

@@ -58,7 +58,6 @@ export default function LoginPage() {
     try {
         const normalizedPhone = normalizePhoneNumber(values.phone);
         
-        // This query correctly fetches the user from the central 'users' table.
         const { data: user, error } = await supabase
             .from('users')
             .select('*')
@@ -70,9 +69,12 @@ export default function LoginPage() {
         }
         
         if (user) {
-            // The 'user' object from Supabase has all the correct fields.
-            // We cast it to AppUser and pass it directly to the login context.
-            const userToLogin = user as AppUser;
+            const userToLogin: AppUser = {
+                id: user.id,
+                name: user.name,
+                phone: user.phone,
+                account_type: user.account_type,
+            };
             
             login(userToLogin);
 
