@@ -2,7 +2,6 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 // The user object shape, mirroring the 'users' table in Supabase
 export interface AppUser {
@@ -32,7 +31,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
     try {
-      // **THE FIX**: Use the correct constant key to read from localStorage.
       const storedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
@@ -48,7 +46,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: AppUser) => {
     try {
-      // Use the correct constant key to save to localStorage.
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
@@ -58,7 +55,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     try {
-      // Use the correct constant key to remove from localStorage.
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       setUser(null);
       // Using window.location.href forces a full page reload, clearing all states

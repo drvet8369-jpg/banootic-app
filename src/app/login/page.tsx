@@ -58,41 +58,57 @@ export default function LoginPage() {
     try {
         const normalizedPhone = normalizePhoneNumber(values.phone);
         
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('*')
+        // Step 1: Check if the user is a provider
+        const { data: provider, error: providerError } = await supabase
+            .from('providers')
+            .select('user_id, name, phone')
             .eq('phone', normalizedPhone)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
-            throw error;
-        }
-        
-        if (user) {
+        if (provider) {
             const userToLogin: AppUser = {
-                id: user.id,
-                name: user.name,
-                phone: user.phone,
-                account_type: user.account_type,
+                id: provider.user_id,
+                name: provider.name,
+                phone: provider.phone,
+                account_type: 'provider',
             };
-            
             login(userToLogin);
-
-            toast({
-              title: 'ورود با موفقیت انجام شد!',
-              description: `خوش آمدید ${userToLogin.name}!`,
-            });
-            
-            const destination = userToLogin.account_type === 'provider' ? '/profile' : '/';
-            router.push(destination);
-
-        } else {
-             toast({
-                title: 'کاربر یافت نشد',
-                description: 'شماره تلفن شما در سیستم ثبت نشده است. لطفاً ثبت‌نام کنید.',
-                variant: 'destructive',
-            });
+            toast({ title: 'ورود موفق', description: `خوش آمدید هنرمند عزیز، ${userToLogin.name}!` });
+            router.push('/profile');
+            return;
         }
+
+        // Handle errors other than "not found"
+        if (providerError && providerError.code !== 'PGRST116') throw providerError;
+
+        // Step 2: If not a provider, check if the user is a customer
+        const { data: customer, error: customerError } = await supabase
+            .from('customers')
+            .select('user_id, name, phone')
+            .eq('phone', normalizedPhone)
+            .single();
+        
+        if (customer) {
+             const userToLogin: AppUser = {
+                id: customer.user_id,
+                name: customer.name,
+                phone: customer.phone,
+                account_type: 'customer',
+            };
+            login(userToLogin);
+            toast({ title: 'ورود موفق', description: `خوش آمدید ${userToLogin.name}!` });
+            router.push('/');
+            return;
+        }
+
+        if (customerError && customerError.code !== 'PGRST116') throw customerError;
+
+        // Step 3: If user is in neither table, they need to register
+        toast({
+            title: 'کاربر یافت نشد',
+            description: 'شماره تلفن شما در سیستم ثبت نشده است. لطفاً ثبت‌نام کنید.',
+            variant: 'destructive',
+        });
 
     } catch (error) {
         const err = error as Error;
