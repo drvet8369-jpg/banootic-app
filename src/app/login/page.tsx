@@ -92,15 +92,15 @@ export default function LoginPage() {
             description: `خوش آمدید ${userToLogin.name}!` 
         });
 
-        const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+        const destination = '/';
         router.push(destination);
 
     } catch (error) {
         let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
         if (error && typeof error === 'object' && 'message' in error) {
-            errorMessage = String(error.message);
+            errorMessage = String((error as Error).message);
         }
-        console.error("Login failed:", error);
+        console.error("Login failed:", errorMessage);
         toast({
             title: 'خطا در ورود',
             description: errorMessage,
