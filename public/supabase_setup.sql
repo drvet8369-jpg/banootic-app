@@ -1,57 +1,203 @@
--- Clear old structures first to avoid "already exists" errors
-DROP POLICY IF EXISTS "Users can view their own messages" ON public.messages;
-DROP POLICY IF EXISTS "Users can insert their own messages" ON public.messages;
-DROP FUNCTION IF EXISTS public.get_user_conversations(uuid);
+-- This script is now safe to run multiple times. It will NOT delete existing data.
+-- It only creates tables and functions if they don't already exist.
 
--- Enable RLS for the messages table
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+-- 1. Enable UUID extension if not already enabled
+create extension if not exists "uuid-ossp" with schema extensions;
 
--- Create policy for users to view their own messages (either as sender or receiver)
-CREATE POLICY "Users can view their own messages"
-ON public.messages FOR SELECT
-USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+-- 2. Create the central 'users' table
+-- This table stores common information for all users.
+create table if not exists public.users (
+  id uuid not null default uuid_generate_v4(),
+  name text not null,
+  phone text not null,
+  account_type text not null,
+  created_at timestamp with time zone not null default now(),
+  constraint users_pkey primary key (id),
+  constraint users_phone_key unique (phone)
+);
+comment on table public.users is 'Central table for all users, both customers and providers.';
 
--- Create policy for users to insert messages where they are the sender
-CREATE POLICY "Users can insert their own messages"
-ON public.messages FOR INSERT
-WITH CHECK (auth.uid() = sender_id);
+-- 3. Create the 'providers' table
+-- This table stores specific details for users who are service providers.
+create table if not exists public.providers (
+  id uuid not null default uuid_generate_v4(),
+  user_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  name text not null,
+  service text not null,
+  location text null,
+  phone text not null,
+  bio text null,
+  category_slug text not null,
+  service_slug text not null,
+  rating float8 not null default 0,
+  reviews_count integer not null default 0,
+  profile_image jsonb null default '{"src": "", "ai_hint": "woman portrait"}'::jsonb,
+  portfolio jsonb[] null,
+  constraint providers_pkey primary key (id),
+  constraint providers_phone_key unique (phone),
+  constraint providers_user_id_fkey foreign key (user_id) references public.users (id) on delete cascade
+);
+comment on table public.providers is 'Profiles for service providers, linked to the users table.';
 
--- Function to get all conversation partners for a user
-CREATE OR REPLACE FUNCTION public.get_user_conversations(p_user_id uuid)
-RETURNS TABLE(
-    chat_id text,
-    other_user_id uuid,
-    other_user_name text,
-    other_user_avatar text,
-    last_message_content text,
-    last_message_at timestamptz
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    WITH ranked_messages AS (
-        SELECT 
-            m.*,
-            ROW_NUMBER() OVER(PARTITION BY m.chat_id ORDER BY m.created_at DESC) as rn
-        FROM messages m
-        WHERE m.sender_id = p_user_id OR m.receiver_id = p_user_id
-    ),
-    all_users AS (
-        SELECT id, name, null::jsonb as profile_image FROM customers
-        UNION ALL
-        SELECT user_id as id, name, profile_image FROM providers
-    )
-    SELECT
-        rm.chat_id,
-        (CASE WHEN rm.sender_id = p_user_id THEN rm.receiver_id ELSE rm.sender_id END) as other_user_id,
-        u.name as other_user_name,
-        (u.profile_image->>'src')::text as other_user_avatar,
-        rm.content as last_message_content,
-        rm.created_at as last_message_at
-    FROM ranked_messages rm
-    JOIN all_users u ON u.id = (CASE WHEN rm.sender_id = p_user_id THEN rm.receiver_id ELSE rm.sender_id END)
-    WHERE rm.rn = 1
-    ORDER BY rm.created_at DESC;
-END;
+-- 4. Create the 'customers' table
+-- This table stores specific details for users who are customers.
+create table if not exists public.customers (
+  id uuid not null default uuid_generate_v4(),
+  user_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  name text not null,
+  phone text not null,
+  constraint customers_pkey primary key (id),
+  constraint customers_phone_key unique (phone),
+  constraint customers_user_id_fkey foreign key (user_id) references public.users (id) on delete cascade
+);
+comment on table public.customers is 'Profiles for customers, linked to the users table.';
+
+-- 5. Create the 'reviews' table
+create table if not exists public.reviews (
+  id uuid not null default uuid_generate_v4(),
+  provider_id uuid not null,
+  user_id uuid not null,
+  author_name text not null,
+  rating integer not null,
+  comment text null,
+  created_at timestamp with time zone not null default now(),
+  constraint reviews_pkey primary key (id),
+  constraint reviews_provider_id_fkey foreign key (provider_id) references public.providers (id) on delete cascade,
+  constraint reviews_user_id_fkey foreign key (user_id) references public.users (id) on delete cascade,
+  constraint reviews_rating_check check ((rating >= 1) and (rating <= 5))
+);
+comment on table public.reviews is 'Stores reviews submitted by users for providers.';
+
+-- 6. Create the 'agreements' table
+create table if not exists public.agreements (
+  id bigint generated by default as identity,
+  provider_id uuid not null,
+  customer_id uuid not null,
+  provider_phone text not null,
+  customer_phone text not null,
+  customer_name text not null,
+  status text not null default 'pending'::text,
+  requested_at timestamp with time zone not null default now(),
+  confirmed_at timestamp with time zone null,
+  constraint agreements_pkey primary key (id),
+  constraint agreements_provider_id_fkey foreign key (provider_id) references public.providers (id) on delete cascade,
+  constraint agreements_customer_id_fkey foreign key (customer_id) references public.users (id) on delete cascade,
+  constraint agreements_provider_id_customer_id_key unique (provider_id, customer_id)
+);
+comment on table public.agreements is 'Tracks service agreements between customers and providers.';
+
+-- 7. Create the 'messages' table
+create table if not exists public.messages (
+  id uuid not null default uuid_generate_v4(),
+  chat_id text not null,
+  sender_id uuid not null,
+  receiver_id uuid not null,
+  content text not null,
+  created_at timestamp with time zone not null default now(),
+  constraint messages_pkey primary key (id),
+  constraint messages_sender_id_fkey foreign key (sender_id) references public.users (id) on delete cascade,
+  constraint messages_receiver_id_fkey foreign key (receiver_id) references public.users (id) on delete cascade
+);
+comment on table public.messages is 'Stores chat messages between users.';
+create index if not exists messages_chat_id_idx on public.messages using btree (chat_id);
+
+-- 8. Create the 'get_user_conversations' function
+-- This function now correctly uses user_id.
+create or replace function public.get_user_conversations(p_user_id uuid)
+returns table(chat_id text, other_user_id uuid, other_user_name text, other_user_avatar text, other_user_phone text, last_message_content text, last_message_at timestamp with time zone)
+language sql
+as $$
+  with last_messages as (
+    select
+      m.chat_id,
+      m.content,
+      m.created_at,
+      m.sender_id,
+      m.receiver_id,
+      row_number() over(partition by m.chat_id order by m.created_at desc) as rn
+    from messages m
+    where m.sender_id = p_user_id or m.receiver_id = p_user_id
+  )
+  select
+    lm.chat_id,
+    -- Determine the other user's ID
+    case
+      when lm.sender_id = p_user_id then lm.receiver_id
+      else lm.sender_id
+    end as other_user_id,
+    -- Get the other user's name
+    other_user.name as other_user_name,
+    -- Get the other user's avatar, checking if they are a provider
+   (select p.profile_image->>'src' from providers p where p.user_id = (case when lm.sender_id = p_user_id then lm.receiver_id else lm.sender_id end)) as other_user_avatar,
+    -- Get the other user's phone
+    other_user.phone as other_user_phone,
+    lm.content as last_message_content,
+    lm.created_at as last_message_at
+  from last_messages lm
+  join public.users as other_user on other_user.id = (
+    case
+      when lm.sender_id = p_user_id then lm.receiver_id
+      else lm.sender_id
+    end
+  )
+  where lm.rn = 1
+  order by lm.created_at desc;
 $$;
+
+-- 9. Setup Row Level Security (RLS)
+alter table public.users enable row level security;
+alter table public.providers enable row level security;
+alter table public.customers enable row level security;
+alter table public.reviews enable row level security;
+alter table public.agreements enable row level security;
+alter table public.messages enable row level security;
+
+-- Drop existing policies before creating new ones to avoid conflicts
+drop policy if exists "Allow public read-only access." on public.providers;
+drop policy if exists "Allow public read-only access." on public.reviews;
+drop policy if exists "Allow individual read access" on public.users;
+drop policy if exists "Allow individual access to their own customer profile" on public.customers;
+drop policy if exists "Allow individual access to their own provider profile" on public.providers;
+drop policy if exists "Allow users to create their own reviews" on public.reviews;
+drop policy if exists "Allow users to create their own agreements" on public.agreements;
+drop policy if exists "Allow users to view their own agreements" on public.agreements;
+drop policy if exists "Allow providers to confirm their agreements" on public.agreements;
+drop policy if exists "Allow users to send messages" on public.messages;
+drop policy if exists "Allow users to read messages in their chats" on public.messages;
+
+-- Create Policies
+create policy "Allow public read-only access." on public.providers for select using (true);
+create policy "Allow public read-only access." on public.reviews for select using (true);
+create policy "Allow individual read access" on public.users for select using (auth.uid() = id);
+create policy "Allow individual access to their own customer profile" on public.customers for all using (auth.uid() = user_id);
+create policy "Allow individual access to their own provider profile" on public.providers for all using (auth.uid() = user_id);
+create policy "Allow users to create their own reviews" on public.reviews for insert with check (auth.uid() = user_id);
+create policy "Allow users to create their own agreements" on public.agreements for insert with check (auth.uid() = customer_id);
+create policy "Allow users to view their own agreements" on public.agreements for select using (auth.uid() = customer_id or auth.uid() = (select user_id from providers where phone = provider_phone));
+create policy "Allow providers to confirm their agreements" on public.agreements for update using (auth.uid() = (select user_id from providers where phone = provider_phone));
+create policy "Allow users to send messages" on public.messages for insert with check (auth.uid() = sender_id);
+create policy "Allow users to read messages in their chats" on public.messages for select using (auth.uid() = sender_id or auth.uid() = receiver_id);
+
+-- 10. Configure Storage
+-- This part must be done manually in the Supabase Dashboard.
+-- 1. Go to Storage -> Buckets.
+-- 2. Create a new bucket named 'images'.
+-- 3. Make the bucket **public**.
+-- 4. Go to Bucket Settings -> Policies.
+-- 5. Add policies to allow authenticated users to upload, select, update, and delete their own files.
+--    Example policies are provided in the documentation. Here's a basic setup:
+
+-- Public read access:
+-- (This is handled by making the bucket public)
+
+-- Allow authenticated users to upload to their own folder in 'profile-pics':
+-- Target: profile-pics/*
+-- Allowed operations: INSERT
+-- WITH CHECK: auth.uid()::text = (storage.path_tokens())[2]
+
+-- Allow authenticated users to manage their own files:
+-- Target: profile-pics/*
+-- Allowed operations: SELECT, UPDATE, DELETE
+-- USING: auth.uid()::text = (storage.path_tokens())[2]
