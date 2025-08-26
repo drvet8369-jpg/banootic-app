@@ -246,7 +246,7 @@ export default function RegisterForm() {
                         <Input {...field} disabled />
                       </FormControl>
                       <FormDescription>
-                        در حال حاضر، فعالیت در هنربانو فقط در شهر ارومیه امکان‌پذیر است.
+                        در حال حاضر، فعالیت در بانوتیک فقط در شهر ارومیه امکان‌پذیر است.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
