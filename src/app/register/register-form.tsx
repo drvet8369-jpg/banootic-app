@@ -263,11 +263,14 @@ export default function RegisterForm() {
                   control={form.control}
                   name="location"
                   render={({ field }) => (
-                    <FormItem className="sr-only">
-                      <FormLabel>موقعیت</FormLabel>
+                     <FormItem>
+                      <FormLabel>موقعیت مکانی</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={isLoading} />
+                        <Input {...field} disabled />
                       </FormControl>
+                      <FormDescription>
+                        در حال حاضر، فعالیت در بانوتیک فقط در شهر ارومیه امکان‌پذیر است.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
