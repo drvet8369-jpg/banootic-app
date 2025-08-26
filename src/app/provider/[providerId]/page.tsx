@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, ThumbsUp } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, ThumbsUp, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -261,6 +261,10 @@ export default function ProviderProfilePage() {
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
+                    <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 ml-2 text-accent" />
+                        <span>{provider.location}</span>
+                    </div>
                     <div className="mt-4 flex flex-col sm:flex-row items-center gap-x-6 gap-y-2">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviews_count} readOnly />
                         <div className="flex items-center gap-2 text-muted-foreground font-semibold">
