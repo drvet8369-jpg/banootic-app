@@ -28,9 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import type { AppUser } from '@/context/AuthContext';
-import { normalizePhoneNumber } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
+import type { User } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
 
 
 const formSchema = z.object({
@@ -44,7 +43,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,54 +54,43 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        const normalizedPhone = normalizePhoneNumber(values.phone);
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Use RPC to check both tables at once and get user details
-        const { data, error } = await supabase
-          .rpc('get_user_login_details', { p_phone: normalizedPhone })
-          .single();
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
 
-        if (error || !data) {
-           if(error && error.code !== 'PGRST116') { // PGRST116 is "Not a single row was returned"
-             throw error;
-           }
-           // If no user found in either table
-           toast({
-                title: 'کاربر یافت نشد',
-                description: 'شماره تلفن شما در سیستم ثبت نشده است. لطفاً ثبت‌نام کنید.',
-                variant: 'destructive',
-            });
-            setIsLoading(false);
-            return;
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
         }
-
-        // Map the database response to the AppUser interface
-        const userToLogin: AppUser = {
-            id: data.id,
-            name: data.name,
-            phone: data.phone,
-            accountType: data.account_type, // Map snake_case to camelCase
-        };
-
+        
         login(userToLogin);
 
-        toast({ 
-            title: 'ورود موفق', 
-            description: `خوش آمدید ${userToLogin.name}!` 
+        toast({
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
-
-        const destination = '/';
-        router.push(destination);
+        
+        router.push('/');
 
     } catch (error) {
-        let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
-        if (error && typeof error === 'object' && 'message' in error) {
-            errorMessage = String((error as Error).message);
-        }
-        console.error("Login failed:", errorMessage);
+        console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: errorMessage,
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -112,12 +99,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود به حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -130,7 +117,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                      <Input placeholder="09XXXXXXXXX" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -143,9 +130,9 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنوز ثبت‌نام نکرده‌اید؟{" "}
+            هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              ایجاد حساب کاربری
+              از اینجا ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -19,18 +18,16 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from "@/components/ui/input";
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/constants';
+import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { AppUser } from '@/context/AuthContext';
-import { createCustomer, createProvider } from '@/lib/api';
-import { normalizePhoneNumber } from '@/lib/utils';
-import type { Service } from '@/lib/types';
+import type { User } from '@/context/AuthContext';
+import type { Provider, Service } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -43,26 +40,17 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  categorySlug: z.string().optional(),
-  serviceSlug: z.string().optional(),
+  serviceType: z.string().optional(),
   bio: z.string().optional(),
   location: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.categorySlug;
+        return !!data.serviceType;
     }
     return true;
 }, {
-    message: 'لطفاً دسته‌بندی خدمات را انتخاب کنید.',
-    path: ['categorySlug'],
-}).refine(data => {
-    if (data.accountType === 'provider') {
-        return !!data.serviceSlug;
-    }
-    return true;
-}, {
-    message: 'لطفاً خدمت دقیق خود را انتخاب کنید.',
-    path: ['serviceSlug'],
+    message: 'لطفاً نوع خدمات را انتخاب کنید.',
+    path: ['serviceType'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
@@ -80,7 +68,6 @@ export default function RegisterForm() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -94,85 +81,83 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
-  const selectedCategorySlug = form.watch('categorySlug');
-
-  useEffect(() => {
-    if (selectedCategorySlug) {
-      const servicesForCategory = services.filter(s => s.categorySlug === selectedCategorySlug);
-      setFilteredServices(servicesForCategory);
-      // Reset serviceSlug field if category changes
-      form.resetField('serviceSlug');
-    } else {
-      setFilteredServices([]);
-    }
-  }, [selectedCategorySlug, form]);
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-        let userToLogin: AppUser | null = null;
-        const normalizedPhone = normalizePhoneNumber(values.phone);
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-        if (values.accountType === 'provider') {
-            const selectedCategory = categories.find(c => c.slug === values.categorySlug);
-            const selectedService = services.find(s => s.slug === values.serviceSlug);
-            
-            if (!selectedCategory || !selectedService) {
-                toast({ title: 'خطا', description: 'لطفاً دسته‌بندی و خدمت را به درستی انتخاب کنید.', variant: 'destructive'});
-                setIsLoading(false);
-                return;
-            }
+      const allProviders = getProviders();
 
-            const newProvider = await createProvider({
-              name: values.name,
-              phone: normalizedPhone,
-              account_type: 'provider',
-              service: selectedService.name,
-              location: values.location || 'ارومیه', // Pass the location
-              bio: values.bio || '',
-              category_slug: selectedCategory.slug,
-              service_slug: selectedService.slug,
-            });
-            
-            userToLogin = {
-                id: newProvider.user_id,
-                name: newProvider.name,
-                phone: newProvider.phone,
-                accountType: 'provider'
-            };
-
-        } else {
-             const newCustomer = await createCustomer({
-                 name: values.name,
-                 phone: normalizedPhone,
-             });
-
-             userToLogin = {
-                id: newCustomer.user_id,
-                name: newCustomer.name,
-                phone: newCustomer.phone,
-                accountType: 'customer'
-             }
-        }
-      
-        if(userToLogin) {
-            login(userToLogin);
-        }
-      
+      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      if (existingProviderByPhone) {
         toast({
-            title: 'ثبت‌نام با موفقیت انجام شد!',
-            description: `خوش آمدید ${userToLogin?.name}!`,
+          title: 'خطا در ثبت‌نام',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          variant: 'destructive',
         });
+        setIsLoading(false);
+        return;
+      }
+
+      if (values.accountType === 'provider') {
+        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        if (existingProviderByName) {
+            toast({
+                title: 'خطا در ثبت‌نام',
+                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
+                variant: 'destructive',
+            });
+            setIsLoading(false);
+            return;
+        }
+      }
+
+      const userToLogin: User = {
+        name: values.name,
+        phone: values.phone,
+        accountType: values.accountType,
+        serviceType: values.serviceType,
+        bio: values.bio,
+      };
+
+      if (values.accountType === 'provider') {
+        const selectedCategory = categories.find(c => c.slug === values.serviceType);
+        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
+        
+        const newProvider: Provider = {
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
+          name: values.name,
+          phone: values.phone,
+          service: selectedCategory?.name || 'خدمت جدید',
+          location: values.location || 'ارومیه',
+          bio: values.bio || '',
+          categorySlug: selectedCategory?.slug || 'beauty',
+          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
+          rating: 0,
+          reviewsCount: 0,
+          profileImage: { src: '', aiHint: 'woman portrait' },
+          portfolio: [],
+        };
+        
+        saveProviders([...allProviders, newProvider]);
+      }
       
-        const destination = values.accountType === 'provider' ? '/profile' : '/';
-        router.push(destination);
+      login(userToLogin);
+      
+      toast({
+        title: 'ثبت‌نام با موفقیت انجام شد!',
+        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+      });
+      
+      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      router.push(destination);
 
     } catch (error) {
-         const err = error as Error;
-         console.error("Registration failed:", err);
+         console.error("Registration failed:", error);
          toast({
             title: 'خطا در ثبت‌نام',
-            description: err.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -193,15 +178,7 @@ export default function RegisterForm() {
                   <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        // Reset provider-specific fields when switching to customer
-                        if (value === 'customer') {
-                            form.resetField('categorySlug');
-                            form.resetField('serviceSlug');
-                            form.resetField('bio');
-                        }
-                      }}
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
                       disabled={isLoading}
@@ -250,7 +227,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    <Input placeholder="09XXXXXXXXX" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -269,19 +246,18 @@ export default function RegisterForm() {
                         <Input {...field} disabled />
                       </FormControl>
                       <FormDescription>
-                        در حال حاضر، فعالیت در بانوتیک فقط در شهر ارومیه امکان‌پذیر است.
+                        در حال حاضر، فعالیت در هنربانو فقط در شهر ارومیه امکان‌پذیر است.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
-                  name="categorySlug"
+                  name="serviceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>دسته‌بندی اصلی خدمات</FormLabel>
+                      <FormLabel>نوع خدمات</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
@@ -300,34 +276,6 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
-
-                {selectedCategorySlug && (
-                  <FormField
-                    control={form.control}
-                    name="serviceSlug"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>خدمت دقیق</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isLoading || filteredServices.length === 0}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="خدمت دقیق خود را انتخاب کنید" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {filteredServices.map((service) => (
-                              <SelectItem key={service.slug} value={service.slug}>
-                                {service.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                
                 <FormField
                   control={form.control}
                   name="bio"
@@ -343,7 +291,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداقل ۱۶۰ کاراکتر).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
