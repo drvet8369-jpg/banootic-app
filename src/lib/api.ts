@@ -251,6 +251,23 @@ export async function updateProviderDetails(phone: string, details: { name: stri
     return data;
 }
 
+export async function addPortfolioItem(phone: string, file: File): Promise<Provider> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('phone', phone);
+    
+    const response = await fetch('/api/upload-portfolio-item', {
+        method: 'POST',
+        body: formData,
+    });
+    
+    const result = await response.json();
+    if (!response.ok) {
+        throw new Error(result.error || 'خطای سرور در افزودن نمونه کار.');
+    }
+    return result;
+}
+
 export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
     const { data, error } = await supabase
         .from('providers')

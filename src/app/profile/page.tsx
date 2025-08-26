@@ -12,10 +12,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider, PortfolioItem } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
+import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage, addPortfolioItem } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
 
 // Helper to convert a data URL to a File object for uploading
 function dataURLtoFile(dataurl: string, filename: string): File | null {
@@ -116,14 +115,14 @@ export default function ProfilePage() {
     setMode('viewing');
   }
 
-  const handleImageResizeAndUpload = (file: File, isProfilePic: boolean) => {
+  const handleImageResizeAndUpload = (file: File, callback: (file: File) => Promise<void>) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const imageSrc = e.target?.result as string;
         const img = document.createElement('img');
         img.onload = async () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = isProfilePic ? 400 : 800;
+          const MAX_WIDTH = 800; // Use a single max width for simplicity, quality is handled by toDataURL
           let width = img.width;
           let height = img.height;
 
@@ -143,11 +142,7 @@ export default function ProfilePage() {
               toast({title: 'خطا', description: 'خطا در تبدیل تصویر.', variant: 'destructive'});
               return;
             }
-            if (isProfilePic) {
-              await uploadProfilePicture(imageFile);
-            } else {
-              await uploadPortfolioImage(imageFile);
-            }
+            await callback(imageFile);
           }
         };
         img.src = imageSrc;
@@ -164,7 +159,7 @@ export default function ProfilePage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('phone', user.phone); // Send the user's phone as an identifier
+        formData.append('phone', user.phone);
         
         const response = await fetch('/api/upload-profile-pic', {
           method: 'POST',
@@ -177,7 +172,7 @@ export default function ProfilePage() {
           throw new Error(result.error || 'خطای سرور در آپلود عکس پروفایل.');
         }
 
-        setProvider(result); // The API returns the full updated provider object
+        setProvider(result);
         toast({ title: 'موفق', description: 'عکس پروفایل با موفقیت آپلود شد.' });
 
       } catch (error) {
@@ -189,8 +184,21 @@ export default function ProfilePage() {
   }
 
   const uploadPortfolioImage = async (file: File) => {
-      // Placeholder for future implementation
-      toast({title: "در دست ساخت", description: "آپلود نمونه کار به زودی فعال خواهد شد."});
+    if (!user || !user.phone) {
+        toast({ title: 'خطا', description: 'کاربر شناسایی نشد. لطفاً دوباره وارد شوید.', variant: 'destructive'});
+        return;
+    }
+    setIsSaving(true);
+    try {
+        const updatedProvider = await addPortfolioItem(user.phone, file);
+        setProvider(updatedProvider);
+        toast({ title: 'موفق', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'خطای ناشناس در آپلود نمونه کار.';
+        toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
+    }
   }
   
   const handleDeletePortfolioItem = async (itemIndex: number) => {
@@ -230,7 +238,7 @@ export default function ProfilePage() {
   const onPortfolioFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if(file) {
-      handleImageResizeAndUpload(file, false);
+      handleImageResizeAndUpload(file, uploadPortfolioImage);
       e.target.value = '';
     }
   }
@@ -238,7 +246,7 @@ export default function ProfilePage() {
   const onProfilePicFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if(file) {
-      handleImageResizeAndUpload(file, true);
+      handleImageResizeAndUpload(file, uploadProfilePicture);
       e.target.value = '';
     }
   }
@@ -458,4 +466,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
