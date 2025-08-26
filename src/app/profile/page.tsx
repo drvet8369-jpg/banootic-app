@@ -12,7 +12,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider, PortfolioItem } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage, addPortfolioItem } from '@/lib/api';
+import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -122,13 +122,20 @@ export default function ProfilePage() {
         const img = document.createElement('img');
         img.onload = async () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800; // Use a single max width for simplicity, quality is handled by toDataURL
+          const MAX_WIDTH = 800;
           let width = img.width;
           let height = img.height;
 
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > 800) {
+              width *= 800 / height;
+              height = 800;
+            }
           }
 
           canvas.width = width;
@@ -190,8 +197,21 @@ export default function ProfilePage() {
     }
     setIsSaving(true);
     try {
-        const updatedProvider = await addPortfolioItem(user.phone, file);
-        setProvider(updatedProvider);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('phone', user.phone);
+
+        const response = await fetch('/api/upload-portfolio-item', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'خطای سرور در افزودن نمونه کار.');
+        }
+        
+        setProvider(result);
         toast({ title: 'موفق', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'خطای ناشناس در آپلود نمونه کار.';
