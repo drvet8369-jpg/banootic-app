@@ -71,8 +71,7 @@ export default function LoginPage() {
               description: `خوش آمدید ${userToLogin.name}!`,
             });
             
-            const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
-            router.push(destination);
+            router.push('/');
 
         } else {
              toast({
@@ -98,7 +97,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود</CardTitle>
           <CardDescription>
             برای ورود، شماره تلفن خود را وارد کنید.
           </CardDescription>
