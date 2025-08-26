@@ -1,7 +1,7 @@
 
 'use server';
 
-import type { Provider, Review, Agreement, Customer, PortfolioItem, Message } from './types';
+import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, Service } from './types';
 import { createAdminClient } from './supabase/server';
 import { normalizePhoneNumber } from './utils';
 

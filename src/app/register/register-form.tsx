@@ -5,11 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -30,6 +30,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { AppUser } from '@/context/AuthContext';
 import { createCustomer, createProvider } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/utils';
+import type { Service } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -42,16 +43,25 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  serviceType: z.string().optional(),
+  categorySlug: z.string().optional(),
+  serviceSlug: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.serviceType;
+        return !!data.categorySlug;
     }
     return true;
 }, {
-    message: 'لطفاً نوع خدمات را انتخاب کنید.',
-    path: ['serviceType'],
+    message: 'لطفاً دسته‌بندی خدمات را انتخاب کنید.',
+    path: ['categorySlug'],
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.serviceSlug;
+    }
+    return true;
+}, {
+    message: 'لطفاً خدمت دقیق خود را انتخاب کنید.',
+    path: ['serviceSlug'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
@@ -69,6 +79,7 @@ export default function RegisterForm() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -81,6 +92,18 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
+  const selectedCategorySlug = form.watch('categorySlug');
+
+  useEffect(() => {
+    if (selectedCategorySlug) {
+      const servicesForCategory = services.filter(s => s.categorySlug === selectedCategorySlug);
+      setFilteredServices(servicesForCategory);
+      // Reset serviceSlug field if category changes
+      form.resetField('serviceSlug');
+    } else {
+      setFilteredServices([]);
+    }
+  }, [selectedCategorySlug, form]);
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
@@ -89,25 +112,31 @@ export default function RegisterForm() {
         const normalizedPhone = normalizePhoneNumber(values.phone);
 
         if (values.accountType === 'provider') {
-            const selectedCategory = categories.find(c => c.slug === values.serviceType);
-            const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
+            const selectedCategory = categories.find(c => c.slug === values.categorySlug);
+            const selectedService = services.find(s => s.slug === values.serviceSlug);
             
+            if (!selectedCategory || !selectedService) {
+                toast({ title: 'خطا', description: 'لطفاً دسته‌بندی و خدمت را به درستی انتخاب کنید.', variant: 'destructive'});
+                setIsLoading(false);
+                return;
+            }
+
             const newProvider = await createProvider({
               name: values.name,
               phone: normalizedPhone,
               account_type: 'provider',
-              service: selectedCategory?.name || 'خدمت جدید',
+              service: selectedService.name,
               location: 'ارومیه',
               bio: values.bio || '',
-              category_slug: selectedCategory?.slug || 'beauty',
-              service_slug: firstServiceInCat?.slug || 'manicure-pedicure',
+              category_slug: selectedCategory.slug,
+              service_slug: selectedService.slug,
             });
             
             userToLogin = {
                 id: newProvider.user_id,
                 name: newProvider.name,
                 phone: newProvider.phone,
-                account_type: 'provider'
+                accountType: 'provider'
             };
 
         } else {
@@ -120,7 +149,7 @@ export default function RegisterForm() {
                 id: newCustomer.user_id,
                 name: newCustomer.name,
                 phone: newCustomer.phone,
-                account_type: 'customer'
+                accountType: 'customer'
              }
         }
       
@@ -162,7 +191,15 @@ export default function RegisterForm() {
                   <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Reset provider-specific fields when switching to customer
+                        if (value === 'customer') {
+                            form.resetField('categorySlug');
+                            form.resetField('serviceSlug');
+                            form.resetField('bio');
+                        }
+                      }}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
                       disabled={isLoading}
@@ -222,10 +259,10 @@ export default function RegisterForm() {
               <>
                 <FormField
                   control={form.control}
-                  name="serviceType"
+                  name="categorySlug"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>نوع خدمات</FormLabel>
+                      <FormLabel>دسته‌بندی اصلی خدمات</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
@@ -244,6 +281,34 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
+
+                {selectedCategorySlug && (
+                  <FormField
+                    control={form.control}
+                    name="serviceSlug"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>خدمت دقیق</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || filteredServices.length === 0}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="خدمت دقیق خود را انتخاب کنید" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {filteredServices.map((service) => (
+                              <SelectItem key={service.slug} value={service.slug}>
+                                {service.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
                 <FormField
                   control={form.control}
                   name="bio"
