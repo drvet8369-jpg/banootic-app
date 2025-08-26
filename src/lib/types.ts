@@ -1,4 +1,12 @@
 
+export interface User {
+  id: string; // This is the user_id from the DB (UUID)
+  name: string;
+  phone: string; 
+  account_type: 'customer' | 'provider';
+  created_at: string;
+}
+
 export interface Category {
   id: number;
   name: string;

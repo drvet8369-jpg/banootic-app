@@ -1,13 +1,29 @@
 
 'use server';
 
-import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, Service } from './types';
+import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, Service, User } from './types';
 import { createAdminClient } from './supabase/server';
 import { normalizePhoneNumber } from './utils';
 
 const supabase = createAdminClient();
 
 // --- Provider & Customer Functions ---
+
+export async function getUserByPhone(phone: string): Promise<User | null> {
+    const normalizedPhone = normalizePhoneNumber(phone);
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', normalizedPhone)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user by phone:', error);
+      // Don't throw, just return null so the login page can handle it
+    }
+    
+    return data as User | null;
+}
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   const normalizedPhone = normalizePhoneNumber(phone);
@@ -310,29 +326,4 @@ export async function sendMessage(messageData: Omit<Message, 'id' | 'created_at'
     throw new Error('خطا در ارسال پیام.');
   }
   return data;
-}
-
-// --- API Route Handlers ---
-
-export async function handlePortfolioUpload(phone: string, file: File): Promise<Provider> {
-    const supabaseAdmin = createAdminClient();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    const filePath = `portfolio-items/${phone}/${Date.now()}-${sanitizedFileName}`;
-
-    const { error: uploadError } = await supabaseAdmin.storage.from('images').upload(filePath, file);
-    if (uploadError) {
-        console.error('Supabase Admin Upload Error:', uploadError);
-        throw new Error(`خطا در آپلود فایل: ${uploadError.message}.`);
-    }
-
-    const { data: { publicUrl } } = supabaseAdmin.storage.from('images').getPublicUrl(filePath);
-    if (!publicUrl) throw new Error('امکان دریافت آدرس عمومی فایل وجود نداشت.');
-
-    const { data: provider, error: fetchError } = await getProviderByPhone(phone);
-    if (fetchError || !provider) throw new Error('خطا در یافتن پروفایل هنرمند.');
-
-    const newPortfolioItem: PortfolioItem = { src: publicUrl, ai_hint: 'new work' };
-    const updatedPortfolio = [...(provider.portfolio || []), newPortfolioItem];
-
-    return await updateProviderPortfolio(phone, updatedPortfolio);
 }

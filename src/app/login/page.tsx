@@ -28,8 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
+import { getUserByPhone } from '@/lib/api';
+import type { AppUser } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -54,43 +54,39 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+        const foundUser = await getUserByPhone(values.phone);
 
-        let userToLogin: User;
+        if (foundUser) {
+            const userToLogin: AppUser = {
+                id: foundUser.user_id,
+                name: foundUser.name,
+                phone: foundUser.phone,
+                accountType: foundUser.account_type,
+            };
+            
+            login(userToLogin);
 
-        if (existingProvider) {
-          // User is a known provider
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
+            toast({
+              title: 'ورود با موفقیت انجام شد!',
+              description: `خوش آمدید ${userToLogin.name}!`,
+            });
+            
+            const destination = userToLogin.accountType === 'provider' ? '/profile' : '/';
+            router.push(destination);
+
         } else {
-          // User is a customer
-          userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
+             toast({
+                title: 'کاربر یافت نشد',
+                description: 'کاربری با این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+                variant: 'destructive'
+            });
         }
-        
-        login(userToLogin);
-
-        toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
-        });
-        
-        router.push('/');
 
     } catch (error) {
-        console.error("Login failed:", error);
+        const errorMessage = error instanceof Error ? error.message : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: errorMessage,
             variant: 'destructive'
         });
     } finally {
@@ -104,7 +100,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
+            برای ورود، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -130,7 +126,7 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
+            حساب کاربری ندارید؟{" "}
             <Link href="/register" className="underline">
               از اینجا ثبت‌نام کنید
             </Link>
