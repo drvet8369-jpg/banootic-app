@@ -19,7 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -46,6 +46,7 @@ const formSchema = z.object({
   categorySlug: z.string().optional(),
   serviceSlug: z.string().optional(),
   bio: z.string().optional(),
+  location: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.categorySlug;
@@ -88,6 +89,7 @@ export default function RegisterForm() {
       phone: '',
       accountType: 'customer',
       bio: '',
+      location: 'ارومیه',
     },
   });
 
@@ -126,7 +128,7 @@ export default function RegisterForm() {
               phone: normalizedPhone,
               account_type: 'provider',
               service: selectedService.name,
-              location: 'ارومیه',
+              location: values.location || 'ارومیه', // Pass the location
               bio: values.bio || '',
               category_slug: selectedCategory.slug,
               service_slug: selectedService.slug,
@@ -259,6 +261,20 @@ export default function RegisterForm() {
               <>
                 <FormField
                   control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem className="sr-only">
+                      <FormLabel>موقعیت</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={isLoading} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="categorySlug"
                   render={({ field }) => (
                     <FormItem>
@@ -289,7 +305,7 @@ export default function RegisterForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>خدمت دقیق</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || filteredServices.length === 0}>
+                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isLoading || filteredServices.length === 0}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="خدمت دقیق خود را انتخاب کنید" />

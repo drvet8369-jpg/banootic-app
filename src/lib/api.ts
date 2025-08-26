@@ -311,3 +311,28 @@ export async function sendMessage(messageData: Omit<Message, 'id' | 'created_at'
   }
   return data;
 }
+
+// --- API Route Handlers ---
+
+export async function handlePortfolioUpload(phone: string, file: File): Promise<Provider> {
+    const supabaseAdmin = createAdminClient();
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const filePath = `portfolio-items/${phone}/${Date.now()}-${sanitizedFileName}`;
+
+    const { error: uploadError } = await supabaseAdmin.storage.from('images').upload(filePath, file);
+    if (uploadError) {
+        console.error('Supabase Admin Upload Error:', uploadError);
+        throw new Error(`خطا در آپلود فایل: ${uploadError.message}.`);
+    }
+
+    const { data: { publicUrl } } = supabaseAdmin.storage.from('images').getPublicUrl(filePath);
+    if (!publicUrl) throw new Error('امکان دریافت آدرس عمومی فایل وجود نداشت.');
+
+    const { data: provider, error: fetchError } = await getProviderByPhone(phone);
+    if (fetchError || !provider) throw new Error('خطا در یافتن پروفایل هنرمند.');
+
+    const newPortfolioItem: PortfolioItem = { src: publicUrl, ai_hint: 'new work' };
+    const updatedPortfolio = [...(provider.portfolio || []), newPortfolioItem];
+
+    return await updateProviderPortfolio(phone, updatedPortfolio);
+}
