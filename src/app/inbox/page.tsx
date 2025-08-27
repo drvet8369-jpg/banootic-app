@@ -13,17 +13,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
 import { useCrossTabEventListener } from '@/lib/events';
-
-interface Conversation {
-  chat_id: string;
-  other_user_id: string;
-  other_user_name: string;
-  other_user_phone: string;
-  other_user_profile_image: { src: string | null; ai_hint: string | null };
-  last_message_content: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-}
+import type { ConversationSummary } from '@/lib/types';
 
 const getInitials = (name: string) => {
   if (!name) return '?';
@@ -39,7 +29,7 @@ const getInitials = (name: string) => {
 
 export default function InboxPage() {
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const supabase = createClient();
@@ -52,17 +42,21 @@ export default function InboxPage() {
     if (!user) return;
     setIsLoading(true);
 
-    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
-
-    if (error) {
+    try {
+        const response = await fetch('/api/conversations');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch conversations');
+        }
+        const data = await response.json();
+        setConversations(data);
+    } catch (error) {
         console.error("Error fetching conversations:", error);
         setConversations([]);
-    } else {
-        setConversations(data as Conversation[] || []);
+    } finally {
+        setIsLoading(false);
     }
-
-    setIsLoading(false);
-  }, [user, supabase]);
+  }, [user]);
 
   useEffect(() => {
     if (!isAuthLoading && isLoggedIn) {
@@ -72,21 +66,19 @@ export default function InboxPage() {
     }
   }, [isLoggedIn, fetchConversations, isAuthLoading]);
 
-  useCrossTabEventListener('inbox-update', fetchConversations);
-  
+  // Real-time updates for inbox
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('realtime-inbox')
+      .channel('realtime-inbox-page')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          const newMessage = payload.new as any;
-          if (newMessage && (newMessage.sender_id === user.id || newMessage.receiver_id === user.id)) {
+            // A new message was inserted or updated, refetch all conversations
+            // to get the latest state (last message, unread count, etc.)
             fetchConversations();
-          }
         }
       )
       .subscribe();
@@ -136,7 +128,7 @@ export default function InboxPage() {
           ) : (
             <div className="space-y-4">
               {conversations.map((convo) => (
-                <Link href={`/chat/${convo.other_user_phone}`} key={convo.chat_id}>
+                <Link href={`/chat/${convo.other_user_phone}`} key={convo.conversation_id}>
                   <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                     <Avatar className="h-12 w-12 ml-4">
                       {convo.other_user_profile_image?.src && <AvatarImage src={convo.other_user_profile_image.src} alt={convo.other_user_name} />}
