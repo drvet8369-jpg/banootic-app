@@ -19,10 +19,11 @@ interface Conversation {
   chat_id: string;
   other_user_id: string;
   other_user_name: string;
-  other_user_avatar?: string;
+  other_user_profile_image_src: string | null;
   other_user_phone: string; 
   last_message_content: string;
   last_message_at: string;
+  unread_count: number;
 }
 
 const getInitials = (name: string) => {
@@ -51,6 +52,7 @@ export default function InboxPage() {
 
     if (error) {
       console.error("Error fetching conversations:", JSON.stringify(error, null, 2));
+      // Do not show a toast for this, as the error might be temporary or expected if the function is not yet created.
       setIsLoading(false);
       return;
     }
@@ -130,7 +132,7 @@ export default function InboxPage() {
                 <Link href={`/chat/${convo.other_user_phone}`} key={convo.chat_id}>
                   <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                     <Avatar className="h-12 w-12 ml-4">
-                      {convo.other_user_avatar && <AvatarImage src={convo.other_user_avatar} alt={convo.other_user_name} />}
+                      {convo.other_user_profile_image_src && <AvatarImage src={convo.other_user_profile_image_src} alt={convo.other_user_name} />}
                       <AvatarFallback>{getInitials(convo.other_user_name)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-grow overflow-hidden">
@@ -142,6 +144,9 @@ export default function InboxPage() {
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_content}</p>
+                        {convo.unread_count > 0 && (
+                          <Badge variant="destructive" className="flex-shrink-0">{convo.unread_count}</Badge>
+                        )}
                       </div>
                     </div>
                   </div>
