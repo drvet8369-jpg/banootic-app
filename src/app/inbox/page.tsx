@@ -12,15 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
-import { useCrossTabEventListener, dispatchCrossTabEvent } from '@/lib/events';
-
+import { useCrossTabEventListener } from '@/lib/events';
 
 interface Conversation {
   chat_id: string;
   other_user_id: string;
   other_user_name: string;
   other_user_profile_image_src: string | null;
-  other_user_phone: string; 
+  other_user_phone: string;
   last_message_content: string;
   last_message_at: string;
   unread_count: number;
@@ -29,7 +28,12 @@ interface Conversation {
 const getInitials = (name: string) => {
   if (!name) return '?';
   const names = name.split(' ');
-  if (names.length > 1 && names[1]) return `${names[0][0]}${names[1][0]}`;
+  if (names.length > 1 && names[1] && !isNaN(parseInt(names[1]))) {
+      return `${names[0][0]}${names[1][0]}`;
+  }
+   if(names.length > 1 && names[1]) {
+      return `${names[0][0]}${names[1][0]}`;
+  }
   return name.substring(0, 2);
 };
 
@@ -45,20 +49,19 @@ export default function InboxPage() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    if (!user) return;
-    setIsLoading(true);
-    
-    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
+      if (!user) return;
+      setIsLoading(true);
 
-    if (error) {
-      console.error("Error fetching conversations:", JSON.stringify(error, null, 2));
-      // Do not show a toast for this, as the error might be temporary or expected.
-      setConversations([]);
-    } else {
-        setConversations(data || []);
-    }
+      const { data, error } = await supabase.rpc('get_user_conversations_final', { p_user_id: user.id });
 
-    setIsLoading(false);
+      if (error) {
+          console.error("Error fetching conversations:", error);
+          setConversations([]);
+      } else {
+          setConversations(data || []);
+      }
+
+      setIsLoading(false);
   }, [user, supabase]);
 
   useEffect(() => {
@@ -69,28 +72,30 @@ export default function InboxPage() {
     }
   }, [isLoggedIn, fetchConversations, isAuthLoading]);
 
-  // Real-time listener for new messages to update the inbox
-  useEffect(() => {
+  useCrossTabEventListener('inbox-update', fetchConversations);
+  
+    useEffect(() => {
     if (!user) return;
+
     const channel = supabase
-      .channel('inbox-listener')
-      .on('postgres_changes', { 
-        event: '*', // Listen to INSERT and UPDATE
-        schema: 'public', 
-        table: 'messages',
-        filter: `receiver_id=eq.${user.id}`
-      }, (payload) => {
-          fetchConversations();
-      })
+      .channel('realtime-inbox')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        (payload) => {
+          // Check if the new message belongs to this user
+          const newMessage = payload.new as any;
+          if (newMessage && (newMessage.sender_id === user.id || newMessage.receiver_id === user.id)) {
+            fetchConversations();
+          }
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, user, fetchConversations]);
-  
-  // Listen for custom cross-tab events
-  useCrossTabEventListener('inbox-update', fetchConversations);
+  }, [user, supabase, fetchConversations]);
 
   if (isLoading || isAuthLoading) {
     return (
@@ -119,7 +124,7 @@ export default function InboxPage() {
           <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
-          {conversations.length === 0 ? (
+          {conversations.length === 0 && !isLoading ? (
             <div className="text-center py-20 border-2 border-dashed rounded-lg">
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
