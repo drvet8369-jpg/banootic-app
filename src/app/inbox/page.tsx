@@ -18,10 +18,10 @@ interface Conversation {
   chat_id: string;
   other_user_id: string;
   other_user_name: string;
-  other_user_profile_image_src: string | null;
   other_user_phone: string;
-  last_message_content: string;
-  last_message_at: string;
+  other_user_profile_image: { src: string | null; ai_hint: string | null };
+  last_message_content: string | null;
+  last_message_at: string | null;
   unread_count: number;
 }
 
@@ -49,19 +49,19 @@ export default function InboxPage() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-      if (!user) return;
-      setIsLoading(true);
+    if (!user) return;
+    setIsLoading(true);
 
-      const { data, error } = await supabase.rpc('get_user_conversations_final', { p_user_id: user.id });
+    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
 
-      if (error) {
-          console.error("Error fetching conversations:", error);
-          setConversations([]);
-      } else {
-          setConversations(data || []);
-      }
+    if (error) {
+        console.error("Error fetching conversations:", error);
+        setConversations([]);
+    } else {
+        setConversations(data as Conversation[] || []);
+    }
 
-      setIsLoading(false);
+    setIsLoading(false);
   }, [user, supabase]);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function InboxPage() {
 
   useCrossTabEventListener('inbox-update', fetchConversations);
   
-    useEffect(() => {
+  useEffect(() => {
     if (!user) return;
 
     const channel = supabase
@@ -83,7 +83,6 @@ export default function InboxPage() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          // Check if the new message belongs to this user
           const newMessage = payload.new as any;
           if (newMessage && (newMessage.sender_id === user.id || newMessage.receiver_id === user.id)) {
             fetchConversations();
@@ -140,18 +139,20 @@ export default function InboxPage() {
                 <Link href={`/chat/${convo.other_user_phone}`} key={convo.chat_id}>
                   <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                     <Avatar className="h-12 w-12 ml-4">
-                      {convo.other_user_profile_image_src && <AvatarImage src={convo.other_user_profile_image_src} alt={convo.other_user_name} />}
+                      {convo.other_user_profile_image?.src && <AvatarImage src={convo.other_user_profile_image.src} alt={convo.other_user_name} />}
                       <AvatarFallback>{getInitials(convo.other_user_name)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-grow overflow-hidden">
                       <div className="flex justify-between items-center">
                         <h4 className="font-bold">{convo.other_user_name}</h4>
-                        <p className="text-xs text-muted-foreground flex-shrink-0">
-                          {isClient ? formatDistanceToNow(new Date(convo.last_message_at), { addSuffix: true, locale: faIR }) : '...'}
-                        </p>
+                        {convo.last_message_at && (
+                          <p className="text-xs text-muted-foreground flex-shrink-0">
+                            {isClient ? formatDistanceToNow(new Date(convo.last_message_at), { addSuffix: true, locale: faIR }) : '...'}
+                          </p>
+                        )}
                       </div>
                       <div className="flex justify-between items-center mt-1">
-                        <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_content}</p>
+                        <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_content || 'هنوز پیامی رد و بدل نشده'}</p>
                         {convo.unread_count > 0 && (
                           <Badge variant="destructive" className="flex-shrink-0">{convo.unread_count}</Badge>
                         )}
