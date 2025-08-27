@@ -1,53 +1,64 @@
--- This function retrieves all conversations for a given user,
--- showing the latest message for each conversation and details of the other participant.
-create or replace function get_user_conversations(p_user_id uuid)
-returns table (
+-- Drop the old, incorrect function if it exists
+DROP FUNCTION IF EXISTS public.get_user_conversations(p_user_id uuid);
+
+-- Create a new, simpler, and more robust function
+CREATE OR REPLACE FUNCTION public.get_user_conversations(p_user_id uuid)
+RETURNS TABLE(
     chat_id text,
     other_user_id uuid,
     other_user_name text,
-    other_user_avatar text,
     other_user_phone text,
+    other_user_avatar text,
     last_message_content text,
-    last_message_at timestamptz
+    last_message_at timestamptz,
+    last_message_sender uuid
 )
-language sql stable
-as $$
-with last_messages as (
-    -- 1. Find the last message for each chat involving the user
-    select distinct on (m.chat_id)
-        m.chat_id,
-        m.id,
-        m.content,
-        m.created_at,
-        m.sender_id,
-        m.receiver_id
-    from messages m
-    where m.sender_id = p_user_id or m.receiver_id = p_user_id
-    order by m.chat_id, m.created_at desc
+LANGUAGE sql
+STABLE
+AS $$
+WITH ranked_messages AS (
+  SELECT
+    m.*,
+    ROW_NUMBER() OVER(PARTITION BY m.chat_id ORDER BY m.created_at DESC) as rn
+  FROM
+    public.messages m
+  WHERE
+    m.sender_id = p_user_id OR m.receiver_id = p_user_id
 ),
-conversation_participants as (
-    -- 2. Determine the "other" user in each conversation
-    select
-        lm.chat_id,
-        lm.content as last_message_content,
-        lm.created_at as last_message_at,
-        case
-            when lm.sender_id = p_user_id then lm.receiver_id
-            else lm.sender_id
-        end as other_user_id
-    from last_messages lm
+latest_messages AS (
+  SELECT
+    *
+  FROM
+    ranked_messages
+  WHERE
+    rn = 1
+),
+other_users AS (
+  SELECT
+    lm.chat_id,
+    CASE
+      WHEN lm.sender_id = p_user_id THEN lm.receiver_id
+      ELSE lm.sender_id
+    END as other_id
+  FROM
+    latest_messages lm
 )
--- 3. Join with user and provider tables to get the final details
-select
-    cp.chat_id,
-    cp.other_user_id,
+SELECT
+    lm.chat_id,
+    ou.other_id as other_user_id,
     u.name as other_user_name,
-    p.profile_image->>'src' as other_user_avatar,
     u.phone as other_user_phone,
-    cp.last_message_content,
-    cp.last_message_at
-from conversation_participants cp
-join users u on cp.other_user_id = u.id
-left join providers p on cp.other_user_id = p.user_id
-order by cp.last_message_at desc;
+    -- Get the avatar from the provider table if it exists, otherwise it's null
+    (SELECT p.profile_image ->> 'src' FROM public.providers p WHERE p.user_id = u.id) as other_user_avatar,
+    lm.content as last_message_content,
+    lm.created_at as last_message_at,
+    lm.sender_id as last_message_sender
+FROM
+    latest_messages lm
+JOIN
+    other_users ou ON lm.chat_id = ou.chat_id
+JOIN
+    public.users u ON u.id = ou.other_id
+ORDER BY
+    lm.created_at DESC;
 $$;

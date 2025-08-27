@@ -20,7 +20,7 @@ interface Conversation {
   other_user_id: string;
   other_user_name: string;
   other_user_avatar?: string;
-  other_user_phone: string; // Add phone number here
+  other_user_phone: string; 
   last_message_content: string;
   last_message_at: string;
 }
