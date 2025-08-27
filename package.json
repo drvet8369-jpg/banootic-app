@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:seed": "tsx src/lib/seed.ts"
+    "db:seed": "tsx src/lib/seed.ts",
+    "db:push": "tsx src/lib/supabase/push-schema.ts"
   },
   "dependencies": {
     "@genkit-ai/firebase": "1.15.2",
