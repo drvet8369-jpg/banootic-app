@@ -53,11 +53,11 @@ export default function InboxPage() {
     if (error) {
       console.error("Error fetching conversations:", JSON.stringify(error, null, 2));
       // Do not show a toast for this, as the error might be temporary or expected.
-      setIsLoading(false);
-      return;
+      setConversations([]);
+    } else {
+        setConversations(data || []);
     }
 
-    setConversations(data || []);
     setIsLoading(false);
   }, [user, supabase]);
 

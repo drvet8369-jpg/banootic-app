@@ -60,7 +60,7 @@ export default function ChatPage() {
         // After fetching, mark messages as read
         await markMessagesAsRead(chatId, user.id);
         // Notify other tabs (like inbox) to update unread counts
-        dispatchCrossTabEvent('inbox-update');
+        dispatchCrossTabEvent('inbox-update', null);
     } catch(e) {
         toast({ title: "خطا", description: "امکان بارگذاری پیام‌های قبلی وجود ندارد.", variant: "destructive" });
     }
@@ -89,7 +89,7 @@ export default function ChatPage() {
            setMessages((currentMessages) => [...currentMessages, newMessage]);
            // When a new message arrives, mark it as read immediately
            markMessagesAsRead(chatId, user.id);
-           dispatchCrossTabEvent('inbox-update');
+           dispatchCrossTabEvent('inbox-update', null);
          }
       })
       .subscribe();
@@ -153,7 +153,7 @@ export default function ChatPage() {
     
     try {
         await sendMessage(messagePayload);
-        dispatchCrossTabEvent('inbox-update');
+        dispatchCrossTabEvent('inbox-update', null);
     } catch(error) {
         toast({ title: 'خطا در ارسال', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
         setMessages((currentMessages) => currentMessages.filter(m => m.id !== tempUiMessage.id));
