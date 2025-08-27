@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string; // This is the user_id from the DB (UUID)
   name: string;
@@ -79,4 +80,5 @@ export interface Message {
   receiver_id: string;
   content: string;
   created_at: string;
+  is_read: boolean;
 }

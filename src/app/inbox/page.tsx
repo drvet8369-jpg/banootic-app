@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
-import type { Provider } from '@/lib/types';
+import { useCrossTabEventListener, dispatchCrossTabEvent } from '@/lib/events';
 
 
 interface Conversation {
@@ -52,7 +52,7 @@ export default function InboxPage() {
 
     if (error) {
       console.error("Error fetching conversations:", JSON.stringify(error, null, 2));
-      // Do not show a toast for this, as the error might be temporary or expected if the function is not yet created.
+      // Do not show a toast for this, as the error might be temporary or expected.
       setIsLoading(false);
       return;
     }
@@ -75,7 +75,7 @@ export default function InboxPage() {
     const channel = supabase
       .channel('inbox-listener')
       .on('postgres_changes', { 
-        event: 'INSERT', 
+        event: '*', // Listen to INSERT and UPDATE
         schema: 'public', 
         table: 'messages',
         filter: `receiver_id=eq.${user.id}`
@@ -88,6 +88,9 @@ export default function InboxPage() {
       supabase.removeChannel(channel);
     };
   }, [supabase, user, fetchConversations]);
+  
+  // Listen for custom cross-tab events
+  useCrossTabEventListener('inbox-update', fetchConversations);
 
   if (isLoading || isAuthLoading) {
     return (

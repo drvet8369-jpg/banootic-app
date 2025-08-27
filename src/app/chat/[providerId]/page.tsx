@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getProviderByPhone, sendMessage, getMessages } from '@/lib/api';
+import { getProviderByPhone, sendMessage, getMessages, markMessagesAsRead } from '@/lib/api';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Message, Provider } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
+import { dispatchCrossTabEvent } from '@/lib/events';
 
 interface OtherPersonDetails {
     id: string;
@@ -51,21 +52,26 @@ export default function ChatPage() {
 
   const chatId = getChatId(user?.id, otherPersonDetails?.user_id);
 
-  const fetchMessages = useCallback(async () => {
-    if (!chatId) return;
+  const fetchMessagesAndMarkAsRead = useCallback(async () => {
+    if (!chatId || !user?.id) return;
     try {
         const initialMessages = await getMessages(chatId);
         setMessages(initialMessages);
+        // After fetching, mark messages as read
+        await markMessagesAsRead(chatId, user.id);
+        // Notify other tabs (like inbox) to update unread counts
+        dispatchCrossTabEvent('inbox-update');
     } catch(e) {
         toast({ title: "خطا", description: "امکان بارگذاری پیام‌های قبلی وجود ندارد.", variant: "destructive" });
     }
-  }, [chatId, toast]);
+  }, [chatId, user?.id, toast]);
+
 
   useEffect(() => {
     if (chatId) {
-      fetchMessages();
+      fetchMessagesAndMarkAsRead();
     }
-  }, [fetchMessages, chatId]);
+  }, [fetchMessagesAndMarkAsRead, chatId]);
 
   useEffect(() => {
     if (!chatId || !user) return;
@@ -79,9 +85,11 @@ export default function ChatPage() {
        }, 
        (payload) => {
          const newMessage = payload.new as Message;
-         // Only add the message if it's not from the current user, to avoid duplicates from optimistic update.
          if (newMessage.sender_id !== user.id) {
            setMessages((currentMessages) => [...currentMessages, newMessage]);
+           // When a new message arrives, mark it as read immediately
+           markMessagesAsRead(chatId, user.id);
+           dispatchCrossTabEvent('inbox-update');
          }
       })
       .subscribe();
@@ -103,12 +111,10 @@ export default function ChatPage() {
       }
       
       try {
-        // We always fetch provider details as they are the primary recipients.
         const provider = await getProviderByPhone(otherPersonPhone);
         if (provider) {
           setOtherPersonDetails(provider);
         } else {
-            // This case is unlikely if entry is from profile, but good for robustness.
             toast({ title: "خطا", description: "هنرمند مورد نظر یافت نشد.", variant: "destructive"});
         }
       } catch (error) {
@@ -136,23 +142,22 @@ export default function ChatPage() {
       content,
     };
 
-    // Optimistic UI update
     const tempUiMessage: Message = {
       ...messagePayload,
-      id: Date.now().toString(), // Temporary ID
+      id: Date.now().toString(), 
       created_at: new Date().toISOString(),
+      is_read: false,
     };
     setMessages((currentMessages) => [...currentMessages, tempUiMessage]);
     setNewMessage('');
     
     try {
         await sendMessage(messagePayload);
-        // We don't need to refetch, the real-time subscription will handle updates from the other user.
+        dispatchCrossTabEvent('inbox-update');
     } catch(error) {
         toast({ title: 'خطا در ارسال', description: 'پیام شما ارسال نشد. لطفاً دوباره تلاش کنید.', variant: 'destructive'});
-        // Revert optimistic update on failure
         setMessages((currentMessages) => currentMessages.filter(m => m.id !== tempUiMessage.id));
-        setNewMessage(content); // Put message back in input box on error
+        setNewMessage(content); 
     } finally {
         setIsSending(false);
     }

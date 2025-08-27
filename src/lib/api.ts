@@ -314,7 +314,7 @@ export async function getMessages(chatId: string): Promise<Message[]> {
   return data || [];
 }
 
-export async function sendMessage(messageData: Omit<Message, 'id' | 'created_at'>): Promise<Message> {
+export async function sendMessage(messageData: Omit<Message, 'id' | 'created_at' | 'is_read'>): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
     .insert(messageData)
@@ -326,4 +326,18 @@ export async function sendMessage(messageData: Omit<Message, 'id' | 'created_at'
     throw new Error('خطا در ارسال پیام.');
   }
   return data;
+}
+
+export async function markMessagesAsRead(chatId: string, receiverId: string): Promise<void> {
+    const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('chat_id', chatId)
+        .eq('receiver_id', receiverId)
+        .eq('is_read', false);
+
+    if (error) {
+        console.error("Error marking messages as read:", error);
+        // We don't throw an error here to not break the user's flow
+    }
 }
