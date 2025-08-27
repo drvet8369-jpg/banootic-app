@@ -1,8 +1,10 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
-// IMPORTANT: Never use this client on the client-side.
-// It is intended for server-side operations only, like in API Routes or Server Actions.
+// IMPORTANT: Never use these clients on the client-side.
+// They are intended for server-side operations only.
 
 // This function creates a Supabase admin client that can perform operations
 // with elevated privileges, bypassing RLS policies when necessary.
@@ -38,25 +40,25 @@ export const createServerComponentClient = () => {
         throw new Error("Client-side Supabase credentials for server components are not available.");
     }
 
-    return createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-            storage: {
-              getItem: (key) => {
-                const value = cookieStore.get(key)?.value;
-                return value ?? null;
-              },
-              setItem: (key, value) => {
-                cookieStore.set(key, value);
-              },
-              removeItem: (key) => {
-                cookieStore.delete(key);
-              },
+    return createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+            get(name: string) {
+                return cookieStore.get(name)?.value;
             },
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true,
+            set(name: string, value: string, options: CookieOptions) {
+                try {
+                    cookieStore.set({ name, value, ...options });
+                } catch (error) {
+                    // This can happen in Server Components. It's safe to ignore.
+                }
+            },
+            remove(name: string, options: CookieOptions) {
+                 try {
+                    cookieStore.set({ name, value: '', ...options });
+                } catch (error) {
+                    // This can happen in Server Components. It's safe to ignore.
+                }
+            },
         },
     });
 };
-
-    
