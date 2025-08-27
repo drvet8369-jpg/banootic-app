@@ -76,7 +76,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isLoggedIn || user?.accountType !== 'customer') {
+  if (!isLoggedIn || user?.account_type !== 'customer') {
     return null;
   }
 
@@ -335,7 +335,7 @@ export default function ProviderProfilePage() {
                         </Link>
                     </Button>
                     <CallButton />
-                    {isLoggedIn && user?.accountType === 'customer' && (
+                    {isLoggedIn && user?.account_type === 'customer' && (
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
                              <Button className="w-full bg-accent hover:bg-accent/90">

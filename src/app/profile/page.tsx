@@ -293,7 +293,7 @@ export default function ProfilePage() {
      )
   }
 
-  if (user?.accountType !== 'provider') {
+  if (user?.account_type !== 'provider') {
      return (
         <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />

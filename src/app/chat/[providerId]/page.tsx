@@ -155,7 +155,7 @@ export default function ChatPage() {
     }
   };
 
-  const getHeaderLink = () => user?.accountType === 'provider' ? '/inbox' : '/';
+  const getHeaderLink = () => user?.account_type === 'provider' ? '/inbox' : '/';
 
   if (isAuthLoading || !providerDetails) {
     return (

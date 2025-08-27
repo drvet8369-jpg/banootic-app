@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
-import { useCrossTabEventListener } from '@/lib/events';
 import type { ConversationSummary } from '@/lib/types';
 
 const getInitials = (name: string) => {
@@ -120,7 +119,7 @@ export default function InboxPage() {
               <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
               <p className="text-muted-foreground mt-2">
-                {user.accountType === 'provider'
+                {user.account_type === 'provider'
                   ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                   : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
               </p>

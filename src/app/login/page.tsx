@@ -58,7 +58,7 @@ export default function LoginPage() {
 
         if (foundUser) {
             const userToLogin: AppUser = {
-                id: foundUser.user_id,
+                id: foundUser.id,
                 name: foundUser.name,
                 phone: foundUser.phone,
                 accountType: foundUser.account_type,

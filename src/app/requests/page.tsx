@@ -26,7 +26,7 @@ export default function CustomerRequestsPage() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!user || user.accountType !== 'customer') {
+    if (!user || user.account_type !== 'customer') {
       setIsLoading(false);
       return;
     }
@@ -49,7 +49,7 @@ export default function CustomerRequestsPage() {
   }, [user, toast]);
 
   useEffect(() => {
-    if (!isAuthLoading && isLoggedIn && user?.accountType === 'customer') {
+    if (!isAuthLoading && isLoggedIn && user?.account_type === 'customer') {
       fetchData();
     } else if (!isAuthLoading) {
       setIsLoading(false);
@@ -82,7 +82,7 @@ export default function CustomerRequestsPage() {
     );
   }
 
-   if (user.accountType !== 'customer') {
+   if (user.account_type !== 'customer') {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
