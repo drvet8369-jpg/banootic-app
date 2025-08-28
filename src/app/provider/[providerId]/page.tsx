@@ -239,6 +239,49 @@ export default function ProviderProfilePage() {
     </Button>
   );
 
+  const AgreementButton = () => {
+    if (!isLoggedIn) {
+        return (
+            <Button asChild className="w-full bg-accent hover:bg-accent/90">
+                <Link href="/login">
+                    <Handshake className="w-4 h-4 ml-2" />
+                    درخواست توافق
+                </Link>
+            </Button>
+        );
+    }
+
+    if (user?.account_type !== 'customer') {
+        return null;
+    }
+
+    return (
+       <AlertDialog>
+          <AlertDialogTrigger asChild>
+             <Button className="w-full bg-accent hover:bg-accent/90" disabled={isRequestingAgreement}>
+                {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
+                درخواست توافق
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تایید درخواست توافق؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                با این کار، شما یک درخواست رسمی برای این هنرمند ثبت می‌کنید که نشان‌دهنده شروع همکاری شماست. این به بهبود رتبه هنرمند در پلتفرم کمک می‌کند. آیا ادامه می‌دهید؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>انصراف</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRequestAgreement} disabled={isRequestingAgreement}>
+                {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : "بله، درخواست را ارسال کن"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+    )
+  };
+
+
   return (
     <div className="py-12 md:py-20 flex justify-center">
         <div className="max-w-2xl w-full">
@@ -335,30 +378,7 @@ export default function ProviderProfilePage() {
                         </Link>
                     </Button>
                     <CallButton />
-                    {isLoggedIn && user?.account_type === 'customer' && (
-                       <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                             <Button className="w-full bg-accent hover:bg-accent/90">
-                                {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
-                                درخواست توافق
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>تایید درخواست توافق؟</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                با این کار، شما یک درخواست رسمی برای این هنرمند ثبت می‌کنید که نشان‌دهنده شروع همکاری شماست. این به بهبود رتبه هنرمند در پلتفرم کمک می‌کند. آیا ادامه می‌دهید؟
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>انصراف</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleRequestAgreement} disabled={isRequestingAgreement}>
-                                {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : "بله، درخواست را ارسال کن"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                    )}
+                    <AgreementButton />
                 </CardFooter>
                 )}
 
