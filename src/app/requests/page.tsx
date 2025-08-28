@@ -51,7 +51,7 @@ export default function CustomerRequestsPage() {
   useEffect(() => {
     if (!isAuthLoading && isLoggedIn && user?.account_type === 'customer') {
       fetchData();
-    } else if (!isAuthLoading) {
+    } else if (!isAuthLoading && !isLoggedIn) {
       setIsLoading(false);
     }
   }, [isLoggedIn, user, fetchData, isAuthLoading]);
@@ -153,3 +153,5 @@ export default function CustomerRequestsPage() {
     </div>
   );
 }
+
+      

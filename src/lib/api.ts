@@ -130,6 +130,7 @@ export async function createCustomer(customerData: {name: string, phone: string}
     return newCustomer;
 }
 
+// Uses admin client because it's for public search, not user-specific data.
 export async function getAllProviders(): Promise<Provider[]> {
     const supabase = createAdminClient();
     const { data, error } = await supabase.from('providers').select('*');
@@ -140,6 +141,7 @@ export async function getAllProviders(): Promise<Provider[]> {
     return data || [];
 }
 
+// Uses admin client for public data fetching.
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
     const supabase = createAdminClient();
     const { data, error } = await supabase.from('providers').select('*').eq('service_slug', serviceSlug);
@@ -150,6 +152,7 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
     return data || [];
 }
 
+// Uses action client to ensure only the authenticated user can update their own details.
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string }): Promise<Provider> {
     const supabase = await createActionClient();
     const { data, error } = await supabase
@@ -200,6 +203,7 @@ export async function updateProviderProfileImage(phone: string, profileImage: Po
 
 // --- Review Functions ---
 
+// Uses admin client as reviews are public data.
 export async function getReviewsByProviderId(providerId: string): Promise<Review[]> {
     const supabase = createAdminClient();
     const { data, error } = await supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
@@ -210,6 +214,7 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
     return data || [];
 }
 
+// Uses action client as only a logged-in user can add a review.
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'author_name'> & {user_id: string, author_name: string}): Promise<Review> {
     const supabase = await createActionClient();
     const { data: newReview, error } = await supabase.from('reviews').insert(reviewData).select().single();
@@ -217,10 +222,12 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | '
         console.error('Error adding review:', error);
         throw new Error('خطا در ثبت نظر.');
     }
+    // Update rating using admin client in the background.
     await updateProviderRating(reviewData.provider_id);
     return newReview;
 }
 
+// Uses admin client for a background task.
 export async function updateProviderRating(providerId: string): Promise<void> {
     const supabase = createAdminClient();
     const { data: providerReviews, error: reviewError } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
@@ -247,6 +254,7 @@ export async function updateProviderRating(providerId: string): Promise<void> {
 
 // --- Agreement Functions ---
 
+// Uses action client to get agreements for the currently logged-in provider.
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
     const supabase = await createActionClient();
     const { data, error } = await supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone));
@@ -257,6 +265,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
     return data || [];
 }
 
+// Uses action client to get agreements for the currently logged-in customer.
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
     const supabase = await createActionClient();
     const { data, error } = await supabase.from('agreements').select('*').eq('customer_phone', normalizePhoneNumber(customerPhone));
@@ -267,6 +276,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
     return data || [];
 }
 
+// Uses action client as only a logged-in user can create an agreement.
 export async function createAgreement(provider: Provider, user: { phone: string, name: string, id: string }): Promise<Agreement> {
     const supabase = await createActionClient();
     const agreementData = {
@@ -290,6 +300,7 @@ export async function createAgreement(provider: Provider, user: { phone: string,
     return data;
 }
 
+// Uses action client as only a logged-in provider can confirm.
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
     const supabase = await createActionClient();
     const { data, error } = await supabase
@@ -309,6 +320,7 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 
 // --- Chat & Conversation Functions ---
 
+// Uses action client as messages are private to users.
 export async function getMessages(conversationId: string): Promise<Message[]> {
   const supabase = await createActionClient();
   const { data, error } = await supabase
@@ -324,6 +336,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
   return data || [];
 }
 
+// Uses action client to mark messages for the current user as read.
 export async function markMessagesAsRead(conversationId: string, receiverId: string): Promise<void> {
     const supabase = await createActionClient();
     const { error } = await supabase
@@ -338,12 +351,11 @@ export async function markMessagesAsRead(conversationId: string, receiverId: str
     }
 }
 
+// Uses action client as this is a user-specific action.
 export async function getOrCreateConversation(userId1: string, userId2: string): Promise<Conversation> {
     const supabase = await createActionClient();
-    // Ensure consistent ordering for the query
     const [p1, p2] = [userId1, userId2].sort();
 
-    // Check if a conversation already exists
     const { data: existing, error: existingError } = await supabase
         .from('conversations')
         .select('*')
@@ -360,7 +372,6 @@ export async function getOrCreateConversation(userId1: string, userId2: string):
         return existing;
     }
 
-    // If not, create a new one
     const { data: newConversation, error: newError } = await supabase
         .from('conversations')
         .insert({
@@ -377,3 +388,5 @@ export async function getOrCreateConversation(userId1: string, userId2: string):
 
     return newConversation;
 }
+
+      
