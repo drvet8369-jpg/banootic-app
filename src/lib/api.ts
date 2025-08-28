@@ -151,7 +151,7 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 }
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string }): Promise<Provider> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data, error } = await supabase
         .from('providers')
         .update(details)
@@ -167,7 +167,7 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 }
 
 export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data, error } = await supabase
         .from('providers')
         .update({ portfolio })
@@ -183,7 +183,7 @@ export async function updateProviderPortfolio(phone: string, portfolio: Portfoli
 }
 
 export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data, error } = await supabase
         .from('providers')
         .update({ profile_image: profileImage })
@@ -211,7 +211,7 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
 }
 
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'author_name'> & {user_id: string, author_name: string}): Promise<Review> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data: newReview, error } = await supabase.from('reviews').insert(reviewData).select().single();
     if(error){
         console.error('Error adding review:', error);
@@ -248,7 +248,7 @@ export async function updateProviderRating(providerId: string): Promise<void> {
 // --- Agreement Functions ---
 
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data, error } = await supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone));
     if (error) {
         console.error('Error fetching agreements by provider:', error);
@@ -258,7 +258,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data, error } = await supabase.from('agreements').select('*').eq('customer_phone', normalizePhoneNumber(customerPhone));
     if (error) {
         console.error('Error fetching agreements by customer:', error);
@@ -268,7 +268,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 }
 
 export async function createAgreement(provider: Provider, user: { phone: string, name: string, id: string }): Promise<Agreement> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const agreementData = {
         provider_id: provider.id,
         provider_phone: provider.phone,
@@ -291,7 +291,7 @@ export async function createAgreement(provider: Provider, user: { phone: string,
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { data, error } = await supabase
         .from('agreements')
         .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
@@ -310,7 +310,7 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 // --- Chat & Conversation Functions ---
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
-  const supabase = createActionClient();
+  const supabase = await createActionClient();
   const { data, error } = await supabase
     .from('messages')
     .select('*')
@@ -325,7 +325,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
 }
 
 export async function markMessagesAsRead(conversationId: string, receiverId: string): Promise<void> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
@@ -339,7 +339,7 @@ export async function markMessagesAsRead(conversationId: string, receiverId: str
 }
 
 export async function getOrCreateConversation(userId1: string, userId2: string): Promise<Conversation> {
-    const supabase = createActionClient();
+    const supabase = await createActionClient();
     // Ensure consistent ordering for the query
     const [p1, p2] = [userId1, userId2].sort();
 
