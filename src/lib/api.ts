@@ -1,15 +1,15 @@
 
 'use server';
 
-import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, Service, User, Conversation } from './types';
+import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, User, Conversation } from './types';
 import { createAdminClient } from './supabase/server';
+import { createActionClient } from './supabase/actions';
 import { normalizePhoneNumber } from './utils';
-
-const supabase = createAdminClient();
 
 // --- User, Provider & Customer Functions ---
 
 export async function getUserByPhone(phone: string): Promise<User | null> {
+    const supabase = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const { data, error } = await supabase
       .from('users')
@@ -17,14 +17,15 @@ export async function getUserByPhone(phone: string): Promise<User | null> {
       .eq('phone', normalizedPhone)
       .single();
     
-    if (error && error.code !== 'PGRST116') {
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error here
       console.error('Error fetching user by phone:', error);
     }
     
-    return data as User | null;
+    return data;
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
+  const supabase = createAdminClient();
   const normalizedPhone = normalizePhoneNumber(phone);
   const { data, error } = await supabase
     .from('providers')
@@ -37,10 +38,11 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     throw new Error('خطا در ارتباط با پایگاه داده برای یافتن هنرمند.');
   }
   
-  return data as Provider | null;
+  return data;
 }
 
 export async function getCustomerByPhone(phone: string): Promise<Customer | null> {
+    const supabase = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const { data, error } = await supabase
       .from('customers')
@@ -53,10 +55,11 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
       throw new Error('خطا در ارتباط با پایگاه داده برای یافتن مشتری.');
     }
     
-    return data as Customer | null;
+    return data;
 }
 
 export async function createProvider(providerData: Omit<Provider, 'id' | 'user_id' | 'created_at' | 'rating' | 'reviews_count' | 'profile_image' | 'portfolio'> & { name: string, phone: string, account_type: 'provider' }): Promise<Provider> {
+    const supabase = createAdminClient();
     const { data: newUser, error: userError } = await supabase.from('users').insert({ name: providerData.name, account_type: 'provider', phone: normalizePhoneNumber(providerData.phone) }).select().single();
     if(userError) {
       console.error("Error creating user for provider:", userError);
@@ -96,6 +99,7 @@ export async function createProvider(providerData: Omit<Provider, 'id' | 'user_i
 }
 
 export async function createCustomer(customerData: {name: string, phone: string}): Promise<Customer> {
+     const supabase = createAdminClient();
      const normalizedPhone = normalizePhoneNumber(customerData.phone);
      const { data: newUser, error: userError } = await supabase.from('users').insert({ name: customerData.name, account_type: 'customer', phone: normalizedPhone }).select().single();
      if(userError) {
@@ -127,6 +131,7 @@ export async function createCustomer(customerData: {name: string, phone: string}
 }
 
 export async function getAllProviders(): Promise<Provider[]> {
+    const supabase = createAdminClient();
     const { data, error } = await supabase.from('providers').select('*');
     if (error) {
         console.error('Error fetching all providers:', error);
@@ -136,6 +141,7 @@ export async function getAllProviders(): Promise<Provider[]> {
 }
 
 export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Provider[]> {
+    const supabase = createAdminClient();
     const { data, error } = await supabase.from('providers').select('*').eq('service_slug', serviceSlug);
     if (error) {
         console.error(`Error fetching providers for service ${serviceSlug}:`, error);
@@ -145,6 +151,7 @@ export async function getProvidersByServiceSlug(serviceSlug: string): Promise<Pr
 }
 
 export async function updateProviderDetails(phone: string, details: { name: string; service: string; bio: string }): Promise<Provider> {
+    const supabase = createActionClient();
     const { data, error } = await supabase
         .from('providers')
         .update(details)
@@ -160,6 +167,7 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 }
 
 export async function updateProviderPortfolio(phone: string, portfolio: PortfolioItem[]): Promise<Provider> {
+    const supabase = createActionClient();
     const { data, error } = await supabase
         .from('providers')
         .update({ portfolio })
@@ -175,6 +183,7 @@ export async function updateProviderPortfolio(phone: string, portfolio: Portfoli
 }
 
 export async function updateProviderProfileImage(phone: string, profileImage: PortfolioItem): Promise<Provider> {
+    const supabase = createActionClient();
     const { data, error } = await supabase
         .from('providers')
         .update({ profile_image: profileImage })
@@ -192,6 +201,7 @@ export async function updateProviderProfileImage(phone: string, profileImage: Po
 // --- Review Functions ---
 
 export async function getReviewsByProviderId(providerId: string): Promise<Review[]> {
+    const supabase = createAdminClient();
     const { data, error } = await supabase.from('reviews').select('*').eq('provider_id', providerId).order('created_at', { ascending: false });
      if (error) {
         console.error(`Error fetching reviews for provider ${providerId}:`, error);
@@ -201,6 +211,7 @@ export async function getReviewsByProviderId(providerId: string): Promise<Review
 }
 
 export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | 'author_name'> & {user_id: string, author_name: string}): Promise<Review> {
+    const supabase = createActionClient();
     const { data: newReview, error } = await supabase.from('reviews').insert(reviewData).select().single();
     if(error){
         console.error('Error adding review:', error);
@@ -211,6 +222,7 @@ export async function addReview(reviewData: Omit<Review, 'id' | 'created_at' | '
 }
 
 export async function updateProviderRating(providerId: string): Promise<void> {
+    const supabase = createAdminClient();
     const { data: providerReviews, error: reviewError } = await supabase.from('reviews').select('rating').eq('provider_id', providerId);
     if(reviewError) {
         console.error(`Error fetching reviews for rating update on provider ${providerId}:`, reviewError);
@@ -236,6 +248,7 @@ export async function updateProviderRating(providerId: string): Promise<void> {
 // --- Agreement Functions ---
 
 export async function getAgreementsByProvider(providerPhone: string): Promise<Agreement[]> {
+    const supabase = createActionClient();
     const { data, error } = await supabase.from('agreements').select('*').eq('provider_phone', normalizePhoneNumber(providerPhone));
     if (error) {
         console.error('Error fetching agreements by provider:', error);
@@ -245,6 +258,7 @@ export async function getAgreementsByProvider(providerPhone: string): Promise<Ag
 }
 
 export async function getAgreementsByCustomer(customerPhone: string): Promise<Agreement[]> {
+    const supabase = createActionClient();
     const { data, error } = await supabase.from('agreements').select('*').eq('customer_phone', normalizePhoneNumber(customerPhone));
     if (error) {
         console.error('Error fetching agreements by customer:', error);
@@ -254,6 +268,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 }
 
 export async function createAgreement(provider: Provider, user: { phone: string, name: string, id: string }): Promise<Agreement> {
+    const supabase = createActionClient();
     const agreementData = {
         provider_id: provider.id,
         provider_phone: provider.phone,
@@ -276,6 +291,7 @@ export async function createAgreement(provider: Provider, user: { phone: string,
 }
 
 export async function confirmAgreement(agreementId: number): Promise<Agreement> {
+    const supabase = createActionClient();
     const { data, error } = await supabase
         .from('agreements')
         .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
@@ -294,6 +310,7 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 // --- Chat & Conversation Functions ---
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
+  const supabase = createActionClient();
   const { data, error } = await supabase
     .from('messages')
     .select('*')
@@ -308,6 +325,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
 }
 
 export async function markMessagesAsRead(conversationId: string, receiverId: string): Promise<void> {
+    const supabase = createActionClient();
     const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
@@ -321,6 +339,7 @@ export async function markMessagesAsRead(conversationId: string, receiverId: str
 }
 
 export async function getOrCreateConversation(userId1: string, userId2: string): Promise<Conversation> {
+    const supabase = createActionClient();
     // Ensure consistent ordering for the query
     const [p1, p2] = [userId1, userId2].sort();
 
