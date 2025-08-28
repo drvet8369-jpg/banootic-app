@@ -39,6 +39,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { dispatchCrossTabEvent } from '@/lib/events';
+import type { AppUser } from '@/context/AuthContext';
 
 
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -76,7 +77,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isLoggedIn || user?.account_type !== 'customer') {
+  if (!isLoggedIn || user?.accountType !== 'customer') {
     return null;
   }
 
@@ -154,7 +155,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
 export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -195,7 +196,14 @@ export default function ProviderProfilePage() {
     if (!provider || !user) return;
     setIsRequestingAgreement(true);
     try {
-      await createAgreement(provider, user);
+      // We pass the full AppUser object which matches the expected signature in `createAgreement`.
+      const appUser: AppUser = {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        accountType: user.accountType
+      };
+      await createAgreement(provider, appUser);
       toast({
         title: 'موفق',
         description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد. می‌توانید وضعیت آن را در صفحه "درخواست‌های من" پیگیری کنید.',
@@ -211,7 +219,7 @@ export default function ProviderProfilePage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
       <div className="flex justify-center items-center py-20 flex-grow">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -251,7 +259,7 @@ export default function ProviderProfilePage() {
         );
     }
 
-    if (user?.account_type !== 'customer') {
+    if (user?.accountType !== 'customer') {
         return null;
     }
 

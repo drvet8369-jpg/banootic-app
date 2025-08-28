@@ -5,6 +5,7 @@ import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, Use
 import { createAdminClient } from './supabase/server';
 import { createActionClient } from './supabase/actions';
 import { normalizePhoneNumber } from './utils';
+import type { AppUser } from '@/context/AuthContext';
 
 // --- User, Provider & Customer Functions ---
 
@@ -277,7 +278,7 @@ export async function getAgreementsByCustomer(customerPhone: string): Promise<Ag
 }
 
 // Uses action client as only a logged-in user can create an agreement.
-export async function createAgreement(provider: Provider, user: { phone: string, name: string, id: string }): Promise<Agreement> {
+export async function createAgreement(provider: Provider, user: AppUser): Promise<Agreement> {
     const supabase = await createActionClient();
     const agreementData = {
         provider_id: provider.id,
@@ -388,5 +389,3 @@ export async function getOrCreateConversation(userId1: string, userId2: string):
 
     return newConversation;
 }
-
-      
