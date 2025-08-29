@@ -29,9 +29,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 
-const phoneSchema = z.object({
-  phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+const emailSchema = z.object({
+  email: z.string().email({
+    message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
   }),
 });
 
@@ -42,25 +42,22 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
-  const form = useForm<z.infer<typeof phoneSchema>>({
-    resolver: zodResolver(phoneSchema),
+  const form = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
-      phone: '',
+      email: '',
     },
   });
 
-  async function onSubmit(values: z.infer<typeof phoneSchema>) {
+  async function onSubmit(values: z.infer<typeof emailSchema>) {
     setIsLoading(true);
 
     try {
-      // This is the standard Supabase client-side OTP flow.
-      // With the dashboard configured for test OTPs, it will not send a real SMS.
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: values.phone,
+      const { error } = await supabase.auth.signInWithOtp({
+        email: values.email,
         options: {
-          // This is crucial. It tells Supabase to not create a new user
-          // if they don't exist. This is the correct behavior for a login page.
-          shouldCreateUser: false,
+          shouldCreateUser: false, // Don't create new users on the login page
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       });
 
@@ -69,18 +66,16 @@ export default function LoginPage() {
       }
       
       toast({
-        title: 'کد تایید آماده است',
-        description: 'به صفحه تایید کد هدایت می‌شوید. در محیط تست، از کد 123456 استفاده کنید.',
+        title: 'لینک ورود ارسال شد',
+        description: 'لطفاً ایمیل خود را چک کنید. در محیط تست، لینک ورود در داشبورد Supabase شما (بخش Authentication > Emails) قابل مشاهده است.',
       });
-      
-      router.push(`/login/verify?phone=${encodeURIComponent(values.phone)}`);
+      // Clear the form or provide feedback, no redirect needed here.
+      form.reset();
 
     } catch (error: any) {
-        let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
+        let errorMessage = 'مشکلی در ارسال لینک ورود پیش آمده است. لطفاً دوباره تلاش کنید.';
         if (error.message.includes('User not found')) {
-            errorMessage = 'کاربری با این شماره تلفن یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
-        } else if (error.message.includes('rate limit')) {
-            errorMessage = 'تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.'
+            errorMessage = 'کاربری با این ایمیل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
         }
         
         toast({
@@ -100,9 +95,9 @@ export default function LoginPage() {
             <div className="mx-auto bg-primary/10 rounded-full p-4 w-fit mb-4">
                 <KeyRound className="w-10 h-10 text-primary" />
             </div>
-          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
+          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود، شماره تلفن خود را وارد کنید تا به صفحه تایید کد هدایت شوید.
+            برای ورود، ایمیل خود را وارد کنید تا لینک جادویی برای شما ارسال شود.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -110,12 +105,12 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="phone"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>شماره تلفن</FormLabel>
+                    <FormLabel>آدرس ایمیل</FormLabel>
                     <FormControl>
-                      <Input placeholder="09XXXXXXXXX" {...field} disabled={isLoading} dir="ltr" className="text-center" />
+                      <Input placeholder="you@example.com" {...field} disabled={isLoading} dir="ltr" className="text-center" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -123,7 +118,7 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ارسال کد تایید
+                ارسال لینک ورود
               </Button>
             </form>
           </Form>

@@ -1,12 +1,5 @@
 
-
-export interface User {
-  id: string; // This is the user_id from the DB (UUID)
-  name: string;
-  phone: string; 
-  account_type: 'customer' | 'provider';
-  created_at: string;
-}
+import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
   id: number;
@@ -23,101 +16,37 @@ export interface Service {
 
 export interface PortfolioItem {
   src: string;
-  ai_hint?: string;
+  aiHint?: string;
 }
 
 export interface Provider {
-  id: string; 
-  user_id: string;
-  created_at: string;
+  id: number;
   name: string;
-  service: string;
+  email: string;
+  service: string; // The specific service they provide, e.g., "Manicure"
   location: string;
   phone: string;
   bio: string;
-  category_slug: Category['slug'];
-  service_slug: Service['slug'];
+  categorySlug: Category['slug'];
+  serviceSlug: Service['slug']; // Link to the service
   rating: number;
-  reviews_count: number;
-  profile_image: PortfolioItem;
+  reviewsCount: number;
+  profileImage: PortfolioItem; // Dedicated profile image
   portfolio: PortfolioItem[];
-}
-
-export interface Customer {
-  id: string;
-  user_id: string;
-  created_at: string;
-  name: string;
-  phone: string;
 }
 
 export interface Review {
   id: string;
-  provider_id: string;
-  user_id: string;
-  author_name: string;
+  providerId: number;
+  authorName: string;
   rating: number;
   comment: string;
-  created_at: string;
-}
-
-export interface Agreement {
-  id: number;
-  provider_id: string;
-  customer_id: string;
-  provider_phone: string;
-  customer_phone: string;
-  customer_name: string;
-  status: 'pending' | 'confirmed';
-  requested_at: string;
-  confirmed_at: string | null;
-}
-
-export interface Conversation {
-    id: string;
-    created_at: string;
-    participant_one_id: string;
-    participant_two_id: string;
-    last_message_id?: number | null;
-    last_message_at?: string | null;
+  createdAt: string; // ISO String format
 }
 
 export interface Message {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  receiver_id: string;
-  content: string;
-  created_at: string;
-  is_read: boolean;
-}
-
-// Type for the data returned by the API for the inbox page
-export interface ConversationSummary {
-  conversation_id: string;
-  other_user_id: string;
-  other_user_name: string;
-  other_user_phone: string;
-  other_user_profile_image: { src: string | null; ai_hint: string | null };
-  last_message_content: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-}
-
-
-// Types for creating new users
-export interface NewProvider {
-    name: string;
-    phone: string;
-    account_type: 'provider';
-    service: string;
-    location: string;
-    bio: string;
-    category_slug: Category['slug'];
-    service_slug: Service['slug'];
-}
-
-export interface NewCustomer {
-    name: string;
-    phone: string;
+  text: string;
+  senderId: string;
+  receiverId?: string;
+  createdAt: Timestamp;
 }

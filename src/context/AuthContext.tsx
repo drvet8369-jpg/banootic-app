@@ -2,16 +2,16 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { getProviderByPhone, getCustomerByPhone } from '@/lib/api';
 
-// This is the user object shape used within our React application.
-// It combines Supabase's auth user with our public user profile data.
+// The user object shape used within our React application.
 export interface AppUser {
-  id: string; // This is the user_id from the DB (UUID)
+  id: string; // The user_id from the DB (UUID)
   name: string;
-  phone: string; 
+  email: string; 
+  phone: string; // Still useful for contact info
   accountType: 'customer' | 'provider';
 }
 
@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -35,35 +36,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
         if (session?.user) {
           const supabaseUser = session.user;
-          // After getting the session, we need to fetch our public profile
-          // to get the accountType and full name.
-          let profile: { name: string; accountType: 'provider' | 'customer' } | null = null;
-          
-          const providerProfile = await getProviderByPhone(supabaseUser.phone!);
-          if (providerProfile) {
-            profile = { name: providerProfile.name, accountType: 'provider' };
-          } else {
-            const customerProfile = await getCustomerByPhone(supabaseUser.phone!);
-            if (customerProfile) {
-              profile = { name: customerProfile.name, accountType: 'customer' };
-            }
-          }
-
-          if (profile) {
-            setUser({
-              id: supabaseUser.id,
-              phone: supabaseUser.phone!,
-              name: profile.name,
-              accountType: profile.accountType
-            });
-          } else {
-            // This case might happen if a user exists in auth but not in our public tables.
-            // Log them out to force a clean registration.
-            console.warn("User exists in Supabase Auth but not in public profiles. Logging out.");
-            await supabase.auth.signOut();
-            setUser(null);
-          }
-
+          // In a real app, you would fetch the user's profile from your public table
+          // to get additional details like name, accountType, etc.
+          // For this demo, we'll construct a mock user object.
+          setUser({
+            id: supabaseUser.id,
+            email: supabaseUser.email!,
+            name: supabaseUser.email?.split('@')[0] || 'کاربر', // Mock name
+            phone: supabaseUser.phone || 'N/A', // Mock phone
+            accountType: 'customer', // Default to customer for demo
+          });
         } else {
           setUser(null);
         }
@@ -92,17 +74,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setIsLoading(false);
     // Redirect to home to ensure a clean state
-    window.location.href = '/';
+    router.push('/');
   };
   
-  // The login function is no longer needed here as the onAuthStateChange listener handles everything.
-  // We keep the context shape for consumers but the function will be handled by Supabase sign-in methods.
   const value = {
     isLoggedIn: !isLoading && !!user,
     user,
     isLoading,
     logout,
-    // login is removed from the provider value
   };
 
   return (
