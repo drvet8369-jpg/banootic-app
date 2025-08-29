@@ -56,7 +56,16 @@ export async function middleware(request: NextRequest) {
   )
 
   // This will refresh the session if it's expired.
-  await supabase.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // IMPORTANT: This part is for URL rewriting. If the NEXT_PUBLIC_SITE_URL
+  // is set and doesn't match the request URL, it redirects to the canonical URL.
+  // This is crucial for OAuth and magic link flows to work correctly.
+  const url = request.nextUrl
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  if (siteUrl && url.origin !== siteUrl) {
+    return NextResponse.redirect(new URL(url.pathname, siteUrl))
+  }
 
   return response
 }

@@ -51,12 +51,14 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof emailSchema>) {
     setIsLoading(true);
 
+    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` : '/auth/callback';
+
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: values.email,
         options: {
           shouldCreateUser: false,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectUrl,
         }
       });
 
