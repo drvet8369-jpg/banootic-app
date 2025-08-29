@@ -83,17 +83,6 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
     return data;
 }
 
-export async function loginAndGetSession(phone: string) {
-    const supabaseAdmin = createAdminClient();
-    const actionClient = await createActionClient();
-    const normalizedPhone = normalizePhoneNumber(phone);
-
-    // This function is now deprecated and replaced by the /api/auth/login flow
-    // It is kept here to avoid breaking old references but should not be used.
-    throw new Error('loginAndGetSession is deprecated. Use the Magic Link flow.');
-}
-
-
 export async function createProvider(providerData: NewProvider): Promise<Provider> {
   const supabase = createAdminClient(); // Use Admin for user creation
   const normalizedPhone = normalizePhoneNumber(providerData.phone);
@@ -189,7 +178,6 @@ export async function createCustomer(customerData: NewCustomer) {
         throw new Error('خطا در ذخیره پروفایل مشتری.');
     }
     
-    // We no longer log the user in here. They must use the magic link flow after registering.
     return { customer: newCustomer };
 }
 

@@ -4,6 +4,11 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { getUserByPhone } from '@/lib/api';
 
+// This API route starts the OTP login process.
+// In a real app with an SMS provider configured, Supabase would send the OTP.
+// In our development setup, Supabase will not send an SMS but will prepare the OTP
+// for verification. We will rely on the client-side call for this process.
+
 export async function POST(request: Request) {
   const { phone } = await request.json();
 
@@ -12,40 +17,22 @@ export async function POST(request: Request) {
   }
 
   const normalizedPhone = normalizePhoneNumber(phone);
-  const supabaseAdmin = createAdminClient();
-
+  
   try {
-    // 1. Check if user exists. If not, they need to register.
+    // We just need to check if the user exists. The client will handle the OTP logic.
     const user = await getUserByPhone(normalizedPhone);
     if (!user) {
         return NextResponse.json({ error: 'کاربری با این شماره تلفن یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' }, { status: 404 });
     }
 
-    // 2. Generate a magic link for the existing user.
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        phone: normalizedPhone,
-        options: {
-            // This is where the user will be redirected after clicking the link
-            redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`
-        }
-    });
+    // The actual `signInWithOtp` will be called on the client side,
+    // which is the standard Supabase flow. This API route now only serves
+    // to confirm the user's existence before initiating the client-side flow.
+    return NextResponse.json({ message: 'کاربر یافت شد. لطفاً برای دریافت کد OTP ادامه دهید.' });
 
-    if (error) {
-      console.error('Error generating magic link:', error);
-      throw new Error('خطا در ایجاد لینک ورود امن.');
-    }
-    
-    // 3. In a real application, you would send this link via an SMS provider.
-    // For this demo, we will log it to the server console.
-    const magicLink = data.properties.action_link;
-    console.log(`\n\n--- MAGIC LINK FOR ${normalizedPhone} ---\n${magicLink}\n--- CLICK THIS LINK TO LOG IN ---\n\n`);
-
-
-    return NextResponse.json({ message: 'لینک ورود با موفقیت ایجاد و در کنسول سرور لاگ شد.' });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'یک خطای ناشناخته در سرور رخ داد.';
-    console.error('Login API error:', error);
+    console.error('Login API (user check) error:', error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
