@@ -3,17 +3,9 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
-import type { UserProfile } from '@/lib/types';
-
-// The user object shape used within our React application.
-export interface AppUser {
-  id: string; // The user_id from the DB (UUID)
-  name: string;
-  email: string; 
-  accountType: 'customer' | 'provider';
-  phone: string;
-}
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AppUser } from '@/lib/types';
+import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -27,25 +19,60 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
 }
 
-export const AuthProvider = ({ children }: AuthProviderProps) => {
+const ConfigErrorScreen = ({ message, instructions }: { message: string; instructions: string }) => (
+  <div className="flex flex-col items-center justify-center h-screen w-full bg-red-50 text-red-900 p-4">
+    <div className="text-center max-w-2xl">
+      <h1 className="text-3xl font-bold mb-4">{message}</h1>
+      <p className="text-lg mb-2">مقادیر لازم برای اتصال به پایگاه داده در فایل <strong>.env.local</strong> شما یافت نشد یا نامعتبر بودند.</p>
+      <code className="block bg-red-100 p-4 rounded-md text-left text-sm my-4 whitespace-pre-wrap">
+        {`# .env.local
+NEXT_PUBLIC_SITE_URL="http://localhost:9002"
+NEXT_PUBLIC_SUPABASE_URL="YOUR_SUPABASE_URL_HERE"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY_HERE"
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_KEY_HERE"
+`}
+      </code>
+      <p className="text-lg font-semibold">{instructions}</p>
+    </div>
+  </div>
+);
+
+
+export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthProviderProps) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const supabase = useMemo(() => {
-    return createClient();
-  }, []);
+  const [configError, setConfigError] = useState<string | null>(null);
   
   const router = useRouter();
 
+  const supabase = useMemo(() => {
+    if (!supabaseUrl || supabaseUrl.includes("YOUR_SUPABASE_URL")) {
+      setConfigError("Supabase URL is not configured.");
+      return null;
+    }
+    if (!supabaseAnonKey || supabaseAnonKey.includes("YOUR_SUPABASE_ANON_KEY")) {
+       setConfigError("Supabase Anon Key is not configured.");
+       return null;
+    }
+    setConfigError(null);
+    return createClient(supabaseUrl, supabaseAnonKey);
+  }, [supabaseUrl, supabaseAnonKey]);
+
   useEffect(() => {
+    if (!supabase) {
+        setIsLoading(false);
+        return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setIsLoading(true);
         if (session?.user) {
           const supabaseUser = session.user;
-          
           try {
             const { data: userProfile, error } = await supabase
               .from('users')
@@ -62,20 +89,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                     id: userProfile.id,
                     email: supabaseUser.email!,
                     name: userProfile.name,
-                    accountType: userProfile.account_type,
+                    account_type: userProfile.account_type,
                     phone: userProfile.phone,
                 });
-            } else {
-                console.warn(`User ${supabaseUser.id} found in auth but not in public.users. Logging out.`);
-                await supabase.auth.signOut();
-                setUser(null);
             }
           } catch(e) {
              console.error("Critical error fetching user profile:", e);
              await supabase.auth.signOut();
              setUser(null);
           }
-
         } else {
           setUser(null);
         }
@@ -85,19 +107,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const checkInitialSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            setIsLoading(false);
-        }
+        if (!session) setIsLoading(false);
     };
     checkInitialSession();
-
 
     return () => {
       subscription.unsubscribe();
     };
   }, [supabase]);
+  
+  if (configError) {
+      return <ConfigErrorScreen message={configError} instructions="لطفاً فایل .env.local را تکمیل کرده و سرور را مجدداً راه‌اندازی (Restart) کنید." />;
+  }
 
   const logout = async () => {
+    if (!supabase) return;
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
@@ -110,17 +134,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     isLoading,
     logout,
-    supabase,
+    supabase: supabase!,
   };
 
   return (
     <AuthContext.Provider value={value}>
       {isLoading ? (
          <div className="flex justify-center items-center h-screen w-full">
-            <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+            <Loader2 className="animate-spin h-10 w-10 text-primary" />
         </div>
       ) : (
         children
