@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
-import { AlertCircle } from 'lucide-react';
 
 // The user object shape used within our React application.
 export interface AppUser {
@@ -30,36 +29,10 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const ConfigError = ({ missingVar }: { missingVar: string }) => (
-  <div className="flex flex-col items-center justify-center h-screen w-full bg-red-100 text-red-900 p-4">
-    <div className="flex items-center gap-4 border-2 border-red-800 rounded-lg p-8 bg-white shadow-lg">
-      <AlertCircle className="w-16 h-16 text-red-600" />
-      <div>
-        <h1 className="text-2xl font-bold">خطای پیکربندی</h1>
-        <p className="mt-2 text-lg">
-          متغیر محیطی <code className="bg-red-200 p-1 rounded font-mono text-base">{missingVar}</code> در فایل <code className="bg-red-200 p-1 rounded font-mono text-base">.env.local</code> تنظیم نشده است.
-        </p>
-        <p className="mt-1">لطفاً کلیدهای پروژه Supabase خود را در این فایل وارد کرده و برنامه را مجدداً راه‌اندازی کنید.</p>
-      </div>
-    </div>
-  </div>
-);
-
-
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || supabaseUrl.includes("YOUR_SUPABASE_URL")) {
-    return <ConfigError missingVar="NEXT_PUBLIC_SUPABASE_URL" />;
-  }
-  if (!supabaseAnonKey || supabaseAnonKey.includes("YOUR_SUPABASE_ANON_KEY")) {
-    return <ConfigError missingVar="NEXT_PUBLIC_SUPABASE_ANON_KEY" />;
-  }
-
   const supabase = useMemo(() => {
     return createClient();
   }, []);
