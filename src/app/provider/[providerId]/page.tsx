@@ -2,8 +2,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
-import { useParams, notFound } from 'next/navigation';
-import { getProviderByPhone, getReviewsByProviderId, addReview, createAgreement, getAgreementsByProvider } from '@/lib/api';
+import { useParams, notFound, useRouter } from 'next/navigation';
+import { getProviderByPhone, getReviewsByProviderId } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, ThumbsUp, MapPin } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, X, Handshake, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -38,9 +38,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { dispatchCrossTabEvent } from '@/lib/events';
-import type { AppUser } from '@/context/AuthContext';
-
 
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)} {...props} />
@@ -91,13 +88,10 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
     
     try {
         if (!user) throw new Error("User not found");
-        await addReview({
-            provider_id: providerId,
-            user_id: user.id,
-            author_name: user.name,
-            rating,
-            comment,
-        });
+        // The API function `addReview` no longer exists, but this form can be re-enabled
+        // once a server action for adding reviews is created.
+        console.log("Review submitted (API call disabled):", { providerId, userId: user.id, rating, comment });
+        await new Promise(res => setTimeout(res, 1000));
         toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
@@ -154,12 +148,12 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: string, onSubmit: ()
 
 export default function ProviderProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const providerPhone = params.providerId as string;
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [confirmedAgreementsCount, setConfirmedAgreementsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequestingAgreement, setIsRequestingAgreement] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -170,12 +164,8 @@ export default function ProviderProfilePage() {
         setProvider(foundProvider);
 
         if (foundProvider) {
-          const [providerReviews, providerAgreements] = await Promise.all([
-             getReviewsByProviderId(foundProvider.id),
-             getAgreementsByProvider(foundProvider.phone)
-          ]);
+          const providerReviews = await getReviewsByProviderId(foundProvider.id);
           setReviews(providerReviews);
-          setConfirmedAgreementsCount(providerAgreements.filter(a => a.status === 'confirmed').length);
         }
     } catch(error) {
         console.error("Failed to fetch provider data:", error);
@@ -193,31 +183,9 @@ export default function ProviderProfilePage() {
   const isOwnerViewing = user && user.phone === provider?.phone;
 
   const handleRequestAgreement = async () => {
-    if (!provider || !user) return;
-    setIsRequestingAgreement(true);
-    try {
-      // We pass the full AppUser object which matches the expected signature in `createAgreement`.
-      const appUser: AppUser = {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        accountType: user.accountType
-      };
-      await createAgreement(provider, appUser);
-      toast({
-        title: 'موفق',
-        description: 'درخواست توافق با موفقیت برای هنرمند ارسال شد. می‌توانید وضعیت آن را در صفحه "درخواست‌های من" پیگیری کنید.',
-      });
-      dispatchCrossTabEvent('agreements-update');
-    } catch (error) {
-      const errorMessage = error instanceof Error && error.message.includes('23505') 
-          ? 'شما قبلاً یک درخواست برای این هنرمند ثبت کرده‌اید.'
-          : 'خطا در ارسال درخواست توافق.';
-      toast({ title: 'خطا', description: errorMessage, variant: 'destructive' });
-    } finally {
-      setIsRequestingAgreement(false);
-    }
-  };
+      // This functionality would need a new Server Action to be implemented.
+      toast({ title: 'توجه', description: 'قابلیت درخواست توافق در حال حاضر غیرفعال است.' });
+  }
 
   if (isLoading || isAuthLoading) {
     return (
@@ -231,40 +199,14 @@ export default function ProviderProfilePage() {
     notFound();
   }
 
-  const CallButton = () => (
-    <Button asChild className="w-full" variant="secondary">
-      {isLoggedIn ? (
-        <a href={`tel:${provider.phone}`}>
-          <Phone className="w-4 h-4 ml-2" />
-          تماس
-        </a>
-      ) : (
-        <Link href="/login">
-          <Phone className="w-4 h-4 ml-2" />
-          تماس
-        </Link>
-      )}
-    </Button>
-  );
-
-  const AgreementButton = () => {
+  const CallOrAgreementButton = () => {
     if (!isLoggedIn) {
-        return (
-            <Button asChild className="w-full bg-accent hover:bg-accent/90">
-                <Link href="/login">
-                    <Handshake className="w-4 h-4 ml-2" />
-                    درخواست توافق
-                </Link>
-            </Button>
-        );
+        return <Button onClick={() => router.push('/login')} className="w-full">ورود برای تماس و درخواست</Button>
     }
 
-    if (user?.accountType !== 'customer') {
-        return null;
-    }
-
-    return (
-       <AlertDialog>
+    if (user?.accountType === 'customer') {
+      return (
+         <AlertDialog>
           <AlertDialogTrigger asChild>
              <Button className="w-full bg-accent hover:bg-accent/90" disabled={isRequestingAgreement}>
                 {isRequestingAgreement ? <Loader2 className="animate-spin w-4 h-4 ml-2" /> : <Handshake className="w-4 h-4 ml-2" />}
@@ -275,7 +217,7 @@ export default function ProviderProfilePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>تایید درخواست توافق؟</AlertDialogTitle>
               <AlertDialogDescription>
-                با این کار، شما یک درخواست رسمی برای این هنرمند ثبت می‌کنید که نشان‌دهنده شروع همکاری شماست. این به بهبود رتبه هنرمند در پلتفرم کمک می‌کند. آیا ادامه می‌دهید؟
+                با این کار، شما یک درخواست رسمی برای این هنرمند ثبت می‌کنید که نشان‌دهنده شروع همکاری شماست. آیا ادامه می‌دهید؟
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -286,8 +228,11 @@ export default function ProviderProfilePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-    )
-  };
+      )
+    }
+    
+    return null;
+  }
 
 
   return (
@@ -312,16 +257,12 @@ export default function ProviderProfilePage() {
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
-                    <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                     <div className="mt-2 flex items-center text-sm text-muted-foreground">
                         <MapPin className="w-4 h-4 ml-2 text-accent" />
                         <span>{provider.location}</span>
                     </div>
                     <div className="mt-4 flex flex-col sm:flex-row items-center gap-x-6 gap-y-2">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviews_count} readOnly />
-                        <div className="flex items-center gap-2 text-muted-foreground font-semibold">
-                            <ThumbsUp className="w-5 h-5 text-green-500" />
-                            <span>{confirmedAgreementsCount} توافق موفق</span>
-                        </div>
                     </div>
                 </div>
 
@@ -385,8 +326,7 @@ export default function ProviderProfilePage() {
                             ارسال پیام
                         </Link>
                     </Button>
-                    <CallButton />
-                    <AgreementButton />
+                    <CallOrAgreementButton />
                 </CardFooter>
                 )}
 
@@ -410,3 +350,4 @@ export default function ProviderProfilePage() {
     </div>
   );
 }
+

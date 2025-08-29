@@ -27,10 +27,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { getUserByPhone } from '@/lib/api';
-import type { AppUser } from '@/context/AuthContext';
-
+import { getUserByPhone, loginAndGetSession } from '@/lib/api';
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
@@ -41,7 +38,6 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -57,21 +53,18 @@ export default function LoginPage() {
         const foundUser = await getUserByPhone(values.phone);
 
         if (foundUser) {
-            const userToLogin: AppUser = {
-                id: foundUser.id,
-                name: foundUser.name,
-                phone: foundUser.phone,
-                accountType: foundUser.account_type,
-            };
+            // User exists, so we can log them in.
+            await loginAndGetSession(values.phone);
             
-            login(userToLogin);
-
             toast({
               title: 'ورود با موفقیت انجام شد!',
-              description: `خوش آمدید ${userToLogin.name}!`,
+              description: `خوش آمدید ${foundUser.name}!`,
             });
             
+            // The AuthContext will automatically update and handle the redirect/UI changes.
+            // We can refresh the page to ensure all server components re-render with the new session.
             router.push('/');
+            router.refresh();
 
         } else {
              toast({
@@ -94,12 +87,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود</CardTitle>
           <CardDescription>
-            برای ورود، شماره تلفن خود را وارد کنید.
+            برای ورود، شماره تلفن ثبت شده خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
