@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +7,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,24 +24,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/data';
+import { categories } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import { getProviders, saveProviders } from '@/lib/data';
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
     required_error: 'لطفاً نوع حساب کاربری خود را انتخاب کنید.',
   }),
-  name: z.string().min(2, {
-    message: 'نام باید حداقل ۲ حرف داشته باشد.',
-  }),
-  email: z.string().email({
-    message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
-  }),
-  phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
-  }),
+  name: z.string().min(2, { message: 'نام باید حداقل ۲ حرف داشته باشد.' }),
+  email: z.string().email({ message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.' }),
+  phone: z.string().regex(/^09\d{9}$/, { message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).' }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
@@ -67,8 +59,8 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -83,17 +75,56 @@ export default function RegisterForm() {
 
   const accountType = form.watch('accountType');
 
-  // This is a placeholder function now. The real registration logic needs to be
-  // implemented using Supabase client.
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    toast({
-        title: "ثبت نام غیرفعال است",
-        description: "این یک نسخه نمایشی است و ثبت نام جدید در حال حاضر امکان‌پذیر نیست.",
-        variant: "default"
-    });
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
+    
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: values.email,
+        password: `password_${Date.now()}`, // Dummy password for email-only auth
+        options: {
+          data: {
+            name: values.name,
+            account_type: values.accountType,
+            phone: values.phone,
+            // Provider specific data
+            service: values.accountType === 'provider' ? (categories.find(c => c.slug === values.serviceType)?.name || 'خدمت جدید') : undefined,
+            location: values.accountType === 'provider' ? 'ارومیه' : undefined,
+            bio: values.accountType === 'provider' ? values.bio : undefined,
+            category_slug: values.accountType === 'provider' ? values.serviceType : undefined,
+            service_slug: values.accountType === 'provider' ? values.serviceType : undefined, // Simplified for now
+          }
+        }
+      });
+      
+      if (authError) throw authError;
+
+      if (!authData.user) throw new Error("کاربر ایجاد نشد، لطفاً دوباره تلاش کنید.");
+      
+      // The onAuthStateChange in AuthContext will handle the rest.
+      toast({
+        title: 'ثبت‌نام موفقیت‌آمیز بود',
+        description: 'یک ایمیل تایید برای شما ارسال شد. لطفاً برای فعال‌سازی حساب، روی لینک داخل ایمیل کلیک کنید.',
+      });
+      
+      form.reset();
+      // Redirect to a page that tells them to check their email
+      // For now, we'll just clear the form. In a real app, a dedicated "check your email" page is better.
+
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+      let errorMessage = "مشکلی در فرآیند ثبت‌نام پیش آمده است.";
+      if (error.message.includes('User already registered')) {
+        errorMessage = 'کاربری با این ایمیل قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.';
+      }
+      toast({
+        title: "خطا در ثبت‌نام",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -161,7 +192,7 @@ export default function RegisterForm() {
                     <Input placeholder="you@example.com" {...field} disabled={isLoading} dir="ltr" />
                   </FormControl>
                   <FormDescription>
-                    لینک ورود به این آدرس ایمیل ارسال خواهد شد.
+                    برای ورود و خروج از این ایمیل استفاده خواهید کرد.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -173,10 +204,13 @@ export default function RegisterForm() {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>شماره تلفن (برای تماس مشتریان)</FormLabel>
+                  <FormLabel>شماره تلفن (برای تماس)</FormLabel>
                   <FormControl>
                     <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr"/>
                   </FormControl>
+                  <FormDescription>
+                    این شماره در پروفایل شما برای تماس مشتریان نمایش داده می‌شود.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -234,7 +268,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام
+              ثبت‌نام و ارسال لینک تایید
             </Button>
             
             <div className="mt-4 text-center text-sm">

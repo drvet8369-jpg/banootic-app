@@ -12,7 +12,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Provider, PortfolioItem } from '@/lib/types';
-import { getProviderByPhone, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
+import { getProviderByUserId, updateProviderDetails, updateProviderPortfolio, updateProviderProfileImage } from '@/lib/api';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -45,19 +45,20 @@ export default function ProfilePage() {
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
-  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
+  const [editedData, setEditedData] = useState({ name: '', service: '', bio: '', phone: '' });
 
   const loadProviderData = useCallback(async () => {
     if (user && user.accountType === 'provider') {
         setIsLoading(true);
         try {
-            const currentProvider = await getProviderByPhone(user.phone);
+            const currentProvider = await getProviderByUserId(user.id);
             if (currentProvider) {
                 setProvider(currentProvider);
                 setEditedData({
                     name: currentProvider.name,
                     service: currentProvider.service,
                     bio: currentProvider.bio,
+                    phone: currentProvider.phone,
                 });
             } else {
                  toast({ title: "خطا", description: "پروفایل هنرمند یافت نشد.", variant: "destructive" });
@@ -86,13 +87,13 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = async () => {
-    if(!user || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
+    if(!user || !editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim() || !editedData.phone.trim()){
         toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
     setIsSaving(true);
     try {
-        const updatedProvider = await updateProviderDetails(user.phone, editedData);
+        const updatedProvider = await updateProviderDetails(user.id, editedData);
         setProvider(updatedProvider);
         toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
@@ -110,6 +111,7 @@ export default function ProfilePage() {
             name: provider.name,
             service: provider.service,
             bio: provider.bio,
+            phone: provider.phone
         });
     }
     setMode('viewing');
@@ -158,7 +160,7 @@ export default function ProfilePage() {
   }
 
   const uploadProfilePicture = async (file: File) => {
-      if (!user || !user.phone) {
+      if (!user) {
           toast({ title: 'خطا', description: 'کاربر شناسایی نشد. لطفاً دوباره وارد شوید.', variant: 'destructive'});
           return;
       }
@@ -166,7 +168,7 @@ export default function ProfilePage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('phone', user.phone);
+        formData.append('userId', user.id);
         
         const response = await fetch('/api/upload-profile-pic', {
           method: 'POST',
@@ -191,7 +193,7 @@ export default function ProfilePage() {
   }
 
   const uploadPortfolioImage = async (file: File) => {
-    if (!user || !user.phone) {
+    if (!user) {
         toast({ title: 'خطا', description: 'کاربر شناسایی نشد. لطفاً دوباره وارد شوید.', variant: 'destructive'});
         return;
     }
@@ -199,7 +201,7 @@ export default function ProfilePage() {
     try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('phone', user.phone);
+        formData.append('userId', user.id);
 
         const response = await fetch('/api/upload-portfolio-item', {
             method: 'POST',
@@ -226,7 +228,7 @@ export default function ProfilePage() {
     setIsSaving(true);
     try {
         const updatedPortfolio = (provider.portfolio || []).filter((_, index) => index !== itemIndex);
-        const updatedProvider = await updateProviderPortfolio(user.phone, updatedPortfolio);
+        const updatedProvider = await updateProviderPortfolio(user.id, updatedPortfolio);
         setProvider(updatedProvider);
         toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
     } catch (error) {
@@ -244,7 +246,7 @@ export default function ProfilePage() {
     }
     setIsSaving(true);
     try {
-        const updatedProvider = await updateProviderProfileImage(user.phone, { src: '', ai_hint: '' });
+        const updatedProvider = await updateProviderProfileImage(user.id, { src: '', ai_hint: '' });
         setProvider(updatedProvider);
         toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } catch (error) {
@@ -293,7 +295,7 @@ export default function ProfilePage() {
      )
   }
 
-  if (user?.account_type !== 'provider') {
+  if (user?.accountType !== 'provider') {
      return (
         <div className="flex flex-col items-center justify-center text-center py-20 md:py-32 flex-grow">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
@@ -302,7 +304,7 @@ export default function ProfilePage() {
                 این صفحه فقط برای ارائه‌دهندگان خدمات است.
             </p>
             <Button asChild size="lg" className="mt-8">
-                <Link href="/register">ثبت‌نام به عنوان هنرمند</Link>
+                <Link href="/">بازگشت به صفحه اصلی</Link>
             </Button>
         </div>
      )
@@ -404,7 +406,7 @@ export default function ProfilePage() {
                                 ویرایش اطلاعات
                             </Button>
                             <Button asChild className="w-full" variant="secondary">
-                                <Link href={`/provider/${provider.phone}`}>
+                                <Link href={`/provider/${provider.user_id}`}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                     مشاهده پروفایل عمومی
                                 </Link>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -73,8 +72,9 @@ export default function LoginPage() {
       form.reset();
 
     } catch (error: any) {
+        console.error("Login error:", error);
         let errorMessage = 'مشکلی در ارسال لینک ورود پیش آمده است. لطفاً دوباره تلاش کنید.';
-        if (error.message.includes('User not found')) {
+        if (error.message.includes('User not found') || error.message.includes('No user found')) {
             errorMessage = 'کاربری با این ایمیل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
         }
         

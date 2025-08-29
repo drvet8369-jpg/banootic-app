@@ -12,20 +12,20 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const phone = formData.get('phone') as string | null;
+    const userId = formData.get('userId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'فایلی برای آپلود انتخاب نشده است.' }, { status: 400 });
     }
-    if (!phone) {
-      return NextResponse.json({ error: 'شناسه کاربری (شماره تلفن) ارسال نشده است.' }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: 'شناسه کاربری ارسال نشده است.' }, { status: 400 });
     }
 
     const supabaseAdmin = createAdminClient();
 
     // Use a folder within the 'images' bucket to keep things organized.
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    const filePath = `profile-pics/${phone}/${Date.now()}-${sanitizedFileName}`;
+    const filePath = `profile-pics/${userId}/${Date.now()}-${sanitizedFileName}`;
 
     // Upload the file to the correct Supabase Storage bucket: 'images'
     const { error: uploadError } = await supabaseAdmin.storage
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const { data: updatedProvider, error: updateError } = await supabaseAdmin
       .from('providers')
       .update({ profile_image: newProfileImage })
-      .eq('phone', phone)
+      .eq('user_id', userId)
       .select()
       .single();
     

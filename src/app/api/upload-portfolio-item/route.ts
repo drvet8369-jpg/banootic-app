@@ -13,13 +13,13 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const phone = formData.get('phone') as string | null;
+    const userId = formData.get('userId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'فایلی برای آپلود انتخاب نشده است.' }, { status: 400 });
     }
-    if (!phone) {
-      return NextResponse.json({ error: 'شناسه کاربری (شماره تلفن) ارسال نشده است.' }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: 'شناسه کاربری ارسال نشده است.' }, { status: 400 });
     }
 
     const supabaseAdmin = createAdminClient();
@@ -28,17 +28,17 @@ export async function POST(request: Request) {
     const { data: provider, error: fetchError } = await supabaseAdmin
         .from('providers')
         .select('portfolio')
-        .eq('phone', phone)
+        .eq('user_id', userId)
         .single();
 
     if (fetchError) {
         console.error('Supabase Admin Fetch Error:', fetchError);
         throw new Error('خطا در یافتن پروفایل هنرمند.');
     }
-
+    const phoneForPath = provider.portfolio;
     // Use a different folder for portfolio items
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    const filePath = `portfolio-items/${phone}/${Date.now()}-${sanitizedFileName}`;
+    const filePath = `portfolio-items/${userId}/${Date.now()}-${sanitizedFileName}`;
 
     // Upload the file to the 'images' bucket
     const { error: uploadError } = await supabaseAdmin.storage
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const { data: updatedProvider, error: updateError } = await supabaseAdmin
       .from('providers')
       .update({ portfolio: updatedPortfolio })
-      .eq('phone', phone)
+      .eq('user_id', userId)
       .select()
       .single();
     

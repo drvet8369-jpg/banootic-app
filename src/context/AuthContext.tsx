@@ -1,17 +1,16 @@
-
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { getProviderByUserId } from '@/lib/api';
 
 // The user object shape used within our React application.
 export interface AppUser {
   id: string; // The user_id from the DB (UUID)
   name: string;
   email: string; 
-  phone: string; // Still useful for contact info
   accountType: 'customer' | 'provider';
 }
 
@@ -36,16 +35,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
         if (session?.user) {
           const supabaseUser = session.user;
-          // In a real app, you would fetch the user's profile from your public table
-          // to get additional details like name, accountType, etc.
-          // For this demo, we'll construct a mock user object.
-          setUser({
-            id: supabaseUser.id,
-            email: supabaseUser.email!,
-            name: supabaseUser.email?.split('@')[0] || 'کاربر', // Mock name
-            phone: supabaseUser.phone || 'N/A', // Mock phone
-            accountType: 'customer', // Default to customer for demo
-          });
+          
+          try {
+            const { data: appUserData, error } = await supabase
+              .from('users')
+              .select('id, name, account_type')
+              .eq('id', supabaseUser.id)
+              .single();
+            
+            if (error) throw error;
+            
+            if (appUserData) {
+                 setUser({
+                    id: appUserData.id,
+                    email: supabaseUser.email!,
+                    name: appUserData.name,
+                    accountType: appUserData.account_type as 'customer' | 'provider',
+                });
+            } else {
+                // This case can happen if a user exists in auth but not in our public.users table
+                // Log them out to force a clean registration
+                await supabase.auth.signOut();
+                setUser(null);
+            }
+          } catch(e) {
+             console.error("Error fetching user profile:", e);
+             await supabase.auth.signOut();
+             setUser(null);
+          }
+
         } else {
           setUser(null);
         }

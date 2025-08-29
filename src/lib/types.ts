@@ -1,6 +1,4 @@
 
-import type { Timestamp } from 'firebase/firestore';
-
 export interface Category {
   id: number;
   name: string;
@@ -16,37 +14,87 @@ export interface Service {
 
 export interface PortfolioItem {
   src: string;
-  aiHint?: string;
+  ai_hint?: string;
+}
+
+export interface User {
+    id: string; // Corresponds to auth.users.id
+    name: string;
+    account_type: 'customer' | 'provider';
+    phone: string;
 }
 
 export interface Provider {
-  id: number;
+  id: number; // The auto-incrementing primary key from the providers table
+  user_id: string; // The foreign key to auth.users.id
   name: string;
-  email: string;
-  service: string; // The specific service they provide, e.g., "Manicure"
+  service: string; 
   location: string;
   phone: string;
   bio: string;
-  categorySlug: Category['slug'];
-  serviceSlug: Service['slug']; // Link to the service
+  category_slug: Category['slug'];
+  service_slug: Service['slug'];
   rating: number;
-  reviewsCount: number;
-  profileImage: PortfolioItem; // Dedicated profile image
+  reviews_count: number;
+  profile_image: PortfolioItem;
   portfolio: PortfolioItem[];
 }
 
-export interface Review {
-  id: string;
-  providerId: number;
-  authorName: string;
-  rating: number;
-  comment: string;
-  createdAt: string; // ISO String format
+export interface Customer {
+  id: number;
+  user_id: string;
+  name: string;
+  phone: string;
 }
 
+
+export interface Review {
+  id: string;
+  provider_id: string; // This should be the provider's user_id (UUID)
+  author_id: string;
+  author_name: string;
+  rating: number;
+  comment: string;
+  created_at: string; // ISO String format
+}
+
+export interface Conversation {
+    id: string; // UUID from the conversations table
+    created_at: string;
+    participant_one_id: string;
+    participant_two_id: string;
+    last_message_at: string | null;
+}
+
+export interface ConversationSummary {
+    conversation_id: string;
+    other_user_id: string;
+    other_user_name: string;
+    other_user_phone: string;
+    other_user_profile_image: PortfolioItem | null;
+    last_message_content: string | null;
+    last_message_at: string | null;
+    unread_count: number;
+}
+
+
 export interface Message {
-  text: string;
-  senderId: string;
-  receiverId?: string;
-  createdAt: Timestamp;
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+
+export interface Agreement {
+  id: number;
+  provider_phone: string;
+  customer_phone: string;
+  customer_name: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  requested_at: string;
+  confirmed_at?: string;
 }

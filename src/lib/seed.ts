@@ -8,99 +8,120 @@ dotenv.config({ path: '.env' });
 
 import { createAdminClient } from './supabase/server';
 import { categories, services } from './constants';
-import type { Provider, Customer } from './types';
+import type { Provider, Customer, User } from './types';
 
-// IMPORTANT: Do not import from './data' as it can cause circular dependencies 
-// or conflicts with client-side logic. This script is server-side only.
+// IMPORTANT: This script is destructive. It will delete all existing data
+// in the users, providers, and customers tables before seeding.
 
 const supabase = createAdminClient();
 
-// Default raw data for providers
-const defaultProviderData = [
-  { id: 1, user_id: '10000000-0000-0000-0000-000000000001', name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', profileImageSrc: 'https://placehold.co/400x400.png', profileImageHint: 'woman portrait' },
-  { id: 2, user_id: '10000000-0000-0000-0000-000000000002', name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', profileImageSrc: 'https://placehold.co/400x400.png', profileImageHint: 'woman hair' },
-  { id: 3, user_id: '10000000-0000-0000-0000-000000000003', name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه، استادان', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', profileImageSrc: 'https://placehold.co/400x400.png', profileImageHint: 'skincare' },
-  { id: 4, user_id: '10000000-0000-0000-0000-000000000004', name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه، خیابان فردوسی', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', profileImageSrc: 'https://placehold.co/400x400.png', profileImageHint: 'woman cooking' },
-  { id: 5, user_id: '10000000-0000-0000-0000-000000000005', name: 'شیرینی‌پزی بهار', service: 'کیک و شیرینی', location: 'ارومیه، خیابان کشاورز', phone: '09000000005', bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', categorySlug: 'cooking', serviceSlug: 'cakes-sweets', profileImageSrc: 'https://placehold.co/400x400.png', profileImageHint: 'pastry chef' },
-];
+// This function will be called to clean the database
+async function cleanDatabase() {
+    console.log('--- Cleaning database ---');
+    
+    // Order of deletion is important due to foreign key constraints
+    console.log('Deleting from providers...');
+    const { error: providerError } = await supabase.from('providers').delete().neq('id', 0);
+    if(providerError) console.error('Error cleaning providers:', providerError.message);
 
-// Default raw data for customers
-const defaultCustomerData = [
-    { user_id: '20000000-0000-0000-0000-000000000001', name: 'علی رضایی', phone: '09141234567'},
-    { user_id: '20000000-0000-0000-0000-000000000002', name: 'فاطمه محمدی', phone: '09129876543'},
-];
+    console.log('Deleting from customers...');
+    const { error: customerError } = await supabase.from('customers').delete().neq('id', 0);
+    if(customerError) console.error('Error cleaning customers:', customerError.message);
 
+    console.log('Deleting from users...');
+    const { error: userError } = await supabase.from('users').delete().neq('id', '0');
+    if(userError) console.error('Error cleaning users:', userError.message);
+    
+    console.log('Deleting from auth.users...');
+    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+    if (authUsersError) {
+        console.error('Error listing auth users:', authUsersError.message);
+    } else {
+        for (const user of authUsers.users) {
+            const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+            if (deleteError) console.error(`Error deleting auth user ${user.id}:`, deleteError.message);
+        }
+    }
+    
+    console.log('--- Database cleaning complete ---');
+}
 
 async function seedDatabase() {
   console.log('Starting to seed the database...');
-
-  // 1. Check if users table already has data
-  const { data: existingUsers, error: checkError } = await supabase.from('users').select('id').limit(1);
-  if (checkError) {
-    console.error('Error checking for existing data:', checkError.message);
-    return;
-  }
-
-  if (existingUsers && existingUsers.length > 0) {
-    console.log('Database already contains data. Seeding script will not run.');
-    return;
-  }
   
-  console.log('Database is empty. Proceeding with seeding...');
+  // First, clean the database to ensure a fresh start
+  await cleanDatabase();
 
-  // 2. Prepare user data
-  const usersToInsert = [
-      ...defaultProviderData.map(p => ({ id: p.user_id, name: p.name, account_type: 'provider' as const, phone: p.phone })),
-      ...defaultCustomerData.map(c => ({ id: c.user_id, name: c.name, account_type: 'customer' as const, phone: c.phone }))
+  console.log('Seeding new data...');
+  
+  // Create test users in Supabase Auth and get their IDs
+  const testUsersToCreate = [
+      { email: 'sara-provider@example.com', password: 'password123', name: 'سالن زیبایی سارا', type: 'provider', phone: '09353847484', service: 'خدمات ناخن', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure' },
+      { email: 'laleh-provider@example.com', password: 'password123', name: 'طراحی مو لاله', type: 'provider', phone: '09000000002', service: 'خدمات مو', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring' },
+      { email: 'ali-customer@example.com', password: 'password123', name: 'علی رضایی', type: 'customer', phone: '09141234567' }
   ];
-  
-  // 3. Insert users
-  const { error: userError } = await supabase.from('users').insert(usersToInsert);
-  if (userError) {
-    console.error('Error seeding users:', userError.message);
-    return;
+
+  for (const userData of testUsersToCreate) {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: userData.email,
+          password: userData.password,
+          email_confirm: true, // Auto-confirm email for seeding
+      });
+
+      if (authError || !authData.user) {
+          console.error(`Error creating auth user for ${userData.email}:`, authError?.message);
+          continue; // Skip this user if auth creation fails
+      }
+
+      const userId = authData.user.id;
+      
+      // Insert into public.users table
+      const { error: userError } = await supabase.from('users').insert({
+          id: userId,
+          name: userData.name,
+          account_type: userData.type as 'provider' | 'customer',
+          phone: userData.phone
+      });
+
+      if (userError) {
+          console.error(`Error inserting into public.users for ${userData.name}:`, userError.message);
+          continue;
+      }
+
+      // If provider, insert into public.providers table
+      if (userData.type === 'provider') {
+          const { error: providerError } = await supabase.from('providers').insert({
+              user_id: userId,
+              name: userData.name,
+              service: userData.service,
+              location: 'ارومیه', // Default location
+              phone: userData.phone,
+              bio: userData.bio,
+              category_slug: userData.categorySlug,
+              service_slug: userData.serviceSlug,
+              rating: (Math.random() * (5 - 4.5) + 4.5).toFixed(1),
+              reviews_count: Math.floor(Math.random() * 100) + 20,
+              profile_image: { src: `https://placehold.co/400x400.png?text=${userData.name.charAt(0)}`, ai_hint: 'woman portrait' },
+              portfolio: [],
+          });
+          if (providerError) {
+              console.error(`Error inserting into public.providers for ${userData.name}:`, providerError.message);
+          }
+      }
+
+      // If customer, insert into public.customers table
+      if (userData.type === 'customer') {
+          const { error: customerError } = await supabase.from('customers').insert({
+              user_id: userId,
+              name: userData.name,
+              phone: userData.phone,
+          });
+          if (customerError) {
+              console.error(`Error inserting into public.customers for ${userData.name}:`, customerError.message);
+          }
+      }
+      console.log(`Successfully created user: ${userData.name}`);
   }
-  console.log(`Successfully seeded ${usersToInsert.length} users.`);
-
-
-  // 4. Prepare provider data
-  const providersToInsert = defaultProviderData.map(p => ({
-    user_id: p.user_id,
-    name: p.name,
-    service: p.service,
-    location: p.location,
-    phone: p.phone,
-    bio: p.bio,
-    category_slug: p.categorySlug,
-    service_slug: p.serviceSlug,
-    rating: (Math.random() * (5 - 4.5) + 4.5).toFixed(1), // Random rating between 4.5 and 5
-    reviews_count: Math.floor(Math.random() * 100) + 20, // Random reviews between 20 and 120
-    profile_image: { src: p.profileImageSrc, ai_hint: p.profileImageHint },
-    portfolio: [],
-  }));
-
-  // 5. Insert providers
-  const { error: providerError } = await supabase.from('providers').insert(providersToInsert);
-   if (providerError) {
-    console.error('Error seeding providers:', providerError.message);
-    return;
-  }
-  console.log(`Successfully seeded ${providersToInsert.length} providers.`);
-
-  // 6. Prepare customer data
-  const customersToInsert = defaultCustomerData.map(c => ({
-      user_id: c.user_id,
-      name: c.name,
-      phone: c.phone,
-  }));
-
-  // 7. Insert customers
-  const { error: customerError } = await supabase.from('customers').insert(customersToInsert);
-  if (customerError) {
-    console.error('Error seeding customers:', customerError.message);
-    return;
-  }
-  console.log(`Successfully seeded ${customersToInsert.length} customers.`);
   
   console.log('Database seeding completed successfully!');
 }
