@@ -53,34 +53,36 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Standard Supabase client-side OTP flow
+      // This is the standard Supabase client-side OTP flow.
+      // With the dashboard configured for test OTPs, it will not send a real SMS.
       const { data, error } = await supabase.auth.signInWithOtp({
         phone: values.phone,
+        options: {
+          // This is crucial. It tells Supabase to not create a new user
+          // if they don't exist. This is the correct behavior for a login page.
+          shouldCreateUser: false,
+        }
       });
 
       if (error) {
-        // Handle cases like user not found, etc.
-         throw new Error(error.message || 'خطا در ارسال کد تایید.');
+         throw error;
       }
       
-      // In a real app with SMS configured, the user would check their phone.
-      // In dev, Supabase doesn't send the SMS. The user would get the code from logs or a test interface.
-      // For this project, we'll log it to the browser console for the developer to use.
-      console.log('--- SUPABASE DEV OTP ---');
-      console.log('Because no SMS provider is configured, Supabase returns the OTP here for testing.');
-      console.log('Use the code `123456` on the next screen.');
-      console.log('------------------------');
-
       toast({
-        title: 'کد تایید ارسال شد',
-        description: 'در محیط تست، از کد 123456 استفاده کنید.',
+        title: 'کد تایید آماده است',
+        description: 'به صفحه تایید کد هدایت می‌شوید. در محیط تست، از کد 123456 استفاده کنید.',
       });
       
-      // Redirect to the verification page, passing the phone number along
       router.push(`/login/verify?phone=${encodeURIComponent(values.phone)}`);
 
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
+    } catch (error: any) {
+        let errorMessage = 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
+        if (error.message.includes('User not found')) {
+            errorMessage = 'کاربری با این شماره تلفن یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
+        } else if (error.message.includes('rate limit')) {
+            errorMessage = 'تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.'
+        }
+        
         toast({
             title: 'خطا در ورود',
             description: errorMessage,
@@ -100,7 +102,7 @@ export default function LoginPage() {
             </div>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود، شماره تلفن خود را وارد کنید تا کد تایید برایتان ارسال شود.
+            برای ورود، شماره تلفن خود را وارد کنید تا به صفحه تایید کد هدایت شوید.
           </CardDescription>
         </CardHeader>
         <CardContent>
