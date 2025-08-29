@@ -84,17 +84,13 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
 }
 
 export async function loginAndGetSession(phone: string) {
-    const supabase = createAdminClient(); // Use admin client for elevated privileges
-    const actionClient = createActionClient(); // Use action client for setting cookies
+    const supabaseAdmin = createAdminClient();
+    const actionClient = await createActionClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // This is the "magic" step. We use the service_role key on the server
-    // to generate a magic link for the user, but we immediately exchange it
-    // for a session without sending an email. This securely logs in the user
-    // without needing an OTP.
-    const { data: userData, error: userError } = await supabase.auth.admin.generateLink({
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
-        email: `${normalizedPhone}@example.com`, // Dummy email required by Supabase
+        email: `${normalizedPhone}@example.com`,
     });
 
     if (userError || !userData.properties) {
@@ -102,7 +98,7 @@ export async function loginAndGetSession(phone: string) {
         throw new Error('خطا در ایجاد لینک ورود امن.');
     }
     
-    const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
+    const { data: sessionData, error: sessionError } = await actionClient.auth.verifyOtp({
         type: 'magiclink',
         token_hash: userData.properties.hashed_token,
     });
@@ -110,16 +106,6 @@ export async function loginAndGetSession(phone: string) {
     if (sessionError || !sessionData.session) {
         console.error('Error creating session from link:', sessionError);
         throw new Error('خطا در ایجاد جلسه کاربری.');
-    }
-    
-    // Set the cookie for the session using the action client which has cookie access
-    const { session } = sessionData;
-    if (session) {
-        const { error: cookieError } = await actionClient.auth.setSession(session);
-        if (cookieError) {
-             console.error('Error setting auth cookie:', cookieError);
-             throw new Error('خطا در تنظیم کوکی احراز هویت.');
-        }
     }
     
     return sessionData.session;
@@ -130,7 +116,6 @@ export async function createProvider(providerData: NewProvider): Promise<Provide
   const supabase = createAdminClient(); // Use Admin for user creation
   const normalizedPhone = normalizePhoneNumber(providerData.phone);
   
-  // 1. Create a user in auth.users
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     phone: normalizedPhone,
     email: `${normalizedPhone}@example.com`, // Dummy email
@@ -144,7 +129,6 @@ export async function createProvider(providerData: NewProvider): Promise<Provide
 
   const userId = authData.user.id;
 
-  // 2. Create the user record in public.users
   const { error: userError } = await supabase.from('users').insert({
     id: userId,
     name: providerData.name,
@@ -158,7 +142,6 @@ export async function createProvider(providerData: NewProvider): Promise<Provide
     throw new Error('خطا در ذخیره اطلاعات عمومی کاربر.');
   }
 
-  // 3. Create the provider record in public.providers
   const { data: newProvider, error: providerError } = await supabase
     .from('providers')
     .insert({
@@ -188,7 +171,6 @@ export async function createCustomer(customerData: NewCustomer): Promise<Custome
 
     const normalizedPhone = normalizePhoneNumber(customerData.phone);
 
-    // 1. Create user in auth.users
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         phone: normalizedPhone,
         email: `${normalizedPhone}@example.com`,
@@ -201,7 +183,6 @@ export async function createCustomer(customerData: NewCustomer): Promise<Custome
     }
     const userId = authData.user.id;
 
-    // 2. Create user in public.users
     const { error: userError } = await supabase.from('users').insert({
         id: userId,
         name: customerData.name,
@@ -213,7 +194,6 @@ export async function createCustomer(customerData: NewCustomer): Promise<Custome
         throw new Error('خطا در ذخیره اطلاعات کاربر.');
     }
 
-    // 3. Create customer in public.customers
     const { data: newCustomer, error: customerError } = await supabase
         .from('customers')
         .insert({
@@ -312,7 +292,6 @@ export async function updateProviderDetails(phone: string, details: { name: stri
         throw new Error('خطا در به‌روزرسانی پروفایل هنرمند.');
     }
     
-    // Also update the public users table
     const { error: userUpdateError } = await supabase
         .from('users')
         .update({ name: details.name })
@@ -320,7 +299,6 @@ export async function updateProviderDetails(phone: string, details: { name: stri
 
     if (userUpdateError) {
         console.error("User table update error:", userUpdateError);
-        // We don't throw here as the main provider profile was updated, but we log it.
     }
 
     return updatedProvider;
@@ -367,7 +345,6 @@ export async function getOrCreateConversation(userId1: string, userId2: string):
         throw new Error('خطا در یافتن یا ایجاد گفتگو.');
     }
 
-    // The RPC returns a single row which is the conversation object
     return data as unknown as Conversation;
 }
 
