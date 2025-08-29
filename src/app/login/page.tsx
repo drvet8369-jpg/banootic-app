@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,14 +28,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const emailSchema = z.object({
   email: z.string().email({
     message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
   }),
 });
-
 
 export default function LoginPage() {
   const { toast } = useToast();
@@ -56,8 +55,8 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: values.email,
         options: {
-          shouldCreateUser: false, // Don't create new users on the login page
-          emailRedirectTo: `http://localhost:9002/auth/callback`, // Corrected URL
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       });
 

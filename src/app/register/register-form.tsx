@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -83,8 +84,7 @@ export default function RegisterForm() {
         email: values.email,
         password: `password_${Date.now()}`, // Dummy password
         options: {
-          // This will be used in the auth callback page to redirect the user.
-          emailRedirectTo: `http://localhost:9002/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             name: values.name,
             account_type: values.accountType,
@@ -93,7 +93,7 @@ export default function RegisterForm() {
             location: values.accountType === 'provider' ? 'ارومیه' : undefined,
             bio: values.accountType === 'provider' ? values.bio : undefined,
             category_slug: values.accountType === 'provider' ? values.serviceType : undefined,
-            service_slug: values.accountType === 'provider' ? values.serviceType : undefined, // Simplified for now
+            service_slug: values.accountType === 'provider' ? values.serviceType : undefined, 
           }
         }
       });
@@ -108,7 +108,6 @@ export default function RegisterForm() {
         duration: 10000,
       });
       
-      // Redirect to login page after successful registration
       router.push('/login');
 
     } catch (error: any) {
@@ -268,7 +267,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام
+              ثبت‌نام و ارسال ایمیل تایید
             </Button>
             
             <div className="mt-4 text-center text-sm">
