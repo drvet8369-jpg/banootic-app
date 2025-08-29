@@ -4,8 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 // It is safe to use in client components.
 export const createClient = (supabaseUrl: string, supabaseAnonKey: string) => {
     if (!supabaseUrl || !supabaseAnonKey) {
-        // This error will be thrown if the environment variables are not passed correctly from RootLayout.
-        console.error("Supabase client credentials not provided to createClient function.");
+        // This check will now happen inside the AuthProvider.
         throw new Error("Client-side Supabase credentials are not available.");
     }
     

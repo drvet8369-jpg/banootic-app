@@ -35,7 +35,6 @@ export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthPro
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // The client is now created using the props passed down from the server layout.
   const supabase = useMemo(() => {
     if (!supabaseUrl || !supabaseAnonKey) {
       // This check is a safeguard, but the layout should always provide the props.

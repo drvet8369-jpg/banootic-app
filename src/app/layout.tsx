@@ -4,7 +4,6 @@ import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -19,23 +18,15 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-// This is a server component, so we can access process.env here
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .catch(error => console.log('Service Worker registration failed:', error));
-    }
-  }, []);
+  // These are now read on the client, inside AuthProvider.
+  // This layout is a client component to support the AuthProvider.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   return (
     <html lang="fa" dir="rtl">
@@ -51,7 +42,7 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider supabaseUrl={supabaseUrl!} supabaseAnonKey={supabaseAnonKey!}>
+        <AuthProvider supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey}>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
