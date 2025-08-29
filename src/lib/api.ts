@@ -88,34 +88,9 @@ export async function loginAndGetSession(phone: string) {
     const actionClient = await createActionClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // 1. Generate a secure, one-time magic link for the user's phone number.
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        phone: normalizedPhone,
-    });
-
-    if (linkError || !linkData) {
-        console.error('Login failed: could not generate magic link', linkError);
-        throw new Error('خطا در ایجاد لینک ورود امن.');
-    }
-
-    // 2. Extract the verification token from the generated link.
-    const searchParams = new URLSearchParams(linkData.properties.action_link.split('?')[1]);
-    const code = searchParams.get('token');
-
-    if (!code) {
-        throw new Error('توکن تایید در لینک ورود یافت نشد.');
-    }
-
-    // 3. Exchange the code for a valid session, which sets the auth cookie.
-    const { data: sessionData, error: sessionError } = await actionClient.auth.exchangeCodeForSession(code);
-    
-    if (sessionError || !sessionData.session) {
-        console.error('Error exchanging code for session:', sessionError);
-        throw new Error('خطا در ایجاد جلسه کاربری.');
-    }
-    
-    return sessionData.session;
+    // This function is now deprecated and replaced by the /api/auth/login flow
+    // It is kept here to avoid breaking old references but should not be used.
+    throw new Error('loginAndGetSession is deprecated. Use the Magic Link flow.');
 }
 
 
@@ -174,8 +149,7 @@ export async function createProvider(providerData: NewProvider): Promise<Provide
 }
 
 export async function createCustomer(customerData: NewCustomer) {
-    const supabase = createAdminClient(); // Use Admin for user creation
-    const actionClient = await createActionClient();
+    const supabase = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(customerData.phone);
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -215,14 +189,8 @@ export async function createCustomer(customerData: NewCustomer) {
         throw new Error('خطا در ذخیره پروفایل مشتری.');
     }
     
-    // After creating the user, log them in immediately.
-    const { data: sessionData, error: sessionError } = await loginAndGetSession(normalizedPhone);
-    if(sessionError || !sessionData) {
-        console.error('Error during post-registration login:', sessionError);
-        return { customer: newCustomer, session: null };
-    }
-    
-    return { customer: newCustomer, session: sessionData };
+    // We no longer log the user in here. They must use the magic link flow after registering.
+    return { customer: newCustomer };
 }
 
 

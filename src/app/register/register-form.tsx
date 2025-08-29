@@ -106,12 +106,10 @@ export default function RegisterForm() {
     try {
       const existingUser = await getUserByPhone(values.phone);
       if (existingUser) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است.', variant: 'destructive'});
+          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است. لطفاً از صفحه ورود، وارد شوید.', variant: 'destructive'});
           setIsLoading(false);
           return;
       }
-      
-      let destination = '/';
 
       if (values.accountType === 'provider') {
         if (!values.serviceType || !values.serviceSlug || !values.bio || !values.location) {
@@ -130,26 +128,19 @@ export default function RegisterForm() {
             category_slug: values.serviceType as any,
             service_slug: values.serviceSlug,
         });
-        destination = '/profile';
       } else {
-        const { session } = await createCustomer({
+        await createCustomer({
             name: values.name,
             phone: values.phone,
         });
-        if (!session) {
-          toast({ title: 'توجه', description: 'ثبت نام موفق بود اما ورود خودکار با خطا مواجه شد. لطفاً از صفحه ورود اقدام کنید.' });
-          router.push('/login');
-          return;
-        }
       }
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        description: 'اکنون می‌توانید با شماره تلفن خود از صفحه ورود، وارد شوید.',
       });
       
-      router.push(destination);
-      router.refresh();
+      router.push('/login');
 
     } catch (error) {
          const errorMessage = error instanceof Error ? error.message : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
