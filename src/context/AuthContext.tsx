@@ -1,9 +1,9 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 
 // The user object shape used within our React application.
@@ -20,14 +20,30 @@ interface AuthContextType {
   user: AppUser | null;
   isLoading: boolean;
   logout: () => Promise<void>;
+  supabase: SupabaseClient;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}
+
+export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthProviderProps) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+  
+  // The client is now created using the props passed down from the server layout.
+  const supabase = useMemo(() => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      // This check is a safeguard, but the layout should always provide the props.
+      throw new Error("Supabase credentials were not provided to AuthProvider.");
+    }
+    return createClient(supabaseUrl, supabaseAnonKey);
+  }, [supabaseUrl, supabaseAnonKey]);
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -46,8 +62,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               .single();
             
             if (error) {
-                // This might happen if the user is in auth but not our public table yet (e.g., due to a trigger delay)
-                // We'll log an error and treat them as logged out for now.
                 console.error("Error fetching user profile:", error);
                 await supabase.auth.signOut();
                 setUser(null);
@@ -77,7 +91,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Initial check for session on component mount
     const checkInitialSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -97,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUser(null);
     setIsLoading(false);
-    // Redirect to home to ensure a clean state across the app
     router.push('/');
   };
   
@@ -106,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     isLoading,
     logout,
+    supabase,
   };
 
   return (

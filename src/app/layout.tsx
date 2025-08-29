@@ -19,19 +19,15 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-// This can't be a dynamic export in a client component, 
-// so we define it statically here.
-// export const metadata: Metadata = {
-//   title: 'بانوتیک',
-//   description: 'بازاری برای خدمات و محصولات بانوان هنرمند',
-//   manifest: '/manifest.json',
-// };
-
+// This is a server component, so we can access process.env here
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -55,7 +51,7 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider>
+        <AuthProvider supabaseUrl={supabaseUrl!} supabaseAnonKey={supabaseAnonKey!}>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
