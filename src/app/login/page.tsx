@@ -57,7 +57,7 @@ export default function LoginPage() {
         email: values.email,
         options: {
           shouldCreateUser: false, // Don't create new users on the login page
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `http://localhost:9002/auth/callback`, // Corrected URL
         }
       });
 
@@ -67,14 +67,8 @@ export default function LoginPage() {
       
       toast({
         title: 'لینک ورود ارسال شد',
-        description: (
-            <div className="flex flex-col gap-2 text-sm">
-                <p>برای ورود، به داشبورد Supabase خود بروید.</p>
-                <p className="font-bold">Authentication &gt; Emails</p>
-                <p>و روی لینک "Sign In" در آخرین ایمیل کلیک کنید.</p>
-            </div>
-        ),
-        duration: 15000, // Keep toast open longer
+        description: 'یک ایمیل حاوی لینک ورود برای شما ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.',
+        duration: 10000,
       });
 
       form.reset();
@@ -105,17 +99,10 @@ export default function LoginPage() {
             </div>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود، ایمیل خود را وارد کنید. یک لینک جادویی برای شما ایجاد خواهد شد.
+            برای ورود، ایمیل خود را وارد کنید تا لینک جادویی برایتان ارسال شود.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert className="mb-4">
-            <AlertTitle className="font-bold">محیط تست</AlertTitle>
-            <AlertDescription>
-                ایمیل واقعی ارسال نمی‌شود. لینک ورود در داشبورد Supabase شما (بخش Authentication &gt; Emails) نمایش داده خواهد شد.
-            </AlertDescription>
-          </Alert>
-
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField

@@ -83,10 +83,8 @@ export default function RegisterForm() {
         email: values.email,
         password: `password_${Date.now()}`, // Dummy password
         options: {
-          // IMPORTANT: email_confirm is set to true to auto-confirm users
-          // This bypasses the email verification step for a smoother dev experience.
-          // For production, you would remove this and have a real email provider.
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          // This will be used in the auth callback page to redirect the user.
+          emailRedirectTo: `http://localhost:9002/auth/callback`,
           data: {
             name: values.name,
             account_type: values.accountType,
@@ -105,8 +103,9 @@ export default function RegisterForm() {
       if (!authData.user) throw new Error("کاربر ایجاد نشد، لطفاً دوباره تلاش کنید.");
       
       toast({
-        title: 'ثبت‌نام موفقیت‌آمیز بود',
-        description: 'حساب شما ایجاد شد. اکنون می‌توانید وارد شوید.',
+        title: 'ثبت‌نام شما موفقیت‌آمیز بود',
+        description: 'یک ایمیل برای تأیید حساب کاربری برای شما ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.',
+        duration: 10000,
       });
       
       // Redirect to login page after successful registration
