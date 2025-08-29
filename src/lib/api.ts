@@ -84,7 +84,8 @@ export async function getCustomerByPhone(phone: string): Promise<Customer | null
 }
 
 export async function loginAndGetSession(phone: string) {
-    const supabase = await createActionClient();
+    const supabase = createAdminClient(); // Use admin client for elevated privileges
+    const actionClient = createActionClient(); // Use action client for setting cookies
     const normalizedPhone = normalizePhoneNumber(phone);
 
     // This is the "magic" step. We use the service_role key on the server
@@ -111,10 +112,10 @@ export async function loginAndGetSession(phone: string) {
         throw new Error('خطا در ایجاد جلسه کاربری.');
     }
     
-    // Set the cookie for the session
+    // Set the cookie for the session using the action client which has cookie access
     const { session } = sessionData;
     if (session) {
-        const { error: cookieError } = await supabase.auth.setSession(session);
+        const { error: cookieError } = await actionClient.auth.setSession(session);
         if (cookieError) {
              console.error('Error setting auth cookie:', cookieError);
              throw new Error('خطا در تنظیم کوکی احراز هویت.');
@@ -126,7 +127,7 @@ export async function loginAndGetSession(phone: string) {
 
 
 export async function createProvider(providerData: NewProvider): Promise<Provider> {
-  const supabase = await createActionClient();
+  const supabase = createAdminClient(); // Use Admin for user creation
   const normalizedPhone = normalizePhoneNumber(providerData.phone);
   
   // 1. Create a user in auth.users
@@ -183,7 +184,8 @@ export async function createProvider(providerData: NewProvider): Promise<Provide
 }
 
 export async function createCustomer(customerData: NewCustomer): Promise<Customer> {
-    const supabase = await createActionClient();
+    const supabase = createAdminClient(); // Use Admin for user creation
+
     const normalizedPhone = normalizePhoneNumber(customerData.phone);
 
     // 1. Create user in auth.users
