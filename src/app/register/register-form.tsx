@@ -81,14 +81,16 @@ export default function RegisterForm() {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
-        password: `password_${Date.now()}`, // Dummy password for email-only auth
+        password: `password_${Date.now()}`, // Dummy password
         options: {
+          // IMPORTANT: email_confirm is set to true to auto-confirm users
+          // This bypasses the email verification step for a smoother dev experience.
+          // For production, you would remove this and have a real email provider.
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             name: values.name,
             account_type: values.accountType,
             phone: values.phone,
-            // Provider specific data that will be used to create the provider profile
-            // This happens via a database function trigger upon user creation
             service: values.accountType === 'provider' ? (categories.find(c => c.slug === values.serviceType)?.name || 'خدمت جدید') : undefined,
             location: values.accountType === 'provider' ? 'ارومیه' : undefined,
             bio: values.accountType === 'provider' ? values.bio : undefined,
@@ -104,12 +106,11 @@ export default function RegisterForm() {
       
       toast({
         title: 'ثبت‌نام موفقیت‌آمیز بود',
-        description: 'یک ایمیل تایید برای شما ارسال شد. لطفاً برای فعال‌سازی حساب، روی لینک داخل ایمیل کلیک کنید.',
+        description: 'حساب شما ایجاد شد. اکنون می‌توانید وارد شوید.',
       });
       
-      form.reset();
-      // In a real app, you might redirect to a "check your email" page
-      // For now, staying on the page is fine.
+      // Redirect to login page after successful registration
+      router.push('/login');
 
     } catch (error: any) {
       console.error("Registration Error:", error);
@@ -268,7 +269,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام و ارسال لینک تایید
+              ثبت‌نام
             </Button>
             
             <div className="mt-4 text-center text-sm">

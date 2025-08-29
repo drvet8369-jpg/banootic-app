@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const emailSchema = z.object({
   email: z.string().email({
@@ -66,15 +67,22 @@ export default function LoginPage() {
       
       toast({
         title: 'لینک ورود ارسال شد',
-        description: 'لطفاً ایمیل خود را چک کنید. در محیط تست، لینک ورود در داشبورد Supabase شما (بخش Authentication > Emails) قابل مشاهده است.',
+        description: (
+            <div className="flex flex-col gap-2 text-sm">
+                <p>برای ورود، به داشبورد Supabase خود بروید.</p>
+                <p className="font-bold">Authentication &gt; Emails</p>
+                <p>و روی لینک "Sign In" در آخرین ایمیل کلیک کنید.</p>
+            </div>
+        ),
+        duration: 15000, // Keep toast open longer
       });
-      // Clear the form or provide feedback, no redirect needed here.
+
       form.reset();
 
     } catch (error: any) {
         console.error("Login error:", error);
         let errorMessage = 'مشکلی در ارسال لینک ورود پیش آمده است. لطفاً دوباره تلاش کنید.';
-        if (error.message.includes('User not found') || error.message.includes('No user found for')) {
+        if (error.message.includes('User not found') || error.message.includes('for an existing user')) {
             errorMessage = 'کاربری با این ایمیل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
         }
         
@@ -97,10 +105,17 @@ export default function LoginPage() {
             </div>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود، ایمیل خود را وارد کنید تا لینک جادویی برای شما ارسال شود.
+            برای ورود، ایمیل خود را وارد کنید. یک لینک جادویی برای شما ایجاد خواهد شد.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4">
+            <AlertTitle className="font-bold">محیط تست</AlertTitle>
+            <AlertDescription>
+                ایمیل واقعی ارسال نمی‌شود. لینک ورود در داشبورد Supabase شما (بخش Authentication &gt; Emails) نمایش داده خواهد شد.
+            </AlertDescription>
+          </Alert>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField

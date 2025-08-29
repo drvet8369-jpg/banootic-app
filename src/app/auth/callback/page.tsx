@@ -13,9 +13,9 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      // The session is automatically set by the Supabase client library
-      // when the user is redirected back from the magic link.
-      // We just need to check if the user is now logged in and redirect.
+      // The Supabase client library handles the session exchange automatically
+      // when the user is redirected from the magic link.
+      // We just need to check if the session is now valid and redirect the user.
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
@@ -31,13 +31,14 @@ export default function AuthCallbackPage() {
       if (session) {
         toast({
           title: 'ورود موفق',
-          description: 'شما با موفقیت وارد شدید. در حال انتقال...',
+          description: 'شما با موفقیت وارد شدید. در حال انتقال به صفحه اصلی...',
         });
-        // A hard refresh to ensure all server components get the new user session
-        // and the AuthProvider can correctly fetch the user profile.
+        // Use window.location.href for a hard refresh.
+        // This is crucial to ensure all server components and the layout
+        // are re-rendered with the new user session.
         window.location.href = '/';
       } else {
-        // This might happen if the token is invalid or expired
+        // This might happen if the token is invalid, expired, or already used.
         toast({
           title: 'خطا در ورود',
           description: 'لینک ورود نامعتبر یا منقضی شده است. لطفاً دوباره تلاش کنید.',
@@ -47,7 +48,13 @@ export default function AuthCallbackPage() {
       }
     };
     
-    handleAuthCallback();
+    // A small delay can sometimes help ensure the session is fully processed
+    // by the Supabase client before we check it.
+    const timer = setTimeout(() => {
+      handleAuthCallback();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [router, supabase, toast]);
 
   return (
