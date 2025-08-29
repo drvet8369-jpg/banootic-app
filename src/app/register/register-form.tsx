@@ -26,10 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories, services } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import type { AppUser } from '@/context/AuthContext';
-import { createProvider, createCustomer, getProviderByPhone, getCustomerByPhone } from '@/lib/api';
-
+import { createProvider, createCustomer, getUserByPhone } from '@/lib/api';
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -76,7 +73,6 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [availableServices, setAvailableServices] = useState<typeof services>([]);
 
@@ -108,32 +104,23 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     try {
-      const existingProvider = await getProviderByPhone(values.phone);
-      if (existingProvider) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است.', variant: 'destructive'});
+      const existingUser = await getUserByPhone(values.phone);
+      if (existingUser) {
+          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً در سیستم ثبت شده است.', variant: 'destructive'});
           setIsLoading(false);
           return;
       }
       
-      const existingCustomer = await getCustomerByPhone(values.phone);
-      if (existingCustomer) {
-          toast({ title: 'خطا', description: 'این شماره تلفن قبلاً به عنوان مشتری ثبت شده است.', variant: 'destructive'});
-          setIsLoading(false);
-          return;
-      }
+      let destination = '/';
 
-      let loggedInUser: AppUser;
-      
       if (values.accountType === 'provider') {
         if (!values.serviceType || !values.serviceSlug || !values.bio || !values.location) {
           toast({ title: 'خطا', description: 'لطفاً تمام فیلدهای مربوط به هنرمند را پر کنید.', variant: 'destructive'});
           setIsLoading(false);
           return;
         }
-
         const selectedService = services.find(s => s.slug === values.serviceSlug);
-
-        const newProvider = await createProvider({
+        await createProvider({
             name: values.name,
             phone: values.phone,
             account_type: 'provider',
@@ -143,36 +130,26 @@ export default function RegisterForm() {
             category_slug: values.serviceType as any,
             service_slug: values.serviceSlug,
         });
-        
-        loggedInUser = {
-            id: newProvider.user_id,
-            name: newProvider.name,
-            phone: newProvider.phone,
-            accountType: 'provider'
-        };
-
+        destination = '/profile';
       } else {
-        const newCustomer = await createCustomer({
+        const { session } = await createCustomer({
             name: values.name,
-            phone: values.phone
+            phone: values.phone,
         });
-        loggedInUser = {
-            id: newCustomer.user_id,
-            name: newCustomer.name,
-            phone: newCustomer.phone,
-            accountType: 'customer'
-        };
+        if (!session) {
+          toast({ title: 'توجه', description: 'ثبت نام موفق بود اما ورود خودکار با خطا مواجه شد. لطفاً از صفحه ورود اقدام کنید.' });
+          router.push('/login');
+          return;
+        }
       }
-      
-      login(loggedInUser);
       
       toast({
         title: 'ثبت‌نام با موفقیت انجام شد!',
         description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
       });
       
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
       router.push(destination);
+      router.refresh();
 
     } catch (error) {
          const errorMessage = error instanceof Error ? error.message : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';

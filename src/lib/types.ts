@@ -103,3 +103,21 @@ export interface ConversationSummary {
   last_message_at: string | null;
   unread_count: number;
 }
+
+
+// Types for creating new users
+export interface NewProvider {
+    name: string;
+    phone: string;
+    account_type: 'provider';
+    service: string;
+    location: string;
+    bio: string;
+    category_slug: Category['slug'];
+    service_slug: Service['slug'];
+}
+
+export interface NewCustomer {
+    name: string;
+    phone: string;
+}

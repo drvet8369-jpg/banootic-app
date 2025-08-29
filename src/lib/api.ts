@@ -88,26 +88,30 @@ export async function loginAndGetSession(phone: string) {
     const actionClient = await createActionClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: `${normalizedPhone}@example.com`,
-    });
-
-    if (userError || !userData.properties) {
-        console.error('Error generating auth link for login:', userError);
-        throw new Error('خطا در ایجاد لینک ورود امن.');
+    // 1. Find the user in our public.users table to get their UUID.
+    const { data: user, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .single();
+    
+    if (userError || !user) {
+        console.error('Login failed: could not find user with phone', normalizedPhone, userError);
+        throw new Error('کاربری با این شماره تلفن یافت نشد.');
     }
+
+    // 2. Impersonate the user to create a session for them.
+    // This is a secure, server-only operation.
+    const { data: sessionData, error: impersonationError } = await supabaseAdmin.auth.admin.impersonateUser(user.id);
     
-    const { data: sessionData, error: sessionError } = await actionClient.auth.verifyOtp({
-        type: 'magiclink',
-        token_hash: userData.properties.hashed_token,
-    });
-    
-    if (sessionError || !sessionData.session) {
-        console.error('Error creating session from link:', sessionError);
+    if (impersonationError || !sessionData.session) {
+        console.error('Error during user impersonation:', impersonationError);
         throw new Error('خطا در ایجاد جلسه کاربری.');
     }
     
+    // 3. Set the session cookies for the client.
+    await actionClient.auth.setSession(sessionData.session);
+
     return sessionData.session;
 }
 
@@ -166,9 +170,9 @@ export async function createProvider(providerData: NewProvider): Promise<Provide
   return newProvider;
 }
 
-export async function createCustomer(customerData: NewCustomer): Promise<Customer> {
+export async function createCustomer(customerData: NewCustomer) {
     const supabase = createAdminClient(); // Use Admin for user creation
-
+    const actionClient = await createActionClient();
     const normalizedPhone = normalizePhoneNumber(customerData.phone);
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -207,8 +211,18 @@ export async function createCustomer(customerData: NewCustomer): Promise<Custome
         console.error('Customer Insert Error:', customerError);
         throw new Error('خطا در ذخیره پروفایل مشتری.');
     }
+    
+    // After creating the user, log them in immediately.
+    const { data: sessionData, error: impersonationError } = await supabase.auth.admin.impersonateUser(userId);
+    if (impersonationError || !sessionData.session) {
+      console.error('Error during post-registration impersonation:', impersonationError);
+      // Don't throw, as the user is created, but they might need to log in manually.
+      return { customer: newCustomer, session: null };
+    }
+    
+    await actionClient.auth.setSession(sessionData.session);
 
-    return newCustomer;
+    return { customer: newCustomer, session: sessionData.session };
 }
 
 

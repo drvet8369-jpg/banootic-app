@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { getUserByPhone, loginAndGetSession } from '@/lib/api';
+import { loginAndGetSession } from '@/lib/api';
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
@@ -50,29 +50,17 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        const foundUser = await getUserByPhone(values.phone);
-
-        if (foundUser) {
-            // User exists, so we can log them in.
-            await loginAndGetSession(values.phone);
-            
-            toast({
-              title: 'ورود با موفقیت انجام شد!',
-              description: `خوش آمدید ${foundUser.name}!`,
-            });
-            
-            // The AuthContext will automatically update and handle the redirect/UI changes.
-            // We can refresh the page to ensure all server components re-render with the new session.
-            router.push('/');
-            router.refresh();
-
-        } else {
-             toast({
-                title: 'کاربر یافت نشد',
-                description: 'کاربری با این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-                variant: 'destructive'
-            });
-        }
+        await loginAndGetSession(values.phone);
+        
+        toast({
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید!`,
+        });
+        
+        // The AuthContext listener will pick up the session change.
+        // We can refresh the page to ensure all server components re-render with the new session.
+        router.push('/');
+        router.refresh();
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.';
