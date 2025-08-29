@@ -2,11 +2,9 @@ import { createBrowserClient } from '@supabase/ssr';
 
 // This function creates a Supabase client for the browser.
 // It is safe to use in client components.
-export const createClient = (supabaseUrl: string, supabaseAnonKey: string) => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-        // This check will now happen inside the AuthProvider.
-        throw new Error("Client-side Supabase credentials are not available.");
-    }
+export const createClient = () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     
     return createBrowserClient(supabaseUrl, supabaseAnonKey);
 };

@@ -23,10 +23,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // These are now read on the client, inside AuthProvider.
-  // This layout is a client component to support the AuthProvider.
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   return (
     <html lang="fa" dir="rtl">
@@ -42,7 +38,7 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey}>
+        <AuthProvider>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
