@@ -87,7 +87,8 @@ export default function RegisterForm() {
             name: values.name,
             account_type: values.accountType,
             phone: values.phone,
-            // Provider specific data
+            // Provider specific data that will be used to create the provider profile
+            // This happens via a database function trigger upon user creation
             service: values.accountType === 'provider' ? (categories.find(c => c.slug === values.serviceType)?.name || 'خدمت جدید') : undefined,
             location: values.accountType === 'provider' ? 'ارومیه' : undefined,
             bio: values.accountType === 'provider' ? values.bio : undefined,
@@ -101,15 +102,14 @@ export default function RegisterForm() {
 
       if (!authData.user) throw new Error("کاربر ایجاد نشد، لطفاً دوباره تلاش کنید.");
       
-      // The onAuthStateChange in AuthContext will handle the rest.
       toast({
         title: 'ثبت‌نام موفقیت‌آمیز بود',
         description: 'یک ایمیل تایید برای شما ارسال شد. لطفاً برای فعال‌سازی حساب، روی لینک داخل ایمیل کلیک کنید.',
       });
       
       form.reset();
-      // Redirect to a page that tells them to check their email
-      // For now, we'll just clear the form. In a real app, a dedicated "check your email" page is better.
+      // In a real app, you might redirect to a "check your email" page
+      // For now, staying on the page is fine.
 
     } catch (error: any) {
       console.error("Registration Error:", error);

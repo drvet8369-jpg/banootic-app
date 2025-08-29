@@ -17,13 +17,15 @@ export interface PortfolioItem {
   ai_hint?: string;
 }
 
-export interface User {
+// Represents the user record in the public.users table
+export interface UserProfile {
     id: string; // Corresponds to auth.users.id
     name: string;
     account_type: 'customer' | 'provider';
     phone: string;
 }
 
+// Represents a provider record in the public.providers table
 export interface Provider {
   id: number; // The auto-incrementing primary key from the providers table
   user_id: string; // The foreign key to auth.users.id

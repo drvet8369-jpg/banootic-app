@@ -74,7 +74,7 @@ export default function LoginPage() {
     } catch (error: any) {
         console.error("Login error:", error);
         let errorMessage = 'مشکلی در ارسال لینک ورود پیش آمده است. لطفاً دوباره تلاش کنید.';
-        if (error.message.includes('User not found') || error.message.includes('No user found')) {
+        if (error.message.includes('User not found') || error.message.includes('No user found for')) {
             errorMessage = 'کاربری با این ایمیل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
         }
         

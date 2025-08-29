@@ -21,7 +21,7 @@ export default function ChatPage() {
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
 
-  const [providerDetails, setProviderDetails] = useState<Provider | null>(null);
+  const [otherUserDetails, setOtherUserDetails] = useState<Provider | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -39,10 +39,10 @@ export default function ChatPage() {
   
   // Setup conversation and fetch initial messages
   const setupConversation = useCallback(async () => {
-    if (!user || !providerDetails) return;
+    if (!user || !otherUserDetails) return;
     setIsLoading(true);
     try {
-      const conv = await getOrCreateConversation(user.id, providerDetails.user_id);
+      const conv = await getOrCreateConversation(user.id, otherUserDetails.user_id);
       setConversation(conv);
       if (conv) {
         const initialMessages = await getMessages(conv.id);
@@ -54,35 +54,35 @@ export default function ChatPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [user, providerDetails, toast]);
+  }, [user, otherUserDetails, toast]);
 
 
   // Effect to load provider details first
   useEffect(() => {
-    const fetchProvider = async () => {
+    const fetchOtherUser = async () => {
         if (!isLoggedIn || !user) { return; }
         try {
             const provider = await getProviderByPhone(otherPersonPhone);
             if (provider) {
-                setProviderDetails(provider);
+                setOtherUserDetails(provider);
             } else {
-                toast({ title: "خطا", description: "هنرمند مورد نظر یافت نشد.", variant: "destructive"});
+                toast({ title: "خطا", description: "کاربر مورد نظر یافت نشد.", variant: "destructive"});
             }
         } catch (error) {
             toast({ title: "خطا", description: "امکان بارگذاری اطلاعات کاربر وجود ندارد.", variant: "destructive"});
         }
     };
     if (!isAuthLoading) {
-        fetchProvider();
+        fetchOtherUser();
     }
   }, [otherPersonPhone, isLoggedIn, user, toast, isAuthLoading]);
 
   // Effect to setup conversation once provider details are available
   useEffect(() => {
-    if (providerDetails) {
+    if (otherUserDetails) {
         setupConversation();
     }
-  }, [providerDetails, setupConversation]);
+  }, [otherUserDetails, setupConversation]);
 
 
   // Realtime subscription for new messages
@@ -119,7 +119,7 @@ export default function ChatPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const content = newMessage.trim();
-    if (!content || isSending || !providerDetails || !user || !conversation) return;
+    if (!content || isSending || !otherUserDetails || !user || !conversation) return;
 
     setIsSending(true);
     
@@ -127,7 +127,7 @@ export default function ChatPage() {
       id: Date.now().toString(), // Temporary ID for UI rendering
       conversation_id: conversation.id,
       sender_id: user.id,
-      receiver_id: providerDetails.user_id,
+      receiver_id: otherUserDetails.user_id,
       content,
       created_at: new Date().toISOString(),
       is_read: false,
@@ -139,7 +139,7 @@ export default function ChatPage() {
         const { error } = await supabase.from('messages').insert({
             conversation_id: conversation.id,
             sender_id: user.id,
-            receiver_id: providerDetails.user_id,
+            receiver_id: otherUserDetails.user_id,
             content,
         });
 
@@ -155,9 +155,9 @@ export default function ChatPage() {
     }
   };
 
-  const getHeaderLink = () => user?.account_type === 'provider' ? '/inbox' : '/';
+  const getHeaderLink = () => user?.accountType === 'provider' ? '/inbox' : '/';
 
-  if (isAuthLoading || !providerDetails) {
+  if (isAuthLoading || !otherUserDetails) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -182,11 +182,11 @@ export default function ChatPage() {
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
           <Link href={getHeaderLink()}><Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5"/></Button></Link>
           <Avatar>
-            {providerDetails?.profile_image?.src ? <AvatarImage src={providerDetails.profile_image.src} alt={providerDetails.name} /> : null }
-            <AvatarFallback>{getInitials(providerDetails?.name ?? '')}</AvatarFallback>
+            {otherUserDetails?.profile_image?.src ? <AvatarImage src={otherUserDetails.profile_image.src} alt={otherUserDetails.name} /> : null }
+            <AvatarFallback>{getInitials(otherUserDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="font-headline text-xl">{providerDetails?.name}</CardTitle>
+            <CardTitle className="font-headline text-xl">{otherUserDetails?.name}</CardTitle>
             <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
           </div>
         </CardHeader>
@@ -204,8 +204,8 @@ export default function ChatPage() {
                 <div key={message.id} className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}>
                   {!senderIsUser && (
                     <Avatar className="h-8 w-8 select-none">
-                      {providerDetails?.profile_image?.src ? <AvatarImage src={providerDetails.profile_image.src} alt={providerDetails.name} /> : null }
-                      <AvatarFallback>{getInitials(providerDetails?.name ?? '')}</AvatarFallback>
+                      {otherUserDetails?.profile_image?.src ? <AvatarImage src={otherUserDetails.profile_image.src} alt={otherUserDetails.name} /> : null }
+                      <AvatarFallback>{getInitials(otherUserDetails?.name ?? '')}</AvatarFallback>
                     </Avatar>
                   )}
                   <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
@@ -222,8 +222,8 @@ export default function ChatPage() {
         </CardContent>
         <div className="p-4 border-t bg-background shrink-0">
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
-            <Input type="text" placeholder="پیام خود را بنویسید..." className="flex-1" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} disabled={isSending || isLoading || !providerDetails} />
-            <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !providerDetails}>
+            <Input type="text" placeholder="پیام خود را بنویسید..." className="flex-1" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} disabled={isSending || isLoading || !otherUserDetails} />
+            <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || isLoading || !otherUserDetails}>
               {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
             </Button>
           </form>

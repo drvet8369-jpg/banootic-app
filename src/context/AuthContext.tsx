@@ -4,7 +4,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { getProviderByUserId } from '@/lib/api';
+import type { UserProfile } from '@/lib/types';
 
 // The user object shape used within our React application.
 export interface AppUser {
@@ -12,6 +12,7 @@ export interface AppUser {
   name: string;
   email: string; 
   accountType: 'customer' | 'provider';
+  phone: string;
 }
 
 interface AuthContextType {
@@ -37,29 +38,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const supabaseUser = session.user;
           
           try {
-            const { data: appUserData, error } = await supabase
+            // Fetch the user's profile from our public.users table
+            const { data: userProfile, error } = await supabase
               .from('users')
-              .select('id, name, account_type')
+              .select('id, name, account_type, phone')
               .eq('id', supabaseUser.id)
               .single();
             
-            if (error) throw error;
-            
-            if (appUserData) {
+            if (error) {
+                // This might happen if the user is in auth but not our public table yet (e.g., due to a trigger delay)
+                // We'll log an error and treat them as logged out for now.
+                console.error("Error fetching user profile:", error);
+                await supabase.auth.signOut();
+                setUser(null);
+            } else if (userProfile) {
                  setUser({
-                    id: appUserData.id,
+                    id: userProfile.id,
                     email: supabaseUser.email!,
-                    name: appUserData.name,
-                    accountType: appUserData.account_type as 'customer' | 'provider',
+                    name: userProfile.name,
+                    accountType: userProfile.account_type,
+                    phone: userProfile.phone,
                 });
             } else {
-                // This case can happen if a user exists in auth but not in our public.users table
-                // Log them out to force a clean registration
+                console.warn(`User ${supabaseUser.id} found in auth but not in public.users. Logging out.`);
                 await supabase.auth.signOut();
                 setUser(null);
             }
           } catch(e) {
-             console.error("Error fetching user profile:", e);
+             console.error("Critical error fetching user profile:", e);
              await supabase.auth.signOut();
              setUser(null);
           }
@@ -71,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Initial check for session
+    // Initial check for session on component mount
     const checkInitialSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -91,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUser(null);
     setIsLoading(false);
-    // Redirect to home to ensure a clean state
+    // Redirect to home to ensure a clean state across the app
     router.push('/');
   };
   

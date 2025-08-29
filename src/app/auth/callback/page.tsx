@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -17,16 +16,28 @@ export default function AuthCallbackPage() {
       // The session is automatically set by the Supabase client library
       // when the user is redirected back from the magic link.
       // We just need to check if the user is now logged in and redirect.
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
 
+      if (error) {
+        toast({
+          title: 'خطای احراز هویت',
+          description: 'مشکلی در برقراری ارتباط با سرور پیش آمد.',
+          variant: 'destructive',
+        });
+        router.push('/login');
+        return;
+      }
+      
       if (session) {
         toast({
           title: 'ورود موفق',
           description: 'شما با موفقیت وارد شدید. در حال انتقال...',
         });
-        // A hard refresh to ensure all server components get the new user session.
+        // A hard refresh to ensure all server components get the new user session
+        // and the AuthProvider can correctly fetch the user profile.
         window.location.href = '/';
       } else {
+        // This might happen if the token is invalid or expired
         toast({
           title: 'خطا در ورود',
           description: 'لینک ورود نامعتبر یا منقضی شده است. لطفاً دوباره تلاش کنید.',
