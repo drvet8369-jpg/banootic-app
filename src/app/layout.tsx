@@ -18,12 +18,14 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+// These props are passed from the server-side RootLayout to the client-side component
+interface ClientRootLayoutProps {
   children: React.ReactNode;
-}>) {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}
 
+function ClientRootLayout({ children, supabaseUrl, supabaseAnonKey }: ClientRootLayoutProps) {
   return (
     <html lang="fa" dir="rtl">
        <head>
@@ -38,7 +40,7 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider>
+        <AuthProvider supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey}>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
@@ -52,4 +54,21 @@ export default function RootLayout({
       </body>
     </html>
   );
+}
+
+
+// This is the actual root layout, which is a server component.
+// It reads the environment variables on the server and passes them to the client component.
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+    return (
+        <ClientRootLayout 
+            supabaseUrl={supabaseUrl} 
+            supabaseAnonKey={supabaseAnonKey}
+        >
+            {children}
+        </ClientRootLayout>
+    );
 }

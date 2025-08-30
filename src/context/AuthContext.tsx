@@ -3,9 +3,14 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AppUser } from '@/lib/types';
+import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
+import type { UserProfile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+
+// Combined AppUser type
+export interface AppUser extends UserProfile {
+  email: string;
+}
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -23,56 +28,24 @@ interface AuthProviderProps {
   supabaseAnonKey: string;
 }
 
-const ConfigErrorScreen = ({ message, instructions }: { message: string; instructions: string }) => (
-  <div className="flex flex-col items-center justify-center h-screen w-full bg-red-50 text-red-900 p-4">
-    <div className="text-center max-w-2xl">
-      <h1 className="text-3xl font-bold mb-4">{message}</h1>
-      <p className="text-lg mb-2">مقادیر لازم برای اتصال به پایگاه داده در فایل <strong>.env.local</strong> شما یافت نشد یا نامعتبر بودند.</p>
-      <code className="block bg-red-100 p-4 rounded-md text-left text-sm my-4 whitespace-pre-wrap">
-        {`# .env.local
-NEXT_PUBLIC_SITE_URL="http://localhost:9002"
-NEXT_PUBLIC_SUPABASE_URL="YOUR_SUPABASE_URL_HERE"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY_HERE"
-SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_KEY_HERE"
-`}
-      </code>
-      <p className="text-lg font-semibold">{instructions}</p>
-    </div>
-  </div>
-);
-
-
 export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthProviderProps) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [configError, setConfigError] = useState<string | null>(null);
   
   const router = useRouter();
 
+  // Create the Supabase client once with the provided props
   const supabase = useMemo(() => {
-    if (!supabaseUrl || supabaseUrl.includes("YOUR_SUPABASE_URL")) {
-      setConfigError("Supabase URL is not configured.");
-      return null;
-    }
-    if (!supabaseAnonKey || supabaseAnonKey.includes("YOUR_SUPABASE_ANON_KEY")) {
-       setConfigError("Supabase Anon Key is not configured.");
-       return null;
-    }
-    setConfigError(null);
     return createClient(supabaseUrl, supabaseAnonKey);
   }, [supabaseUrl, supabaseAnonKey]);
 
   useEffect(() => {
-    if (!supabase) {
-        setIsLoading(false);
-        return;
-    }
-
+    // Auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setIsLoading(true);
-        if (session?.user) {
-          const supabaseUser = session.user;
+        const supabaseUser = session?.user;
+        if (supabaseUser) {
           try {
             const { data: userProfile, error } = await supabase
               .from('users')
@@ -105,6 +78,7 @@ export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthPro
       }
     );
 
+    // Check initial session
     const checkInitialSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) setIsLoading(false);
@@ -116,12 +90,7 @@ export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthPro
     };
   }, [supabase]);
   
-  if (configError) {
-      return <ConfigErrorScreen message={configError} instructions="لطفاً فایل .env.local را تکمیل کرده و سرور را مجدداً راه‌اندازی (Restart) کنید." />;
-  }
-
   const logout = async () => {
-    if (!supabase) return;
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
@@ -134,7 +103,7 @@ export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthPro
     user,
     isLoading,
     logout,
-    supabase: supabase!,
+    supabase,
   };
 
   return (
