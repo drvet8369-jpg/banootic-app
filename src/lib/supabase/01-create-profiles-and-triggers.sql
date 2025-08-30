@@ -1,273 +1,211 @@
--- Create a table for public profiles
-create table if not exists users (
-  id uuid references auth.users on delete cascade not null primary key,
-  updated_at timestamp with time zone,
-  name text,
-  phone text unique,
-  email text unique,
-  account_type text
-);
 
--- Set up Row Level Security (RLS)
--- See https://supabase.com/docs/guides/auth/row-level-security
-alter table users
-  enable row level security;
+-- Drop the trigger and function if they exist to ensure a clean re-creation.
+-- This prevents errors if the script is run multiple times.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.create_public_profile_for_user;
 
-create policy "Public profiles are viewable by everyone." on users
-  for select using (true);
-
-create policy "Users can insert their own profile." on users
-  for insert with check (auth.uid() = id);
-
-create policy "Users can update own profile." on users
-  for update using (auth.uid() = id);
-
--- Create a table for providers, extending the users table
-create table if not exists providers (
-  id serial primary key,
-  user_id uuid references public.users(id) on delete cascade not null,
-  name text,
-  service text,
-  location text,
-  phone text unique,
-  bio text,
-  category_slug text,
-  service_slug text,
-  rating numeric(2,1) default 0.0,
-  reviews_count integer default 0,
-  profile_image jsonb,
-  portfolio jsonb[]
-);
-
-alter table providers
-  enable row level security;
-
-create policy "Providers are viewable by everyone." on providers
-  for select using (true);
-
-create policy "Providers can insert their own profile." on providers
-  for insert with check (auth.uid() = user_id);
-
-create policy "Providers can update their own profile." on providers
-  for update using (auth.uid() = user_id);
-
-
--- Create a table for customers, extending the users table
-create table if not exists customers (
-    id serial primary key,
-    user_id uuid references public.users(id) on delete cascade not null,
-    name text,
-    phone text
-);
-
-alter table customers
-    enable row level security;
-
-create policy "Customers are viewable by authenticated users." on customers
-    for select using (auth.role() = 'authenticated');
-
-create policy "Customers can insert their own profile." on customers
-    for insert with check (auth.uid() = user_id);
-
-create policy "Customers can update their own profile." on customers
-    for update using (auth.uid() = user_id);
-
-
--- This trigger automatically creates a profile entry when a new user signs up.
--- and a customer entry by default.
-create or replace function public.handle_new_user()
+-- Function to create a user profile in public.users when a new user signs up.
+create function public.create_public_profile_for_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
 begin
-  -- Create a public user profile
-  insert into public.users (id, name, phone, email, account_type)
+  insert into public.users (id, name, account_type, phone, email)
   values (
     new.id,
     new.raw_user_meta_data->>'name',
+    (new.raw_user_meta_data->>'account_type')::account_type,
     new.raw_user_meta_data->>'phone',
-    new.raw_user_meta_data->>'email',
-    new.raw_user_meta_data->>'account_type'
-   );
-
-  -- If the user is a customer, create a customer profile
-  if new.raw_user_meta_data->>'account_type' = 'customer' then
-    insert into public.customers (user_id, name, phone)
-    values (
-        new.id,
-        new.raw_user_meta_data->>'name',
-        new.raw_user_meta_data->>'phone'
-    );
-  end if;
-
+    new.email
+  );
   return new;
 end;
 $$;
 
--- Drop existing trigger if it exists, to prevent errors on re-run
-drop trigger if exists on_auth_user_created on auth.users;
-
--- create the trigger
+-- Trigger to call the function after a new user is created.
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+  for each row execute procedure public.create_public_profile_for_user();
 
-
--- This RPC function is for providers to create their specific profile after the user is created.
-create or replace function public.create_provider_profile(
-    p_user_id uuid,
-    p_name text,
-    p_service text,
-    p_location text,
-    p_phone text,
-    p_bio text,
-    p_category_slug text,
-    p_service_slug text
-)
-returns void
-language plpgsql
-security definer set search_path = public
-as $$
-begin
-    insert into public.providers (user_id, name, service, location, phone, bio, category_slug, service_slug, profile_image, portfolio)
-    values (
-        p_user_id,
-        p_name,
-        p_service,
-        p_location,
-        p_phone,
-        p_bio,
-        p_category_slug,
-        p_service_slug,
-        '{"src": "", "ai_hint": "woman portrait"}',
-        '{}'
-    );
-end;
-$$;
-
-
--- Create conversations and messages tables for chat
-create table if not exists public.conversations (
-    id uuid primary key default gen_random_uuid(),
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-    participant_one_id uuid references public.users(id) on delete cascade not null,
-    participant_two_id uuid references public.users(id) on delete cascade not null,
-    last_message_at timestamp with time zone,
-    constraint unique_conversation unique (participant_one_id, participant_two_id)
-);
+-- Enable RLS for the tables
+alter table public.users enable row level security;
+alter table public.providers enable row level security;
+alter table public.customers enable row level security;
+alter table public.reviews enable row level security;
 alter table public.conversations enable row level security;
-create policy "Users can view their own conversations" on public.conversations for select using (auth.uid() = participant_one_id or auth.uid() = participant_two_id);
-
-
-create table if not exists public.messages (
-    id uuid primary key default gen_random_uuid(),
-    conversation_id uuid references public.conversations(id) on delete cascade not null,
-    sender_id uuid references public.users(id) on delete cascade not null,
-    receiver_id uuid references public.users(id) on delete cascade not null,
-    content text not null,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-    is_read boolean default false
-);
 alter table public.messages enable row level security;
-create policy "Users can view messages in their conversations" on public.messages for select using (auth.uid() = sender_id or auth.uid() = receiver_id);
-create policy "Users can insert messages" on public.messages for insert with check (auth.uid() = sender_id);
-create policy "Users can update their own messages (for read status)" on public.messages for update using (auth.uid() = receiver_id);
+alter table public.agreements enable row level security;
+
+-- Policies for 'users' table
+-- Users can see their own profile.
+create policy "Users can view their own profile."
+on public.users for select
+using ( auth.uid() = id );
+
+-- Users can update their own profile.
+create policy "Users can update their own profile."
+on public.users for update
+using ( auth.uid() = id );
 
 
--- Create function to update last_message_at on new message
-create or replace function public.update_conversation_timestamp()
-returns trigger
-language plpgsql
-as $$
-begin
-    update public.conversations
-    set last_message_at = new.created_at
-    where id = new.conversation_id;
-    return new;
-end;
-$$;
+-- Policies for 'providers' table
+-- Allow public read access to all providers.
+create policy "Providers are publicly visible."
+on public.providers for select
+using ( true );
 
--- Drop trigger if it exists to prevent errors on re-run
-drop trigger if exists on_new_message on public.messages;
-
-create trigger on_new_message
-    after insert on public.messages
-    for each row execute procedure public.update_conversation_timestamp();
+-- Allow providers to update their own profile.
+create policy "Providers can update their own profile."
+on public.providers for update
+using ( auth.uid() = user_id );
 
 
--- RPC to get or create a conversation
-create or replace function get_or_create_conversation(p_user_id_1 uuid, p_user_id_2 uuid)
-returns public.conversations
-language plpgsql
-as $$
-declare
-    conversation_record public.conversations;
-begin
-    -- Sort IDs to ensure uniqueness regardless of order
-    if p_user_id_1 > p_user_id_2 then
-        -- swap ids
-        declare temp_id uuid := p_user_id_1;
-        begin
-            p_user_id_1 := p_user_id_2;
-            p_user_id_2 := temp_id;
-        end;
-    end if;
+-- Policies for 'customers' table
+-- Allow customers to view their own profile.
+create policy "Customers can view their own profile."
+on public.customers for select
+using ( auth.uid() = user_id );
 
-    select * into conversation_record
-    from public.conversations
-    where participant_one_id = p_user_id_1 and participant_two_id = p_user_id_2;
+-- Allow customers to update their own profile.
+create policy "Customers can update their own profile."
+on public.customers for update
+using ( auth.uid() = user_id );
 
-    if conversation_record is null then
-        insert into public.conversations (participant_one_id, participant_two_id)
-        values (p_user_id_1, p_user_id_2)
-        returning * into conversation_record;
-    end if;
+-- Policies for 'messages' table
+-- Allow users to see messages in conversations they are part of.
+create policy "Users can view messages in their conversations."
+on public.messages for select
+using ( 
+  auth.uid() = sender_id or auth.uid() = receiver_id 
+);
 
-    return conversation_record;
-end;
-$$;
+-- Allow users to insert messages where they are the sender.
+create policy "Users can send messages."
+on public.messages for insert
+with check ( auth.uid() = sender_id );
 
--- RPC to get metadata for conversations list
-create or replace function get_conversations_metadata(user_id uuid)
-returns table (
-    conversation_id uuid,
-    last_message_content text,
-    unread_count bigint
+-- Allow users to update the is_read status of messages sent to them.
+create policy "Users can mark their messages as read."
+on public.messages for update
+using ( auth.uid() = receiver_id )
+with check ( auth.uid() = receiver_id );
+
+
+-- Policies for 'conversations' table
+-- Allow users to view conversations they are part of.
+create policy "Users can view their own conversations."
+on public.conversations for select
+using (
+  auth.uid() = participant_one_id or auth.uid() = participant_two_id
+);
+
+-- Note: Conversation creation/updates are handled by RPC functions.
+
+-- This ensures that when a message is inserted, the last_message_at of the corresponding conversation is updated.
+CREATE OR REPLACE FUNCTION update_conversation_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE conversations
+  SET last_message_at = NOW()
+  WHERE id = NEW.conversation_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_new_message ON public.messages;
+
+CREATE TRIGGER on_new_message
+AFTER INSERT ON public.messages
+FOR EACH ROW
+EXECUTE FUNCTION update_conversation_timestamp();
+
+
+-- Function to get or create a conversation between two users
+CREATE OR REPLACE FUNCTION get_or_create_conversation(p_user_id_1 UUID, p_user_id_2 UUID)
+RETURNS TABLE(
+    id UUID,
+    created_at TIMESTAMPTZ,
+    participant_one_id UUID,
+    participant_two_id UUID,
+    last_message_at TIMESTAMPTZ
+) AS $$
+DECLARE
+    v_conversation_id UUID;
+BEGIN
+    -- Ensure order to prevent duplicate conversations
+    IF p_user_id_1 < p_user_id_2 THEN
+        SELECT c.id INTO v_conversation_id FROM conversations c WHERE c.participant_one_id = p_user_id_1 AND c.participant_two_id = p_user_id_2;
+    ELSE
+        SELECT c.id INTO v_conversation_id FROM conversations c WHERE c.participant_one_id = p_user_id_2 AND c.participant_two_id = p_user_id_1;
+    END IF;
+
+    IF v_conversation_id IS NULL THEN
+        -- Create new conversation
+        INSERT INTO conversations (participant_one_id, participant_two_id)
+        VALUES (
+            LEAST(p_user_id_1, p_user_id_2),
+            GREATEST(p_user_id_1, p_user_id_2)
+        )
+        RETURNING conversations.id INTO v_conversation_id;
+    END IF;
+
+    RETURN QUERY SELECT * FROM conversations c WHERE c.id = v_conversation_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Function to create a provider profile
+CREATE OR REPLACE FUNCTION create_provider_profile(
+    p_user_id UUID,
+    p_name TEXT,
+    p_service TEXT,
+    p_location TEXT,
+    p_phone TEXT,
+    p_bio TEXT,
+    p_category_slug TEXT,
+    p_service_slug TEXT
 )
-language sql
-as $$
-    select
-        c.id as conversation_id,
-        (select content from public.messages where conversation_id = c.id order by created_at desc limit 1) as last_message_content,
-        (select count(*) from public.messages where conversation_id = c.id and receiver_id = user_id and is_read = false) as unread_count
-    from
-        public.conversations c
-    where
-        c.participant_one_id = user_id or c.participant_two_id = user_id;
-$$;
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO public.providers(user_id, name, service, location, phone, bio, category_slug, service_slug)
+    VALUES (p_user_id, p_name, p_service, p_location, p_phone, p_bio, p_category_slug, p_service_slug);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Storage bucket for images
-insert into storage.buckets (id, name, public)
-values ('images', 'images', true)
-on conflict (id) do nothing;
 
-create policy "Public access for images"
-on storage.objects for select
-to public
-using ( bucket_id = 'images' );
-
-create policy "Users can upload images for their profile"
-on storage.objects for insert
-to authenticated
-with check ( bucket_id = 'images' and (storage.filename(name) like 'profile-pics/' || auth.uid() || '/%') or (storage.filename(name) like 'portfolio-items/' || auth.uid() || '/%'));
-
-create policy "Users can update their own images"
-on storage.objects for update
-to authenticated
-using ( bucket_id = 'images' and (storage.filename(name) like 'profile-pics/' || auth.uid() || '/%') or (storage.filename(name) like 'portfolio-items/' || auth.uid() || '/%'));
-
-create policy "Users can delete their own images"
-on storage.objects for delete
-to authenticated
-using ( bucket_id = 'images' and (storage.filename(name) like 'profile-pics/' || auth.uid() || '/%') or (storage.filename(name) like 'portfolio-items/' || auth.uid() || '/%'));
+-- Function to get conversation metadata for a user
+CREATE OR REPLACE FUNCTION get_conversations_metadata(user_id UUID)
+RETURNS TABLE (
+    conversation_id UUID,
+    last_message_content TEXT,
+    unread_count BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH last_messages AS (
+        SELECT
+            m.conversation_id,
+            m.content,
+            ROW_NUMBER() OVER(PARTITION BY m.conversation_id ORDER BY m.created_at DESC) as rn
+        FROM messages m
+        WHERE m.conversation_id IN (SELECT c.id FROM conversations c WHERE c.participant_one_id = user_id OR c.participant_two_id = user_id)
+    ),
+    unread_counts AS (
+        SELECT
+            m.conversation_id,
+            count(*) as unread
+        FROM messages m
+        WHERE m.receiver_id = user_id AND m.is_read = false
+        GROUP BY m.conversation_id
+    )
+    SELECT
+        c.id,
+        lm.content,
+        COALESCE(uc.unread, 0)
+    FROM conversations c
+    LEFT JOIN last_messages lm ON c.id = lm.conversation_id AND lm.rn = 1
+    LEFT JOIN unread_counts uc ON c.id = uc.conversation_id
+    WHERE c.participant_one_id = user_id OR c.participant_two_id = user_id;
+END;
+$$ LANGUAGE plpgsql;
