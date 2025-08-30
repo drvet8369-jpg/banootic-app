@@ -6,8 +6,7 @@ import * as z from 'zod';
 import Link from "next/link";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, KeyRound } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +26,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { getUserByPhone } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
+import type { User } from '@/context/AuthContext';
+
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
@@ -38,8 +40,8 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,36 +53,43 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        // Check if user exists first
-        const userExists = await getUserByPhone(values.phone);
-        if (!userExists) {
-            toast({
-                title: 'کاربر یافت نشد',
-                description: 'کاربری با این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-                variant: 'destructive'
-            });
-            setIsLoading(false);
-            return;
-        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
 
-        const { error } = await supabase.auth.signInWithOtp({
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
             phone: values.phone,
-        });
-
-        if (error) throw error;
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
 
         toast({
-            title: 'کد تایید ارسال شد',
-            description: 'یک کد تایید ۶ رقمی به شماره شما ارسال شد.',
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
         });
         
-        router.push(`/login/verify?phone=${values.phone}`);
+        router.push('/');
 
-    } catch (error: any) {
-        console.error("Login error:", error);
+    } catch (error) {
+        console.error("Login failed:", error);
         toast({
             title: 'خطا در ورود',
-            description: 'مشکلی در ارسال کد تایید پیش آمده است. لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -89,15 +98,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
-        <CardHeader className="text-center">
-            <div className="mx-auto bg-primary/10 rounded-full p-4 w-fit mb-4">
-                <KeyRound className="w-10 h-10 text-primary" />
-            </div>
-          <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
+        <CardHeader>
+          <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود، شماره تلفن خود را وارد کنید تا کد تایید برایتان ارسال شود.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -110,7 +116,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr" className="text-center" />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -118,14 +124,14 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ارسال کد تایید
+                ورود
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            حساب کاربری ندارید؟{" "}
+            هنرمند هستید؟{" "}
             <Link href="/register" className="underline">
-              ثبت‌نام کنید
+              از اینجا ثبت‌نام کنید
             </Link>
           </div>
         </CardContent>
