@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,6 +8,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,12 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
-import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
-
+import { categories } from '@/lib/constants';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -39,6 +37,12 @@ const formSchema = z.object({
   }),
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+  }),
+  email: z.string().email({
+    message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
+  }),
+  password: z.string().min(6, {
+    message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
   }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
@@ -64,15 +68,17 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 
 export default function RegisterForm() {
   const { toast } = useToast();
-  const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const supabase = createClient();
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       phone: '',
+      email: '',
+      password: '',
       accountType: 'customer',
       bio: '',
     },
@@ -82,97 +88,76 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const allProviders = getProviders();
-
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Check for existing provider by business name, only if registering as a provider
-      if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
-            toast({
-                title: 'خطا در ثبت‌نام',
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-                variant: 'destructive',
-            });
-            setIsLoading(false);
-            return;
-        }
-      }
-
-
-      // This is the user object for the AuthContext
-      const userToLogin: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-        serviceType: values.serviceType,
-        bio: values.bio,
-      };
-
-      // Only create a new provider if the account type is 'provider'
-      if (values.accountType === 'provider') {
-        const selectedCategory = categories.find(c => c.slug === values.serviceType);
-        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
-        
-        const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: values.email,
+      password: values.password,
+      options: {
+        data: {
           name: values.name,
           phone: values.phone,
-          service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
-          bio: values.bio || '',
-          categorySlug: selectedCategory?.slug || 'beauty',
-          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-          rating: 0,
-          reviewsCount: 0,
-          profileImage: { src: '', aiHint: 'woman portrait' },
-          portfolio: [],
-        };
-        
-        saveProviders([...allProviders, newProvider]);
-      }
-      
-      login(userToLogin);
-      
-      toast({
-        title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-      });
-      
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
-      router.push(destination);
+          account_type: values.accountType,
+          // Provider specific data
+          ...(values.accountType === 'provider' && {
+            service: categories.find(c => c.slug === values.serviceType)?.name,
+            bio: values.bio,
+            category_slug: values.serviceType,
+            service_slug: 'default-service', // Placeholder, can be refined
+            location: 'ارومیه',
+          }),
+        },
+      },
+    });
 
-    } catch (error) {
-         console.error("Registration failed:", error);
-         toast({
-            title: 'خطا در ثبت‌نام',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
-            variant: 'destructive'
-        });
-    } finally {
-        setIsLoading(false);
+    if (signUpError) {
+      toast({
+        title: 'خطا در ثبت‌نام',
+        description: signUpError.message === 'User already registered' 
+          ? 'کاربری با این ایمیل قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.'
+          : 'مشکلی در فرآیند ثبت‌نام رخ داد. لطفاً دوباره تلاش کنید.',
+        variant: 'destructive',
+      });
+    } else if (signUpData.user) {
+        if(signUpData.user.identities && signUpData.user.identities.length === 0){
+             toast({
+                title: 'خطا',
+                description: 'این ایمیل در لیست انتظار قرار دارد. لطفاً بعداً تلاش کنید.',
+                variant: 'destructive'
+            });
+        } else {
+            setIsSuccess(true);
+            toast({
+                title: 'ثبت‌نام موفقیت‌آمیز بود!',
+                description: 'ایمیل تایید برای شما ارسال شد. لطفاً صندوق ورودی ایمیل خود را بررسی کنید.',
+            });
+        }
     }
+
+    setIsLoading(false);
+  }
+
+  if (isSuccess) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-center">ثبت‌نام شما موفقیت آمیز بود!</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+                <p>یک ایمیل حاوی لینک تایید به آدرس شما ارسال شد.</p>
+                <p className="mt-2">لطفاً روی لینک موجود در ایمیل کلیک کنید تا حساب کاربری شما فعال شود.</p>
+                <Button asChild className="mt-6">
+                    <Link href="/login">رفتن به صفحه ورود</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
   }
 
   return (
     <Card>
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="accountType"
@@ -216,7 +201,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی"} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -231,6 +216,34 @@ export default function RegisterForm() {
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
                     <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+             <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>آدرس ایمیل</FormLabel>
+                  <FormControl>
+                    <Input placeholder="email@example.com" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+             <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>رمز عبور</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="حداقل ۶ کاراکتر" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -278,7 +291,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -289,7 +302,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام
+              ثبت‌نام و ارسال ایمیل تایید
             </Button>
             
             <div className="mt-4 text-center text-sm">
