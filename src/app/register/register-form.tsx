@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,6 +26,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getUserByPhone } from '@/lib/api';
+import { normalizePhoneNumber } from '@/lib/utils';
+
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -37,12 +39,6 @@ const formSchema = z.object({
   }),
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
-  }),
-  email: z.string().email({
-    message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
-  }),
-  password: z.string().min(6, {
-    message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
   }),
   serviceType: z.string().optional(),
   bio: z.string().optional(),
@@ -68,8 +64,8 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 
 export default function RegisterForm() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const supabase = createClient();
 
   const form = useForm<UserRegistrationInput>({
@@ -77,8 +73,6 @@ export default function RegisterForm() {
     defaultValues: {
       name: '',
       phone: '',
-      email: '',
-      password: '',
       accountType: 'customer',
       bio: '',
     },
@@ -88,69 +82,72 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
+    
+    try {
+        const normalizedPhone = normalizePhoneNumber(values.phone);
+        const existingUser = await getUserByPhone(normalizedPhone);
 
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: {
-          name: values.name,
-          phone: values.phone,
-          account_type: values.accountType,
-          // Provider specific data
-          ...(values.accountType === 'provider' && {
-            service: categories.find(c => c.slug === values.serviceType)?.name,
-            bio: values.bio,
-            category_slug: values.serviceType,
-            service_slug: 'default-service', // Placeholder, can be refined
-            location: 'ارومیه',
-          }),
-        },
-      },
-    });
-
-    if (signUpError) {
-      toast({
-        title: 'خطا در ثبت‌نام',
-        description: signUpError.message === 'User already registered' 
-          ? 'کاربری با این ایمیل قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.'
-          : 'مشکلی در فرآیند ثبت‌نام رخ داد. لطفاً دوباره تلاش کنید.',
-        variant: 'destructive',
-      });
-    } else if (signUpData.user) {
-        if(signUpData.user.identities && signUpData.user.identities.length === 0){
-             toast({
+        if (existingUser) {
+            toast({
                 title: 'خطا',
-                description: 'این ایمیل در لیست انتظار قرار دارد. لطفاً بعداً تلاش کنید.',
+                description: 'این شماره تلفن قبلاً ثبت شده است. لطفاً وارد شوید.',
                 variant: 'destructive'
             });
-        } else {
-            setIsSuccess(true);
-            toast({
-                title: 'ثبت‌نام موفقیت‌آمیز بود!',
-                description: 'ایمیل تایید برای شما ارسال شد. لطفاً صندوق ورودی ایمیل خود را بررسی کنید.',
-            });
+            setIsLoading(false);
+            return;
         }
+
+        // Use a dummy email for sign-up, as phone will be the primary identifier.
+        // This is a common pattern when phone is the main login method.
+        const dummyEmail = `${normalizedPhone}@example.com`;
+        
+        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+            email: dummyEmail,
+            password: Math.random().toString(36).slice(-12), // Strong random password
+            phone: normalizedPhone,
+            options: {
+                data: {
+                    name: values.name,
+                    phone: normalizedPhone,
+                    account_type: values.accountType,
+                    // Provider specific data
+                    ...(values.accountType === 'provider' && {
+                        service: categories.find(c => c.slug === values.serviceType)?.name || 'خدمات عمومی',
+                        bio: values.bio,
+                        category_slug: values.serviceType,
+                        location: 'ارومیه',
+                    }),
+                }
+            }
+        });
+
+        if (signUpError) throw signUpError;
+        if (!user) throw new Error('ثبت نام موفق نبود، کاربری ایجاد نشد.');
+        
+        // After successful sign-up, immediately sign in with OTP
+        const { error: signInError } = await supabase.auth.signInWithOtp({
+            phone: normalizedPhone,
+        });
+
+        if (signInError) throw signInError;
+
+        toast({
+            title: 'ثبت نام موفقیت آمیز بود!',
+            description: 'کد تایید برای شما ارسال شد.',
+        });
+        
+        router.push(`/login/verify?phone=${encodeURIComponent(normalizedPhone)}`);
+
+    } catch (error: any) {
+        console.error("Registration failed:", error);
+        toast({
+            title: 'خطا در ثبت‌نام',
+            description: error.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsLoading(false);
     }
-
-    setIsLoading(false);
-  }
-
-  if (isSuccess) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-center">ثبت‌نام شما موفقیت آمیز بود!</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-                <p>یک ایمیل حاوی لینک تایید به آدرس شما ارسال شد.</p>
-                <p className="mt-2">لطفاً روی لینک موجود در ایمیل کلیک کنید تا حساب کاربری شما فعال شود.</p>
-                <Button asChild className="mt-6">
-                    <Link href="/login">رفتن به صفحه ورود</Link>
-                </Button>
-            </CardContent>
-        </Card>
-    );
   }
 
   return (
@@ -215,36 +212,11 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr" />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-             <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>آدرس ایمیل</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@example.com" {...field} disabled={isLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-             <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>رمز عبور</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="حداقل ۶ کاراکتر" {...field} disabled={isLoading} />
-                  </FormControl>
+                   <FormDescription>
+                    از این شماره برای ورود به حساب کاربری خود استفاده خواهید کرد.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -291,7 +263,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید.
+                        این بیوگرافی در پروفایل عمومی شما نمایش داده می‌شود.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -302,7 +274,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام و ارسال ایمیل تایید
+              ثبت‌نام و ارسال کد تایید
             </Button>
             
             <div className="mt-4 text-center text-sm">

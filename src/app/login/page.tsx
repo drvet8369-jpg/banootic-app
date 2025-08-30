@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,13 +27,13 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
+import { getUserByPhone } from '@/lib/api';
+import { normalizePhoneNumber } from '@/lib/utils';
+
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
-  }),
-  password: z.string().min(6, {
-    message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
+  phone: z.string().regex(/^09\d{9}$/, {
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
 
@@ -47,36 +46,48 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      phone: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
+    try {
+        const normalizedPhone = normalizePhoneNumber(values.phone);
+        const existingUser = await getUserByPhone(normalizedPhone);
+        
+        if (!existingUser) {
+            toast({
+                title: 'کاربر یافت نشد',
+                description: 'کاربری با این شماره تلفن ثبت‌نام نکرده است. لطفاً ابتدا ثبت‌نام کنید.',
+                variant: 'destructive'
+            });
+            setIsLoading(false);
+            return;
+        }
 
-    if (error) {
-      toast({
-        title: 'خطا در ورود',
-        description: error.message === 'Invalid login credentials' 
-          ? 'ایمیل یا رمز عبور نامعتبر است.' 
-          : 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-    } else {
-      toast({
-        title: 'ورود موفق',
-        description: 'شما با موفقیت وارد شدید. در حال انتقال...',
-      });
-      // Use router.refresh() to re-fetch server components and re-render the layout
-      router.refresh();
-      router.push('/');
+        const { error } = await supabase.auth.signInWithOtp({
+            phone: normalizedPhone,
+        });
+
+        if (error) throw error;
+        
+        toast({
+          title: 'کد تایید ارسال شد',
+          description: `کد تایید به شماره ${normalizedPhone} ارسال شد.`,
+        });
+        
+        router.push(`/login/verify?phone=${encodeURIComponent(normalizedPhone)}`);
+
+    } catch (error: any) {
+        console.error("Login failed:", error);
+        toast({
+            title: 'خطا در ورود',
+            description: error.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsLoading(false);
     }
   }
 
@@ -86,7 +97,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود به حساب کاربری خود، ایمیل و رمز عبور را وارد کنید.
+            برای ورود، شماره تلفن خود را وارد کنید تا کد تایید برایتان ارسال شود.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -94,25 +105,12 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ایمیل</FormLabel>
+                    <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="email@example.com" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>رمز عبور</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} disabled={isLoading} />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -120,7 +118,7 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ورود
+                ارسال کد تایید
               </Button>
             </form>
           </Form>
