@@ -79,7 +79,7 @@ export default function RegisterForm() {
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
     
-    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` : '/auth/callback';
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
