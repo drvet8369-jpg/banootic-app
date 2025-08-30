@@ -1,8 +1,7 @@
 'use client';
 
-import type { Metadata } from 'next';
-import { Vazirmatn } from 'next/font/google';
 import './globals.css';
+import { Vazirmatn } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/AuthContext';
@@ -18,21 +17,21 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-// These props are passed from the server-side RootLayout to the client-side component
-interface ClientRootLayoutProps {
+export default function RootLayout({
+  children,
+}: {
   children: React.ReactNode;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-}
-
-function ClientRootLayout({ children, supabaseUrl, supabaseAnonKey }: ClientRootLayoutProps) {
+}) {
   return (
     <html lang="fa" dir="rtl">
-       <head>
-          <title>بانوتیک</title>
-          <meta name="description" content="بازاری برای خدمات و محصولات بانوان هنرمند" />
-          <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#A3BEA6" />
+      <head>
+        <title>بانوتیک</title>
+        <meta
+          name="description"
+          content="بازاری برای خدمات و محصولات بانوان هنرمند"
+        />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
         className={cn(
@@ -40,7 +39,7 @@ function ClientRootLayout({ children, supabaseUrl, supabaseAnonKey }: ClientRoot
           vazirmatn.variable
         )}
       >
-        <AuthProvider supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey}>
+        <AuthProvider>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
@@ -54,21 +53,4 @@ function ClientRootLayout({ children, supabaseUrl, supabaseAnonKey }: ClientRoot
       </body>
     </html>
   );
-}
-
-
-// This is the actual root layout, which is a server component.
-// It reads the environment variables on the server and passes them to the client component.
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    return (
-        <ClientRootLayout 
-            supabaseUrl={supabaseUrl} 
-            supabaseAnonKey={supabaseAnonKey}
-        >
-            {children}
-        </ClientRootLayout>
-    );
 }

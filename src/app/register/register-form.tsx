@@ -27,6 +27,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { categories } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
+import type { ProviderRegistrationData } from '@/lib/types';
+
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider'], {
@@ -78,49 +80,61 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
-        password: `password_${Date.now()}`, // Dummy password
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            name: values.name,
-            account_type: values.accountType,
+        const { data, error } = await supabase.auth.signUp({
             phone: values.phone,
-            service: values.accountType === 'provider' ? (categories.find(c => c.slug === values.serviceType)?.name || 'خدمت جدید') : undefined,
-            location: values.accountType === 'provider' ? 'ارومیه' : undefined,
-            bio: values.accountType === 'provider' ? values.bio : undefined,
-            category_slug: values.accountType === 'provider' ? values.serviceType : undefined,
-            service_slug: values.accountType === 'provider' ? values.serviceType : undefined, 
-          }
-        }
-      });
-      
-      if (authError) throw authError;
+            password: `password_${Date.now()}`, // Dummy password required by Supabase
+            options: {
+                data: {
+                    name: values.name,
+                    account_type: values.accountType,
+                    phone: values.phone,
+                    email: values.email,
+                }
+            }
+        });
 
-      if (!authData.user) throw new Error("کاربر ایجاد نشد، لطفاً دوباره تلاش کنید.");
-      
-      toast({
-        title: 'ثبت‌نام شما موفقیت‌آمیز بود',
-        description: 'یک ایمیل برای تأیید حساب کاربری برای شما ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.',
-        duration: 10000,
-      });
-      
-      router.push('/login');
+        if (error) {
+            if (error.message.includes('User already registered')) {
+                throw new Error('کاربری با این شماره تلفن قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.');
+            }
+            throw error;
+        }
+
+        if (!data.user) throw new Error("کاربر در سیستم احراز هویت ایجاد نشد.");
+
+        // If user is a provider, call the RPC to create their provider profile
+        if (values.accountType === 'provider') {
+            const selectedCategory = categories.find(c => c.slug === values.serviceType);
+
+            const providerData: ProviderRegistrationData = {
+                p_user_id: data.user.id,
+                p_name: values.name,
+                p_service: selectedCategory?.name || 'سرویس عمومی',
+                p_location: 'ارومیه', // Default location
+                p_phone: values.phone,
+                p_bio: values.bio || '',
+                p_category_slug: selectedCategory?.slug || 'beauty',
+                p_service_slug: values.serviceType || 'manicure-pedicure', // This should be more specific
+            };
+
+            const { error: rpcError } = await supabase.rpc('create_provider_profile', providerData);
+            if (rpcError) throw rpcError;
+        }
+
+        toast({
+            title: 'ثبت‌نام موفقیت‌آمیز بود',
+            description: 'یک کد تایید به شماره شما ارسال شد. لطفاً آن را در مرحله بعد وارد کنید.',
+        });
+        
+        router.push(`/login/verify?phone=${values.phone}`);
 
     } catch (error: any) {
       console.error("Registration Error:", error);
-      let errorMessage = "مشکلی در فرآیند ثبت‌نام پیش آمده است.";
-      if (error.message.includes('User already registered')) {
-        errorMessage = 'کاربری با این ایمیل قبلاً ثبت‌نام کرده است. لطفاً وارد شوید.';
-      }
       toast({
         title: "خطا در ثبت‌نام",
-        description: errorMessage,
+        description: error.message || "مشکلی در فرآیند ثبت‌نام پیش آمده است.",
         variant: "destructive"
       });
     } finally {
@@ -182,36 +196,33 @@ export default function RegisterForm() {
                 </FormItem>
               )}
             />
+
+             <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>شماره تلفن (برای ورود و تماس)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr"/>
+                  </FormControl>
+                   <FormDescription>
+                    برای ورود و خروج از این شماره تلفن استفاده خواهید کرد.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
              <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>آدرس ایمیل</FormLabel>
+                  <FormLabel>آدرس ایمیل (برای اطلاع‌رسانی‌ها)</FormLabel>
                   <FormControl>
                     <Input placeholder="you@example.com" {...field} disabled={isLoading} dir="ltr" />
                   </FormControl>
-                  <FormDescription>
-                    برای ورود و خروج از این ایمیل استفاده خواهید کرد.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>شماره تلفن (برای تماس)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr"/>
-                  </FormControl>
-                  <FormDescription>
-                    این شماره در پروفایل شما برای تماس مشتریان نمایش داده می‌شود.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -269,7 +280,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام و ارسال ایمیل تایید
+              ثبت‌نام و ارسال کد تایید
             </Button>
             
             <div className="mt-4 text-center text-sm">

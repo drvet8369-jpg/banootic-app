@@ -4,12 +4,11 @@
 import { createActionClient } from './supabase/actions';
 import { createAdminClient } from './supabase/server';
 import { normalizePhoneNumber } from './utils';
-import type { Provider, Review, Agreement, Customer, PortfolioItem, Message, User, Conversation } from './types';
-import { categories } from './constants';
+import type { Provider, Review, Agreement, PortfolioItem, Message, UserProfile, Conversation } from './types';
 
 // --- User, Provider & Customer Functions ---
 
-export async function getUserByPhone(phone: string): Promise<User | null> {
+export async function getUserByPhone(phone: string): Promise<UserProfile | null> {
     const supabase = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
     const { data, error } = await supabase
@@ -18,7 +17,7 @@ export async function getUserByPhone(phone: string): Promise<User | null> {
       .eq('phone', normalizedPhone)
       .single();
     
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error here
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
       console.error('Error fetching user by phone:', error);
     }
     
@@ -51,7 +50,6 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
   
   if (error && error.code !== 'PGRST116') {
     console.error('Error fetching provider by phone:', error);
-    // Don't throw here, returning null is a valid outcome.
   }
   
   return data;
@@ -148,7 +146,6 @@ export async function confirmAgreement(agreementId: number): Promise<Agreement> 
 export async function updateProviderDetails(userId: string, details: { name: string; service: string; bio: string; phone: string }): Promise<Provider> {
     const supabase = await createActionClient();
     
-    // First, update the user's general profile in the 'users' table
     const { error: userUpdateError } = await supabase
       .from('users')
       .update({ name: details.name, phone: details.phone })
@@ -159,7 +156,6 @@ export async function updateProviderDetails(userId: string, details: { name: str
         throw new Error('خطا در به‌روزرسانی اطلاعات عمومی کاربر.');
     }
 
-    // Then, update the provider-specific profile
     const { data: updatedProvider, error: providerUpdateError } = await supabase
         .from('providers')
         .update({ name: details.name, service: details.service, bio: details.bio, phone: details.phone })

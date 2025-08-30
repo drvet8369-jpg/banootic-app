@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,10 +27,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
+import { getUserByPhone } from '@/lib/api';
 
-const emailSchema = z.object({
-  email: z.string().email({
-    message: 'لطفاً یک آدرس ایمیل معتبر وارد کنید.',
+const formSchema = z.object({
+  phone: z.string().regex(/^09\d{9}$/, {
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
 
@@ -41,56 +41,53 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
-  const form = useForm<z.infer<typeof emailSchema>>({
-    resolver: zodResolver(emailSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
+      phone: '',
     },
   });
 
-  async function onSubmit(values: z.infer<typeof emailSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: values.email,
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: redirectUrl,
+        // Check if user exists first
+        const userExists = await getUserByPhone(values.phone);
+        if (!userExists) {
+            toast({
+                title: 'کاربر یافت نشد',
+                description: 'کاربری با این شماره تلفن ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+                variant: 'destructive'
+            });
+            setIsLoading(false);
+            return;
         }
-      });
 
-      if (error) {
-         throw error;
-      }
-      
-      toast({
-        title: 'لینک ورود ارسال شد',
-        description: 'یک ایمیل حاوی لینک ورود برای شما ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.',
-        duration: 10000,
-      });
+        const { error } = await supabase.auth.signInWithOtp({
+            phone: values.phone,
+        });
 
-      form.reset();
+        if (error) throw error;
+
+        toast({
+            title: 'کد تایید ارسال شد',
+            description: 'یک کد تایید ۶ رقمی به شماره شما ارسال شد.',
+        });
+        
+        router.push(`/login/verify?phone=${values.phone}`);
 
     } catch (error: any) {
         console.error("Login error:", error);
-        let errorMessage = 'مشکلی در ارسال لینک ورود پیش آمده است. لطفاً دوباره تلاش کنید.';
-        if (error.message.includes('User not found') || error.message.includes('for an existing user')) {
-            errorMessage = 'کاربری با این ایمیل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.'
-        }
-        
         toast({
             title: 'خطا در ورود',
-            description: errorMessage,
+            description: 'مشکلی در ارسال کد تایید پیش آمده است. لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
         setIsLoading(false);
     }
   }
-  
+
   return (
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
@@ -100,7 +97,7 @@ export default function LoginPage() {
             </div>
           <CardTitle className="text-2xl font-headline">ورود به حساب کاربری</CardTitle>
           <CardDescription>
-            برای ورود، ایمیل خود را وارد کنید تا لینک جادویی برایتان ارسال شود.
+            برای ورود، شماره تلفن خود را وارد کنید تا کد تایید برایتان ارسال شود.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -108,12 +105,12 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>آدرس ایمیل</FormLabel>
+                    <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" {...field} disabled={isLoading} dir="ltr" className="text-center" />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr" className="text-center" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -121,7 +118,7 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ارسال لینک ورود
+                ارسال کد تایید
               </Button>
             </form>
           </Form>

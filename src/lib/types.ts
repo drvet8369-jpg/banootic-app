@@ -23,6 +23,7 @@ export interface UserProfile {
     name: string;
     account_type: 'customer' | 'provider';
     phone: string;
+    email: string;
 }
 
 // Represents a provider record in the public.providers table
@@ -41,6 +42,18 @@ export interface Provider {
   profile_image: PortfolioItem;
   portfolio: PortfolioItem[];
 }
+
+export interface ProviderRegistrationData {
+    p_user_id: string;
+    p_name: string;
+    p_service: string;
+    p_location: string;
+    p_phone: string;
+    p_bio: string;
+    p_category_slug: string;
+    p_service_slug: string;
+}
+
 
 export interface Customer {
   id: number;
@@ -100,3 +113,6 @@ export interface Agreement {
   requested_at: string;
   confirmed_at?: string;
 }
+
+// AppUser is the combined user object we'll use throughout the client-side application.
+export interface AppUser extends UserProfile {}

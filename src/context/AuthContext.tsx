@@ -22,34 +22,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-}
-
-export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthProviderProps) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const router = useRouter();
 
-  // Create the Supabase client once with the provided props
-  const supabase = useMemo(() => {
-    return createClient(supabaseUrl, supabaseAnonKey);
-  }, [supabaseUrl, supabaseAnonKey]);
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    // Auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setIsLoading(true);
         const supabaseUser = session?.user;
+
         if (supabaseUser) {
           try {
             const { data: userProfile, error } = await supabase
               .from('users')
-              .select('id, name, account_type, phone')
+              .select('id, name, account_type, phone, email')
               .eq('id', supabaseUser.id)
               .single();
             
@@ -60,7 +51,7 @@ export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthPro
             } else if (userProfile) {
                  setUser({
                     id: userProfile.id,
-                    email: supabaseUser.email!,
+                    email: userProfile.email,
                     name: userProfile.name,
                     account_type: userProfile.account_type,
                     phone: userProfile.phone,
@@ -77,13 +68,6 @@ export const AuthProvider = ({ children, supabaseUrl, supabaseAnonKey }: AuthPro
         setIsLoading(false);
       }
     );
-
-    // Check initial session
-    const checkInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) setIsLoading(false);
-    };
-    checkInitialSession();
 
     return () => {
       subscription.unsubscribe();
