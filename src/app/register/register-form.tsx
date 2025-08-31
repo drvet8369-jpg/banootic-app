@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,7 +7,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,10 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, services } from '@/lib/constants';
+import { categories, getProviders, saveProviders, services } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
-import { getUserByPhone } from '@/lib/api';
-import { normalizePhoneNumber } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import type { User } from '@/context/AuthContext';
+import type { Provider } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -43,8 +42,8 @@ const formSchema = z.object({
   }),
   serviceType: z.string().optional(),
   serviceSlug: z.string().optional(),
-  location: z.string().optional(),
   bio: z.string().optional(),
+  location: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceType;
@@ -76,8 +75,8 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
@@ -85,8 +84,8 @@ export default function RegisterForm() {
       name: '',
       phone: '',
       accountType: 'customer',
-      location: 'ارومیه',
       bio: '',
+      location: 'ارومیه',
     },
   });
 
@@ -95,64 +94,83 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    
     try {
-        const normalizedPhone = normalizePhoneNumber(values.phone);
-        const existingUser = await getUserByPhone(normalizedPhone);
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-        if (existingUser) {
+      const allProviders = getProviders();
+
+      // Universal check for existing phone number among providers
+      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
+      if (existingProviderByPhone) {
+        toast({
+          title: 'خطا در ثبت‌نام',
+          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check for existing provider by business name, only if registering as a provider
+      if (values.accountType === 'provider') {
+        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
+        if (existingProviderByName) {
             toast({
-                title: 'خطا',
-                description: 'این شماره تلفن قبلاً ثبت شده است. لطفاً وارد شوید.',
-                variant: 'destructive'
+                title: 'خطا در ثبت‌نام',
+                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
+                variant: 'destructive',
             });
             setIsLoading(false);
             return;
         }
-        
-        const dummyEmail = `${normalizedPhone}@example.com`;
-        
-        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-            email: dummyEmail,
-            password: Math.random().toString(36).slice(-12),
-            phone: normalizedPhone,
-            options: {
-                data: {
-                    name: values.name,
-                    phone: normalizedPhone,
-                    account_type: values.accountType,
-                    ...(values.accountType === 'provider' && {
-                        service: services.find(s => s.slug === values.serviceSlug)?.name || 'خدمات عمومی',
-                        bio: values.bio,
-                        category_slug: values.serviceType,
-                        service_slug: values.serviceSlug,
-                        location: values.location,
-                    }),
-                }
-            }
-        });
+      }
 
-        if (signUpError) throw signUpError;
-        if (!user) throw new Error('ثبت نام موفق نبود، کاربری ایجاد نشد.');
+
+      // This is the user object for the AuthContext
+      const userToLogin: User = {
+        name: values.name,
+        phone: values.phone,
+        accountType: values.accountType,
+      };
+
+      // Only create a new provider if the account type is 'provider'
+      if (values.accountType === 'provider') {
+        const selectedCategory = categories.find(c => c.slug === values.serviceType);
+        const selectedService = services.find(s => s.slug === values.serviceSlug);
         
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-            phone: normalizedPhone,
-        });
-
-        if (signInError) throw signInError;
-
-        toast({
-            title: 'ثبت نام موفقیت آمیز بود!',
-            description: 'کد تایید برای شما ارسال شد.',
-        });
+        const newProvider: Provider = {
+          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
+          name: values.name,
+          phone: values.phone,
+          service: selectedService?.name || 'خدمت جدید',
+          location: values.location || 'ارومیه', // Default location
+          bio: values.bio || '',
+          categorySlug: selectedCategory?.slug || 'beauty',
+          serviceSlug: selectedService?.slug || 'manicure-pedicure',
+          rating: 0,
+          reviewsCount: 0,
+          profileImage: { src: '', aiHint: 'woman portrait' },
+          portfolio: [],
+        };
         
-        router.push(`/login/verify?phone=${encodeURIComponent(normalizedPhone)}`);
+        saveProviders([...allProviders, newProvider]);
+      }
+      
+      login(userToLogin);
+      
+      toast({
+        title: 'ثبت‌نام با موفقیت انجام شد!',
+        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+      });
+      
+      const destination = values.accountType === 'provider' ? '/profile' : '/';
+      router.push(destination);
 
-    } catch (error: any) {
-        console.error("Registration failed:", error);
-        toast({
+    } catch (error) {
+         console.error("Registration failed:", error);
+         toast({
             title: 'خطا در ثبت‌نام',
-            description: error.message || 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
     } finally {
@@ -164,7 +182,7 @@ export default function RegisterForm() {
     <Card>
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
               control={form.control}
               name="accountType"
@@ -173,13 +191,7 @@ export default function RegisterForm() {
                   <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={(value) => {
-                          field.onChange(value);
-                          form.setValue('serviceType', undefined);
-                          form.setValue('serviceSlug', undefined);
-                          form.clearErrors('serviceType');
-                          form.clearErrors('serviceSlug');
-                      }}
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
                       disabled={isLoading}
@@ -214,7 +226,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی"} {...field} disabled={isLoading} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -228,11 +240,8 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr" />
+                    <Input placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹" {...field} disabled={isLoading} />
                   </FormControl>
-                   <FormDescription>
-                    از این شماره برای ورود به حساب کاربری خود استفاده خواهید کرد.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -252,8 +261,7 @@ export default function RegisterForm() {
                             form.setValue('serviceSlug', undefined); // Reset specific service on category change
                         }} 
                         defaultValue={field.value} 
-                        disabled={isLoading}
-                      >
+                        disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -271,7 +279,7 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
-
+                
                 {selectedCategorySlug && (
                     <FormField
                     control={form.control}
@@ -299,7 +307,7 @@ export default function RegisterForm() {
                     />
                 )}
                 
-                <FormField
+                 <FormField
                   control={form.control}
                   name="location"
                   render={({ field }) => (
@@ -328,7 +336,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        این بیوگرافی در پروفایل عمومی شما نمایش داده می‌شود.
+                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -339,7 +347,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام و ارسال کد تایید
+              ثبت‌نام
             </Button>
             
             <div className="mt-4 text-center text-sm">
@@ -354,4 +362,3 @@ export default function RegisterForm() {
     </Card>
   );
 }
-
