@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,8 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories } from '@/lib/constants';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { categories, services } from '@/lib/constants';
+import { Card, CardContent } from '@/components/ui/card';
 import { getUserByPhone } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/utils';
 
@@ -41,6 +42,8 @@ const formSchema = z.object({
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
   serviceType: z.string().optional(),
+  serviceSlug: z.string().optional(),
+  location: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
@@ -50,6 +53,14 @@ const formSchema = z.object({
 }, {
     message: 'لطفاً نوع خدمات را انتخاب کنید.',
     path: ['serviceType'],
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.serviceSlug;
+    }
+    return true;
+}, {
+    message: 'لطفاً خدمت دقیق را انتخاب کنید.',
+    path: ['serviceSlug'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
@@ -74,11 +85,13 @@ export default function RegisterForm() {
       name: '',
       phone: '',
       accountType: 'customer',
+      location: 'ارومیه',
       bio: '',
     },
   });
 
   const accountType = form.watch('accountType');
+  const selectedCategorySlug = form.watch('serviceType');
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
@@ -96,26 +109,24 @@ export default function RegisterForm() {
             setIsLoading(false);
             return;
         }
-
-        // Use a dummy email for sign-up, as phone will be the primary identifier.
-        // This is a common pattern when phone is the main login method.
+        
         const dummyEmail = `${normalizedPhone}@example.com`;
         
         const { data: { user }, error: signUpError } = await supabase.auth.signUp({
             email: dummyEmail,
-            password: Math.random().toString(36).slice(-12), // Strong random password
+            password: Math.random().toString(36).slice(-12),
             phone: normalizedPhone,
             options: {
                 data: {
                     name: values.name,
                     phone: normalizedPhone,
                     account_type: values.accountType,
-                    // Provider specific data
                     ...(values.accountType === 'provider' && {
-                        service: categories.find(c => c.slug === values.serviceType)?.name || 'خدمات عمومی',
+                        service: services.find(s => s.slug === values.serviceSlug)?.name || 'خدمات عمومی',
                         bio: values.bio,
                         category_slug: values.serviceType,
-                        location: 'ارومیه',
+                        service_slug: values.serviceSlug,
+                        location: values.location,
                     }),
                 }
             }
@@ -124,7 +135,6 @@ export default function RegisterForm() {
         if (signUpError) throw signUpError;
         if (!user) throw new Error('ثبت نام موفق نبود، کاربری ایجاد نشد.');
         
-        // After successful sign-up, immediately sign in with OTP
         const { error: signInError } = await supabase.auth.signInWithOtp({
             phone: normalizedPhone,
         });
@@ -163,7 +173,13 @@ export default function RegisterForm() {
                   <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue('serviceType', undefined);
+                          form.setValue('serviceSlug', undefined);
+                          form.clearErrors('serviceType');
+                          form.clearErrors('serviceSlug');
+                      }}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
                       disabled={isLoading}
@@ -229,8 +245,15 @@ export default function RegisterForm() {
                   name="serviceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                      <FormLabel>دسته‌بندی خدمات</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                            field.onChange(value);
+                            form.setValue('serviceSlug', undefined); // Reset specific service on category change
+                        }} 
+                        defaultValue={field.value} 
+                        disabled={isLoading}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -248,6 +271,48 @@ export default function RegisterForm() {
                     </FormItem>
                   )}
                 />
+
+                {selectedCategorySlug && (
+                    <FormField
+                    control={form.control}
+                    name="serviceSlug"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>خدمت دقیق</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="نوع دقیق خدمت خود را انتخاب کنید" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {services.filter(s => s.categorySlug === selectedCategorySlug).map((service) => (
+                                <SelectItem key={service.slug} value={service.slug}>
+                                {service.name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+                
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>مکان</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="bio"
@@ -289,3 +354,4 @@ export default function RegisterForm() {
     </Card>
   );
 }
+
