@@ -29,5 +29,4 @@ port = 54323
 
 [functions.kavenegar-otp-sender]
 entrypoint = "./functions/kavenegar-otp-sender/index.ts"
-import_map = "./functions/import_map.json"
 verify_jwt = false
