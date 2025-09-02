@@ -27,20 +27,6 @@ major_version = 15
 # Port to use for Supabase Studio
 port = 54323
 
-# Email testing
-# To test email sending, forward emails to an SMTP server.
-# You can use a service like Inbucket to view emails locally.
-# See https://supabase.com/docs/guides/auth/auth-email-templates#local-email-testing
-[inbucket]
-# Port to use for the email testing server.
-port = 54324
-# The Smtp address of the email testing server.
-smtp_addr = "127.0.0.1"
-# The Pop3 address of the email testing server.
-pop3_addr = "127.0.0.1"
-# The web interface address of the email testing server.
-web_addr = "127.0.0.1"
-
 [functions.kavenegar-otp-sender]
 entrypoint = "./functions/kavenegar-otp-sender/index.ts"
 handler = "handler"
