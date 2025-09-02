@@ -2,7 +2,6 @@
 # https://supabase.com/docs/guides/cli/config
 
 project_id = "hcnyyylvoledwvybxrqt"
-org_id = "eyad-gholamian"
 
 [api]
 # Port to use for Supabase API URL
