@@ -1,0 +1,48 @@
+# Supabase project configuration.
+# https://supabase.com/docs/guides/cli/config
+
+project_id = "hcnyyylvoledwvybxrqt"
+org_id = "eyad-gholamian"
+
+[api]
+# Port to use for Supabase API URL
+port = 54321
+# Schemas to expose in the API. 'public' and 'storage' are required,
+# 'graphql_public' is recommended.
+schemas = ["public", "storage", "graphql_public"]
+# Extra search path for views, functions, etc.
+extra_search_path = ["public"]
+# Limit for the number of rows returned by a view, table, or function.
+max_rows = 1000
+
+[db]
+# Port to use for the local database URL
+port = 54322
+# Use a custom Docker image for the database.
+# docker_image = "supabase/postgres:15.1.0.118"
+# The database major version to use.
+major_version = 15
+
+[studio]
+# Port to use for Supabase Studio
+port = 54323
+
+# Email testing
+# To test email sending, forward emails to an SMTP server.
+# You can use a service like Inbucket to view emails locally.
+# See https://supabase.com/docs/guides/auth/auth-email-templates#local-email-testing
+[inbucket]
+# Port to use for the email testing server.
+port = 54324
+# The Smtp address of the email testing server.
+smtp_addr = "127.0.0.1"
+# The Pop3 address of the email testing server.
+pop3_addr = "127.0.0.1"
+# The web interface address of the email testing server.
+web_addr = "127.0.0.1"
+
+[functions.kavenegar-otp-sender]
+entrypoint = "./functions/kavenegar-otp-sender/index.ts"
+handler = "handler"
+import_map = "./functions/import_map.json"
+verify_jwt = false
