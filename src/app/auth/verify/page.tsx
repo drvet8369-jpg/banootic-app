@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense } from 'react';
-import { useActionState, useFormStatus } from 'react';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import {
   InputOTP,
