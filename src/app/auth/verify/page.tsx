@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   InputOTP,
@@ -32,7 +32,7 @@ function SubmitButton() {
 function VerifyOTPForm() {
   const searchParams = useSearchParams();
   const phone = searchParams.get('phone');
-  const [state, formAction] = useFormState(verifyOtp, null);
+  const [state, formAction] = useActionState(verifyOtp, null);
 
   if (!phone) {
     return (

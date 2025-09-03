@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -40,7 +40,7 @@ function SubmitButton() {
 function RegisterForm() {
   const searchParams = useSearchParams();
   const phone = searchParams.get('phone');
-  const [state, formAction] = useFormState(completeRegistration, null);
+  const [state, formAction] = useActionState(completeRegistration, null);
 
   const [accountType, setAccountType] = useState('customer');
   const [selectedCategorySlug, setSelectedCategorySlug] = useState('');
