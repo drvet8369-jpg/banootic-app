@@ -28,18 +28,22 @@ serve(async (req) => {
     // Construct the message with the OTP code.
     const message = `کد تایید شما در بانوتیک: ${token}`;
 
-    // Construct the URL for Kavenegar's Send SMS API.
+    // The endpoint for the send API
     const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/sms/send.json`;
 
-    // The parameters need to be URL encoded.
+    // The parameters need to be in a URL-encoded format for the POST body
     const params = new URLSearchParams({
       receptor: phone,
       sender: KAVEHNEGAR_SENDER_NUMBER,
       message: message,
     });
 
-    const response = await fetch(`${url}?${params.toString()}`, {
-      method: 'GET', // Kavenegar Send API uses GET
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
     });
 
     if (!response.ok) {
