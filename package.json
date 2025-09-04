@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "supabase": "node scripts/supabase.js"
+    "supabase": "dotenv -e workspace/.env -- supabase"
   },
   "dependencies": {
     "@genkit-ai/firebase": "1.15.2",
