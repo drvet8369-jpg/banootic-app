@@ -9,8 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "supabase": "dotenv -e workspace/.env -- supabase"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@genkit-ai/firebase": "1.15.2",
@@ -62,7 +61,6 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "dotenv-cli": "^7.4.2",
     "genkit-cli": "^1.15.2",
     "postcss": "^8",
     "supabase": "^1.187.3",
