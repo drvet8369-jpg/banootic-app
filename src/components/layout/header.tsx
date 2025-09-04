@@ -108,6 +108,12 @@ export default function Header() {
                 ورود
               </Link>
             </SheetClose>
+            <SheetClose asChild>
+              <Link href="/auth/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                <UserPlus className="h-5 w-5" />
+                ثبت‌نام
+              </Link>
+            </SheetClose>
           </>
         )}
       </nav>
@@ -202,9 +208,12 @@ export default function Header() {
                 </DropdownMenu>
                 ) : (
                 <>
-                    <Button asChild>
-                    <Link href="/auth/login">ورود / ثبت‌نام</Link>
-                    </Button>
+                  <Button asChild variant="secondary">
+                    <Link href="/auth/register">ثبت‌نام</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/auth/login">ورود</Link>
+                  </Button>
                 </>
                 )}
             </nav>
