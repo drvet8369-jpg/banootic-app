@@ -1,7 +1,7 @@
 # Supabase project configuration.
 # https://supabase.com/docs/guides/cli/config
 
-project_id = "rfiybvlqdibtwckbgscu"
+project_id = "gygnshfngcyxkamapejf"
 
 [api]
 # Port to use for Supabase API URL
