@@ -2,9 +2,9 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
-// These values will be set as environment variables in the Supabase dashboard.
+// These values will be set as environment variables in the Supabase dashboard secrets.
 const KAVEHNEGAR_API_KEY = Deno.env.get('KAVEHNEGAR_API_KEY');
-const KAVEHNEGAR_TEMPLATE_NAME = Deno.env.get('KAVEHNEGAR_TEMPLATE_NAME');
+const KAVEHNEGAR_SENDER_NUMBER = Deno.env.get('KAVEHNEGAR_SENDER_NUMBER');
 
 serve(async (req) => {
   // This is a preflight request. We don't need to do anything special here.
@@ -14,39 +14,32 @@ serve(async (req) => {
   }
 
   try {
-    if (!KAVEHNEGAR_API_KEY || !KAVEHNEGAR_TEMPLATE_NAME) {
-      throw new Error('Kavenegar API Key or Template Name is not set in environment variables.');
+    if (!KAVEHNEGAR_API_KEY || !KAVEHNEGAR_SENDER_NUMBER) {
+      throw new Error('Kavenegar API Key or Sender Number is not set in environment variables.');
     }
 
-    const { phone } = await req.json();
-    
-    // Supabase automatically generates and passes the OTP token when calling this hook.
-    // However, for the Kavenegar Verify API, we only need to pass up to 10 tokens.
-    // The hook will provide the token in the `data.token` field, but Kavenegar's
-    // Verify API requires us to send the token as `token`, `token2`, `token3`.
-    // Since Supabase's built-in OTP is a single token, we only need `token`.
-    // Supabase will pass this token in the `data` field of the hook payload.
-    const { data } = await req.json();
-    const token = data.token;
-
+    const { phone, data } = await req.json();
+    const token = data?.token; // The OTP code is passed by Supabase in the 'token' field
 
     if (!phone || !token) {
         throw new Error('Phone number or OTP token is missing in the request body.');
     }
 
-    // Construct the URL for Kavenegar's Verify Lookup API.
-    const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
+    // Construct the message with the OTP code.
+    const message = `کد تایید شما در بانوتیک: ${token}`;
+
+    // Construct the URL for Kavenegar's Send SMS API.
+    const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/sms/send.json`;
 
     // The parameters need to be URL encoded.
     const params = new URLSearchParams({
       receptor: phone,
-      template: KAVEHNEGAR_TEMPLATE_NAME,
-      token: token,
-      type: 'sms', // We are sending an SMS.
+      sender: KAVEHNEGAR_SENDER_NUMBER,
+      message: message,
     });
 
     const response = await fetch(`${url}?${params.toString()}`, {
-      method: 'GET', // Kavenegar Verify API uses GET
+      method: 'GET', // Kavenegar Send API uses GET
     });
 
     if (!response.ok) {
@@ -56,6 +49,11 @@ serve(async (req) => {
 
     const responseData = await response.json();
     console.log("Kavenegar API Response:", responseData);
+
+    // Check for errors within the Kavenegar response body itself
+    if (responseData.return.status !== 200) {
+        throw new Error(`Kavenegar returned an error: ${responseData.return.message}`);
+    }
 
     return new Response(JSON.stringify({ success: true, data: responseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
