@@ -109,7 +109,7 @@ export default function Header() {
               </Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link href="/auth/register" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+              <Link href="/auth/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                 <UserPlus className="h-5 w-5" />
                 ثبت‌نام
               </Link>
@@ -209,7 +209,7 @@ export default function Header() {
                 ) : (
                 <>
                   <Button asChild variant="secondary">
-                    <Link href="/auth/register">ثبت‌نام</Link>
+                    <Link href="/auth/login">ثبت‌نام</Link>
                   </Button>
                   <Button asChild>
                     <Link href="/auth/login">ورود</Link>
