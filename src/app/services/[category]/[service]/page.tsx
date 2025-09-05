@@ -1,7 +1,6 @@
 'use client';
 
-import { services, categories } from '@/lib/constants';
-import { getProvidersByServiceSlug } from '@/lib/api';
+import { services, categories, getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,9 @@ export default function ServiceProvidersPage() {
   const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
+  // This logic is now wrapped in a useCallback to ensure it's stable
+  // and correctly re-fetches data whenever the URL slugs change.
+  const loadData = useCallback(() => {
     setIsLoading(true);
 
     const foundCategory = categories.find((c) => c.slug === categorySlug);
@@ -28,14 +29,12 @@ export default function ServiceProvidersPage() {
     setCategory(foundCategory || null);
     setService(foundService || null);
       
-    if (foundService) {
-      try {
-        const foundProviders = await getProvidersByServiceSlug(serviceSlug);
-        setServiceProviders(foundProviders);
-      } catch (error) {
-        console.error("Failed to fetch providers for service page:", error);
-        setServiceProviders([]);
-      }
+    if (foundCategory && foundService) {
+      // Always get the latest providers from localStorage inside the function
+      const allProviders = getProviders();
+      // Correctly filter providers based on the serviceSlug from the URL.
+      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      setServiceProviders(foundProviders);
     } else {
       setServiceProviders([]);
     }
@@ -43,13 +42,20 @@ export default function ServiceProvidersPage() {
     setIsLoading(false);
   }, [categorySlug, serviceSlug]);
 
+  // useEffect now has a stable dependency and will re-run correctly
+  // every time the user navigates to a new service page or revisits the tab.
   useEffect(() => {
     loadData();
+
+    window.addEventListener('focus', loadData);
+    return () => {
+      window.removeEventListener('focus', loadData);
+    };
   }, [loadData]);
 
   if (isLoading) {
     return (
-        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
+        <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
         </div>
@@ -61,7 +67,7 @@ export default function ServiceProvidersPage() {
   }
 
   return (
-    <div className="py-12 md:py-20 flex-grow">
+    <div className="py-12 md:py-20">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">

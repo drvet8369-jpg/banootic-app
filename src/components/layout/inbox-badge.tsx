@@ -1,12 +1,9 @@
-
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
-import { useCrossTabEventListener } from '@/lib/events';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
@@ -15,44 +12,52 @@ interface InboxBadgeProps {
 export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const supabase = createClient();
 
-  const checkUnread = useCallback(async () => {
-    if (!user?.id) {
+  useEffect(() => {
+    if (!user?.phone) {
       setUnreadCount(0);
       return;
     }
-    
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', user.id)
-      .eq('is_read', false);
 
-    if (!error) {
-      setUnreadCount(data?.length || 0);
-    }
-  }, [user?.id, supabase]);
+    const checkUnread = () => {
+      try {
+        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const totalUnread = Object.values(allChatsData)
+          .filter((chat: any) => chat.members?.includes(user.phone))
+          .reduce((acc: number, chat: any) => {
+            const selfInfo = chat.participants?.[user.phone];
+            return acc + (selfInfo?.unreadCount || 0);
+          }, 0);
+        setUnreadCount(totalUnread);
+      } catch (e) {
+        // Silently fail if localStorage is not available or corrupted
+        setUnreadCount(0);
+      }
+    };
 
-  useEffect(() => {
+    // Initial check
     checkUnread();
 
-    const channel = supabase
-      .channel('public:messages:inbox-badge')
-      .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user?.id}` },
-          () => checkUnread()
-      )
-      .subscribe();
-    
-    // Also listen for cross-tab events
-    const cleanup = useCrossTabEventListener('inbox-update', checkUnread);
+    // Listen for storage changes from other tabs
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'inbox_chats') {
+            checkUnread();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check on focus for changes within the same tab
+    window.addEventListener('focus', checkUnread);
+
+    // Set up an interval as a fallback
+    const intervalId = setInterval(checkUnread, 5000); 
 
     return () => {
-      supabase.removeChannel(channel);
-      cleanup();
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', checkUnread);
     };
-  }, [user?.id, checkUnread, supabase]);
+  }, [user?.phone]);
 
   if (unreadCount === 0) {
     return null;

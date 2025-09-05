@@ -1,75 +1,61 @@
-
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { getAllProviders } from '@/lib/api';
+import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import { categories } from '@/lib/constants';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const categorySlug = searchParams.get('category') || '';
-
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [pageTitle, setPageTitle] = useState('نتایج جستجو');
-  const [pageDescription, setPageDescription] = useState('');
 
-  const performSearch = useCallback(async () => {
+  // This function now correctly re-fetches and filters data whenever the query changes.
+  const performSearch = useCallback(() => {
     setIsLoading(true);
-    try {
-        const allProviders = await getAllProviders();
-        let results: Provider[] = [];
-
-        if (categorySlug) {
-            const category = categories.find(c => c.slug === categorySlug);
-            setPageTitle(`هنرمندان دسته ${category?.name || ''}`);
-            setPageDescription(`تمام هنرمندان فعال در این دسته‌بندی را مشاهده کنید.`);
-            results = allProviders.filter(p => p.category_slug === categorySlug);
-        } else {
-            setPageTitle('نتایج جستجو');
-            if (query) {
-                setPageDescription(`برای عبارت: "${query}"`);
-                const lowercasedQuery = query.toLowerCase();
-                results = allProviders.filter(provider => 
-                    provider.name.toLowerCase().includes(lowercasedQuery) ||
-                    provider.service.toLowerCase().includes(lowercasedQuery) ||
-                    (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-                );
-            } else {
-                setPageDescription('لیست تمام هنرمندان بر اساس امتیاز و فعالیت مرتب شده است.');
-                results = allProviders;
-            }
-        }
-        
-        // Sort results by a simple score: rating * number of reviews
-        results.sort((a,b) => (b.rating * b.reviews_count) - (a.rating * a.reviews_count));
-
-        setSearchResults(results);
-    } catch(e) {
-        console.error("Failed to perform search:", e);
-        setSearchResults([]);
-    } finally {
-        setIsLoading(false);
+    // Always get the latest providers from localStorage at the moment of searching.
+    const allProviders = getProviders();
+    if (!query) {
+      setSearchResults([]);
+      setIsLoading(false);
+      return;
     }
-  }, [query, categorySlug]);
+    const lowercasedQuery = query.toLowerCase();
+    const results = allProviders.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      provider.bio.toLowerCase().includes(lowercasedQuery)
+    );
+    setSearchResults(results);
+    setIsLoading(false);
+  }, [query]);
 
+  // useEffect now correctly depends on performSearch.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
     performSearch();
+
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
   }, [performSearch]);
 
 
   return (
-    <div className="py-12 md:py-20 flex-grow">
+    <div className="py-12 md:py-20">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">{pageTitle}</h1>
-        {pageDescription && (
+        <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
+        {query ? (
           <p className="mt-3 text-lg text-muted-foreground">
-            {pageDescription}
+            برای عبارت: <span className="font-bold text-foreground">"{query}"</span>
+          </p>
+        ) : (
+          <p className="mt-3 text-lg text-muted-foreground">
+            لطفا عبارتی را برای جستجو وارد کنید.
           </p>
         )}
       </div>
@@ -86,13 +72,15 @@ export default function SearchPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
-          <p className="text-muted-foreground mt-2">
-            هیچ ارائه‌دهنده‌ای با معیارهای شما مطابقت نداشت.
-          </p>
-        </div>
+        query && (
+          <div className="text-center py-16 border-2 border-dashed rounded-lg">
+            <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
+            <p className="text-muted-foreground mt-2">
+              هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید.
+            </p>
+          </div>
+        )
       )}
     </div>
   );

@@ -21,8 +21,8 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 140 25% 75%; /* Made darker and less saturated */
-    --input: 140 25% 65%; /* Darker Jade for border */
-    --ring: 140 44% 45%; /* Darker Jade for focus ring */
+    --input: 140 25% 75%; /* Made darker and less saturated */
+    --ring: 140 44% 55%; /* Made darker */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
