@@ -29,7 +29,7 @@ async function setupAuthHook() {
         RETURNS json
         LANGUAGE plv8
         AS $$
-            -- Make a POST request to our Edge Function
+            // Make a POST request to our Edge Function
             const response = plv8.execute(
                 'SELECT content FROM http_post(
                     ''${KAVENEGAR_FUNCTION_URI}'',
@@ -68,6 +68,7 @@ async function setupAuthHook() {
         UPDATE auth.settings SET hook_sms_provider = 'kavenegar_sms_sender';
     `;
     
+    // We use the generic 'execute_sql' function which we will ensure exists first.
     const { error } = await supabase.rpc('execute_sql', { sql: sqlCommands });
 
     if (error) {
@@ -100,19 +101,29 @@ async function setupAuthHook() {
 }
 
 async function createExecuteSqlFunction() {
-    const { error } = await supabase.sql(`
-        CREATE OR REPLACE FUNCTION execute_sql(sql text)
-        RETURNS void
-        LANGUAGE plpgsql
-        AS $$
-        BEGIN
-            EXECUTE sql;
-        END;
-        $$;
-    `);
+    const { data, error } = await supabase.functions.invoke('execute-sql', {
+        body: { 
+            query: `
+                CREATE OR REPLACE FUNCTION execute_sql(sql text)
+                RETURNS void
+                LANGUAGE plpgsql
+                AS $$
+                BEGIN
+                    EXECUTE sql;
+                END;
+                $$;
+            `
+        }
+    });
+
+    // Check for function invocation error or error within the executed SQL
     if (error) {
-        console.error('Failed to create helper function `execute_sql`', error);
+        console.error('Failed to invoke execute-sql function', error);
         throw error;
+    }
+    if (data && data.error) {
+         console.error('Failed to create helper function `execute_sql`', data.error);
+        throw new Error(data.error);
     }
 }
 
@@ -120,6 +131,8 @@ async function createExecuteSqlFunction() {
 async function main() {
     try {
         console.log("Ensuring 'execute_sql' helper function exists...");
+        // This function is now designed to be idempotent and safe to run multiple times.
+        // The implementation details are abstracted into the Supabase Edge Function.
         await createExecuteSqlFunction();
         console.log("Setting up authentication hook...");
         await setupAuthHook();
