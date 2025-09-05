@@ -14,7 +14,9 @@ serve(async (req) => {
   }
 
   try {
+    // Critical check for secrets
     if (!KAVEHNEGAR_API_KEY || !KAVEHNEGAR_SENDER_NUMBER) {
+      console.error('Kavenegar secrets not found. Please set KAVEHNEGAR_API_KEY and KAVEHNEGAR_SENDER_NUMBER in Supabase secrets.');
       throw new Error('Kavenegar API Key or Sender Number is not set in environment variables.');
     }
 
@@ -22,6 +24,7 @@ serve(async (req) => {
     const token = data?.token; // The OTP code is passed by Supabase in the 'token' field
 
     if (!phone || !token) {
+        console.error('Request body is missing phone or token.');
         throw new Error('Phone number or OTP token is missing in the request body.');
     }
 
@@ -43,17 +46,27 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: params,
+      body: params.toString(), // Ensure body is a string
     });
+    
+    // Detailed logging for the response from Kavenegar
+    const responseBodyText = await response.text();
+    console.log(`Kavenegar API response status: ${response.status}`);
+    console.log(`Kavenegar API response body: ${responseBodyText}`);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Kavenegar API request failed with status ${response.status}: ${errorText}`);
+      // If the request failed, throw a detailed error to be caught below
+      throw new Error(`Kavenegar API request failed with status ${response.status}: ${responseBodyText}`);
     }
 
-    const responseData = await response.json();
-    console.log("Kavenegar API Response:", responseData);
-
+    // Try to parse the JSON, but handle if it's not JSON
+    let responseData;
+    try {
+        responseData = JSON.parse(responseBodyText);
+    } catch (e) {
+        throw new Error(`Failed to parse Kavenegar JSON response: ${responseBodyText}`);
+    }
+    
     // Check for errors within the Kavenegar response body itself
     if (responseData.return.status !== 200) {
         throw new Error(`Kavenegar returned an error: ${responseData.return.message}`);
@@ -65,7 +78,8 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in Kavenegar OTP sender:', error.message);
+    // This will now log the detailed error from the try block
+    console.error('CRITICAL ERROR in Kavenegar OTP sender:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
