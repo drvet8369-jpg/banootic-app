@@ -4,11 +4,37 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
 
-import { createAdminClient } from './server';
+import { createAdminClient } from './admin'; // Use the new admin client
 import fs from 'fs/promises';
 import path from 'path';
 
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("Error: Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are not set.");
+    process.exit(1);
+}
+
 const supabase = createAdminClient();
+
+// Helper function to run arbitrary SQL. We need to create this function in the DB first.
+const createExecuteSqlFn = async () => {
+    const { error } = await supabase.rpc('execute_sql', {
+        sql: `
+            CREATE OR REPLACE FUNCTION execute_sql(sql text)
+            RETURNS void
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                EXECUTE sql;
+            END;
+            $$;
+        `,
+    });
+     // It's okay if the function already exists.
+    if (error && error.code !== '42723') { 
+        console.error('Failed to create helper function `execute_sql`', error);
+        throw error;
+    }
+}
 
 // This function creates the necessary hook to link our Kavenegar function to Supabase Auth.
 async function setupAuthHook() {
@@ -32,12 +58,13 @@ async function setupAuthHook() {
                             ''phone'', phone,
                             ''data'', json_build_object(''token'', token)
                         )::text,
-                        ''application/json''
+                        ''application/json'',
+                        json_build_object(
+                            ''Authorization'', ''Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}''
+                        )::text
                     )'
                 );
                 
-                -- Supabase Auth expects a JSON object to be returned, even if it's empty.
-                -- We return the content from the Edge Function response.
                 return response[0].content;
             $$;
 
@@ -46,10 +73,10 @@ async function setupAuthHook() {
             grant usage on schema public to supabase_auth_admin;
 
             -- 3. Register the hook in the Supabase Auth configuration
-            -- This tells Supabase Auth to use our function for sending OTPs.
             UPDATE auth.settings SET hook_sms_provider = 'kavenegar_sms_sender';
 
             -- 4. Re-load the configuration so the changes take effect immediately
+            -- This step is often needed to make the auth service aware of the hook.
             SELECT net.http_post(
                 url:='${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/config',
                 headers:=jsonb_build_object(
@@ -69,30 +96,17 @@ async function setupAuthHook() {
     console.log('✅ Successfully configured custom SMS provider hook.');
 }
 
-// Helper function in the DB to run arbitrary SQL
-const createExecuteSqlFn = async () => {
-    const { error } = await supabase.rpc('execute_sql', {
-        sql: `
-            create or replace function execute_sql(sql text)
-            returns void
-            language plpgsql
-            as $$
-            begin
-                execute sql;
-            end;
-            $$;
-        `,
-    });
-    if (error && error.code !== '42723') { // 42723 is duplicate_function
-        console.error('Failed to create helper function `execute_sql`', error);
-        throw error;
+async function main() {
+    try {
+        console.log("Ensuring 'execute_sql' helper function exists...");
+        await createExecuteSqlFn();
+        console.log("Setting up authentication hook...");
+        await setupAuthHook();
+        console.log('Database setup complete.');
+    } catch(e) {
+        console.error("An error occurred during database setup:", e);
+        process.exit(1);
     }
 }
 
-async function main() {
-    await createExecuteSqlFn();
-    await setupAuthHook();
-    console.log('Database setup complete.');
-}
-
-main().catch(console.error);
+main();
