@@ -10,35 +10,63 @@ import path from 'path';
 
 const supabase = createAdminClient();
 
-async function pushSchema() {
-  console.log('Looking for SQL files to push to the database...');
-  
-  const sqlDir = __dirname;
-  const files = await fs.readdir(sqlDir);
-  const sqlFiles = files.filter(file => file.endsWith('.sql'));
+// This function creates the necessary hook to link our Kavenegar function to Supabase Auth.
+async function setupAuthHook() {
+    console.log('Setting up Supabase auth hook for custom SMS provider...');
 
-  if (sqlFiles.length === 0) {
-    console.log('No SQL files found. Nothing to push.');
-    return;
-  }
+    // The URI of our deployed Edge Function
+    const KAVENEGAR_FUNCTION_URI = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/kavenegar-otp-sender`;
 
-  for (const file of sqlFiles) {
-    console.log(`Applying schema from ${file}...`);
-    const filePath = path.join(sqlDir, file);
-    const sqlContent = await fs.readFile(filePath, 'utf-8');
+    const { error } = await supabase.rpc('execute_sql', {
+        sql: `
+            -- 1. Create the hook function that calls our Edge Function
+            create or replace function public.kavenegar_sms_sender(phone text, token text)
+            returns json
+            language plv8
+            as $$
+                -- Make a POST request to our Edge Function
+                const response = plv8.execute(
+                    'SELECT content FROM http_post(
+                        ''${KAVENEGAR_FUNCTION_URI}'',
+                        json_build_object(
+                            ''phone'', phone,
+                            ''data'', json_build_object(''token'', token)
+                        )::text,
+                        ''application/json''
+                    )'
+                );
+                
+                -- Supabase Auth expects a JSON object to be returned, even if it's empty.
+                -- We return the content from the Edge Function response.
+                return response[0].content;
+            $$;
 
-    const { error } = await supabase.rpc('execute_sql', { sql: sqlContent });
+            -- 2. Grant usage permission to the necessary roles
+            grant execute on function public.kavenegar_sms_sender(text, text) to supabase_auth_admin;
+            grant usage on schema public to supabase_auth_admin;
+
+            -- 3. Register the hook in the Supabase Auth configuration
+            -- This tells Supabase Auth to use our function for sending OTPs.
+            UPDATE auth.settings SET hook_sms_provider = 'kavenegar_sms_sender';
+
+            -- 4. Re-load the configuration so the changes take effect immediately
+            SELECT net.http_post(
+                url:='${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/config',
+                headers:=jsonb_build_object(
+                    'apikey', '${process.env.SUPABASE_SERVICE_ROLE_KEY}',
+                    'Authorization', 'Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}'
+                ),
+                body:=jsonb_build_object('hook_sms_provider_enabled', true)
+            ) as "response";
+        `,
+    });
 
     if (error) {
-      console.error(`Error applying schema from ${file}:`, error);
-      // Stop on first error
-      return;
+      console.error('CRITICAL ERROR setting up auth hook:', error);
+      throw error;
     }
 
-    console.log(`Successfully applied ${file}.`);
-  }
-
-  console.log('Database schema push completed.');
+    console.log('✅ Successfully configured custom SMS provider hook.');
 }
 
 // Helper function in the DB to run arbitrary SQL
@@ -63,7 +91,8 @@ const createExecuteSqlFn = async () => {
 
 async function main() {
     await createExecuteSqlFn();
-    await pushSchema();
+    await setupAuthHook();
+    console.log('Database setup complete.');
 }
 
-main();
+main().catch(console.error);
