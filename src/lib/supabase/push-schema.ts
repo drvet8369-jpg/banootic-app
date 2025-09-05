@@ -3,7 +3,7 @@
 import * as dotenv from 'dotenv';
 import { Client } from 'pg';
 
-// Load environment variables from .env file
+// Load environment variables from .env file in the root directory
 dotenv.config({ path: '.env' });
 
 const setupSmsProviderSql = `
@@ -15,7 +15,7 @@ const setupSmsProviderSql = `
         SELECT 1 FROM auth.config WHERE key = 'external_sms_provider' AND value = 'kavenegar-otp-sender'
     ) THEN
         -- Set our Kavenegar function as the official SMS provider for OTPs.
-        UPDATE auth.config SET external_sms_provider = 'kavenegar-otp-sender';
+        UPDATE auth.config SET value = 'kavenegar-otp-sender' WHERE key = 'external_sms_provider';
         RAISE NOTICE '✅ Successfully set Supabase Auth SMS provider to: kavenegar-otp-sender';
     ELSE
         RAISE NOTICE '☑️ Supabase Auth SMS provider is already correctly set. No action needed.';
@@ -28,9 +28,9 @@ async function pushSchemaChanges() {
   console.log('--- Starting database schema setup ---');
 
   // Validate that the database connection string is available.
-  const connectionString = process.env.SUPABASE_DB_CONNECTION_STRING;
+  const connectionString = process.env.SUPABASE_DB_CONNECTION;
   if (!connectionString) {
-    console.error('❌ CRITICAL ERROR: SUPABASE_DB_CONNECTION_STRING is not set in your .env file.');
+    console.error('❌ CRITICAL ERROR: SUPABASE_DB_CONNECTION is not set in your .env file.');
     console.error('Hint: Find it in your Supabase project dashboard under Project Settings > Database > Connection string (URI).');
     process.exit(1);
   }
