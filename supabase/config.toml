@@ -20,7 +20,7 @@ port = 54322
 # Use a custom Docker image for the database.
 # docker_image = "supabase/postgres:15.1.0.118"
 # The database major version to use.
-major_version = 17
+major_version = 16
 
 [studio]
 # Port to use for Supabase Studio
