@@ -37,7 +37,7 @@ async function pushSchemaChanges() {
   }
 
   // Updated validation to accept both "postgres://" and "postgresql://"
-  if (!connectionString.startsWith('postgres://postgres:') && !connectionString.startsWith('postgresql://postgres:')) {
+  if (!connectionString.startsWith('postgres://') && !connectionString.startsWith('postgresql://')) {
       console.error('\n❌ CRITICAL ERROR: The format of your SUPABASE_DB_CONNECTION string seems incorrect.');
       console.error('It should look like this: postgresql://postgres:[YOUR-PASSWORD]@db.{your-project-id}.supabase.co:5432/postgres');
       console.error('\nPlease copy the full URI from Supabase Dashboard (Project Settings > Database) and only replace [YOUR-PASSWORD] with your actual database password.\n');
