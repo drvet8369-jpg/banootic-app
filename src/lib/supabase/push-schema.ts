@@ -29,11 +29,23 @@ async function pushSchemaChanges() {
 
   // Validate that the database connection string is available.
   const connectionString = process.env.SUPABASE_DB_CONNECTION;
+  
+  // --- Start of New Validation Logic ---
   if (!connectionString) {
-    console.error('❌ CRITICAL ERROR: SUPABASE_DB_CONNECTION is not set in your .env file.');
-    console.error('Hint: Find it in your Supabase project dashboard under Project Settings > Database > Connection string (URI).');
+    console.error('\n❌ CRITICAL ERROR: SUPABASE_DB_CONNECTION is not set in your .env file.');
+    console.error('Hint: Find it in your Supabase project dashboard under Project Settings > Database > Connection string (URI).\n');
     process.exit(1);
   }
+
+  const expectedFormat = /^postgres:\/\/postgres:\[YOUR-PASSWORD\]@db\..+\.supabase\.co:5432\/postgres$/;
+  if (!connectionString.includes('postgres://postgres:') || !connectionString.includes('.supabase.co')) {
+      console.error('\n❌ CRITICAL ERROR: The format of your SUPABASE_DB_CONNECTION string seems incorrect.');
+      console.error('It should look exactly like this: postgres://postgres:[YOUR-PASSWORD]@db.{your-project-id}.supabase.co:5432/postgres');
+      console.error('\nPlease copy the full URI from Supabase Dashboard (Project Settings > Database) and only replace [YOUR-PASSWORD] with your actual database password.\n');
+      process.exit(1);
+  }
+   // --- End of New Validation Logic ---
+
 
   // Create a new database client
   const client = new Client({ connectionString });
@@ -51,7 +63,13 @@ async function pushSchemaChanges() {
 
   } catch (error: any) {
     // Log any errors that occur during the process
-    console.error('❌ CRITICAL ERROR during schema setup:', error.message);
+    if (error.code === 'ENOTFOUND') {
+        console.error('\n❌ CRITICAL ERROR: Could not find the database host. This almost always means the Project ID in your connection string is incorrect.');
+        console.error(`Host not found: ${error.hostname}`);
+        console.error('Please double-check your Project ID in the SUPABASE_DB_CONNECTION variable in your .env file.\n');
+    } else {
+        console.error('❌ CRITICAL ERROR during schema setup:', error.message);
+    }
     process.exit(1); // Exit with an error code
 
   } finally {
