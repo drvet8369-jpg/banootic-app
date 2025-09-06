@@ -37,7 +37,7 @@ async function pushSchemaChanges() {
   }
 
   // Updated validation to accept both "postgres://" and "postgresql://"
-  if (!connectionString.includes('postgres://postgres:') && !connectionString.includes('postgresql://postgres:')) {
+  if (!connectionString.startsWith('postgres://postgres:') && !connectionString.startsWith('postgresql://postgres:')) {
       console.error('\n❌ CRITICAL ERROR: The format of your SUPABASE_DB_CONNECTION string seems incorrect.');
       console.error('It should look like this: postgresql://postgres:[YOUR-PASSWORD]@db.{your-project-id}.supabase.co:5432/postgres');
       console.error('\nPlease copy the full URI from Supabase Dashboard (Project Settings > Database) and only replace [YOUR-PASSWORD] with your actual database password.\n');
@@ -62,9 +62,11 @@ async function pushSchemaChanges() {
   } catch (error: any) {
     // Log any errors that occur during the process
     if (error.code === 'ENOTFOUND') {
+        const projectIdMatch = connectionString.match(/@db\.(.*?)\.supabase\.co/);
+        const foundProjectId = projectIdMatch ? projectIdMatch[1] : '[not found]';
         console.error('\n❌ CRITICAL ERROR: Could not find the database host. This almost always means the Project ID in your connection string is incorrect.');
-        console.error(`Host not found: ${error.hostname}`);
-        console.error('Please double-check your Project ID in the SUPABASE_DB_CONNECTION variable in your .env file.\n');
+        console.error(`   The script tried to connect using Project ID: "${foundProjectId}"`);
+        console.error('   Please double-check your Project ID in your .env file.\n');
     } else {
         console.error('❌ CRITICAL ERROR during schema setup:', error.message);
     }
