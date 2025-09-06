@@ -18,14 +18,19 @@ max_rows = 1000
 # Port to use for the local database URL
 port = 54322
 # Use a custom Docker image for the database.
-# docker_image = "supabase/postgres:15.1.0.118"
+docker_image = "supabase/postgres:15.1.0.118"
 # The database major version to use.
-major_version = 16
+# major_version = 16
 
 [studio]
 # Port to use for Supabase Studio
 port = 54323
 
-[functions.kavenegar-otp-sender]
-entrypoint = "./functions/kavenegar-otp-sender/index.ts"
-verify_jwt = false
+# Edge Functions
+[functions]
+  [functions.kavenegar-otp-sender]
+    # To run this function, you need to add KAVEHNEGAR_API_KEY and KAVEHNEGAR_SENDER_NUMBER
+    # to your project's secrets:
+    # supabase secrets set KAVEHNEGAR_API_KEY=your_api_key
+    # supabase secrets set KAVEHNEGAR_SENDER_NUMBER=your_sender_number
+    # verify_jwt = false
