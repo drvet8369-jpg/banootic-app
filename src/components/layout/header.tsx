@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -42,14 +42,15 @@ export default function Header() {
 
   const MobileNavMenu = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <SheetHeader className="p-4 border-b">
+         <SheetTitle className="sr-only">منوی اصلی</SheetTitle>
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-primary-foreground" />
               <span className="font-display text-2xl font-bold">بانوتیک</span>
             </Link>
          </SheetClose>
-      </div>
+      </SheetHeader>
       <nav className="flex-grow p-4 space-y-2">
         {isLoggedIn && user ? (
            <>
