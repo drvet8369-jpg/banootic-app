@@ -1,0 +1,5 @@
+-- This is an empty migration file.
+-- Its purpose is to reset the Supabase migration state.
+-- By applying this empty migration, we are telling the Supabase CLI
+-- that the current state of the database is the desired state,
+-- which should resolve any persistent diffing errors.
