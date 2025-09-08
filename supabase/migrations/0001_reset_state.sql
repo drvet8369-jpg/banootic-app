@@ -1,4 +1,3 @@
-
 -- Drop existing tables with cascade to remove dependencies
 DROP TABLE IF EXISTS public.reviews CASCADE;
 DROP TABLE IF EXISTS public.agreements CASCADE;
