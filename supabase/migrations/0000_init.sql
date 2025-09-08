@@ -1,67 +1,98 @@
+-- Enable the pgcrypto extension for gen_random_uuid()
+create extension if not exists "pgcrypto" with schema "extensions";
 
--- Step 1: Enable the pgcrypto extension to use gen_random_uuid()
-CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+-- Create a custom type for user account roles
+create type public.user_account_type as enum ('provider', 'customer');
 
--- Step 2: Define a custom type for user account roles
-CREATE TYPE public.user_account_type AS ENUM (
-    'customer',
-    'provider'
+-- Create the users table
+create table public.users (
+    id uuid primary key not null default extensions.gen_random_uuid(),
+    name text not null,
+    phone text not null unique,
+    account_type public.user_account_type not null,
+    created_at timestamp with time zone not null default now()
 );
+comment on table public.users is 'Stores public user profile information.';
 
--- Step 3: Create the main users table
-CREATE TABLE public.users (
-    id uuid PRIMARY KEY NOT NULL DEFAULT extensions.gen_random_uuid(),
-    name text NOT NULL,
-    phone text NOT NULL UNIQUE,
-    account_type public.user_account_type NOT NULL,
-    created_at timestamp with time zone NOT NULL DEFAULT now()
+-- Create the providers table
+create table public.providers (
+    id bigint primary key generated always as identity,
+    user_id uuid not null references public.users(id) on delete cascade,
+    name text not null,
+    phone text not null unique,
+    service text not null,
+    location text not null default 'ارومیه',
+    bio text not null,
+    category_slug text not null,
+    service_slug text not null,
+    rating numeric(2, 1) not null default 0.0,
+    reviews_count integer not null default 0,
+    profile_image jsonb,
+    portfolio jsonb,
+    created_at timestamp with time zone not null default now()
 );
+comment on table public.providers is 'Stores detailed information for service providers.';
 
--- Step 4: Create the providers table with a foreign key to users
-CREATE TABLE public.providers (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id uuid NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
-    name text NOT NULL,
-    phone text NOT NULL UNIQUE,
-    service text NOT NULL,
-    location text NOT NULL DEFAULT 'ارومیه',
-    bio text NOT NULL,
-    category_slug text NOT NULL,
-    service_slug text NOT NULL,
-    rating real NOT NULL DEFAULT 0,
-    reviews_count integer NOT NULL DEFAULT 0,
-    profile_image jsonb NOT NULL DEFAULT '{}'::jsonb,
-    portfolio jsonb[] NOT NULL DEFAULT '{}',
-    created_at timestamp with time zone NOT NULL DEFAULT now()
+-- Create the customers table
+create table public.customers (
+    id bigint primary key generated always as identity,
+    user_id uuid not null references public.users(id) on delete cascade,
+    created_at timestamp with time zone not null default now()
 );
+comment on table public.customers is 'Stores information specific to customers.';
 
--- Step 5: Create the customers table (if needed for specific customer data)
-CREATE TABLE public.customers (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id uuid NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
-    created_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- Step 6: Create the reviews table
-CREATE TABLE public.reviews (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    provider_id bigint NOT NULL REFERENCES public.providers(id) ON DELETE CASCADE,
-    customer_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
+-- Create the reviews table
+create table public.reviews (
+    id bigint primary key generated always as identity,
+    provider_id bigint not null references public.providers(id) on delete cascade,
+    customer_id uuid not null references public.users(id) on delete cascade,
+    rating integer not null check (rating >= 1 and rating <= 5),
     comment text,
-    customer_name text NOT NULL,
-    created_at timestamp with time zone NOT NULL DEFAULT now()
+    created_at timestamp with time zone not null default now()
 );
+comment on table public.reviews is 'Stores reviews and ratings from customers for providers.';
 
--- Step 7: Create the agreements table
-CREATE TABLE public.agreements (
-    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    customer_phone text NOT NULL,
-    provider_phone text NOT NULL,
-    status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed')),
-    requested_at timestamp with time zone NOT NULL DEFAULT now(),
+-- Create the agreements table
+create table public.agreements (
+    id bigint primary key generated always as identity,
+    customer_phone text not null,
+    provider_phone text not null,
+    status text not null default 'pending',
+    requested_at timestamp with time zone not null default now(),
     confirmed_at timestamp with time zone
 );
+comment on table public.agreements is 'Tracks service agreements between customers and providers.';
 
--- Step 8: Setup Real-time for new tables
-ALTER PUBLICATION supabase_realtime ADD TABLE public.agreements, public.reviews, public.providers, public.users, public.customers;
+-- Create conversations table
+create table public.conversations (
+    id uuid primary key not null default extensions.gen_random_uuid(),
+    created_at timestamp with time zone not null default now(),
+    participant_one_id uuid not null references public.users(id) on delete cascade,
+    participant_two_id uuid not null references public.users(id) on delete cascade,
+    last_message_at timestamp with time zone,
+    constraint participants_unique unique (participant_one_id, participant_two_id)
+);
+comment on table public.conversations is 'Represents a chat conversation between two users.';
+
+-- Create messages table
+create table public.messages (
+    id uuid primary key not null default extensions.gen_random_uuid(),
+    conversation_id uuid not null references public.conversations(id) on delete cascade,
+    sender_id uuid not null references public.users(id) on delete cascade,
+    receiver_id uuid not null references public.users(id) on delete cascade,
+    content text not null,
+    created_at timestamp with time zone not null default now(),
+    is_read boolean not null default false
+);
+comment on table public.messages is 'Stores individual chat messages within a conversation.';
+
+-- Add indexes for performance
+create index on public.providers (user_id);
+create index on public.customers (user_id);
+create index on public.reviews (provider_id);
+create index on public.reviews (customer_id);
+create index on public.conversations (participant_one_id);
+create index on public.conversations (participant_two_id);
+create index on public.messages (conversation_id);
+create index on public.messages (sender_id);
+create index on public.messages (receiver_id);
