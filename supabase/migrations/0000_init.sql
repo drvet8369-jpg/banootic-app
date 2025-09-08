@@ -1,161 +1,181 @@
--- Drop tables in reverse order of dependency with CASCADE to handle foreign keys
-DROP TABLE IF EXISTS "public"."messages";
-DROP TABLE IF EXISTS "public"."conversations";
-DROP TABLE IF EXISTS "public"."reviews";
-DROP 'public'.'agreements' isn't a table, this should be 'agreements'
-DROP TABLE IF EXISTS "public"."agreements";
-DROP TABLE IF EXISTS "public"."providers";
-DROP TABLE IF EXISTS "public"."customers";
-DROP TABLE IF EXISTS "public"."users";
+-- Honarbanoo Initial Schema
+-- This script resets and defines the entire database schema.
+-- Version: 1.5 - Final Cascade & Timestamp Fix
 
--- Enable the pgroonga extension for search capabilities
-CREATE EXTENSION IF NOT EXISTS pgroonga WITH SCHEMA extensions;
+-- Section 1: Complete Teardown of Existing Schema
+-- Drops all tables in the correct dependency order to ensure a clean reset.
+-- The use of CASCADE handles all related objects like foreign keys and policies.
 
--- Create the users table
+DROP TABLE IF EXISTS "public"."reviews" CASCADE;
+DROP TABLE IF EXISTS "public"."messages" CASCADE;
+DROP TABLE IF EXISTS "public"."conversations" CASCADE;
+DROP TABLE IF EXISTS "public"."agreements" CASCADE;
+DROP TABLE IF EXISTS "public"."providers" CASCADE;
+DROP TABLE IF EXISTS "public"."customers" CASCADE;
+DROP TABLE IF EXISTS "public"."users" CASCADE;
+
+-- Section 2: Rebuilding the Schema from Scratch
+
+-- Table for all users (both customers and providers)
+-- This table is linked to the auth.users table.
 CREATE TABLE "public"."users" (
-    "id" UUID PRIMARY KEY NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    "name" TEXT NOT NULL,
-    "phone" TEXT UNIQUE NOT NULL,
-    "account_type" TEXT NOT NULL CHECK (account_type IN ('customer', 'provider')),
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+    "id" uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    "name" text NOT NULL,
+    "phone" text NOT NULL UNIQUE,
+    "account_type" text NOT NULL CHECK (account_type IN ('customer', 'provider')),
+    "profile_image" jsonb,
+    "created_at" timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow authenticated users to read user data" ON "public"."users" FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow user to manage their own profile" ON "public"."users" FOR ALL USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "Public profiles are viewable by everyone." ON users FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile." ON users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update their own profile." ON users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
--- Create the providers table
+
+-- Table for providers, extending the users table with provider-specific details.
 CREATE TABLE "public"."providers" (
-    "id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    "user_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "name" TEXT NOT NULL,
-    "phone" TEXT UNIQUE NOT NULL,
-    "service" TEXT NOT NULL,
-    "location" TEXT NOT NULL DEFAULT 'ارومیه',
-    "bio" TEXT,
-    "category_slug" TEXT NOT NULL,
-    "service_slug" TEXT NOT NULL,
-    "rating" REAL NOT NULL DEFAULT 0,
-    "reviews_count" INT NOT NULL DEFAULT 0,
-    "profile_image" JSONB,
-    "portfolio" JSONB,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+    "id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    "user_id" uuid NOT NULL UNIQUE REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "name" text NOT NULL,
+    "phone" text NOT NULL UNIQUE,
+    "service" text NOT NULL,
+    "location" text NOT NULL,
+    "bio" text NOT NULL,
+    "category_slug" text NOT NULL,
+    "service_slug" text NOT NULL,
+    "rating" real NOT NULL DEFAULT 0,
+    "reviews_count" integer NOT NULL DEFAULT 0,
+    "profile_image" jsonb,
+    "portfolio" jsonb[] DEFAULT '{}'::jsonb[],
+    "created_at" timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE "public"."providers" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read access to providers" ON "public"."providers" FOR SELECT USING (true);
-CREATE POLICY "Allow provider to manage their own profile" ON "public"."providers" FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Providers are viewable by everyone." ON providers FOR SELECT USING (true);
+CREATE POLICY "Providers can insert their own profile." ON providers FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.account_type = 'provider'));
+CREATE POLICY "Providers can update their own profile." ON providers FOR UPDATE USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.id = providers.user_id AND users.account_type = 'provider')) WITH CHECK (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.id = providers.user_id AND users.account_type = 'provider'));
 
--- Create the customers table
+
+-- Table for customers, mainly for potential customer-specific data in the future.
 CREATE TABLE "public"."customers" (
-    "id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    "user_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+    "id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    "user_id" uuid NOT NULL UNIQUE REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "created_at" timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE "public"."customers" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read access to customers" ON "public"."customers" FOR SELECT USING (true);
-CREATE POLICY "Allow customer to manage their own profile" ON "public"."customers" FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Customers can view their own profile." ON customers FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Customers can insert their own profile." ON customers FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.account_type = 'customer'));
 
--- Create the reviews table
-CREATE TABLE "public"."reviews" (
-    "id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    "provider_id" BIGINT NOT NULL REFERENCES "public"."providers"(id) ON DELETE CASCADE,
-    "customer_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "customer_name" TEXT NOT NULL,
-    "rating" INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    "comment" TEXT,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-ALTER TABLE "public"."reviews" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read access to reviews" ON "public"."reviews" FOR SELECT USING (true);
-CREATE POLICY "Allow customer to manage their own reviews" ON "public"."reviews" FOR ALL USING (auth.uid() = customer_id) WITH CHECK (auth.uid() = customer_id);
 
--- Create the agreements table
+-- Table for service agreements between customers and providers.
 CREATE TABLE "public"."agreements" (
-    "id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    "customer_phone" TEXT NOT NULL,
-    "provider_phone" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed')),
-    "requested_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-    "confirmed_at" TIMESTAMPTZ
+    "id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    "customer_phone" text NOT NULL,
+    "provider_phone" text NOT NULL,
+    "status" text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed')),
+    "requested_at" timestamptz NOT NULL DEFAULT now(),
+    "confirmed_at" timestamptz
 );
 ALTER TABLE "public"."agreements" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow users to see their own agreements" ON "public"."agreements" FOR SELECT USING (
-    (SELECT phone FROM public.users WHERE id = auth.uid()) = customer_phone OR
-    (SELECT phone FROM public.users WHERE id = auth.uid()) = provider_phone
-);
-CREATE POLICY "Allow customer to create agreements" ON "public"."agreements" FOR INSERT WITH CHECK (
-    (SELECT phone FROM public.users WHERE id = auth.uid()) = customer_phone
-);
-CREATE POLICY "Allow provider to update (confirm) agreements" ON "public"."agreements" FOR UPDATE USING (
-    (SELECT phone FROM public.users WHERE id = auth.uid()) = provider_phone
-);
+CREATE POLICY "Users can view their own agreements." ON agreements FOR SELECT USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND (users.phone = agreements.customer_phone OR users.phone = agreements.provider_phone)));
+CREATE POLICY "Customers can create agreements." ON agreements FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.phone = agreements.customer_phone AND users.account_type = 'customer'));
+CREATE POLICY "Providers can update status to confirm." ON agreements FOR UPDATE USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.phone = agreements.provider_phone AND users.account_type = 'provider')) WITH CHECK (status = 'confirmed');
 
--- Create the conversations table
+
+-- Table for conversations between two users.
 CREATE TABLE "public"."conversations" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "participant_one_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "participant_two_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "last_message_at" TIMESTAMPTZ,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "participant_one_id" uuid NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "participant_two_id" uuid NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "last_message_at" timestamptz,
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(participant_one_id, participant_two_id)
 );
 ALTER TABLE "public"."conversations" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow participants to access their conversations" ON "public"."conversations" FOR SELECT USING (
-    auth.uid() = participant_one_id OR auth.uid() = participant_two_id
-);
+CREATE POLICY "Users can view conversations they are part of." ON conversations FOR SELECT USING (auth.uid() = participant_one_id OR auth.uid() = participant_two_id);
+CREATE POLICY "Users can create conversations they are part of." ON conversations FOR INSERT WITH CHECK (auth.uid() = participant_one_id OR auth.uid() = participant_two_id);
 
--- Create the messages table
+
+-- Table for individual chat messages within a conversation.
 CREATE TABLE "public"."messages" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "conversation_id" UUID NOT NULL REFERENCES "public"."conversations"(id) ON DELETE CASCADE,
-    "sender_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "receiver_id" UUID NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
-    "content" TEXT NOT NULL,
-    "is_read" BOOLEAN NOT NULL DEFAULT false,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "conversation_id" uuid NOT NULL REFERENCES "public"."conversations"(id) ON DELETE CASCADE,
+    "sender_id" uuid NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "receiver_id" uuid NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "content" text NOT NULL,
+    "is_read" boolean NOT NULL DEFAULT false,
+    "created_at" timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE "public"."messages" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow participants to access their messages" ON "public"."messages" FOR SELECT USING (
-    auth.uid() = sender_id OR auth.uid() = receiver_id
-);
-CREATE POLICY "Allow users to send messages" ON "public"."messages" FOR INSERT WITH CHECK (
-    auth.uid() = sender_id
-);
-CREATE POLICY "Allow receiver to mark messages as read" ON "public"."messages" FOR UPDATE USING (
-    auth.uid() = receiver_id
-) WITH CHECK (auth.uid() = receiver_id);
+CREATE POLICY "Users can view messages in their conversations." ON messages FOR SELECT USING (EXISTS (SELECT 1 FROM conversations WHERE conversations.id = messages.conversation_id));
+CREATE POLICY "Users can send messages." ON messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+CREATE POLICY "Users can mark messages they received as read." ON messages FOR UPDATE USING (auth.uid() = receiver_id) WITH CHECK (is_read = true);
 
 
--- Create RPC function to get or create a conversation
-CREATE OR REPLACE FUNCTION get_or_create_conversation(p_user_id_1 UUID, p_user_id_2 UUID)
-RETURNS TABLE(id UUID, created_at TIMESTAMPTZ, participant_one_id UUID, participant_two_id UUID, last_message_at TIMESTAMPTZ) AS $$
+-- Table for reviews given by customers to providers.
+CREATE TABLE "public"."reviews" (
+    "id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    "provider_id" bigint NOT NULL REFERENCES "public"."providers"(id) ON DELETE CASCADE,
+    "customer_id" uuid NOT NULL REFERENCES "public"."users"(id) ON DELETE CASCADE,
+    "customer_name" text NOT NULL,
+    "rating" integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    "comment" text,
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(provider_id, customer_id)
+);
+ALTER TABLE "public"."reviews" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Reviews are public." ON reviews FOR SELECT USING (true);
+CREATE POLICY "Customers can create reviews." ON reviews FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.id = reviews.customer_id AND users.account_type = 'customer'));
+
+
+-- Section 3: Functions and Triggers
+-- This section defines database functions and triggers for automatic operations.
+
+-- Function to get or create a conversation between two users.
+CREATE OR REPLACE FUNCTION get_or_create_conversation(p_user_id_1 uuid, p_user_id_2 uuid)
+RETURNS TABLE (
+    id uuid,
+    created_at timestamptz,
+    participant_one_id uuid,
+    participant_two_id uuid,
+    last_message_at timestamptz
+) AS $$
 DECLARE
-    v_conversation_id UUID;
+    v_conversation_id uuid;
 BEGIN
-    -- Ensure consistent ordering of participants to avoid duplicates
-    IF p_user_id_1 < p_user_id_2 THEN
-        SELECT c.id INTO v_conversation_id FROM conversations c
-        WHERE c.participant_one_id = p_user_id_1 AND c.participant_two_id = p_user_id_2;
-    ELSE
-        SELECT c.id INTO v_conversation_id FROM conversations c
-        WHERE c.participant_one_id = p_user_id_2 AND c.participant_two_id = p_user_id_1;
+    -- Ensure consistent ordering of participants to avoid duplicate conversations
+    IF p_user_id_1 > p_user_id_2 THEN
+        -- Swap variables
+        SELECT p_user_id_2, p_user_id_1 INTO p_user_id_1, p_user_id_2;
     END IF;
 
+    -- Check if a conversation already exists
+    SELECT c.id INTO v_conversation_id
+    FROM public.conversations c
+    WHERE c.participant_one_id = p_user_id_1 AND c.participant_two_id = p_user_id_2;
+
+    -- If no conversation exists, create a new one
     IF v_conversation_id IS NULL THEN
-        -- Create a new conversation if one doesn't exist
-        INSERT INTO conversations (participant_one_id, participant_two_id)
-        VALUES (
-            CASE WHEN p_user_id_1 < p_user_id_2 THEN p_user_id_1 ELSE p_user_id_2 END,
-            CASE WHEN p_user_id_1 < p_user_id_2 THEN p_user_id_2 ELSE p_user_id_1 END
-        )
+        INSERT INTO public.conversations (participant_one_id, participant_two_id)
+        VALUES (p_user_id_1, p_user_id_2)
         RETURNING conversations.id INTO v_conversation_id;
     END IF;
-    
-    RETURN QUERY SELECT * FROM conversations WHERE conversations.id = v_conversation_id;
+
+    -- Return the conversation details
+    RETURN QUERY
+    SELECT c.id, c.created_at, c.participant_one_id, c.participant_two_id, c.last_message_at
+    FROM public.conversations c
+    WHERE c.id = v_conversation_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create RPC function to get conversation metadata
-CREATE OR REPLACE FUNCTION get_conversations_metadata(user_id UUID)
-RETURNS TABLE(conversation_id UUID, last_message_content TEXT, unread_count BIGINT) AS $$
+
+-- Function to get metadata for all conversations of a user.
+CREATE OR REPLACE FUNCTION get_conversations_metadata(user_id uuid)
+RETURNS TABLE (
+    conversation_id uuid,
+    last_message_content text,
+    unread_count bigint
+) AS $$
 BEGIN
     RETURN QUERY
     WITH last_messages AS (
@@ -165,21 +185,30 @@ BEGIN
             ROW_NUMBER() OVER(PARTITION BY m.conversation_id ORDER BY m.created_at DESC) as rn
         FROM messages m
         JOIN conversations c ON m.conversation_id = c.id
-        WHERE c.participant_one_id = get_conversations_metadata.user_id OR c.participant_two_id = get_conversations_metadata.user_id
+        WHERE c.participant_one_id = user_id OR c.participant_two_id = user_id
+    ),
+    unread_counts AS (
+        SELECT
+            m.conversation_id,
+            count(*) as unread
+        FROM messages m
+        WHERE m.receiver_id = user_id AND m.is_read = false
+        GROUP BY m.conversation_id
     )
     SELECT
-        c.id as conversation_id,
-        lm.content as last_message_content,
-        (SELECT COUNT(*) FROM messages m_unread WHERE m_unread.conversation_id = c.id AND m_unread.receiver_id = get_conversations_metadata.user_id AND m_unread.is_read = false) as unread_count
+        c.id,
+        lm.content,
+        COALESCE(uc.unread, 0)
     FROM conversations c
     LEFT JOIN last_messages lm ON c.id = lm.conversation_id AND lm.rn = 1
-    WHERE c.participant_one_id = get_conversations_metadata.user_id OR c.participant_two_id = get_conversations_metadata.user_id;
+    LEFT JOIN unread_counts uc ON c.id = uc.conversation_id
+    WHERE c.participant_one_id = user_id OR c.participant_two_id = user_id;
 END;
 $$ LANGUAGE plpgsql;
 
 
--- Add a trigger to update last_message_at in conversations table
-CREATE OR REPLACE FUNCTION update_last_message_at_trigger()
+-- Trigger to update the last_message_at timestamp in conversations table.
+CREATE OR REPLACE FUNCTION update_last_message_at()
 RETURNS TRIGGER AS $$
 BEGIN
     UPDATE conversations
@@ -192,86 +221,45 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER on_new_message
 AFTER INSERT ON messages
 FOR EACH ROW
-EXECUTE FUNCTION update_last_message_at_trigger();
+EXECUTE FUNCTION update_last_message_at();
 
 
--- Add a trigger to automatically create a customer or provider entry when a user is created
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+-- Trigger function to recalculate provider rating and reviews count.
+CREATE OR REPLACE FUNCTION update_provider_rating()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Create a customer profile by default
-  IF NEW.raw_user_meta_data->>'account_type' = 'customer' THEN
-    INSERT INTO public.customers (user_id)
-    VALUES (NEW.id);
-  -- Create a provider profile
-  ELSIF NEW.raw_user_meta_data->>'account_type' = 'provider' THEN
-     INSERT INTO public.providers (user_id, name, phone, service, bio, category_slug, service_slug, location)
-     VALUES (
-        NEW.id,
-        NEW.raw_user_meta_data->>'name',
-        NEW.raw_user_meta_data->>'phone',
-        NEW.raw_user_meta_data->>'service',
-        NEW.raw_user_meta_data->>'bio',
-        NEW.raw_user_meta_data->>'category_slug',
-        NEW.raw_user_meta_data->>'service_slug',
-        NEW.raw_user_meta_data->>'location'
-     );
-  END IF;
-
-  -- Always create an entry in the public users table for joining
-  INSERT INTO public.users (id, name, phone, account_type)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'phone', NEW.raw_user_meta_data->>'account_type');
-
+  WITH stats AS (
+    SELECT
+      AVG(rating) as avg_rating,
+      COUNT(*) as reviews_count
+    FROM reviews
+    WHERE provider_id = COALESCE(NEW.provider_id, OLD.provider_id)
+  )
+  UPDATE providers
+  SET
+    rating = COALESCE(stats.avg_rating, 0),
+    reviews_count = COALESCE(stats.reviews_count, 0)
+  FROM stats
+  WHERE id = COALESCE(NEW.provider_id, OLD.provider_id);
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER on_auth_user_created
-AFTER INSERT ON auth.users
-FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+CREATE TRIGGER on_review_change
+AFTER INSERT OR UPDATE OR DELETE ON reviews
+FOR EACH ROW
+EXECUTE FUNCTION update_provider_rating();
 
+-- Section 4: Final Permissions
+-- Grant usage on the public schema to authenticated users.
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
--- Add a trigger to update provider rating on new review
-CREATE OR REPLACE FUNCTION public.update_provider_rating()
-RETURNS TRIGGER AS $$
-DECLARE
-    new_rating REAL;
-    new_reviews_count INT;
-BEGIN
-    SELECT
-        AVG(rating),
-        COUNT(*)
-    INTO
-        new_rating,
-        new_reviews_count
-    FROM reviews
-    WHERE provider_id = NEW.provider_id;
-
-    UPDATE providers
-    SET
-        rating = new_rating,
-        reviews_count = new_reviews_count
-    WHERE id = NEW.provider_id;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_new_review
-AFTER INSERT ON reviews
-FOR EACH ROW EXECUTE PROCEDURE public.update_provider_rating();
+-- Enable real-time for relevant tables
+ALTER PUBLICATION supabase_realtime ADD TABLE messages, conversations, agreements;
 
 
--- Setup Storage bucket and policies
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('images', 'images', true)
-ON CONFLICT (id) DO NOTHING;
-
-CREATE POLICY "Allow public read access to images" ON storage.objects
-FOR SELECT USING ( bucket_id = 'images' );
-
-CREATE POLICY "Allow authenticated users to upload images" ON storage.objects
-FOR INSERT TO authenticated WITH CHECK ( bucket_id = 'images' );
-
-CREATE POLICY "Allow owner to manage their images" ON storage.objects
-FOR UPDATE, DELETE TO authenticated USING ( auth.uid() = owner );
+-- Final confirmation message
+SELECT 'Honarbanoo schema setup complete.' as status;
