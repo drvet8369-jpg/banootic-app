@@ -1,3 +1,4 @@
+
 {
   "name": "nextn",
   "version": "0.1.0",
@@ -11,7 +12,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:push": "node scripts/supabase.js db push --include-all",
-    "db:reset-remote": "node scripts/supabase.js db remote set && node scripts/supabase.js db push --include-all"
+    "db:reset-hard": "node scripts/supabase.js db remote reset && npm run db:push"
   },
   "dependencies": {
     "@genkit-ai/firebase": "1.15.2",
