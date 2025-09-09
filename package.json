@@ -10,8 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:push": "node scripts/supabase.js db push",
-    "db:reset-remote": "node scripts/supabase.js db remote set && node scripts/supabase.js db push"
+    "db:push": "node scripts/supabase.js db push --include-all",
+    "db:reset-remote": "node scripts/supabase.js db remote set && node scripts/supabase.js db push --include-all"
   },
   "dependencies": {
     "@genkit-ai/firebase": "1.15.2",
