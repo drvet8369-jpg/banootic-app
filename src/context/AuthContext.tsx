@@ -16,6 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   user: AppUser | null;
   session: Session | null;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,13 +78,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    // Optional: redirect to home or login page
+    // window.location.href = '/'; 
+  };
 
   const value = {
     isLoggedIn: !!user,
     isLoading,
     user,
     session,
+    logout,
   };
 
   return (

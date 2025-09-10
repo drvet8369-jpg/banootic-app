@@ -24,7 +24,6 @@ export interface UserProfile {
   phone: string;
   account_type: 'customer' | 'provider';
   created_at: string;
-  profile_image?: PortfolioItem; // This can be added to the user profile
 }
 
 // Represents `public.providers` table
