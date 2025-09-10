@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:push": "node scripts/supabase.js db push",
+    "db:push": "echo 'This script is deprecated. Please use the Supabase SQL Editor to run supabase/schema.sql manually.' && exit 1",
     "db:reset-hard": "echo 'This script is deprecated. Please use db:push after resetting the remote database via the dashboard if needed.' && exit 1"
   },
   "dependencies": {
