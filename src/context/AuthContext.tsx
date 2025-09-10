@@ -3,7 +3,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import type { UserProfile, Provider, PortfolioItem } from '@/lib/types';
+import type { UserProfile, Provider } from '@/lib/types';
 import { getProviderByUserId } from '@/lib/api';
 
 // This combines all user-related data into a single, comprehensive object.
@@ -36,7 +36,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 .eq('id', supabaseUser.id)
                 .single();
 
-            if (profileError) throw profileError;
+            if (profileError) {
+                // If profile doesn't exist yet (e.g., right after signup), just return.
+                // The profile will be created in the completeRegistration server action.
+                if (profileError.code === 'PGRST116') {
+                    return; 
+                }
+                throw profileError;
+            }
 
             let appUser: AppUser = { ...userProfile };
 
@@ -66,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
+        setIsLoading(true);
         if (session?.user) {
           await fetchUserAndProvider(session.user);
         } else {
@@ -85,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     // Optional: redirect to home or login page
-    // window.location.href = '/'; 
+    window.location.href = '/'; 
   };
 
   const value = {

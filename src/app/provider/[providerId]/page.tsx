@@ -11,7 +11,7 @@ import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { useCrossTabEventListener, dispatchCrossTabEvent } from '@/lib/events';
 
-import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, User, Send, Star, Trash2, X, Handshake, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';

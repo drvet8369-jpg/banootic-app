@@ -15,13 +15,14 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
       <Card className="flex flex-col w-full overflow-hidden h-full">
         <CardHeader className="flex-col items-center text-center p-6">
           <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-            {provider.profileImage && provider.profileImage.src ? (
+            {provider.profile_image && provider.profile_image.src ? (
               <Image
-                src={provider.profileImage.src}
+                src={provider.profile_image.src}
                 alt={provider.name}
                 fill
                 className="object-cover"
-                data-ai-hint={provider.profileImage.aiHint}
+                data-ai-hint={provider.profile_image.ai_hint}
+                sizes="96px"
               />
             ) : (
               <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -33,7 +34,7 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <CardDescription className="text-base">{provider.service}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center justify-center p-4 pt-0">
-          <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+          <StarRating rating={provider.rating} reviewsCount={provider.reviews_count} readOnly />
         </CardContent>
          <CardFooter className="p-4 mt-auto border-t">
            <Button asChild className="w-full font-bold">

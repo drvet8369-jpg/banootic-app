@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake } from 'lucide-react';
+import { Menu, LogOut, LogIn, UserPlus, UserRound, FileText, Handshake, Eye } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -107,7 +107,7 @@ export default function Header() {
         <div className="mt-auto p-4 border-t">
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
-                 {user.profile_image?.src && <AvatarImage src={user.profile_image.src} alt={user.name} />}
+                 {user.provider_details?.profile_image?.src && <AvatarImage src={user.provider_details.profile_image.src} alt={user.name} />}
                 <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
@@ -138,7 +138,7 @@ export default function Header() {
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                         <Avatar>
-                           {user.profile_image?.src && <AvatarImage src={user.profile_image.src} alt={user.name} />}
+                           {user.provider_details?.profile_image?.src && <AvatarImage src={user.provider_details.profile_image.src} alt={user.name} />}
                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                     </Button>
