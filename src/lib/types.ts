@@ -56,10 +56,10 @@ export interface Review {
   id: number;
   provider_id: number; // Foreign key to public.providers.id
   customer_id: string; // Foreign key to public.users.id
+  customer_name: string; // Added for convenience, can be joined
   rating: number;
   comment: string;
   created_at: string;
-  customer_name: string; // Added for convenience, can be joined
 }
 
 // Represents `public.agreements` table
