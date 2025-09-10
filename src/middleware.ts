@@ -1,24 +1,62 @@
-import { type NextRequest } from 'next/server'
-import { createServerComponentClient } from '@/lib/supabase/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // The `createServerComponentClient` function is designed for server components
-  // and route handlers, but it doesn't directly return a `response` object
-  // suitable for middleware. The Supabase SSR package expects a specific
-  // client for middleware that handles the request and response cycle.
-  // Since we are only refreshing the session, we can call the function
-  // but we won't use the returned client directly to manipulate the response here.
-  // For more complex middleware scenarios, a different client setup might be needed.
-  const supabase = createServerComponentClient()
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  // Refresh session if expired - required for Server Components
-  // https://supabase.com/docs/guides/auth/server-side/nextjs
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
+
   await supabase.auth.getSession()
 
-  // The createServerComponentClient doesn't return a response object to pass along.
-  // In this simplified middleware, we allow the request to continue.
-  // For protected routes, you would add logic here to check the session
-  // and redirect if necessary.
+  return response
 }
 
 export const config = {
