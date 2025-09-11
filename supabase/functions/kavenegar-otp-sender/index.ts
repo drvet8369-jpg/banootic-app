@@ -4,7 +4,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 // These values will be set as environment variables in the Supabase dashboard secrets.
 const KAVEHNEGAR_API_KEY = Deno.env.get('KAVEHNEGAR_API_KEY');
-const KAVEHNEGAR_SENDER_NUMBER = Deno.env.get('KAVEHNEGAR_SENDER_NUMBER');
 
 serve(async (req) => {
   // This is a preflight request. We don't need to do anything special here.
@@ -14,31 +13,32 @@ serve(async (req) => {
   }
 
   try {
-    // Critical check for secrets
-    if (!KAVEHNEGAR_API_KEY || !KAVEHNEGAR_SENDER_NUMBER) {
-      console.error('Kavenegar secrets not found. Please set KAVEHNEGAR_API_KEY and KAVEHNEGAR_SENDER_NUMBER in Supabase secrets.');
-      throw new Error('Kavenegar API Key or Sender Number is not set in environment variables.');
+    // Critical check for API key secret
+    if (!KAVEHNEGAR_API_KEY) {
+      console.error('Kavenegar secret not found. Please set KAVEHNEGAR_API_KEY in Supabase secrets.');
+      throw new Error('Kavenegar API Key is not set in environment variables.');
     }
 
     const { phone, data } = await req.json();
     const token = data?.token; // The OTP code is passed by Supabase in the 'token' field
+    const templateName = 'logincode'; // The template name as specified by the user
 
     if (!phone || !token) {
         console.error('Request body is missing phone or token.');
         throw new Error('Phone number or OTP token is missing in the request body.');
     }
 
-    // Construct the message with the OTP code.
-    const message = `کد تایید شما در بانوتیک: ${token}`;
+    // The endpoint for the verify lookup API (for template-based sending)
+    const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
 
-    // The endpoint for the send API
-    const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/sms/send.json`;
-
-    // The parameters need to be in a URL-encoded format for the POST body
+    // The parameters need to be in a URL-encoded format for the POST body.
+    // We now use `template` and `token` instead of `sender` and `message`.
     const params = new URLSearchParams({
       receptor: phone,
-      sender: KAVEHNEGAR_SENDER_NUMBER,
-      message: message,
+      template: templateName,
+      token: token,
+      // You can add token2 and token3 here if your template needs them
+      // For example: token2: 'some value'
     });
 
     const response = await fetch(url, {
