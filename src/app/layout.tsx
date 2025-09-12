@@ -1,13 +1,13 @@
-'use client';
+'use server';
 
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import SearchBar from '@/components/ui/search-bar';
+import { createClient } from '@/lib/supabase/server';
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -15,11 +15,15 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <html lang="fa" dir="rtl">
@@ -34,9 +38,8 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider>
           <div className="relative flex min-h-screen flex-col">
-            <Header />
+            <Header user={user} />
             <SearchBar />
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
               {children}
@@ -44,7 +47,6 @@ export default function RootLayout({
             <Footer />
           </div>
           <Toaster />
-        </AuthProvider>
       </body>
     </html>
   );

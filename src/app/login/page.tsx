@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +27,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { getProviders } from '@/lib/data';
-import type { User } from '@/context/AuthContext';
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -40,8 +39,8 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,53 +51,33 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const allProviders = getProviders();
-        const existingProvider = allProviders.find(p => p.phone === values.phone);
+    
+    // Use the Kavenegar hook by calling the Supabase Edge Function
+    const normalizedPhone = normalizePhoneNumber(values.phone);
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: normalizedPhone,
+    });
 
-        let userToLogin: User;
-
-        if (existingProvider) {
-          // User is a known provider
-          userToLogin = {
-            name: existingProvider.name,
-            phone: existingProvider.phone,
-            accountType: 'provider',
-          };
-        } else {
-          // User is a customer
-          userToLogin = {
-            name: `کاربر ${values.phone.slice(-4)}`,
-            phone: values.phone,
-            accountType: 'customer',
-          };
-        }
-        
-        login(userToLogin);
-
+    if (error) {
+        console.error('Supabase OTP Error:', error);
         toast({
-          title: 'ورود با موفقیت انجام شد!',
-          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
-        });
-        
-        router.push('/');
-
-    } catch (error) {
-        console.error("Login failed:", error);
-        toast({
-            title: 'خطا در ورود',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+            title: 'خطا در ارسال کد',
+            description: `مشکلی در ارتباط با سرویس پیامک رخ داد: ${error.message}`,
             variant: 'destructive'
         });
-    } finally {
-        setIsLoading(false);
+    } else {
+        toast({
+            title: 'کد تایید ارسال شد',
+            description: 'یک کد ۶ رقمی به شماره شما ارسال گردید.',
+        });
+        router.push(`/login/verify?phone=${values.phone}`);
     }
+    
+    setIsLoading(false);
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20">
+    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
@@ -124,16 +103,13 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ورود
+                ارسال کد تایید
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
-            <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
-            </Link>
-          </div>
+           <div className="mt-4 text-center text-sm">
+             ثبت‌نام به عنوان هنرمند فعلاً غیرفعال است.
+           </div>
         </CardContent>
       </Card>
     </div>

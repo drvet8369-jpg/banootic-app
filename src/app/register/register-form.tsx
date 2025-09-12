@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,11 +24,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
+import { categories } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
+import { registerUser } from './actions';
 
 
 const formSchema = z.object({
@@ -62,17 +61,16 @@ const formSchema = z.object({
 
 type UserRegistrationInput = z.infer<typeof formSchema>;
 
-export default function RegisterForm() {
+export default function RegisterForm({ user }: { user: User | null }) {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: '',
+      phone: user?.phone?.replace('+98', '0') || '',
       accountType: 'customer',
       bio: '',
     },
@@ -82,90 +80,46 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const allProviders = getProviders();
-
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
-        toast({
-          title: 'خطا در ثبت‌نام',
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Check for existing provider by business name, only if registering as a provider
-      if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
-            toast({
-                title: 'خطا در ثبت‌نام',
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-                variant: 'destructive',
-            });
-            setIsLoading(false);
-            return;
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, value]) => {
+        if (value) {
+            formData.append(key, value as string);
         }
-      }
+    });
 
+    const result = await registerUser(formData);
 
-      // This is the user object for the AuthContext
-      const userToLogin: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-        serviceType: values.serviceType,
-        bio: values.bio,
-      };
-
-      // Only create a new provider if the account type is 'provider'
-      if (values.accountType === 'provider') {
-        const selectedCategory = categories.find(c => c.slug === values.serviceType);
-        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
-        
-        const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
-          name: values.name,
-          phone: values.phone,
-          service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
-          bio: values.bio || '',
-          categorySlug: selectedCategory?.slug || 'beauty',
-          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-          rating: 0,
-          reviewsCount: 0,
-          profileImage: { src: '', aiHint: 'woman portrait' },
-          portfolio: [],
-        };
-        
-        saveProviders([...allProviders, newProvider]);
-      }
-      
-      login(userToLogin);
-      
-      toast({
-        title: 'ثبت‌نام با موفقیت انجام شد!',
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-      });
-      
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
-      router.push(destination);
-
-    } catch (error) {
-         console.error("Registration failed:", error);
-         toast({
+    if (result.error) {
+        toast({
             title: 'خطا در ثبت‌نام',
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
-            variant: 'destructive'
+            description: result.error,
+            variant: 'destructive',
         });
-    } finally {
-        setIsLoading(false);
+    } else {
+        toast({
+            title: 'ثبت‌نام با موفقیت انجام شد!',
+            description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+        });
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        router.push(destination);
+        router.refresh();
     }
+    
+    setIsLoading(false);
+  }
+
+  if (user) {
+    return (
+         <Card>
+            <CardContent className="p-6 text-center">
+                <p className="mb-4">شما قبلاً با شماره {user.phone} وارد شده‌اید.</p>
+                 <form action="/auth/logout" method="post">
+                    <Button variant="outline">خروج و ثبت‌نام با یک حساب جدید</Button>
+                </form>
+            </CardContent>
+         </Card>
+    )
   }
 
   return (
@@ -230,8 +184,11 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading || !!user?.phone} />
                   </FormControl>
+                   <FormDescription>
+                     این شماره برای ورود شما استفاده خواهد شد.
+                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -289,7 +246,7 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام
+              ارسال کد تایید و ثبت‌نام
             </Button>
             
             <div className="mt-4 text-center text-sm">
