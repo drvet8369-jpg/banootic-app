@@ -18,6 +18,8 @@ import { logout } from './actions';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
   SheetClose,
 } from '@/components/ui/sheet';
@@ -41,14 +43,15 @@ const MobileNavMenu = ({
   user: User | null;
 }) => (
   <div className="flex flex-col h-full">
-    <div className="p-4 border-b">
-      <SheetClose asChild>
-        <Link href="/" className="flex items-center gap-2">
-          <Logo className="h-8 w-8 text-primary-foreground" />
-          <span className="font-display text-2xl font-bold">بانوتیک</span>
-        </Link>
-      </SheetClose>
-    </div>
+    <SheetHeader className="p-4 border-b">
+        <SheetTitle className="sr-only">Menu</SheetTitle>
+         <SheetClose asChild>
+            <Link href="/" className="flex items-center gap-2">
+              <Logo className="h-8 w-8 text-primary-foreground" />
+              <span className="font-display text-2xl font-bold">بانوتیک</span>
+            </Link>
+         </SheetClose>
+    </SheetHeader>
     <nav className="flex-grow p-4 space-y-2">
       {isLoggedIn ? (
         <>
@@ -127,14 +130,16 @@ const MobileNavMenu = ({
           </div>
         </div>
         <form action={logout}>
-          <Button
-            type="submit"
-            variant="ghost"
-            className="w-full justify-start"
-          >
-            <LogOut className="ml-2 h-5 w-5" />
-            خروج
-          </Button>
+          <SheetClose asChild>
+            <Button
+              type="submit"
+              variant="ghost"
+              className="w-full justify-start"
+            >
+              <LogOut className="ml-2 h-5 w-5" />
+              خروج
+            </Button>
+          </SheetClose>
         </form>
       </div>
     )}
@@ -230,11 +235,11 @@ export default function Header({ user }: { user: User | null }) {
               </DropdownMenu>
             ) : (
               <>
-                <Button asChild variant="secondary">
-                  <Link href="/register">ثبت‌نام</Link>
-                </Button>
                 <Button asChild>
                   <Link href="/login">ورود</Link>
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link href="/register">ثبت‌نام</Link>
                 </Button>
               </>
             )}
