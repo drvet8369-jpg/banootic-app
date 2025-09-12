@@ -28,8 +28,8 @@ export interface Profile {
   location?: string;
   phone?: string;
   // Fields related to being a provider
-  category_id?: number;
-  service_id?: number; // Main service
+  category_slug?: string;
+  service_slug?: string; 
   rating?: number;
   reviews_count?: number;
   profile_image_url?: string;

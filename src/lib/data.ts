@@ -77,14 +77,7 @@ export async function getServiceBySlug(categorySlug: string, serviceSlug: string
  */
 export async function getProvidersByService(serviceSlug: string): Promise<Profile[]> {
     const supabase = createClient();
-    // 1. Find the service_id from the slug
-    const { data: service, error: serviceError } = await supabase.from('services').select('id').eq('slug', serviceSlug).single();
-    if (serviceError || !service) {
-        console.error(`Service with slug ${serviceSlug} not found`, serviceError);
-        return [];
-    }
-
-    // 2. Find profiles with that service_id
+    
     const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -92,7 +85,7 @@ export async function getProvidersByService(serviceSlug: string): Promise<Profil
             category:categories(name),
             service:services(name)
         `)
-        .eq('service_id', service.id)
+        .eq('service_slug', serviceSlug)
         .eq('account_type', 'provider');
 
     if (error) {
@@ -113,7 +106,6 @@ export async function getProvidersByService(serviceSlug: string): Promise<Profil
 
 /**
  * Searches for providers based on a query.
- * Searches in full_name, service_description, and bio.
  */
 export async function searchProviders(query: string): Promise<Profile[]> {
     const supabase = createClient();
@@ -152,9 +144,17 @@ export async function getProviderProfile(providerId: string): Promise<Profile | 
     const { data, error } = await supabase
         .from('profiles')
         .select(`
-            *,
-            category:categories(name),
-            service:services(name)
+            id,
+            full_name,
+            bio,
+            location,
+            phone,
+            profile_image_url,
+            portfolio_urls,
+            rating,
+            reviews_count,
+            service:services(name),
+            category:categories(name)
         `)
         .eq('id', providerId)
         .eq('account_type', 'provider')

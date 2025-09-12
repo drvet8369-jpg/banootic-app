@@ -2,8 +2,6 @@
 
 This is a NextJS starter in Firebase Studio.
 
-To get started, take a look at src/app/page.tsx.
-
 ## Manual Database Setup Instructions
 
 To set up or reset the database from scratch, please follow these steps carefully. This process ensures a clean and correct database structure.

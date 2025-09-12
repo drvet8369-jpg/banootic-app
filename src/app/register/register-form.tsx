@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,25 +44,25 @@ const formSchema = z.object({
   }, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  categoryId: z.string().optional(),
-  serviceId: z.string().optional(),
+  categorySlug: z.string().optional(),
+  serviceSlug: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.categoryId;
+        return !!data.categorySlug;
     }
     return true;
 }, {
     message: 'لطفاً دسته‌بندی خدمات را انتخاب کنید.',
-    path: ['categoryId'],
+    path: ['categorySlug'],
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.serviceId;
+        return !!data.serviceSlug;
     }
     return true;
 }, {
     message: 'لطفاً نوع خدمات را انتخاب کنید.',
-    path: ['serviceId'],
+    path: ['serviceSlug'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
@@ -101,23 +102,20 @@ export default function RegisterForm() {
   });
 
   const accountType = form.watch('accountType');
-  const categoryId = form.watch('categoryId');
+  const categorySlug = form.watch('categorySlug');
 
   useEffect(() => {
       const fetchServices = async () => {
-          if (categoryId) {
-              const selectedCategory = categories.find(c => c.id.toString() === categoryId);
-              if (selectedCategory) {
-                const srvs = await getServicesByCategory(selectedCategory.slug);
-                setServices(srvs);
-                form.setValue('serviceId', undefined); // Reset service selection
-              }
+          if (categorySlug) {
+              const srvs = await getServicesByCategory(categorySlug);
+              setServices(srvs);
+              form.setValue('serviceSlug', undefined); // Reset service selection
           } else {
               setServices([]);
           }
       }
       fetchServices();
-  }, [categoryId, categories, form]);
+  }, [categorySlug, form]);
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
@@ -138,8 +136,8 @@ export default function RegisterForm() {
           full_name: values.fullName,
           account_type: values.accountType,
           ...(values.accountType === 'provider' && {
-              category_id: values.categoryId ? parseInt(values.categoryId) : null,
-              service_id: values.serviceId ? parseInt(values.serviceId) : null,
+              category_slug: values.categorySlug,
+              service_slug: values.serviceSlug,
               bio: values.bio,
               location: 'ارومیه',
           }),
@@ -247,7 +245,7 @@ export default function RegisterForm() {
               <>
                 <FormField
                   control={form.control}
-                  name="categoryId"
+                  name="categorySlug"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>دسته‌بندی خدمات</FormLabel>
@@ -259,7 +257,7 @@ export default function RegisterForm() {
                         </FormControl>
                         <SelectContent>
                           {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
+                            <SelectItem key={category.id} value={category.slug}>
                               {category.name}
                             </SelectItem>
                           ))}
@@ -271,7 +269,7 @@ export default function RegisterForm() {
                 />
                  <FormField
                   control={form.control}
-                  name="serviceId"
+                  name="serviceSlug"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
@@ -283,7 +281,7 @@ export default function RegisterForm() {
                         </FormControl>
                         <SelectContent>
                           {services.map((service) => (
-                            <SelectItem key={service.id} value={service.id.toString()}>
+                            <SelectItem key={service.id} value={service.slug}>
                               {service.name}
                             </SelectItem>
                           ))}
