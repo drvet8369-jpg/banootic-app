@@ -22,11 +22,11 @@ const iconMap: { [key: string]: React.ElementType } = {
 
 function CategorySkeleton() {
   return (
-    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+    <div className="flex flex-col items-center text-center p-6 border rounded-lg h-full">
       <Skeleton className="w-20 h-20 mb-4 rounded-full" />
       <Skeleton className="h-8 w-3/4 mb-2" />
       <Skeleton className="h-4 w-full" />
-       <Skeleton className="h-4 w-5/6 mt-1" />
+      <Skeleton className="h-4 w-5/6 mt-1" />
     </div>
   )
 }
@@ -37,9 +37,15 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchCategories() {
-      const cats = await getCategories();
-      setCategories(cats);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+        const cats = await getCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchCategories();
   }, []);
