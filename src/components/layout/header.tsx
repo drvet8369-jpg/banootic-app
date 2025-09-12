@@ -44,13 +44,13 @@ const MobileNavMenu = ({
 }) => (
   <div className="flex flex-col h-full">
     <SheetHeader className="p-4 border-b">
-        <SheetTitle className="sr-only">Menu</SheetTitle>
-         <SheetClose asChild>
-            <Link href="/" className="flex items-center gap-2">
-              <Logo className="h-8 w-8 text-primary-foreground" />
-              <span className="font-display text-2xl font-bold">بانوتیک</span>
-            </Link>
-         </SheetClose>
+      <SheetTitle>بانوتیک</SheetTitle>
+      <SheetClose asChild>
+        <Link href="/" className="flex items-center gap-2">
+          <Logo className="h-8 w-8 text-primary-foreground" />
+          <span className="font-display text-2xl font-bold">بانوتیک</span>
+        </Link>
+      </SheetClose>
     </SheetHeader>
     <nav className="flex-grow p-4 space-y-2">
       {isLoggedIn ? (
@@ -104,7 +104,7 @@ const MobileNavMenu = ({
           </SheetClose>
           <SheetClose asChild>
             <Link
-              href="/register"
+              href="/login"
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted"
             >
               <UserPlus className="h-5 w-5" />
@@ -239,7 +239,7 @@ export default function Header({ user }: { user: User | null }) {
                   <Link href="/login">ورود</Link>
                 </Button>
                 <Button asChild variant="secondary">
-                  <Link href="/register">ثبت‌نام</Link>
+                  <Link href="/login">ثبت‌نام</Link>
                 </Button>
               </>
             )}
