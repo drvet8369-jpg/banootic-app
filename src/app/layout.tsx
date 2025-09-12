@@ -1,13 +1,18 @@
-'use server';
+'use client';
 
+import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/toaster';
-import Header from '@/components/layout/header';
-import Footer from '@/components/layout/footer';
-import SearchBar from '@/components/ui/search-bar';
-import { createClient } from '@/lib/supabase/server';
+
+const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
+const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
+const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
+
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -15,21 +20,34 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-export default async function RootLayout({
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'بانوتیک',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
+
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .catch(error => console.log('Service Worker registration failed:', error));
+    }
+  }, []);
 
   return (
     <html lang="fa" dir="rtl">
        <head>
           <title>بانوتیک</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
+          <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
@@ -38,8 +56,9 @@ export default async function RootLayout({
           vazirmatn.variable
         )}
       >
+        <AuthProvider>
           <div className="relative flex min-h-screen flex-col">
-            <Header user={user} />
+            <Header />
             <SearchBar />
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
               {children}
@@ -47,6 +66,7 @@ export default async function RootLayout({
             <Footer />
           </div>
           <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

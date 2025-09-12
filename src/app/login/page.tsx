@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from "next/link";
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { requestOtp } from './actions';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
+import type { User } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -36,6 +39,8 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -47,26 +52,53 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    const formData = new FormData();
-    formData.append('phone', values.phone);
-    
-    const result = await requestOtp(formData);
+    try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
 
-    if (result?.error) {
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
+
         toast({
-            title: 'خطا',
-            description: result.error,
+          title: 'ورود با موفقیت انجام شد!',
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+        });
+        
+        router.push('/');
+
+    } catch (error) {
+        console.error("Login failed:", error);
+        toast({
+            title: 'خطا در ورود',
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
             variant: 'destructive'
         });
+    } finally {
+        setIsLoading(false);
     }
-    // On success, the action handles the redirect, so we don't need to do anything here.
-    
-    setIsLoading(false);
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
@@ -92,12 +124,15 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ارسال کد تایید
+                ورود
               </Button>
             </form>
           </Form>
-           <div className="mt-4 text-center text-sm text-muted-foreground">
-            ثبت‌نام هنرمندان نیز از همین طریق انجام می‌شود.
+          <div className="mt-4 text-center text-sm">
+            هنرمند هستید؟{" "}
+            <Link href="/register" className="underline">
+              از اینجا ثبت‌نام کنید
+            </Link>
           </div>
         </CardContent>
       </Card>

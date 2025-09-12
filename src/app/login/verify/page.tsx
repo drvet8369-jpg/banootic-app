@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { verifyOtp } from '../actions';
+import { toast } from 'sonner';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +31,6 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useToast } from '@/hooks/use-toast';
 
 
 const OTPSchema = z.object({
@@ -40,7 +40,6 @@ const OTPSchema = z.object({
 });
 
 function VerifyOTPForm() {
-    const { toast } = useToast();
     const searchParams = useSearchParams();
     const phone = searchParams.get('phone');
     const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +54,7 @@ function VerifyOTPForm() {
     async function onSubmit(data: z.infer<typeof OTPSchema>) {
         setIsLoading(true);
         if (!phone) {
-            toast({ title: "خطا", description: "شماره تلفن یافت نشد.", variant: "destructive"});
+            toast.error("خطا", { description: "شماره تلفن یافت نشد."});
             setIsLoading(false);
             return;
         }
@@ -67,7 +66,7 @@ function VerifyOTPForm() {
         const result = await verifyOtp(formData);
         
         if (result?.error) {
-            toast({ title: 'خطا', description: result.error, variant: 'destructive'});
+            toast.error('خطا', { description: result.error });
         }
         // On success, the action handles the redirect.
         setIsLoading(false);
