@@ -3,11 +3,11 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Eye } from 'lucide-react';
-import type { Provider } from '@/lib/types';
+import type { Profile } from '@/lib/types';
 import { StarRating } from '@/components/ui/star-rating';
 
 interface SearchResultCardProps {
-  provider: Provider;
+  provider: Profile;
 }
 
 export default function SearchResultCard({ provider }: SearchResultCardProps) {
@@ -15,13 +15,12 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
       <Card className="flex flex-col w-full overflow-hidden h-full">
         <CardHeader className="flex-col items-center text-center p-6">
           <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
-            {provider.profileImage && provider.profileImage.src ? (
+            {provider.profile_image_url ? (
               <Image
-                src={provider.profileImage.src}
-                alt={provider.name}
+                src={provider.profile_image_url}
+                alt={provider.full_name}
                 fill
                 className="object-cover"
-                data-ai-hint={provider.profileImage.aiHint}
               />
             ) : (
               <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -29,15 +28,15 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
               </div>
             )}
           </div>
-          <CardTitle className="font-headline text-xl">{provider.name}</CardTitle>
-          <CardDescription className="text-base">{provider.service}</CardDescription>
+          <CardTitle className="font-headline text-xl">{provider.full_name}</CardTitle>
+          <CardDescription className="text-base">{provider.service_description || provider.service_name}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center justify-center p-4 pt-0">
-          <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+          <StarRating rating={provider.rating || 0} reviewsCount={provider.reviews_count} readOnly />
         </CardContent>
          <CardFooter className="p-4 mt-auto border-t">
            <Button asChild className="w-full font-bold">
-            <Link href={`/provider/${provider.phone}`}>
+            <Link href={`/provider/${provider.id}`}>
                 <Eye className="w-4 h-4 ml-2" />
                 مشاهده پروفایل
             </Link>

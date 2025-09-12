@@ -1,165 +1,193 @@
-import type { Category, Provider, Service, Review } from './types';
+// src/lib/data.ts
+'use server';
+import { createClient } from './supabase/server';
+import type { Category, Profile, Review, Service } from './types';
 
-export const categories: Category[] = [
-  {
-    id: 1,
-    name: 'خدمات زیبایی بانوان',
-    slug: 'beauty',
-    description: 'خدمات مو، ناخن، آرایش و مراقبت از پوست توسط متخصصان محلی با استعداد.',
-  },
-  {
-    id: 2,
-    name: 'آشپزی و غذای خانگی',
-    slug: 'cooking',
-    description: 'غذاهای خانگی خوشمزه و اصیل، شیرینی‌جات و غذاهای سنتی.',
-  },
-  {
-    id: 3,
-    name: 'خیاطی و طراحی مد',
-    slug: 'tailoring',
-    description: 'لباس‌های سفارشی، تعمیرات و طراحی‌های مد منحصر به فرد از بوتیک‌های محلی.',
-  },
-  {
-    id: 4,
-    name: 'صنایع دستی و تزئینی',
-    slug: 'handicrafts',
-    description: 'کاردستی‌های دکوری، هنرهای تزئینی و محصولات دست‌ساز منحصر به فرد.',
-  },
-];
-
-export const services: Service[] = [
-  // Beauty
-  { name: 'خدمات ناخن', slug: 'manicure-pedicure', categorySlug: 'beauty' },
-  { name: 'خدمات مو', slug: 'haircut-coloring', categorySlug: 'beauty' },
-  { name: 'پاکسازی پوست', slug: 'facial-treatment', categorySlug: 'beauty' },
-  { name: 'آرایش صورت', slug: 'makeup', categorySlug: 'beauty' },
-  { name: 'اپیلاسیون', slug: 'waxing', categorySlug: 'beauty' },
-  // Cooking
-  { name: 'غذای سنتی', slug: 'traditional-food', categorySlug: 'cooking' },
-  { name: 'کیک و شیرینی', slug: 'cakes-sweets', categorySlug: 'cooking' },
-  { name: 'غذای گیاهی', slug: 'vegetarian-vegan', categorySlug: 'cooking' },
-  { name: 'فینگرفود', slug: 'finger-food', categorySlug: 'cooking' },
-  { name: 'نان خانگی', slug: 'homemade-bread', categorySlug: 'cooking' },
-  // Tailoring
-  { name: 'دوخت سفارشی لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
-  { name: 'مزون، لباس عروس و مجلسی', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
-  { name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
-  // Handicrafts
-  { name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
-  { name: 'سفال تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
-  { name: 'بافتنی‌ها', slug: 'termeh-kilim', categorySlug: 'handicrafts' },
-  { name: 'چرم‌دوزی', slug: 'leather-crafts', categorySlug: 'handicrafts' },
-  { name: 'شمع‌سازی', slug: 'candles-soaps', categorySlug: 'handicrafts' },
-];
-
-const defaultProviders: Provider[] = [
-  // Beauty
-  { id: 1, name: 'سالن زیبایی سارا', service: 'خدمات ناخن', location: 'ارومیه، خیابان والفجر', phone: '09353847484', bio: 'متخصص در طراحی و هنر ناخن مدرن.', categorySlug: 'beauty', serviceSlug: 'manicure-pedicure', rating: 4.8, reviewsCount: 45, profileImage: { src: 'https://picsum.photos/seed/1/400/400', aiHint: 'woman portrait' }, portfolio: [] },
-  { id: 2, name: 'طراحی مو لاله', service: 'خدمات مو', location: 'ارومیه، شیخ تپه', phone: '09000000002', bio: 'کارشناس بالیاژ و مدل‌های موی مدرن.', categorySlug: 'beauty', serviceSlug: 'haircut-coloring', rating: 4.9, reviewsCount: 62, profileImage: { src: 'https://picsum.photos/seed/2/400/400', aiHint: 'woman hair' }, portfolio: [] },
-  { id: 3, name: 'مراقبت از پوست نگین', service: 'پاکسازی پوست', location: 'ارومیه، استادان', phone: '09000000003', bio: 'درمان‌های پوستی ارگانیک و طبیعی برای انواع پوست.', categorySlug: 'beauty', serviceSlug: 'facial-treatment', rating: 4.7, reviewsCount: 30, profileImage: { src: 'https://picsum.photos/seed/3/400/400', aiHint: 'skincare' }, portfolio: [] },
-  { id: 13, name: 'آرایشگاه رؤیا', service: 'آرایش صورت', location: 'ارومیه، خیابان کاشانی', phone: '09000000013', bio: 'گریم تخصصی عروس و آرایش حرفه‌ای برای مهمانی‌ها.', categorySlug: 'beauty', serviceSlug: 'makeup', rating: 5.0, reviewsCount: 25, profileImage: { src: 'https://picsum.photos/seed/13/400/400', aiHint: 'makeup artist' }, portfolio: [] },
-  { id: 14, name: 'مرکز اپیلاسیون نازی', service: 'اپیلاسیون', location: 'ارومیه، خیابان ورزش', phone: '09000000014', bio: 'اپیلاسیون کامل بدن با استفاده از مواد درجه یک و بهداشتی.', categorySlug: 'beauty', serviceSlug: 'waxing', rating: 4.6, reviewsCount: 55, profileImage: { src: 'https://picsum.photos/seed/14/400/400', aiHint: 'woman beautiful' }, portfolio: [] },
-  
-  // Cooking
-  { id: 4, name: 'آشپزخانه مریم', service: 'غذای سنتی', location: 'ارومیه، خیابان فردوسی', phone: '09000000004', bio: 'ارائه قورمه‌سبزی و کباب خانگی اصیل.', categorySlug: 'cooking', serviceSlug: 'traditional-food', rating: 4.9, reviewsCount: 112, profileImage: { src: 'https://picsum.photos/seed/4/400/400', aiHint: 'woman cooking' }, portfolio: [] },
-  { 
-    id: 5, 
-    name: 'شیرینی‌پزی بهار', 
-    service: 'کیک و شیرینی', 
-    location: 'ارومیه، خیابان کشاورز', 
-    phone: '09000000005', 
-    bio: 'کیک‌های سفارشی برای تولد، عروسی و رویدادهای خاص.', 
-    categorySlug: 'cooking', 
-    serviceSlug: 'cakes-sweets', 
-    rating: 4.8, 
-    reviewsCount: 88, 
-    profileImage: { src: 'https://picsum.photos/seed/5/400/400', aiHint: 'pastry chef' },
-    portfolio: []
-  },
-  { id: 6, name: 'غذای سالم زهرا', service: 'غذای گیاهی', location: 'ارومیه، دانشکده', phone: '09000000006', bio: 'وعده‌های غذایی گیاهی خوشمزه و سالم با ارسال درب منزل.', categorySlug: 'cooking', serviceSlug: 'vegetarian-vegan', rating: 4.7, reviewsCount: 40, profileImage: { src: 'https://picsum.photos/seed/6/400/400', aiHint: 'healthy food' }, portfolio: [] },
-  { id: 15, name: 'فینگرفود شیک', service: 'فینگرفود', location: 'ارومیه، عمار', phone: '09000000015', bio: 'سینی‌های مزه و فینگرفودهای متنوع برای مهمانی‌ها.', categorySlug: 'cooking', serviceSlug: 'finger-food', rating: 4.9, reviewsCount: 75, profileImage: { src: 'https://picsum.photos/seed/15/400/400', aiHint: 'party food' }, portfolio: [] },
-  { id: 16, name: 'نان خانگی گندم', service: 'نان خانگی', location: 'ارومیه، مولوی', phone: '09000000016', bio: 'پخت روزانه انواع نان‌های حجیم، سنتی و رژیمی.', categorySlug: 'cooking', serviceSlug: 'homemade-bread', rating: 5.0, reviewsCount: 95, profileImage: { src: 'https://picsum.photos/seed/16/400/400', aiHint: 'baker woman' }, portfolio: [] },
-  
-  // Tailoring
-  { id: 7, name: 'خیاطی شیرین', service: 'دوخت سفارشی لباس', location: 'ارومیه، خیابان مدرس', phone: '09000000007', bio: 'دوخت لباس‌های زیبا و سفارشی برای هر مناسبتی.', categorySlug: 'tailoring', serviceSlug: 'custom-clothing', rating: 4.8, reviewsCount: 50, profileImage: { src: 'https://picsum.photos/seed/7/400/400', aiHint: 'tailor woman' }, portfolio: [] },
-  { id: 8, name: 'طراحی پروین', service: 'تعمیرات تخصصی لباس', location: 'ارومیه، خیابان امام', phone: '09000000008', bio: 'تعمیرات حرفه‌ای و سریع برای فیت عالی لباس.', categorySlug: 'tailoring', serviceSlug: 'clothing-repair', rating: 4.7, reviewsCount: 35, profileImage: { src: 'https://picsum.photos/seed/8/400/400', aiHint: 'fashion designer' }, portfolio: [] },
-  { id: 9, name: 'بوتیک افسانه', service: 'مزون، لباس عروس و مجلسی', location: 'ارومیه، خیابان خیام', phone: '09000000009', bio: 'مانتوهای منحصر به فرد و شیک که سنت را با مد مدرن ترکیب می‌کند.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 4.9, reviewsCount: 80, profileImage: { src: 'https://picsum.photos/seed/9/400/400', aiHint: 'fashion boutique' }, portfolio: [] },
-  { id: 18, name: 'خانه مد آناهیتا', service: 'مزون، لباس عروس و مجلسی', location: 'ارومیه، خیابان حسنی', phone: '09000000018', bio: 'طراحی و دوخت لباس‌های شب و مجلسی با پارچه‌های خاص.', categorySlug: 'tailoring', serviceSlug: 'fashion-design-mezon', rating: 5.0, reviewsCount: 33, profileImage: { src: 'https://picsum.photos/seed/18/400/400', aiHint: 'evening dress' }, portfolio: [] },
-  
-  // Handicrafts
-  { id: 10, name: 'گالری هنری گیتا', service: 'زیورآلات دست‌ساز', location: 'ارومیه، خیابان بعثت', phone: '09000000010', bio: 'جواهرات نقره و سنگ‌های قیمتی منحصر به فرد، ساخته شده با عشق.', categorySlug: 'handicrafts', serviceSlug: 'handmade-jewelry', rating: 4.9, reviewsCount: 65, profileImage: { src: 'https://picsum.photos/seed/10/400/400', aiHint: 'jewelry maker' }, portfolio: [] },
-  { id: 11, name: 'سفالگری مینا', service: 'سفال تزئینی', location: 'ارومیه، خیابان بهار', phone: '09000000011', bio: 'سفال‌های زیبا و نقاشی شده برای خانه و باغ شما.', categorySlug: 'handicrafts', serviceSlug: 'decorative-pottery', rating: 4.7, reviewsCount: 28, profileImage: { src: 'https://picsum.photos/seed/11/400/400', aiHint: 'pottery artist' }, portfolio: [] },
-  { id: 12, name: 'بافتنی صبا', service: 'بافتنی‌ها', location: 'ارومیه، بازار', phone: '09000000012', bio: 'انواع لباس‌ها و وسایل بافتنی دستباف.', categorySlug: 'handicrafts', serviceSlug: 'termeh-kilim', rating: 4.8, reviewsCount: 48, profileImage: { src: 'https://picsum.photos/seed/12/400/400', aiHint: 'knitting craft' }, portfolio: [] },
-  { id: 19, name: 'هنر چرم لیلا', service: 'چرم‌دوزی', location: 'ارومیه، همافر', phone: '09000000019', bio: 'کیف، کمربند و اکسسوری‌های چرمی با طراحی خاص.', categorySlug: 'handicrafts', serviceSlug: 'leather-crafts', rating: 4.9, reviewsCount: 58, profileImage: { src: 'https://picsum.photos/seed/19/400/400', aiHint: 'leather goods' }, portfolio: [] },
-  { id: 20, name: 'کارگاه شمع‌سازی رویا', service: 'شمع‌سازی', location: 'ارومیه، مدنی', phone: '09000000020', bio: 'انواع شمع‌های معطر و صابون‌های گیاهی دست‌ساز.', categorySlug: 'handicrafts', serviceSlug: 'candles-soaps', rating: 4.8, reviewsCount: 72, profileImage: { src: 'https://picsum.photos/seed/20/400/400', aiHint: 'candle maker' }, portfolio: [] },
-];
-
-const PROVIDERS_STORAGE_KEY = 'banootik-providers';
-const REVIEWS_STORAGE_KEY = 'banootik-reviews';
-
-// Function to get providers from localStorage or return default
-export const getProviders = (): Provider[] => {
-  if (typeof window === 'undefined') {
-    return defaultProviders;
+/**
+ * Fetches all categories from the database.
+ */
+export async function getCategories(): Promise<Category[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from('categories').select('*');
+  if (error) {
+    console.error('Error fetching categories:', error);
+    return [];
   }
-  try {
-    const storedProviders = localStorage.getItem(PROVIDERS_STORAGE_KEY);
-    if (storedProviders) {
-      const parsedProviders = JSON.parse(storedProviders);
-      return parsedProviders;
-    } else {
-      // If nothing is in storage, initialize it with the default data
-      localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(defaultProviders));
-      return defaultProviders;
+  return data;
+}
+
+/**
+ * Fetches a single category by its slug.
+ */
+export async function getCategoryBySlug(slug: string): Promise<Category | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('categories').select('*').eq('slug', slug).single();
+    if(error){
+        console.error(`Error fetching category with slug ${slug}:`, error);
+        return null;
     }
-  } catch (error) {
-    console.error("Failed to access localStorage, returning default providers.", error);
-    return defaultProviders;
-  }
-};
+    return data;
+}
 
-// Function to save providers to localStorage
-export const saveProviders = (updatedProviders: Provider[]) => {
-   if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(PROVIDERS_STORAGE_KEY, JSON.stringify(updatedProviders));
-  } catch (error) {
-    console.error("Failed to save providers to localStorage.", error);
-  }
-};
 
-// --- Reviews ---
-const defaultReviews: Review[] = [];
-
-// Function to get reviews from localStorage
-export const getReviews = (): Review[] => {
-  if (typeof window === 'undefined') {
-    return defaultReviews;
+/**
+ * Fetches all services for a given category slug.
+ */
+export async function getServicesByCategory(categorySlug: string): Promise<Service[]> {
+  const supabase = createClient();
+  const { data: category, error: catError } = await supabase.from('categories').select('id').eq('slug', categorySlug).single();
+  
+  if (catError || !category) {
+      console.error('Error fetching category for services:', catError);
+      return [];
   }
-  try {
-    const storedReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
-    if (storedReviews) {
-      return JSON.parse(storedReviews);
-    } else {
-      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(defaultReviews));
-      return defaultReviews;
+
+  const { data, error } = await supabase.from('services').select('*').eq('category_id', category.id);
+  if (error) {
+    console.error('Error fetching services:', error);
+    return [];
+  }
+  return data;
+}
+
+/**
+ * Fetches a single service by its slug and its category slug.
+ */
+export async function getServiceBySlug(categorySlug: string, serviceSlug: string): Promise<Service | null> {
+    const supabase = createClient();
+    // We need to join to check the category slug
+    const { data, error } = await supabase
+        .from('services')
+        .select('*, categories(slug)')
+        .eq('slug', serviceSlug)
+        .single();
+    
+    // @ts-ignore
+    if (error || !data || data.categories.slug !== categorySlug) {
+        console.error(`Error fetching service ${serviceSlug} in category ${categorySlug}:`, error);
+        return null;
     }
-  } catch (error) {
-    console.error("Failed to access localStorage for reviews.", error);
-    return defaultReviews;
-  }
-};
+    return data as Service;
+}
 
-// Function to save reviews to localStorage
-export const saveReviews = (updatedReviews: Review[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews));
-  } catch (error) {
-    console.error("Failed to save reviews to localStorage.", error);
-  }
-};
+
+/**
+ * Fetches all providers who offer a specific service.
+ */
+export async function getProvidersByService(serviceSlug: string): Promise<Profile[]> {
+    const supabase = createClient();
+    // 1. Find the service_id from the slug
+    const { data: service, error: serviceError } = await supabase.from('services').select('id').eq('slug', serviceSlug).single();
+    if (serviceError || !service) {
+        console.error(`Service with slug ${serviceSlug} not found`, serviceError);
+        return [];
+    }
+
+    // 2. Find profiles with that service_id
+    const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+            *,
+            category:categories(name),
+            service:services(name)
+        `)
+        .eq('service_id', service.id)
+        .eq('account_type', 'provider');
+
+    if (error) {
+        console.error('Error fetching providers by service:', error);
+        return [];
+    }
+
+    // Manual mapping because Supabase join syntax is tricky with types
+    return data.map(p => ({
+      ...p,
+      // @ts-ignore
+      category_name: p.category?.name,
+      // @ts-ignore
+      service_name: p.service?.name,
+    }));
+}
+
+
+/**
+ * Searches for providers based on a query.
+ * Searches in full_name, service_description, and bio.
+ */
+export async function searchProviders(query: string): Promise<Profile[]> {
+    const supabase = createClient();
+    if (!query) return [];
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+            *,
+            category:categories(name),
+            service:services(name)
+        `)
+        .eq('account_type', 'provider')
+        .textSearch('fts', query, { type: 'websearch', config: 'english' }); // Using 'english' config for broader matching
+
+    if (error) {
+        console.error('Error searching providers:', error);
+        return [];
+    }
+    
+     return data.map(p => ({
+      ...p,
+      // @ts-ignore
+      category_name: p.category?.name,
+      // @ts-ignore
+      service_name: p.service?.name,
+    }));
+}
+
+
+/**
+ * Fetches a single provider's public profile by their UUID.
+ */
+export async function getProviderProfile(providerId: string): Promise<Profile | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+            *,
+            category:categories(name),
+            service:services(name)
+        `)
+        .eq('id', providerId)
+        .eq('account_type', 'provider')
+        .single();
+    
+    if (error) {
+        console.error(`Error fetching provider profile for ${providerId}:`, error);
+        return null;
+    }
+
+    return {
+      ...data,
+      // @ts-ignore
+      category_name: data.category?.name,
+      // @ts-ignore
+      service_name: data.service?.name,
+    }
+}
+
+
+/**
+ * Fetches all reviews for a given provider.
+ */
+export async function getReviewsForProvider(providerId: string): Promise<Review[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('provider_id', providerId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error(`Error fetching reviews for provider ${providerId}:`, error);
+        return [];
+    }
+    return data;
+}

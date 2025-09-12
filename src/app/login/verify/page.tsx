@@ -31,6 +31,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const OTPSchema = z.object({
@@ -60,7 +61,7 @@ function VerifyOTPForm() {
         }
 
         const formData = new FormData();
-        formData.append('phone', phone);
+        formData.append('phone', normalizePhoneNumber(phone));
         formData.append('pin', data.pin);
 
         const result = await verifyOtp(formData);

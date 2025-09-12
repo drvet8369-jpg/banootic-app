@@ -56,7 +56,7 @@ export async function requestOtp(formData: FormData) {
     return { error: 'شماره تلفن الزامی است.' };
   }
   
-  const supabase = createAdminClient(); // Use admin client
+  const supabase = createAdminClient();
   const normalizedPhone = normalizePhoneNumber(phone);
   
   // Generate a 6-digit random code
@@ -95,7 +95,7 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'شماره تلفن و کد تایید الزامی است.' };
     }
 
-    const supabaseAdmin = createAdminClient(); // Use admin client for DB operations
+    const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
     // 1. Fetch the stored OTP from our custom table
@@ -107,7 +107,7 @@ export async function verifyOtp(formData: FormData) {
     
     if (fetchError || !otpEntry) {
         console.error('Error fetching OTP or OTP not found:', fetchError);
-        return { error: 'کد تایید یافت نشد. لطفاً دوباره درخواست کد دهید.' };
+        return { error: 'کد تایید یافت نشد یا نامعتبر است. لطفاً دوباره درخواست کد دهید.' };
     }
 
     // 2. Check if the token is expired (e.g., 5 minutes validity)
@@ -115,6 +115,7 @@ export async function verifyOtp(formData: FormData) {
     const now = new Date();
     const expiresIn = 5 * 60 * 1000; // 5 minutes in milliseconds
     if (now.getTime() - otpCreatedAt.getTime() > expiresIn) {
+        await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
         return { error: 'کد تایید منقضی شده است. لطفاً دوباره درخواست کد دهید.' };
     }
 
@@ -123,29 +124,22 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'کد تایید وارد شده نامعتبر است.' };
     }
 
-    // 4. OTP is correct. Now, we create a session for the user.
-    // We use the normal server client for auth operations to manage cookies correctly.
+    // 4. OTP is correct. Create Supabase auth session.
     const supabase = createServerSupabaseClient();
-    
-    // Check if the user exists.
-    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-
-    // Sign in the user with a trick if they don't have a session.
-    // This part is complex because Supabase's phone auth is designed with its own OTP flow.
-    // We are creating our own flow.
-    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+    const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
-        password: process.env.MASTER_PASSWORD || 'your-default-secure-password',
+        password: process.env.SUPABASE_MASTER_PASSWORD!,
     });
 
     if (sessionError) {
          if (sessionError.message.includes('Invalid login credentials')) {
             const { error: signUpError } = await supabase.auth.signUp({
                 phone: normalizedPhone,
-                password: process.env.MASTER_PASSWORD || 'your-default-secure-password',
+                password: process.env.SUPABASE_MASTER_PASSWORD!,
                 options: {
                   data: {
-                    full_name: `کاربر ${phone.slice(-4)}`
+                    full_name: `کاربر ${phone.slice(-4)}`,
+                    account_type: 'customer'
                   }
                 }
             });
@@ -153,12 +147,21 @@ export async function verifyOtp(formData: FormData) {
                 console.error('Supabase Sign-Up Error during OTP verify:', signUpError);
                 return { error: 'خطا در ایجاد حساب کاربری جدید.'};
             }
+             // After sign-up, need to sign in again to create a session
+            const { error: signInAgainError } = await supabase.auth.signInWithPassword({
+              phone: normalizedPhone,
+              password: process.env.SUPABASE_MASTER_PASSWORD!,
+            });
+            if (signInAgainError) {
+               console.error('Supabase Sign-In After Sign-Up Error:', signInAgainError);
+               return { error: 'خطا در ورود پس از ثبت‌نام.' };
+            }
+
          } else {
             console.error('Supabase Sign-In Error during OTP verify:', sessionError);
             return { error: `خطا در ورود به حساب کاربری: ${sessionError.message}`};
         }
     }
-
 
     // 5. Clean up the used OTP
     await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);

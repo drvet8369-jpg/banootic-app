@@ -1,86 +1,69 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
-export interface User {
-  name: string;
-  // The user's phone number is their unique ID
-  phone: string; 
-  accountType: 'customer' | 'provider';
-  // Optional fields for new provider registration context
-  serviceType?: string;
-  bio?: string;
-  service?: string;
+// Define a more specific user profile type
+export interface UserProfile extends User {
+  full_name: string;
+  account_type: 'customer' | 'provider';
 }
 
 interface AuthContextType {
-  isLoggedIn: boolean;
-  user: User | null;
-  login: (userData: User) => void;
-  logout: () => void;
+  user: UserProfile | null;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// A one-time check to see if we need to clean up localStorage
-const performCleanup = () => {
-    if (typeof window !== 'undefined') {
-        const cleanupFlag = 'banootik-cleanup-v1'; // Use a new flag to re-run if needed
-        if (!localStorage.getItem(cleanupFlag)) {
-            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
-            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
-            localStorage.setItem(cleanupFlag, 'true');
-        }
-    }
-};
-
-if (typeof window !== 'undefined') {
-    performCleanup();
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
 
-  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('banootik-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setIsLoading(true);
+        if (session) {
+          // Fetch the user's profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          setUser({ ...session.user, ...profile } as UserProfile);
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage on initial load", error);
-      // Clean up corrupted data
-      localStorage.removeItem('banootik-user');
-    }
-  }, []);
+    );
 
-  const login = (userData: User) => {
-    try {
-      // Ensure accountType is always set
-      const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
-      localStorage.setItem('banootik-user', JSON.stringify(userToSave));
-      setUser(userToSave);
-    } catch (error) {
-       console.error("Failed to save user to localStorage", error);
-    }
-  };
+    // Initial check
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setUser({ ...session.user, ...profile } as UserProfile);
+      }
+      setIsLoading(false);
+    };
+    checkUser();
 
-  const logout = () => {
-    try {
-      localStorage.removeItem('banootik-user');
-      setUser(null);
-      // Redirect to home page for a better user experience
-      router.push('/');
-    } catch (error) {
-       console.error("Failed to remove user from localStorage", error);
-    }
-  };
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,9 @@
+import { createClient } from '@supabase/supabase-js';
+
 // This file is specifically for creating a Supabase admin client.
 // This client has admin privileges and should only be used in
 // secure server-side environments (like Server Actions or Route Handlers).
 // It must never be exposed to the client-side.
-
-import { createClient } from '@supabase/supabase-js';
 
 export const createAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

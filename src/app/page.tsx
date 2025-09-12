@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { categories } from '@/lib/data';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
+import { getCategories } from '@/lib/data';
+import type { Category } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
@@ -16,7 +19,30 @@ const iconMap: { [key: string]: React.ElementType } = {
   handicrafts: Gift,
 };
 
+function CategorySkeleton() {
+  return (
+    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+      <Skeleton className="w-20 h-20 mb-4 rounded-full" />
+      <Skeleton className="h-8 w-3/4 mb-2" />
+      <Skeleton className="h-4 w-full" />
+       <Skeleton className="h-4 w-5/6 mt-1" />
+    </div>
+  )
+}
+
 export default function Home() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const cats = await getCategories();
+      setCategories(cats);
+      setIsLoading(false);
+    }
+    fetchCategories();
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-24 w-full">
@@ -35,24 +61,28 @@ export default function Home() {
       <section id="categories" className="py-16 w-full">
         <h2 className="text-3xl font-headline font-bold text-center mb-12">خدمات ما</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {categories.map((category) => {
-            const Icon = iconMap[category.slug];
-            return (
-              <Link href={`/services/${category.slug}`} key={category.id}>
-                <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
-                  <CardHeader className="items-center">
-                    {Icon && <Icon className="w-20 h-20 mb-4 text-accent" />}
-                    <CardTitle className="font-headline text-2xl">{category.name}</CardTitle>
-                  </CardHeader>
-                  <CardDescription>{category.description}</CardDescription>
-                </Card>
-              </Link>
-            );
-          })}
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <CategorySkeleton key={i} />)
+          ) : (
+            categories.map((category) => {
+              const Icon = iconMap[category.slug];
+              return (
+                <Link href={`/services/${category.slug}`} key={category.id}>
+                  <Card className="h-full flex flex-col items-center text-center p-6 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300">
+                    <CardHeader className="items-center">
+                      {Icon && <Icon className="w-20 h-20 mb-4 text-accent" />}
+                      <CardTitle className="font-headline text-2xl">{category.name}</CardTitle>
+                    </CardHeader>
+                    <CardDescription>{category.description}</CardDescription>
+                  </Card>
+                </Link>
+              );
+            })
+          )}
         </div>
          <div className="mt-12 text-center">
             <Button asChild variant="secondary" size="lg" className="text-lg">
-              <Link href="/register">به جامعه ما بپیوندید</Link>
+              <Link href="/login">به جامعه ما بپیوندید</Link>
             </Button>
           </div>
       </section>

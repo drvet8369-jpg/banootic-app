@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-
 export interface Category {
   id: number;
   name: string;
@@ -8,9 +6,10 @@ export interface Category {
 }
 
 export interface Service {
+  id: number;
   name: string;
   slug: string;
-  categorySlug: Category['slug'];
+  category_id: number;
 }
 
 export interface PortfolioItem {
@@ -18,33 +17,42 @@ export interface PortfolioItem {
   aiHint?: string;
 }
 
-export interface Provider {
-  id: number;
-  name: string;
-  service: string; // The specific service they provide, e.g., "Manicure"
-  location: string;
-  phone: string;
-  bio: string;
-  categorySlug: Category['slug'];
-  serviceSlug: Service['slug']; // Link to the service
-  rating: number;
-  reviewsCount: number;
-  profileImage: PortfolioItem; // Dedicated profile image
-  portfolio: PortfolioItem[];
+// This represents the public profile of a user, especially providers
+export interface Profile {
+  id: string; // Corresponds to auth.users.id
+  account_type: 'customer' | 'provider';
+  full_name: string;
+  service_description?: string; // e.g., "خدمات ناخن"
+  bio?: string;
+  location?: string;
+  phone?: string;
+  // Fields related to being a provider
+  category_id?: number;
+  service_id?: number; // Main service
+  rating?: number;
+  reviews_count?: number;
+  profile_image_url?: string;
+  portfolio_urls?: string[];
+
+  // Joined data
+  category_name?: string;
+  service_name?: string;
 }
+
 
 export interface Review {
   id: string;
-  providerId: number;
-  authorName: string;
+  provider_id: string; // The UUID of the provider's profile
+  author_id: string;   // The UUID of the customer's profile
+  author_name: string; // Denormalized author name for easy display
   rating: number;
   comment: string;
-  createdAt: string; // ISO String format
+  created_at: string; // ISO String format
 }
 
-export interface Message {
-  text: string;
-  senderId: string;
-  receiverId?: string;
-  createdAt: Timestamp;
+// This is different from the auth user. This is for local chat logic.
+export interface ChatParticipant {
+    id: string;
+    name: string;
+    profile_image_url?: string;
 }

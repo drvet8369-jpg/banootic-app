@@ -31,25 +31,25 @@ export const categories: Category[] = [
 
 export const services: Service[] = [
   // Beauty
-  { name: 'خدمات ناخن', slug: 'manicure-pedicure', categorySlug: 'beauty' },
-  { name: 'خدمات مو', slug: 'haircut-coloring', categorySlug: 'beauty' },
-  { name: 'پاکسازی پوست', slug: 'facial-treatment', categorySlug: 'beauty' },
-  { name: 'آرایش صورت', slug: 'makeup', categorySlug: 'beauty' },
-  { name: 'اپیلاسیون', slug: 'waxing', categorySlug: 'beauty' },
+  { id: 1, name: 'خدمات ناخن', slug: 'manicure-pedicure', category_id: 1 },
+  { id: 2, name: 'خدمات مو', slug: 'haircut-coloring', category_id: 1 },
+  { id: 3, name: 'پاکسازی پوست', slug: 'facial-treatment', category_id: 1 },
+  { id: 4, name: 'آرایش صورت', slug: 'makeup', category_id: 1 },
+  { id: 5, name: 'اپیلاسیون', slug: 'waxing', category_id: 1 },
   // Cooking
-  { name: 'غذای سنتی', slug: 'traditional-food', categorySlug: 'cooking' },
-  { name: 'کیک و شیرینی', slug: 'cakes-sweets', categorySlug: 'cooking' },
-  { name: 'غذای گیاهی', slug: 'vegetarian-vegan', categorySlug: 'cooking' },
-  { name: 'فینگرفود', slug: 'finger-food', categorySlug: 'cooking' },
-  { name: 'نان خانگی', slug: 'homemade-bread', categorySlug: 'cooking' },
+  { id: 6, name: 'غذای سنتی', slug: 'traditional-food', category_id: 2 },
+  { id: 7, name: 'کیک و شیرینی', slug: 'cakes-sweets', category_id: 2 },
+  { id: 8, name: 'غذای گیاهی', slug: 'vegetarian-vegan', category_id: 2 },
+  { id: 9, name: 'فینگرفود', slug: 'finger-food', category_id: 2 },
+  { id: 10, name: 'نان خانگی', slug: 'homemade-bread', category_id: 2 },
   // Tailoring
-  { name: 'دوخت سفارشی لباس', slug: 'custom-clothing', categorySlug: 'tailoring' },
-  { name: 'مزون، لباس عروس و مجلسی', slug: 'fashion-design-mezon', categorySlug: 'tailoring' },
-  { name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', categorySlug: 'tailoring' },
+  { id: 11, name: 'دوخت سفارشی لباس', slug: 'custom-clothing', category_id: 3 },
+  { id: 12, name: 'مزون، لباس عروس و مجلسی', slug: 'fashion-design-mezon', category_id: 3 },
+  { id: 13, name: 'تعمیرات تخصصی لباس', slug: 'clothing-repair', category_id: 3 },
   // Handicrafts
-  { name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', categorySlug: 'handicrafts' },
-  { name: 'سفال تزئینی', slug: 'decorative-pottery', categorySlug: 'handicrafts' },
-  { name: 'بافتنی‌ها', slug: 'termeh-kilim', categorySlug: 'handicrafts' },
-  { name: 'چرم‌دوزی', slug: 'leather-crafts', categorySlug: 'handicrafts' },
-  { name: 'شمع‌سازی', slug: 'candles-soaps', categorySlug: 'handicrafts' },
+  { id: 14, name: 'زیورآلات دست‌ساز', slug: 'handmade-jewelry', category_id: 4 },
+  { id: 15, name: 'سفال تزئینی', slug: 'decorative-pottery', category_id: 4 },
+  { id: 16, name: 'بافتنی‌ها', slug: 'termeh-kilim', category_id: 4 },
+  { id: 17, name: 'چرم‌دوزی', slug: 'leather-crafts', category_id: 4 },
+  { id: 18, name: 'شمع‌سازی', slug: 'candles-soaps', category_id: 4 },
 ];
