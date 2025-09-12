@@ -1,5 +1,3 @@
-'use server';
-
 // This file is specifically for creating a Supabase admin client.
 // This client has admin privileges and should only be used in
 // secure server-side environments (like Server Actions or Route Handlers).
