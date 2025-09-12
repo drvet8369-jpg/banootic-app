@@ -2,19 +2,13 @@
 'use client';
 import { getCategoryBySlug, getServicesByCategory } from '@/lib/data';
 import type { Category, Service } from '@/lib/types';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface PageProps {
-  params: {
-    category: string;
-  };
-}
 
 function ServiceCardSkeleton() {
   return (
@@ -28,7 +22,10 @@ function ServiceCardSkeleton() {
 }
 
 
-export default function CategoryPage({ params }: PageProps) {
+export default function CategoryPage() {
+  const params = useParams<{ category: string }>();
+  const categorySlug = params.category;
+
   const [category, setCategory] = useState<Category | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,19 +35,19 @@ export default function CategoryPage({ params }: PageProps) {
     async function fetchData() {
       setIsLoading(true);
       setError(false);
-      const cat = await getCategoryBySlug(params.category);
+      const cat = await getCategoryBySlug(categorySlug);
       if (!cat) {
         setError(true);
         setIsLoading(false);
         return;
       }
-      const catServices = await getServicesByCategory(params.category);
+      const catServices = await getServicesByCategory(categorySlug);
       setCategory(cat);
       setServices(catServices);
       setIsLoading(false);
     }
     fetchData();
-  }, [params.category]);
+  }, [categorySlug]);
 
   if (isLoading) {
     return (
