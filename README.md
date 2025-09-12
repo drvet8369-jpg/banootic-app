@@ -23,4 +23,4 @@ To set up or reset the database from scratch, please follow these steps carefull
 3.  Paste this new content into the SQL Editor.
 4.  Click **"Run"** again.
 
-This will set up all the necessary tables and relationships correctly. Your database should now be ready to use.
+This will set up all the necessary tables, relationships, and **security policies** correctly. Your database should now be ready to use.
