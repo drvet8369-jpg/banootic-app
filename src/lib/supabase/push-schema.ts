@@ -1,3 +1,4 @@
+
 // This script uses the 'pg' library for a direct, reliable database connection
 // to apply critical schema changes that cannot be done via standard migrations.
 import * as dotenv from 'dotenv';
