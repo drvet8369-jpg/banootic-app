@@ -9,19 +9,22 @@ import { normalizePhoneNumber } from '@/lib/utils';
 const KAVEHNEGAR_API_KEY = process.env.KAVEHNEGAR_API_KEY;
 
 /**
- * Sends an OTP code via Kavenegar API.
+ * Sends an OTP code via Kavenegar API using a template.
  * This function directly calls the Kavenegar service.
  */
 async function sendKavenegarOtp(phone: string, token: string) {
   if (!KAVEHNEGAR_API_KEY) {
     console.error('Kavenegar API Key is not set in environment variables.');
-    return { error: 'کلید API کاوه نگار یافت نشد. سرویس پیامک پیکربندی نشده است.' };
+    // Return a user-friendly error message
+    return { error: 'سرویس پیامک به درستی پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.' };
   }
 
   const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
+  
+  // Use URLSearchParams for robust parameter encoding
   const params = new URLSearchParams({
     receptor: phone,
-    template: 'logincode',
+    template: 'logincode', // Using the template name confirmed by the user
     token: token,
   });
 
@@ -34,16 +37,20 @@ async function sendKavenegarOtp(phone: string, token: string) {
 
     const responseBody = await response.json();
 
+    // Check for both network errors and API-level errors
     if (!response.ok || responseBody.return.status !== 200) {
       console.error('Kavenegar API Error:', responseBody.return.message);
-      return { error: `خطا در ارسال پیامک: ${responseBody.return.message}` };
+      // Provide a clear error message for the user
+      return { error: `خطا در ارسال پیامک. لطفاً لحظاتی بعد دوباره تلاش کنید. (کد خطا: ${responseBody.return.status})` };
     }
     
+    // On success, return a success object
     return { success: true };
 
   } catch (error) {
-    console.error('Fetch error for Kavenegar API:', error);
-    return { error: 'خطا در ارتباط با سرویس پیامک.' };
+    // Catch fetch errors (e.g., network issues)
+    console.error('Fetch error when calling Kavenegar API:', error);
+    return { error: 'خطا در برقراری ارتباط با سرویس پیامک.' };
   }
 }
 
@@ -126,42 +133,42 @@ export async function verifyOtp(formData: FormData) {
     }
 
     // 4. OTP is correct. Create Supabase auth session.
+    // We check if the user exists first.
+    const { data: existingUser, error: userCheckError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .single();
+    
     const supabase = createServerSupabaseClient();
+    
+    // If the user does not exist, we need to sign them up first.
+    if (userCheckError || !existingUser) {
+        const { error: signUpError } = await supabase.auth.signUp({
+            phone: normalizedPhone,
+            password: process.env.SUPABASE_MASTER_PASSWORD!,
+            options: {
+              data: {
+                full_name: `کاربر ${phone.slice(-4)}`,
+                account_type: 'customer'
+              }
+            }
+        });
+        if (signUpError) {
+            console.error('Supabase Sign-Up Error during OTP verify:', signUpError);
+            return { error: 'خطا در ایجاد حساب کاربری جدید.'};
+        }
+    }
+    
+    // Now, sign the user in to create a session.
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
         password: process.env.SUPABASE_MASTER_PASSWORD!,
     });
 
     if (sessionError) {
-         if (sessionError.message.includes('Invalid login credentials')) {
-            const { error: signUpError } = await supabase.auth.signUp({
-                phone: normalizedPhone,
-                password: process.env.SUPABASE_MASTER_PASSWORD!,
-                options: {
-                  data: {
-                    full_name: `کاربر ${phone.slice(-4)}`,
-                    account_type: 'customer'
-                  }
-                }
-            });
-            if (signUpError) {
-                console.error('Supabase Sign-Up Error during OTP verify:', signUpError);
-                return { error: 'خطا در ایجاد حساب کاربری جدید.'};
-            }
-             // After sign-up, need to sign in again to create a session
-            const { error: signInAgainError } = await supabase.auth.signInWithPassword({
-              phone: normalizedPhone,
-              password: process.env.SUPABASE_MASTER_PASSWORD!,
-            });
-            if (signInAgainError) {
-               console.error('Supabase Sign-In After Sign-Up Error:', signInAgainError);
-               return { error: 'خطا در ورود پس از ثبت‌نام.' };
-            }
-
-         } else {
-            console.error('Supabase Sign-In Error during OTP verify:', sessionError);
-            return { error: `خطا در ورود به حساب کاربری: ${sessionError.message}`};
-        }
+        console.error('Supabase Sign-In Error during OTP verify:', sessionError);
+        return { error: `خطا در ورود به حساب کاربری.`};
     }
 
     // 5. Clean up the used OTP
