@@ -14,7 +14,7 @@ const KAVEHNEGAR_API_KEY = process.env.KAVEHNEGAR_API_KEY;
 async function sendKavenegarOtp(phone: string, token: string) {
   if (!KAVEHNEGAR_API_KEY) {
     console.error('Kavenegar API Key is not set in environment variables.');
-    return { error: 'سرویس پیامک به درستی پیکربندی نشده است.' };
+    return { error: 'کلید API کاوه نگار یافت نشد. سرویس پیامک پیکربندی نشده است.' };
   }
 
   const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;

@@ -96,9 +96,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-           <div className="mt-4 text-center text-sm">
-             ثبت‌نام به عنوان هنرمند فعلاً غیرفعال است.
-           </div>
         </CardContent>
       </Card>
     </div>
