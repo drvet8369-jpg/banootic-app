@@ -45,7 +45,7 @@ const MobileNavMenu = ({
       <SheetClose asChild>
         <Link href="/" className="flex items-center gap-2">
           <Logo className="h-8 w-8 text-primary-foreground" />
-          <span className="font-display text-2xl font-bold">هنربانو</span>
+          <span className="font-display text-2xl font-bold">بانوتیک</span>
         </Link>
       </SheetClose>
     </div>
@@ -126,14 +126,16 @@ const MobileNavMenu = ({
             <span className="text-xs text-muted-foreground">{user.phone}</span>
           </div>
         </div>
-        <Button
-            onClick={() => logout()}
+        <form action={logout}>
+          <Button
+            type="submit"
             variant="ghost"
             className="w-full justify-start"
-        >
+          >
             <LogOut className="ml-2 h-5 w-5" />
             خروج
-        </Button>
+          </Button>
+        </form>
       </div>
     )}
   </div>
@@ -216,10 +218,14 @@ export default function Header({ user }: { user: User | null }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => logout()}>
-                    <LogOut className="ml-2 h-4 w-4" />
-                    <span>خروج</span>
-                  </DropdownMenuItem>
+                   <form action={logout}>
+                      <DropdownMenuItem asChild>
+                        <button type="submit" className="w-full">
+                          <LogOut className="ml-2 h-4 w-4" />
+                          <span>خروج</span>
+                        </button>
+                      </DropdownMenuItem>
+                   </form>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
