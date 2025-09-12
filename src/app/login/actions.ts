@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 
@@ -55,7 +56,7 @@ export async function requestOtp(formData: FormData) {
     return { error: 'شماره تلفن الزامی است.' };
   }
   
-  const supabase = createClient();
+  const supabase = createAdminClient(); // Use admin client
   const normalizedPhone = normalizePhoneNumber(phone);
   
   // Generate a 6-digit random code
@@ -94,11 +95,11 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'شماره تلفن و کد تایید الزامی است.' };
     }
 
-    const supabase = createClient();
+    const supabaseAdmin = createAdminClient(); // Use admin client for DB operations
     const normalizedPhone = normalizePhoneNumber(phone);
 
     // 1. Fetch the stored OTP from our custom table
-    const { data: otpEntry, error: fetchError } = await supabase
+    const { data: otpEntry, error: fetchError } = await supabaseAdmin
         .from('one_time_passwords')
         .select('token, created_at')
         .eq('phone', normalizedPhone)
@@ -122,36 +123,45 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'کد تایید وارد شده نامعتبر است.' };
     }
 
-    // 4. OTP is correct. Now, we need to sign in the user.
-    // We use a trick: sign in with a password and then immediately update it,
-    // effectively creating a session for a phone number without a real password.
-    // This is a secure way to manage sessions for phone-only auth.
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    // 4. OTP is correct. Now, we create a session for the user.
+    // We use the normal server client for auth operations to manage cookies correctly.
+    const supabase = createServerSupabaseClient();
+    
+    // Check if the user exists.
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+
+    // Sign in the user with a trick if they don't have a session.
+    // This part is complex because Supabase's phone auth is designed with its own OTP flow.
+    // We are creating our own flow.
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
-        // Using a secure random password for this temporary operation
-        password: crypto.randomUUID(), 
+        password: process.env.MASTER_PASSWORD || 'your-default-secure-password',
     });
 
-    if (signInError) {
-        // If the user doesn't exist, we need to sign them up first.
-        if (signInError.message.includes('Invalid login credentials')) {
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    if (sessionError) {
+         if (sessionError.message.includes('Invalid login credentials')) {
+            const { error: signUpError } = await supabase.auth.signUp({
                 phone: normalizedPhone,
-                password: crypto.randomUUID(),
+                password: process.env.MASTER_PASSWORD || 'your-default-secure-password',
+                options: {
+                  data: {
+                    full_name: `کاربر ${phone.slice(-4)}`
+                  }
+                }
             });
             if (signUpError) {
                 console.error('Supabase Sign-Up Error during OTP verify:', signUpError);
                 return { error: 'خطا در ایجاد حساب کاربری جدید.'};
             }
-             // After successful sign-up, the user is logged in.
-        } else {
-            console.error('Supabase Sign-In Error during OTP verify:', signInError);
-            return { error: `خطا در ورود به حساب کاربری: ${signInError.message}`};
+         } else {
+            console.error('Supabase Sign-In Error during OTP verify:', sessionError);
+            return { error: `خطا در ورود به حساب کاربری: ${sessionError.message}`};
         }
     }
 
+
     // 5. Clean up the used OTP
-    await supabase.from('one_time_passwords').delete().eq('phone', normalizedPhone);
+    await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
 
     // 6. Redirect to home page
     redirect('/');
