@@ -96,6 +96,9 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
+           <div className="mt-4 text-center text-sm text-muted-foreground">
+            ثبت‌نام هنرمندان نیز از همین طریق انجام می‌شود.
+          </div>
         </CardContent>
       </Card>
     </div>
