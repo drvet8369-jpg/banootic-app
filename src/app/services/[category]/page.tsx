@@ -1,3 +1,4 @@
+
 'use client';
 import { getCategoryBySlug, getServicesByCategory } from '@/lib/data';
 import type { Category, Service } from '@/lib/types';
