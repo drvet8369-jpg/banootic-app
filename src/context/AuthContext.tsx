@@ -1,111 +1,86 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import type { UserProfile, Provider } from '@/lib/types';
-import { getProviderByUserId } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
-// This combines all user-related data into a single, comprehensive object.
-export interface AppUser extends UserProfile {
-  provider_details?: Provider;
+export interface User {
+  name: string;
+  // The user's phone number is their unique ID
+  phone: string; 
+  accountType: 'customer' | 'provider';
+  // Optional fields for new provider registration context
+  serviceType?: string;
+  bio?: string;
+  service?: string;
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  isLoading: boolean;
-  user: AppUser | null;
-  session: Session | null;
-  logout: () => Promise<void>;
+  user: User | null;
+  login: (userData: User) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// A one-time check to see if we need to clean up localStorage
+const performCleanup = () => {
+    if (typeof window !== 'undefined') {
+        const cleanupFlag = 'honarbanoo-cleanup-v20-final-fix'; // Use a new flag to re-run if needed
+        if (!localStorage.getItem(cleanupFlag)) {
+            console.log("Performing one-time cleanup of localStorage for portfolio reset...");
+            localStorage.removeItem('honarbanoo-providers'); // This will force a reset to default data
+            localStorage.setItem(cleanupFlag, 'true');
+        }
+    }
+};
+
+if (typeof window !== 'undefined') {
+    performCleanup();
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
 
+  // On initial load, try to hydrate the user from localStorage.
   useEffect(() => {
-    const fetchUserAndProvider = async (supabaseUser: SupabaseUser) => {
-        try {
-            const { data: userProfile, error: profileError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', supabaseUser.id)
-                .single();
-
-            if (profileError) {
-                // If profile doesn't exist yet (e.g., right after signup), just return.
-                // The profile will be created in the completeRegistration server action.
-                if (profileError.code === 'PGRST116') {
-                    return; 
-                }
-                throw profileError;
-            }
-
-            let appUser: AppUser = { ...userProfile };
-
-            if (userProfile.account_type === 'provider') {
-                const providerDetails = await getProviderByUserId(supabaseUser.id);
-                if (providerDetails) {
-                    appUser.provider_details = providerDetails;
-                }
-            }
-            setUser(appUser);
-        } catch (error) {
-            console.error("Error fetching user profile or provider details:", error);
-            setUser(null); // Clear user state on error
-        }
-    };
-    
-    // Check for an existing session on initial load
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchUserAndProvider(session.user);
+    try {
+      const storedUser = localStorage.getItem('honarbanoo-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-      setIsLoading(false);
-    });
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setIsLoading(true);
-        if (session?.user) {
-          await fetchUserAndProvider(session.user);
-        } else {
-          setUser(null);
-        }
-        setIsLoading(false);
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    } catch (error) {
+      console.error("Failed to parse user from localStorage on initial load", error);
+      // Clean up corrupted data
+      localStorage.removeItem('honarbanoo-user');
+    }
   }, []);
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    // Optional: redirect to home or login page
-    window.location.href = '/'; 
+  const login = (userData: User) => {
+    try {
+      // Ensure accountType is always set
+      const userToSave = { ...userData, accountType: userData.accountType || 'customer' };
+      localStorage.setItem('honarbanoo-user', JSON.stringify(userToSave));
+      setUser(userToSave);
+    } catch (error) {
+       console.error("Failed to save user to localStorage", error);
+    }
   };
 
-  const value = {
-    isLoggedIn: !!user,
-    isLoading,
-    user,
-    session,
-    logout,
+  const logout = () => {
+    try {
+      localStorage.removeItem('honarbanoo-user');
+      setUser(null);
+      // Redirect to home page for a better user experience
+      router.push('/');
+    } catch (error) {
+       console.error("Failed to remove user from localStorage", error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

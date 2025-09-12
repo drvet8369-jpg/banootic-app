@@ -1,53 +1,49 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { getProviders } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import { getAllProviders } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [allProviders, setAllProviders] = useState<Provider[]>([]);
   const [searchResults, setSearchResults] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
 
-  const fetchProviders = useCallback(async () => {
+  // This function now correctly re-fetches and filters data whenever the query changes.
+  const performSearch = useCallback(() => {
     setIsLoading(true);
-    try {
-      const providers = await getAllProviders();
-      setAllProviders(providers);
-    } catch(e: any) {
-      toast({ title: "خطا", description: e.message, variant: "destructive" });
-    } finally {
+    // Always get the latest providers from localStorage at the moment of searching.
+    const allProviders = getProviders();
+    if (!query) {
+      setSearchResults([]);
       setIsLoading(false);
+      return;
     }
-  }, [toast]);
+    const lowercasedQuery = query.toLowerCase();
+    const results = allProviders.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      provider.bio.toLowerCase().includes(lowercasedQuery)
+    );
+    setSearchResults(results);
+    setIsLoading(false);
+  }, [query]);
 
+  // useEffect now correctly depends on performSearch.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
   useEffect(() => {
-    fetchProviders();
-  }, [fetchProviders]);
+    performSearch();
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!query) {
-        // Here you could show a ranked list of all providers if the query is empty
-        setSearchResults(allProviders); // For now, just show all
-      } else {
-        const lowercasedQuery = query.toLowerCase();
-        const results = allProviders.filter(provider => 
-          provider.name.toLowerCase().includes(lowercasedQuery) ||
-          provider.service.toLowerCase().includes(lowercasedQuery) ||
-          (provider.bio && provider.bio.toLowerCase().includes(lowercasedQuery))
-        );
-        setSearchResults(results);
-      }
-    }
-  }, [query, allProviders, isLoading]);
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
+  }, [performSearch]);
+
 
   return (
     <div className="py-12 md:py-20">
@@ -59,7 +55,7 @@ export default function SearchPage() {
           </p>
         ) : (
           <p className="mt-3 text-lg text-muted-foreground">
-            نمایش همه‌ی هنرمندان
+            لطفا عبارتی را برای جستجو وارد کنید.
           </p>
         )}
       </div>

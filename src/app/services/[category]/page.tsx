@@ -1,4 +1,4 @@
-import { categories, services } from '@/lib/constants';
+import { categories, services } from '@/lib/data';
 import type { Category, Service } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,7 +55,7 @@ export default function CategoryPage({ params }: PageProps) {
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">هنوز هیچ خدماتی در این دسته‌بندی ثبت نشده است.</p>
            <Button asChild variant="link" className="mt-2">
-            <Link href="/auth/register">اولین نفر باشید!</Link>
+            <Link href="/register">اولین نفر باشید!</Link>
           </Button>
         </div>
       )}
