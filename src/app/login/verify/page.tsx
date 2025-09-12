@@ -5,9 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { verifyOtp } from '../actions';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,6 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useToast } from '@/hooks/use-toast';
-import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const OTPSchema = z.object({
@@ -42,11 +41,9 @@ const OTPSchema = z.object({
 
 function VerifyOTPForm() {
     const { toast } = useToast();
-    const router = useRouter();
     const searchParams = useSearchParams();
     const phone = searchParams.get('phone');
     const [isLoading, setIsLoading] = useState(false);
-    const supabase = createClient();
 
     const form = useForm<z.infer<typeof OTPSchema>>({
         resolver: zodResolver(OTPSchema),
@@ -63,21 +60,16 @@ function VerifyOTPForm() {
             return;
         }
 
-        const normalizedPhone = normalizePhoneNumber(phone);
+        const formData = new FormData();
+        formData.append('phone', phone);
+        formData.append('pin', data.pin);
 
-        const { data: { session }, error } = await supabase.auth.verifyOtp({
-            phone: normalizedPhone,
-            token: data.pin,
-            type: 'sms',
-        });
+        const result = await verifyOtp(formData);
         
-        if (error) {
-            toast({ title: 'خطا', description: "کد وارد شده نامعتبر است یا منقضی شده.", variant: 'destructive'});
-        } else if (session) {
-            toast({ title: 'موفق', description: 'شما با موفقیت وارد شدید!'});
-            router.push('/');
-            router.refresh(); // Important to re-fetch user data on layout
+        if (result?.error) {
+            toast({ title: 'خطا', description: result.error, variant: 'destructive'});
         }
+        // On success, the action handles the redirect.
         setIsLoading(false);
     }
 
@@ -102,7 +94,7 @@ function VerifyOTPForm() {
                     کد ۶ رقمی ارسال شده به شماره {phone} را وارد کنید.
                 </CardDescription>
                  <CardDescription className="pt-2 text-blue-600 font-bold">
-                    توجه: در محیط تست، کد تایید همیشه 123456 است.
+                    توجه: در محیط تست، کد تایید ممکن است کمی با تاخیر ارسال شود.
                 </CardDescription>
             </CardHeader>
             <CardContent>

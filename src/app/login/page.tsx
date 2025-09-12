@@ -5,9 +5,8 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from "next/link";
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { requestOtp } from './actions';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +26,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
-import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -38,9 +36,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,26 +48,19 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    // Use the Kavenegar hook by calling the Supabase Edge Function
-    const normalizedPhone = normalizePhoneNumber(values.phone);
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: normalizedPhone,
-    });
+    const formData = new FormData();
+    formData.append('phone', values.phone);
+    
+    const result = await requestOtp(formData);
 
-    if (error) {
-        console.error('Supabase OTP Error:', error);
+    if (result?.error) {
         toast({
-            title: 'خطا در ارسال کد',
-            description: `مشکلی در ارتباط با سرویس پیامک رخ داد: ${error.message}`,
+            title: 'خطا',
+            description: result.error,
             variant: 'destructive'
         });
-    } else {
-        toast({
-            title: 'کد تایید ارسال شد',
-            description: 'یک کد ۶ رقمی به شماره شما ارسال گردید.',
-        });
-        router.push(`/login/verify?phone=${values.phone}`);
     }
+    // On success, the action handles the redirect, so we don't need to do anything here.
     
     setIsLoading(false);
   }
