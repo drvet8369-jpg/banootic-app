@@ -4,9 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -24,9 +24,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { categories } from '@/lib/constants';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { registerUser } from './actions';
-import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -64,18 +64,43 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 export default function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading, session } = useAuth();
+  
+  // Get phone from URL or from logged-in user session
   const phoneFromParams = searchParams.get('phone');
-  const [isLoading, setIsLoading] = useState(false);
+  const phoneFromAuth = user?.phone;
 
+  const [isLoading, setIsLoading] = useState(false);
+  
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: phoneFromParams || '',
+      phone: phoneFromParams || phoneFromAuth || '',
       accountType: 'customer',
       bio: '',
     },
   });
+
+  useEffect(() => {
+    // If the user is already fully registered and somehow lands here, redirect them.
+    if (!loading && user && session) {
+        if(user.account_type === 'provider' && user.full_name) {
+            router.push('/profile');
+        } else if (user.account_type === 'customer' && user.full_name) {
+            router.push('/');
+        }
+    }
+    // If user is not logged in and there's no phone in params, they must log in first.
+    if (!loading && !session && !phoneFromParams) {
+        router.push('/login');
+    }
+    // Pre-fill phone number if it becomes available from auth
+    if (phoneFromAuth) {
+      form.setValue('phone', phoneFromAuth);
+    }
+
+  }, [user, session, loading, router, phoneFromParams, phoneFromAuth, form]);
 
   const accountType = form.watch('accountType');
 
@@ -96,17 +121,30 @@ export default function RegisterForm() {
         setIsLoading(false);
     } else {
         toast.success('ثبت‌نام با موفقیت انجام شد!', {
-            description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+            description: 'خوش آمدید! به صفحه خود هدایت می‌شوید.',
             onAutoClose: () => {
                 const destination = values.accountType === 'provider' ? '/profile' : '/';
                 router.push(destination);
+                router.refresh(); // Force a router refresh to get new server state
             }
         });
     }
   }
+  
+  if (loading) {
+      return (
+        <div className="flex w-full justify-center items-center py-20">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      );
+  }
 
   return (
-    <Card>
+    <Card className="w-full">
+        <CardHeader>
+            <CardTitle className="text-3xl font-headline">تکمیل اطلاعات ثبت‌نام</CardTitle>
+            <CardDescription>فقط چند قدم تا پیوستن به جامعه بانوتیک باقی مانده است.</CardDescription>
+        </CardHeader>
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -167,8 +205,9 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading || !!phoneFromParams} />
+                    <Input placeholder="09123456789" {...field} disabled={true} />
                   </FormControl>
+                  <FormDescription>این شماره تلفن تایید شده و قابل تغییر نیست.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -226,15 +265,9 @@ export default function RegisterForm() {
             
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ثبت‌نام
+              تکمیل ثبت‌نام و ورود
             </Button>
             
-            <div className="mt-4 text-center text-sm">
-              قبلاً ثبت‌نام کرده‌اید؟{" "}
-              <Link href="/login" className="underline">
-                وارد شوید
-              </Link>
-            </div>
           </form>
         </Form>
       </CardContent>

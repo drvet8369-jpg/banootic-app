@@ -92,12 +92,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
-            هنرمند هستید؟{" "}
-            <Link href="/register" className="underline">
-              از اینجا ثبت‌نام کنید
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>

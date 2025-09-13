@@ -55,7 +55,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!profile && !pathname.startsWith('/register')) {
           const phone = session.user.phone;
           if(phone){
-             router.push(`/register?phone=${phone}`);
+             // We pass the raw phone number from Supabase auth, which might not be in the 09 format.
+             // The registration form can handle normalization if needed, or we rely on display.
+             const cleanPhone = phone.replace('+98', '0');
+             router.push(`/register?phone=${cleanPhone}`);
           } else {
              router.push('/register');
           }
