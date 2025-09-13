@@ -121,12 +121,14 @@ export async function verifyOtp(formData: FormData) {
     }
 
     // 4. OTP is correct. Now, get or create the user in Supabase Auth.
-    const { data: { user: existingUser }, error: userCheckError } = await supabaseAdmin.auth.admin.lookupUserByPhone(normalizedPhone);
+    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers();
 
-    if (userCheckError && userCheckError.message !== 'User not found') {
-        console.error('Supabase user check error:', userCheckError);
+    if (listUsersError) {
+        console.error('Supabase listUsers error:', listUsersError);
         return { error: 'خطا در بررسی وضعیت کاربر.' };
     }
+
+    const existingUser = users.find(u => u.phone === normalizedPhone);
     
     // If the user does not exist, create them.
     if (!existingUser) {
