@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
 
 
 /**
@@ -136,7 +137,7 @@ export async function verifyOtp(formData: FormData) {
     if (userCheckError || !existingUser) {
         const { error: signUpError } = await supabase.auth.signUp({
             phone: normalizedPhone,
-            password: process.env.NEXT_PUBLIC_SUPABASE_MASTER_PASSWORD!,
+            password: SUPABASE_MASTER_PASSWORD,
             options: {
               data: {
                 full_name: `کاربر ${phone.slice(-4)}`,
@@ -153,7 +154,7 @@ export async function verifyOtp(formData: FormData) {
     // Now, sign the user in to create a session.
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
-        password: process.env.NEXT_PUBLIC_SUPABASE_MASTER_PASSWORD!,
+        password: SUPABASE_MASTER_PASSWORD,
     });
 
     if (sessionError) {
