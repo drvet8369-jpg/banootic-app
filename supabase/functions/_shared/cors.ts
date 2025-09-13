@@ -1,3 +1,4 @@
+
 // supabase/functions/_shared/cors.ts
 // Standard CORS headers for all Edge Functions.
 

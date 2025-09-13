@@ -1,3 +1,4 @@
+
 # Supabase project configuration.
 # https://supabase.com/docs/guides/cli/config
 
@@ -29,8 +30,7 @@ port = 54323
 # Edge Functions
 [functions]
   [functions.kavenegar-otp-sender]
-    # To run this function, you need to add KAVEHNEGAR_API_KEY and KAVEHNEGAR_SENDER_NUMBER
+    # To run this function, you need to add KAVEHNEGAR_API_KEY
     # to your project's secrets:
     # supabase secrets set KAVEHNEGAR_API_KEY=your_api_key
-    # supabase secrets set KAVEHNEGAR_SENDER_NUMBER=your_sender_number
     # verify_jwt = false
