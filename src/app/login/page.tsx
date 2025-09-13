@@ -32,7 +32,7 @@ import { normalizePhoneNumber } from '@/lib/utils';
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: ۰۹۱۲۳۴۵۶۷۸۹).',
   }),
 });
 
@@ -80,7 +80,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                      <Input placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
