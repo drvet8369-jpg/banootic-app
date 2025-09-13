@@ -1,4 +1,4 @@
-import { categories, services } from '@/lib/data';
+import { categories, services } from '@/lib/constants';
 import type { Category, Service } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +20,7 @@ export async function generateStaticParams() {
 
 const getCategoryData = (slug: string): { category: Category | undefined, categoryServices: Service[] } => {
   const category = categories.find((c) => c.slug === slug);
-  const categoryServices = services.filter((s) => s.categorySlug === slug);
+  const categoryServices = services.filter((s) => s.category_id === category?.id);
   return { category, categoryServices };
 };
 

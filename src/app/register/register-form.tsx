@@ -23,11 +23,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { categories, getProviders, saveProviders, services } from '@/lib/data';
+import { categories } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import type { User } from '@/context/AuthContext';
-import type { Provider } from '@/lib/types';
+import { registerUser } from './actions';
+import { useSearchParams } from 'next/navigation';
 
 
 const formSchema = z.object({
@@ -40,16 +39,16 @@ const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
-  serviceType: z.string().optional(),
+  serviceId: z.string().optional(),
   bio: z.string().optional(),
 }).refine(data => {
     if (data.accountType === 'provider') {
-        return !!data.serviceType;
+        return !!data.serviceId;
     }
     return true;
 }, {
     message: 'لطفاً نوع خدمات را انتخاب کنید.',
-    path: ['serviceType'],
+    path: ['serviceId'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.bio && data.bio.length >= 10;
@@ -64,14 +63,15 @@ type UserRegistrationInput = z.infer<typeof formSchema>;
 
 export default function RegisterForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const phoneFromParams = searchParams.get('phone');
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UserRegistrationInput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: '',
+      phone: phoneFromParams || '',
       accountType: 'customer',
       bio: '',
     },
@@ -81,82 +81,27 @@ export default function RegisterForm() {
 
   async function onSubmit(values: UserRegistrationInput) {
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, value]) => {
+      if (value) {
+        formData.append(key, value);
+      }
+    });
 
-      const allProviders = getProviders();
+    const result = await registerUser(formData);
 
-      // Universal check for existing phone number among providers
-      const existingProviderByPhone = allProviders.find(p => p.phone === values.phone);
-      if (existingProviderByPhone) {
-        toast.error('خطا در ثبت‌نام', {
-          description: 'این شماره تلفن قبلاً به عنوان هنرمند ثبت شده است. لطفاً وارد شوید.',
-        });
+    if (result?.error) {
+        toast.error('خطا در ثبت‌نام', { description: result.error });
         setIsLoading(false);
-        return;
-      }
-
-      // Check for existing provider by business name, only if registering as a provider
-      if (values.accountType === 'provider') {
-        const existingProviderByName = allProviders.find(p => p.name.toLowerCase() === values.name.toLowerCase());
-        if (existingProviderByName) {
-            toast.error('خطا در ثبت‌نام', {
-                description: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.',
-            });
-            setIsLoading(false);
-            return;
-        }
-      }
-
-
-      // This is the user object for the AuthContext
-      const userToLogin: User = {
-        name: values.name,
-        phone: values.phone,
-        accountType: values.accountType,
-        serviceType: values.serviceType,
-        bio: values.bio,
-      };
-
-      // Only create a new provider if the account type is 'provider'
-      if (values.accountType === 'provider') {
-        const selectedCategory = categories.find(c => c.slug === values.serviceType);
-        const firstServiceInCat = services.find(s => s.categorySlug === selectedCategory?.slug);
-        
-        const newProvider: Provider = {
-          id: allProviders.length > 0 ? Math.max(...allProviders.map(p => p.id)) + 1 : 1,
-          name: values.name,
-          phone: values.phone,
-          service: selectedCategory?.name || 'خدمت جدید',
-          location: 'ارومیه', // Default location
-          bio: values.bio || '',
-          categorySlug: selectedCategory?.slug || 'beauty',
-          serviceSlug: firstServiceInCat?.slug || 'manicure-pedicure',
-          rating: 0,
-          reviewsCount: 0,
-          profileImage: { src: '', aiHint: 'woman portrait' },
-          portfolio: [],
-        };
-        
-        saveProviders([...allProviders, newProvider]);
-      }
-      
-      login(userToLogin);
-      
-      toast.success('ثبت‌نام با موفقیت انجام شد!', {
-        description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
-      });
-      
-      const destination = values.accountType === 'provider' ? '/profile' : '/';
-      router.push(destination);
-
-    } catch (error) {
-         console.error("Registration failed:", error);
-         toast.error('خطا در ثبت‌نام', {
-            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+    } else {
+        toast.success('ثبت‌نام با موفقیت انجام شد!', {
+            description: 'خوش آمدید! به صفحه اصلی هدایت می‌شوید.',
+            onAutoClose: () => {
+                const destination = values.accountType === 'provider' ? '/profile' : '/';
+                router.push(destination);
+            }
         });
-    } finally {
-        setIsLoading(false);
     }
   }
 
@@ -222,7 +167,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={isLoading} />
+                    <Input placeholder="09123456789" {...field} disabled={isLoading || !!phoneFromParams} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -233,7 +178,7 @@ export default function RegisterForm() {
               <>
                 <FormField
                   control={form.control}
-                  name="serviceType"
+                  name="serviceId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
@@ -245,7 +190,7 @@ export default function RegisterForm() {
                         </FormControl>
                         <SelectContent>
                           {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.slug}>
+                            <SelectItem key={category.id} value={category.id.toString()}>
                               {category.name}
                             </SelectItem>
                           ))}
@@ -270,7 +215,7 @@ export default function RegisterForm() {
                         />
                       </FormControl>
                       <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید (حداکثر ۱۶۰ کاراکتر).
+                        توضیح مختصری درباره آنچه ارائه می‌دهید.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

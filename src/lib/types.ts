@@ -8,9 +8,10 @@ export interface Category {
 }
 
 export interface Service {
+  id: number;
   name: string;
   slug: string;
-  categorySlug: Category['slug'];
+  category_id: number;
 }
 
 export interface PortfolioItem {
@@ -26,10 +27,10 @@ export interface Provider {
   phone: string;
   bio: string;
   categorySlug: Category['slug'];
-  serviceSlug: Service['slug']; // Link to the service
+  serviceSlug: string; 
   rating: number;
   reviewsCount: number;
-  profileImage: PortfolioItem; // Dedicated profile image
+  profileImage: PortfolioItem;
   portfolio: PortfolioItem[];
 }
 
@@ -48,3 +49,12 @@ export interface Message {
   receiverId?: string;
   createdAt: Timestamp;
 }
+
+// From Supabase
+export type Profile = {
+  id: string;
+  account_type: 'customer' | 'provider';
+  full_name: string | null;
+  phone: string | null;
+  updated_at: string | null;
+};
