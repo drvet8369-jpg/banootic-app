@@ -5,58 +5,42 @@ import { createClient as createServerSupabaseClient } from '@/lib/supabase/serve
 import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
-const KAVEHNEGAR_API_KEY = process.env.KAVEHNEGAR_API_KEY;
 
 /**
- * Sends an OTP code via Kavenegar API using a template.
- * This function directly calls the Kavenegar service.
+ * Helper function to invoke a Supabase Edge Function.
+ * This should be used when a server action needs to call an edge function.
  */
-async function sendKavenegarOtp(phone: string, token: string) {
-  if (!KAVEHNEGAR_API_KEY) {
-    console.error('Kavenegar API Key is not set in environment variables.');
-    // Return a user-friendly error message
-    return { error: 'سرویس پیامک به درستی پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.' };
-  }
-
-  const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
-  
-  // Use URLSearchParams for robust parameter encoding
-  const params = new URLSearchParams({
-    receptor: phone,
-    template: 'logincode', // Using the template name confirmed by the user
-    token: token,
-  });
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
+async function invokeSupabaseFunction(functionName: string, body: object) {
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase.functions.invoke(functionName, {
+        body: JSON.stringify(body),
     });
 
-    const responseBody = await response.json();
-
-    // Check for both network errors and API-level errors
-    if (!response.ok || responseBody.return.status !== 200) {
-      console.error('Kavenegar API Error:', responseBody.return.message);
-      // Provide a clear error message for the user
-      return { error: `خطا در ارسال پیامک. لطفاً لحظاتی بعد دوباره تلاش کنید. (کد خطا: ${responseBody.return.status})` };
+    if (error) {
+        console.error(`Error invoking Supabase function '${functionName}':`, error);
+        return { error: `خطا در ارتباط با سرویس ابری (${functionName}).` };
     }
     
-    // On success, return a success object
-    return { success: true };
-
-  } catch (error) {
-    // Catch fetch errors (e.g., network issues)
-    console.error('Fetch error when calling Kavenegar API:', error);
-    return { error: 'خطا در برقراری ارتباط با سرویس پیامک.' };
-  }
+    // The function response is often nested, let's parse it.
+    try {
+      // Edge functions might return a stringified JSON body.
+      const result = typeof data === 'string' ? JSON.parse(data) : data;
+       if(result.error){
+         console.error(`Error returned from Supabase function '${functionName}':`, result.error);
+         return { error: result.error };
+       }
+       return { data: result };
+    } catch (e) {
+      console.error(`Error parsing response from Supabase function '${functionName}':`, e);
+      return { error: 'پاسخ دریافتی از سرویس ابری نامعتبر است.' };
+    }
 }
 
 
 /**
- * Initiates the login process by generating, storing, and sending an OTP.
+ * Initiates the login process by generating, storing, and sending an OTP via a Supabase Edge Function.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -64,14 +48,14 @@ export async function requestOtp(formData: FormData) {
     return { error: 'شماره تلفن الزامی است.' };
   }
   
-  const supabase = createAdminClient();
+  const supabaseAdmin = createAdminClient();
   const normalizedPhone = normalizePhoneNumber(phone);
   
   // Generate a 6-digit random code
   const token = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Store the phone and token in our custom OTP table
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
     .upsert({ phone: normalizedPhone, token: token }, { onConflict: 'phone' });
 
@@ -80,11 +64,17 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
 
-  // Directly send the OTP via Kavenegar
-  const sendResult = await sendKavenegarOtp(normalizedPhone, token);
+  // Instead of calling Kavenegar directly, invoke the Supabase Edge Function.
+  // The function itself will get the token from the one_time_passwords table based on the phone number.
+  // Note: We are sending the raw token to the function as per Supabase's auth hook design.
+  const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
+      phone: normalizedPhone,
+      data: { token: token }
+  });
 
-  if (sendResult.error) {
-      return { error: sendResult.error };
+  if (functionError) {
+      // The error message from invokeSupabaseFunction is user-friendly.
+      return { error: `خطا در ارسال کد تایید: ${functionError}` };
   }
 
   // Redirect to the verification page on success
