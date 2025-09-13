@@ -5,7 +5,6 @@ import { createClient as createServerSupabaseClient } from '@/lib/supabase/serve
 import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
 import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
 
 
@@ -66,8 +65,6 @@ export async function requestOtp(formData: FormData) {
   }
 
   // Instead of calling Kavenegar directly, invoke the Supabase Edge Function.
-  // The function itself will get the token from the one_time_passwords table based on the phone number.
-  // Note: We are sending the raw token to the function as per Supabase's auth hook design.
   const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
       phone: normalizedPhone,
       data: { token: token }
@@ -123,35 +120,34 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'کد تایید وارد شده نامعتبر است.' };
     }
 
-    // 4. OTP is correct. Create Supabase auth session.
-    // We check if the user exists first.
-    const { data: existingUser, error: userCheckError } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('phone', normalizedPhone)
-        .single();
+    // 4. OTP is correct. Now, get or create the user in Supabase Auth.
+    const { data: existingUser, error: userCheckError } = await supabaseAdmin.auth.admin.getUserByPhone(normalizedPhone);
+
+    if (userCheckError && userCheckError.message !== 'User not found') {
+        console.error('Supabase user check error:', userCheckError);
+        return { error: 'خطا در بررسی وضعیت کاربر.' };
+    }
     
-    const supabase = createServerSupabaseClient();
-    
-    // If the user does not exist, we need to sign them up first.
-    if (userCheckError || !existingUser) {
-        const { error: signUpError } = await supabase.auth.signUp({
+    // If the user does not exist, create them.
+    if (!existingUser) {
+        const { error: signUpError } = await supabaseAdmin.auth.admin.createUser({
             phone: normalizedPhone,
             password: SUPABASE_MASTER_PASSWORD,
-            options: {
-              data: {
-                full_name: `کاربر ${phone.slice(-4)}`,
-                account_type: 'customer'
-              }
+            phone_confirm: true, // Since we verified OTP, we can confirm the phone
+            user_metadata: {
+              full_name: `کاربر ${phone.slice(-4)}`,
+              account_type: 'customer'
             }
         });
+
         if (signUpError) {
             console.error('Supabase Sign-Up Error during OTP verify:', signUpError);
             return { error: 'خطا در ایجاد حساب کاربری جدید.'};
         }
     }
     
-    // Now, sign the user in to create a session.
+    // 5. User exists or was just created. Now, sign them in to create a session.
+    const supabase = createServerSupabaseClient();
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
         password: SUPABASE_MASTER_PASSWORD,
@@ -162,9 +158,9 @@ export async function verifyOtp(formData: FormData) {
         return { error: `خطا در ورود به حساب کاربری.`};
     }
 
-    // 5. Clean up the used OTP
+    // 6. Clean up the used OTP
     await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
 
-    // 6. Redirect to home page
+    // 7. Redirect to home page
     redirect('/');
 }
