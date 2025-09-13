@@ -83,6 +83,11 @@ export default function RegisterForm() {
   });
 
   useEffect(() => {
+    // If user is not logged in and there's no phone in params, they must log in first.
+    if (!loading && !session && !phoneFromParams) {
+        router.push('/login');
+    }
+    
     // If the user is already fully registered and somehow lands here, redirect them.
     if (!loading && user && session) {
         if(user.account_type === 'provider' && user.full_name) {
@@ -91,10 +96,7 @@ export default function RegisterForm() {
             router.push('/');
         }
     }
-    // If user is not logged in and there's no phone in params, they must log in first.
-    if (!loading && !session && !phoneFromParams) {
-        router.push('/login');
-    }
+    
     // Pre-fill phone number if it becomes available from auth
     if (phoneFromAuth) {
       form.setValue('phone', phoneFromAuth);
@@ -131,7 +133,9 @@ export default function RegisterForm() {
     }
   }
   
-  if (loading) {
+  // Do not render the form until loading is false AND we have a valid session or phone param
+  // This prevents the flicker of the form before the redirect logic in useEffect runs.
+  if (loading || (!session && !phoneFromParams)) {
       return (
         <div className="flex w-full justify-center items-center py-20">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
