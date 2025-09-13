@@ -1,73 +1,49 @@
-
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { searchProviders } from '@/lib/data';
-import type { Profile } from '@/lib/types';
+import { getProviders } from '@/lib/data';
+import type { Provider } from '@/lib/types';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX, Loader2 } from 'lucide-react';
-import { useEffect, useState, useCallback, Suspense } from 'react';
-
-function SearchResults() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const [searchResults, setSearchResults] = useState<Profile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const performSearch = useCallback(async (currentQuery: string) => {
-    if (!currentQuery) {
-      setSearchResults([]);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const results = await searchProviders(currentQuery);
-    setSearchResults(results);
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => {
-    performSearch(query);
-  }, [query, performSearch]);
-
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full py-20">
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
-      </div>
-    )
-  }
-
-  if (searchResults.length > 0) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {searchResults.map((provider) => (
-          <SearchResultCard key={provider.id} provider={provider} />
-        ))}
-      </div>
-    )
-  }
-
-  if (query) {
-     return (
-        <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
-          <p className="text-muted-foreground mt-2">
-            هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید.
-          </p>
-        </div>
-      )
-  }
-
-  return null;
-}
+import { useEffect, useState, useCallback } from 'react';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
+  const [searchResults, setSearchResults] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // This function now correctly re-fetches and filters data whenever the query changes.
+  const performSearch = useCallback(() => {
+    setIsLoading(true);
+    // Always get the latest providers from localStorage at the moment of searching.
+    const allProviders = getProviders();
+    if (!query) {
+      setSearchResults([]);
+      setIsLoading(false);
+      return;
+    }
+    const lowercasedQuery = query.toLowerCase();
+    const results = allProviders.filter(provider => 
+      provider.name.toLowerCase().includes(lowercasedQuery) ||
+      provider.service.toLowerCase().includes(lowercasedQuery) ||
+      provider.bio.toLowerCase().includes(lowercasedQuery)
+    );
+    setSearchResults(results);
+    setIsLoading(false);
+  }, [query]);
+
+  // useEffect now correctly depends on performSearch.
+  // The window focus listener ensures data is fresh if the user navigates away and back.
+  useEffect(() => {
+    performSearch();
+
+    window.addEventListener('focus', performSearch);
+    return () => {
+      window.removeEventListener('focus', performSearch);
+    };
+  }, [performSearch]);
+
 
   return (
     <div className="py-12 md:py-20">
@@ -84,14 +60,28 @@ export default function SearchPage() {
         )}
       </div>
 
-       <Suspense fallback={
-          <div className="flex flex-col items-center justify-center h-full py-20">
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">در حال بارگذاری...</p>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">در حال جستجو...</p>
+        </div>
+      ) : searchResults.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {searchResults.map((provider) => (
+            <SearchResultCard key={provider.id} provider={provider} />
+          ))}
+        </div>
+      ) : (
+        query && (
+          <div className="text-center py-16 border-2 border-dashed rounded-lg">
+            <SearchX className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-bold text-xl">نتیجه‌ای یافت نشد</h3>
+            <p className="text-muted-foreground mt-2">
+              هیچ ارائه‌دهنده‌ای با عبارت جستجوی شما مطابقت نداشت. لطفا عبارت دیگری را امتحان کنید.
+            </p>
           </div>
-       }>
-          <SearchResults />
-       </Suspense>
+        )
+      )}
     </div>
   );
 }

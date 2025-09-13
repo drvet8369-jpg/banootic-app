@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Metadata } from 'next';
@@ -7,7 +6,8 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Toaster as Sonner } from 'sonner';
+import { Toaster } from "@/components/ui/sonner"
+
 
 const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
@@ -24,7 +24,7 @@ const vazirmatn = Vazirmatn({
 // This can't be a dynamic export in a client component, 
 // so we define it statically here.
 // export const metadata: Metadata = {
-//   title: 'بانوتیک',
+//   title: 'هنربانو',
 //   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
 //   manifest: '/manifest.json',
 // };
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>بانوتیک</title>
+          <title>هنربانو</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
@@ -66,7 +66,7 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-          <Sonner richColors position="top-center" />
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

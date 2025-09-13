@@ -3,9 +3,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import Link from "next/link";
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { requestOtp } from './actions';
 import { toast } from 'sonner';
 
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
+import { requestOtp } from './actions';
 import { normalizePhoneNumber } from '@/lib/utils';
 
+
 const formSchema = z.object({
-  phone: z.string().refine(phone => {
-      const normalized = normalizePhoneNumber(phone);
-      return /^09\d{9}$/.test(normalized);
-  }, {
+  phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
@@ -52,15 +52,12 @@ export default function LoginPage() {
     const formData = new FormData();
     formData.append('phone', normalizePhoneNumber(values.phone));
 
-    // The server action will handle the redirect on success.
     const result = await requestOtp(formData);
 
     if (result?.error) {
-      toast.error("خطا در ارسال کد", {
-        description: result.error,
-      });
+        toast.error('خطا', { description: result.error });
     }
-    
+    // On success, the action handles the redirect itself.
     setIsLoading(false);
   }
 
@@ -70,7 +67,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
           <CardDescription>
-            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید تا کد تایید برایتان ارسال شود.
+            برای ورود یا ساخت حساب کاربری، شماره تلفن خود را وارد کنید.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -83,7 +80,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                      <Input placeholder="09123456789" {...field} disabled={isLoading} dir="ltr" />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -95,6 +92,12 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
+          <div className="mt-4 text-center text-sm">
+            هنرمند هستید؟{" "}
+            <Link href="/register" className="underline">
+              از اینجا ثبت‌نام کنید
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

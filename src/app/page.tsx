@@ -1,10 +1,13 @@
+'use client';
+
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { categories } from '@/lib/data';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, ChefHat, Scissors, Gift } from 'lucide-react';
-import { getCategories } from '@/lib/data';
-import type { Category } from '@/lib/types';
-import { Logo } from '@/components/layout/logo';
+import dynamic from 'next/dynamic';
+
+const Logo = dynamic(() => import('@/components/layout/logo').then(mod => mod.Logo), { ssr: false });
 
 const iconMap: { [key: string]: React.ElementType } = {
   beauty: Palette,
@@ -13,15 +16,13 @@ const iconMap: { [key: string]: React.ElementType } = {
   handicrafts: Gift,
 };
 
-export default async function Home() {
-  const categories: Category[] = await getCategories();
-
+export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-24 w-full">
         <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
         <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">
-          بانوتیک
+          هنربانو
         </h1>
         <p className="mt-4 font-headline text-xl md:text-2xl text-primary-foreground">
           با دستان هنرمندت بدرخش
@@ -51,7 +52,7 @@ export default async function Home() {
         </div>
          <div className="mt-12 text-center">
             <Button asChild variant="secondary" size="lg" className="text-lg">
-              <Link href="/login">به جامعه ما بپیوندید</Link>
+              <Link href="/register">به جامعه ما بپیوندید</Link>
             </Button>
           </div>
       </section>

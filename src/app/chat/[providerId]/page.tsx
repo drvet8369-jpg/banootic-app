@@ -1,6 +1,6 @@
-
 'use client';
 
+import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,10 @@ import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-r
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth, UserProfile } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { getProviderProfile } from '@/lib/data';
-import type { ChatParticipant } from '@/lib/types';
+import type { Provider } from '@/lib/types';
+import Image from 'next/image';
 
 
 interface Message {
@@ -23,13 +23,20 @@ interface Message {
   isEdited?: boolean;
 }
 
+interface OtherPersonDetails {
+    id: string | number;
+    name: string;
+    phone: string;
+    profileImage?: { src: string; aiHint?: string };
+}
+
 
 export default function ChatPage() {
   const params = useParams();
-  const otherPersonId = params.providerId as string;
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const otherPersonIdOrProviderId = params.providerId as string;
+  const { user, isLoggedIn } = useAuth();
 
-  const [otherPersonDetails, setOtherPersonDetails] = useState<ChatParticipant | null>(null);
+  const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -40,9 +47,9 @@ export default function ChatPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
-  const getChatId = useCallback((id1?: string, id2?: string) => {
-    if (!id1 || !id2) return null;
-    return [id1, id2].sort().join('_');
+  const getChatId = useCallback((phone1?: string, phone2?: string) => {
+    if (!phone1 || !phone2) return null;
+    return [phone1, phone2].sort().join('_');
   }, []);
   
   const getInitials = (name: string) => {
@@ -59,37 +66,30 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    async function fetchOtherPersonDetails() {
-        if (!otherPersonId) {
-            setIsLoading(false);
-            return;
-        };
+    if (!isLoggedIn || !user) {
+        setIsLoading(false);
+        return;
+    }
 
-        const providerProfile = await getProviderProfile(otherPersonId);
-        
-        if (providerProfile) {
-          setOtherPersonDetails({
-            id: providerProfile.id,
-            name: providerProfile.full_name,
-            profile_image_url: providerProfile.profile_image_url
-          });
-        } else {
-            // This could be a customer-to-customer chat if we implement that,
-            // for now, we assume it's always a provider or we can't find them.
-            // Fallback for direct chat links where the other user might not be a provider.
-             setOtherPersonDetails({ id: otherPersonId, name: `کاربر`, profile_image_url: '' });
-        }
+    let details: OtherPersonDetails | null = null;
+    const allProviders = getProviders();
+    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+    
+    if (provider) {
+      details = provider;
+    } else {
+      const customerPhone = otherPersonIdOrProviderId;
+      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
     }
     
-    fetchOtherPersonDetails();
-
-  }, [otherPersonId]);
-
-
-  useEffect(() => {
-    if (isAuthLoading || !user || !otherPersonDetails) return;
-
-    const chatId = getChatId(user.id, otherPersonDetails.id);
+    if (!details) {
+        toast.error("خطا", { description: "اطلاعات کاربر یا هنرمند یافت نشد." });
+        setIsLoading(false);
+        return;
+    }
+    setOtherPersonDetails(details);
+    
+    const chatId = getChatId(user.phone, details.phone);
     if (chatId) {
       try {
           const storedMessages = localStorage.getItem(`chat_${chatId}`);
@@ -99,8 +99,8 @@ export default function ChatPage() {
 
           // Mark messages as read when chat is opened
           const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.id]) {
-              allChats[chatId].participants[user.id].unreadCount = 0;
+          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+              allChats[chatId].participants[user.phone].unreadCount = 0;
               localStorage.setItem('inbox_chats', JSON.stringify(allChats));
           }
       } catch(e) {
@@ -110,12 +110,12 @@ export default function ChatPage() {
     
     setIsLoading(false);
 
-  }, [otherPersonId, isAuthLoading, user, otherPersonDetails, getChatId]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId]);
 
 
-  if (!user && !isAuthLoading) {
+  if (!isLoggedIn || !user) {
     return (
-        <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
+        <div className="flex flex-col items-center justify-center text-center py-20">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
             <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
             <p className="text-muted-foreground mt-2">برای ارسال پیام باید وارد حساب کاربری خود شوید.</p>
@@ -126,9 +126,9 @@ export default function ChatPage() {
     );
   }
   
-  if (isLoading || isAuthLoading || !otherPersonDetails) {
+  if (isLoading) {
      return (
-        <div className="flex flex-col items-center justify-center h-full py-20 flex-grow">
+        <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground">در حال بارگذاری گفتگو...</p>
         </div>
@@ -148,7 +148,7 @@ export default function ChatPage() {
   const handleSaveEdit = () => {
     if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
 
-    const chatId = getChatId(user.id, otherPersonDetails.id);
+    const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (!chatId) return;
 
     const updatedMessages = messages.map(msg => {
@@ -186,7 +186,7 @@ export default function ChatPage() {
     const tempUiMessage: Message = {
       id: Date.now().toString(),
       text: text,
-      senderId: user.id,
+      senderId: user.phone,
       createdAt: new Date().toISOString(),
     };
     
@@ -194,31 +194,34 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setNewMessage('');
 
-    const chatId = getChatId(user.id, otherPersonDetails.id);
+    const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (chatId) {
         try {
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
             const currentChat = allChats[chatId] || {
                 id: chatId,
-                members: [user.id, otherPersonDetails.id],
+                members: [user.phone, otherPersonDetails.phone],
                 participants: {
-                    [user.id]: { name: user.full_name, unreadCount: 0 },
-                    [otherPersonDetails.id]: { name: otherPersonDetails.name, unreadCount: 0 }
+                    [user.phone]: { name: user.name, unreadCount: 0 },
+                    [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
                 }
             };
             
+            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
-            const receiverId = otherPersonDetails.id;
-            if (currentChat.participants[receiverId]) {
-                currentChat.participants[receiverId].unreadCount = (currentChat.participants[receiverId].unreadCount || 0) + 1;
+            // Increment unread count for the receiver
+            const receiverPhone = otherPersonDetails.phone;
+            if (currentChat.participants[receiverPhone]) {
+                currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
             } else {
-                 currentChat.participants[receiverId] = { name: otherPersonDetails.name, unreadCount: 1 };
+                 currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
 
-            if (!currentChat.participants[user.id]) {
-                currentChat.participants[user.id] = { name: user.full_name, unreadCount: 0 };
+            // Ensure sender's participant data exists
+            if (!currentChat.participants[user.phone]) {
+                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
             }
 
             allChats[chatId] = currentChat;
@@ -227,7 +230,7 @@ export default function ChatPage() {
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
-            toast.error("خطا", {description: "پیام شما در حافظه موقت ذخیره نشد."});
+            toast.error("خطا", { description: "پیام شما در حافظه موقت ذخیره نشد." });
         }
     }
    
@@ -237,10 +240,11 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    if (user.account_type === 'provider') return '/inbox';
+    if (user.accountType === 'provider') return '/inbox';
+    // For customers, check if they have any chats, if so link to inbox, otherwise home.
     try {
       const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.id));
+      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
       if (userChats.length > 0) return '/inbox';
     } catch (e) { /* ignore */ }
     return '/'; 
@@ -257,8 +261,8 @@ export default function ChatPage() {
              </Button>
            </Link>
            <Avatar>
-            {otherPersonDetails?.profile_image_url ? (
-                <AvatarImage src={otherPersonDetails.profile_image_url} alt={otherPersonDetails.name} />
+            {otherPersonDetails?.profileImage?.src ? (
+                <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
             ) : null }
             <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
           </Avatar>
@@ -275,7 +279,7 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((message) => {
-                const senderIsUser = message.senderId === user?.id;
+                const senderIsUser = message.senderId === user?.phone;
                 const isEditing = editingMessageId === message.id;
 
                 return (
@@ -285,8 +289,8 @@ export default function ChatPage() {
                   >
                     {!senderIsUser && (
                       <Avatar className="h-8 w-8 select-none">
-                        {otherPersonDetails?.profile_image_url ? (
-                            <AvatarImage src={otherPersonDetails.profile_image_url} alt={otherPersonDetails.name} />
+                        {otherPersonDetails?.profileImage?.src ? (
+                            <AvatarImage src={otherPersonDetails.profileImage.src} alt={otherPersonDetails.name} />
                         ) : null }
                         <AvatarFallback>{getInitials(otherPersonDetails?.name ?? '')}</AvatarFallback>
                       </Avatar>
@@ -308,7 +312,7 @@ export default function ChatPage() {
                     ) : (
                          <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
                              <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                <p className="text-sm">
+                                <p className="text-sm font-semibold">
                                   {message.text}
                                   {message.isEdited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
                                 </p>

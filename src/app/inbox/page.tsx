@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -32,7 +31,7 @@ const getInitials = (name: string) => {
 
 
 export default function InboxPage() {
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,8 +43,9 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) {
-      if (!isAuthLoading) setIsLoading(false);
+    if (!user?.phone) {
+      setChats([]);
+      setIsLoading(false);
       return;
     }
 
@@ -56,17 +56,17 @@ export default function InboxPage() {
       const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
       
       const userChats = Object.values(allChatsData)
-        .filter((chat: any) => chat.members?.includes(user.id))
+        .filter((chat: any) => chat.members?.includes(user.phone))
         .map((chat: any): Chat | null => {
             if (!chat.participants || !chat.members) return null;
 
-            const otherMemberId = chat.members.find((id: string) => id !== user.id);
+            const otherMemberId = chat.members.find((id: string) => id !== user.phone);
             if (!otherMemberId) return null;
             
             const otherMemberInfo = chat.participants[otherMemberId];
-            const selfInfo = chat.participants[user.id];
+            const selfInfo = chat.participants[user.phone];
 
-            const otherMemberName = otherMemberInfo?.name || `کاربر`;
+            const otherMemberName = otherMemberInfo?.name || `کاربر ${otherMemberId.slice(-4)}`;
 
             return {
                 id: chat.id,
@@ -87,20 +87,20 @@ export default function InboxPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, isAuthLoading]);
+  }, [user?.phone]);
 
 
-  if (isLoading || isAuthLoading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20 flex-grow">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     )
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20 flex-grow">
+      <div className="flex flex-col items-center justify-center text-center py-20">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>
@@ -118,7 +118,7 @@ export default function InboxPage() {
             <CardHeader>
                 <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
                  <CardDescription>
-                    {user.account_type === 'provider' 
+                    {user.accountType === 'provider' 
                         ? 'آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید.' 
                         : 'آخرین گفتگوهای خود با هنرمندان را در اینجا مشاهده کنید.'}
                 </CardDescription>
@@ -128,11 +128,11 @@ export default function InboxPage() {
                     <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                     <h3 className="font-bold text-xl">صندوق ورودی شما خالی است</h3>
                     <p className="text-muted-foreground mt-2">
-                        {user.account_type === 'provider'
+                        {user.accountType === 'provider'
                             ? 'وقتی پیامی از مشتریان دریافت کنید، در اینجا نمایش داده می‌شود.'
                             : 'برای شروع، یک هنرمند را پیدا کرده و به او پیام دهید.'}
                     </p>
-                    {user.account_type === 'customer' && (
+                    {user.accountType === 'customer' && (
                         <Button asChild className="mt-6">
                             <Link href="/">مشاهده هنرمندان</Link>
                         </Button>
@@ -173,7 +173,7 @@ export default function InboxPage() {
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mt-1">
-                                <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
+                                <p className="text-sm text-muted-foreground truncate font-semibold">{chat.lastMessage}</p>
                                 {chat.unreadCount > 0 && (
                                     <Badge variant="destructive" className="flex-shrink-0">{chat.unreadCount}</Badge>
                                 )}

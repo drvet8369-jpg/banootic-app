@@ -1,75 +1,68 @@
-
 'use client';
 
-import { getServiceBySlug, getProvidersByService } from '@/lib/data';
-import type { Service, Profile, Category } from '@/lib/types';
+import { services, categories, getProviders } from '@/lib/data';
+import type { Service, Provider, Category } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import SearchResultCard from '@/components/search-result-card';
-import { Skeleton } from '@/components/ui/skeleton';
-
-function ProviderCardSkeleton() {
-  return (
-    <div className="border rounded-lg flex flex-col items-center p-6">
-      <Skeleton className="h-24 w-24 rounded-full mb-4" />
-      <Skeleton className="h-6 w-3/4 mb-2" />
-      <Skeleton className="h-5 w-1/2 mb-4" />
-      <Skeleton className="h-5 w-2/3" />
-      <div className="w-full p-4 mt-auto border-t">
-         <Skeleton className="h-10 w-full" />
-      </div>
-    </div>
-  )
-}
 
 export default function ServiceProvidersPage() {
   const params = useParams<{ category: string; service: string }>();
   const { category: categorySlug, service: serviceSlug } = params;
 
   const [service, setService] = useState<Service | null>(null);
-  const [providers, setProviders] = useState<Profile[]>([]);
+  const [category, setCategory] = useState<Category | null>(null);
+  const [serviceProviders, setServiceProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      setError(false);
-      
-      const foundService = await getServiceBySlug(categorySlug, serviceSlug);
-      if (!foundService) {
-        setError(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      const foundProviders = await getProvidersByService(serviceSlug);
+  // This logic is now wrapped in a useCallback to ensure it's stable
+  // and correctly re-fetches data whenever the URL slugs change.
+  const loadData = useCallback(() => {
+    setIsLoading(true);
 
-      setService(foundService);
-      setProviders(foundProviders);
-      setIsLoading(false);
+    const foundCategory = categories.find((c) => c.slug === categorySlug);
+    const foundService = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
+    
+    setCategory(foundCategory || null);
+    setService(foundService || null);
+      
+    if (foundCategory && foundService) {
+      // Always get the latest providers from localStorage inside the function
+      const allProviders = getProviders();
+      // Correctly filter providers based on the serviceSlug from the URL.
+      const foundProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+      setServiceProviders(foundProviders);
+    } else {
+      setServiceProviders([]);
     }
-    loadData();
+    
+    setIsLoading(false);
   }, [categorySlug, serviceSlug]);
+
+  // useEffect now has a stable dependency and will re-run correctly
+  // every time the user navigates to a new service page or revisits the tab.
+  useEffect(() => {
+    loadData();
+
+    window.addEventListener('focus', loadData);
+    return () => {
+      window.removeEventListener('focus', loadData);
+    };
+  }, [loadData]);
 
   if (isLoading) {
     return (
-        <div className="py-12 md:py-20">
-          <div className="text-center mb-12">
-            <Skeleton className="h-12 w-1/3 mx-auto mb-4" />
-            <Skeleton className="h-5 w-1/2 mx-auto" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array.from({length: 3}).map((_,i) => <ProviderCardSkeleton key={i} />)}
-          </div>
+        <div className="flex flex-col items-center justify-center h-full py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">در حال یافتن هنرمندان...</p>
         </div>
     );
   }
   
-  if (error || !service) {
+  if (!service || !category) {
     notFound();
   }
 
@@ -79,19 +72,15 @@ export default function ServiceProvidersPage() {
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">
           ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی{' '}
-          <Link href={`/services/${categorySlug}`} className="hover:underline">
-            {
-                // We don't have the category name here without another query,
-                // so we can just show the slug or fetch it if needed.
-                categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1)
-            }
+          <Link href={`/services/${category.slug}`} className="hover:underline">
+            {category.name}
           </Link>
         </p>
       </div>
 
-      {providers.length > 0 ? (
+      {serviceProviders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {providers.map((provider) => (
+          {serviceProviders.map((provider) => (
             <SearchResultCard key={provider.id} provider={provider} />
           ))}
         </div>
@@ -99,7 +88,7 @@ export default function ServiceProvidersPage() {
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">هنوز هیچ ارائه‌دهنده‌ای برای این سرویس ثبت‌نام نکرده است.</p>
           <Button asChild variant="link" className="mt-2">
-            <Link href="/login">اولین نفر باشید!</Link>
+            <Link href="/register">اولین نفر باشید!</Link>
           </Button>
         </div>
       )}
