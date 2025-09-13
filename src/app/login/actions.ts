@@ -136,7 +136,7 @@ export async function verifyOtp(formData: FormData) {
     if (userCheckError || !existingUser) {
         const { error: signUpError } = await supabase.auth.signUp({
             phone: normalizedPhone,
-            password: process.env.SUPABASE_MASTER_PASSWORD!,
+            password: process.env.NEXT_PUBLIC_SUPABASE_MASTER_PASSWORD!,
             options: {
               data: {
                 full_name: `کاربر ${phone.slice(-4)}`,
@@ -153,7 +153,7 @@ export async function verifyOtp(formData: FormData) {
     // Now, sign the user in to create a session.
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
-        password: process.env.SUPABASE_MASTER_PASSWORD!,
+        password: process.env.NEXT_PUBLIC_SUPABASE_MASTER_PASSWORD!,
     });
 
     if (sessionError) {
