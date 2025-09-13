@@ -18,17 +18,21 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { logout as logoutAction } from './actions';
 
 const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
 
+
 export default function Header() {
-  const { isLoggedIn, user, logout } = useAuth();
+  const { user, loading, session } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     setIsSheetOpen(false);
   }, [pathname]);
+
+  const isLoggedIn = !!session;
 
   const getInitials = (name: string) => {
     if (!name) return '..';
@@ -45,14 +49,14 @@ export default function Header() {
          <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-primary-foreground" />
-              <span className="font-display text-2xl font-bold">هنربانو</span>
+              <span className="font-display text-2xl font-bold">بانوتیک</span>
             </Link>
          </SheetClose>
       </div>
       <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn ? (
+        {isLoggedIn && user ? (
            <>
-             {user?.accountType === 'provider' && (
+             {user?.account_type === 'provider' && (
                 <SheetClose asChild>
                   <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                     <UserRound className="h-5 w-5" />
@@ -89,23 +93,35 @@ export default function Header() {
         <div className="mt-auto p-4 border-t">
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
-                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                <AvatarFallback>{getInitials(user.full_name || '')}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                  <span className="font-medium">{user.name}</span>
+                  <span className="font-medium">{user.full_name}</span>
                   <span className="text-xs text-muted-foreground">{user.phone}</span>
               </div>
             </div>
             <SheetClose asChild>
-              <Button onClick={logout} variant="ghost" className="w-full justify-start">
-                  <LogOut className="ml-2 h-5 w-5" />
-                  خروج
-              </Button>
+              <form action={logoutAction}>
+                <Button type="submit" variant="ghost" className="w-full justify-start">
+                    <LogOut className="ml-2 h-5 w-5" />
+                    خروج
+                </Button>
+              </form>
             </SheetClose>
         </div>
       )}
     </div>
   );
+
+  if (loading) {
+    return (
+     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between">
+           {/* Skeleton loader */}
+        </div>
+     </header>
+    )
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -119,7 +135,7 @@ export default function Header() {
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                         <Avatar>
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(user.full_name || '')}</AvatarFallback>
                         </Avatar>
                         <InboxBadge isMenu />
                     </Button>
@@ -127,12 +143,12 @@ export default function Header() {
                     <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-sm font-medium leading-none">{user.full_name}</p>
                         <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.accountType === 'provider' && (
+                    {user.account_type === 'provider' && (
                         <DropdownMenuItem asChild>
                         <Link href="/profile">
                             <UserRound className="ml-2 h-4 w-4" />
@@ -148,10 +164,14 @@ export default function Header() {
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
-                        <LogOut className="ml-2 h-4 w-4" />
-                        <span>خروج</span>
-                    </DropdownMenuItem>
+                     <form action={logoutAction}>
+                        <DropdownMenuItem asChild>
+                            <button type="submit" className="w-full">
+                                <LogOut className="ml-2 h-4 w-4" />
+                                <span>خروج</span>
+                            </button>
+                        </DropdownMenuItem>
+                    </form>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 ) : (
@@ -183,7 +203,7 @@ export default function Header() {
 
         {/* Right Side: Branding */}
         <Link href="/" className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">هنربانو</span>
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
             <Logo className="h-10 w-10 text-primary-foreground" />
         </Link>
       </div>
