@@ -55,10 +55,10 @@ export async function requestOtp(formData: FormData) {
   const token = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Store the phone and token in our custom OTP table.
-  // We also reset the creation time using `now()` from the database.
+  // By not providing `created_at`, we let the database use its default `now()` function.
   const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
-    .upsert({ phone: normalizedPhone, token: token, created_at: new Date().toISOString() }, { onConflict: 'phone' });
+    .upsert({ phone: normalizedPhone, token: token }, { onConflict: 'phone' });
 
   if (upsertError) {
     console.error('Error storing OTP:', upsertError);
@@ -108,16 +108,16 @@ export async function verifyOtp(formData: FormData) {
     }
     
     // 2. Check if the token is expired (e.g., 5 minutes validity)
-    // IMPORTANT FIX: Compare against the database's current time, not the server's.
-    const otpCreatedAt = new Date(otpEntry.created_at).getTime();
-    const { data: { currentTime }, error: timeError } = await supabaseAdmin.rpc('get_current_server_time');
+    // We get the current time from the DB itself to avoid server time mismatches.
+    const { data: rpcData, error: timeError } = await supabaseAdmin.rpc('get_current_server_time');
 
-    if (timeError || !currentTime) {
+    if (timeError || !rpcData) {
       console.error('Could not get server time from DB:', timeError);
       return { error: 'خطا در بررسی زمان انقضای کد.' };
     }
     
-    const serverNow = new Date(currentTime).getTime();
+    const serverNow = new Date(rpcData).getTime();
+    const otpCreatedAt = new Date(otpEntry.created_at).getTime();
     const expiresIn = 5 * 60 * 1000; // 5 minutes in milliseconds
 
     if (serverNow - otpCreatedAt > expiresIn) {
