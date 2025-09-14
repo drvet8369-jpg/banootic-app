@@ -54,10 +54,11 @@ export async function requestOtp(formData: FormData) {
   // Generate a 6-digit random code
   const token = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store the phone and token in our custom OTP table
+  // Store the phone and token in our custom OTP table.
+  // We also reset the creation time using `now()` from the database.
   const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
-    .upsert({ phone: normalizedPhone, token: token }, { onConflict: 'phone' });
+    .upsert({ phone: normalizedPhone, token: token, created_at: new Date().toISOString() }, { onConflict: 'phone' });
 
   if (upsertError) {
     console.error('Error storing OTP:', upsertError);
@@ -105,15 +106,25 @@ export async function verifyOtp(formData: FormData) {
         console.error('Error fetching OTP or OTP not found:', fetchError);
         return { error: 'کد تایید یافت نشد یا نامعتبر است. لطفاً دوباره درخواست کد دهید.' };
     }
-
+    
     // 2. Check if the token is expired (e.g., 5 minutes validity)
-    const otpCreatedAt = new Date(otpEntry.created_at);
-    const now = new Date();
+    // IMPORTANT FIX: Compare against the database's current time, not the server's.
+    const otpCreatedAt = new Date(otpEntry.created_at).getTime();
+    const { data: { currentTime }, error: timeError } = await supabaseAdmin.rpc('get_current_server_time');
+
+    if (timeError || !currentTime) {
+      console.error('Could not get server time from DB:', timeError);
+      return { error: 'خطا در بررسی زمان انقضای کد.' };
+    }
+    
+    const serverNow = new Date(currentTime).getTime();
     const expiresIn = 5 * 60 * 1000; // 5 minutes in milliseconds
-    if (now.getTime() - otpCreatedAt.getTime() > expiresIn) {
+
+    if (serverNow - otpCreatedAt > expiresIn) {
         await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
         return { error: 'کد تایید منقضی شده است. لطفاً دوباره درخواست کد دهید.' };
     }
+
 
     // 3. Check if the token matches
     if (otpEntry.token !== token) {
@@ -121,7 +132,10 @@ export async function verifyOtp(formData: FormData) {
     }
 
     // 4. OTP is correct. Now, get or create the user in Supabase Auth.
-    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
 
     if (listUsersError) {
         console.error('Supabase listUsers error:', listUsersError);
@@ -136,10 +150,6 @@ export async function verifyOtp(formData: FormData) {
             phone: normalizedPhone,
             password: SUPABASE_MASTER_PASSWORD,
             phone_confirm: true, // Since we verified OTP, we can confirm the phone
-            user_metadata: {
-              full_name: `کاربر ${phone.slice(-4)}`,
-              account_type: 'customer'
-            }
         });
 
         if (signUpError) {
@@ -150,7 +160,7 @@ export async function verifyOtp(formData: FormData) {
     
     // 5. User exists or was just created. Now, sign them in to create a session.
     const supabase = createServerSupabaseClient();
-    const { error: sessionError } = await supabase.auth.signInWithPassword({
+    const { data: { session } , error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
         password: SUPABASE_MASTER_PASSWORD,
     });
@@ -159,10 +169,18 @@ export async function verifyOtp(formData: FormData) {
         console.error('Supabase Sign-In Error during OTP verify:', sessionError);
         return { error: `خطا در ورود به حساب کاربری.`};
     }
+    
+     if (!session?.user.user_metadata?.full_name) {
+       // This is a new or incomplete user. Redirect to complete registration.
+       await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
+       redirect(`/register?phone=${phone}`);
+     }
 
     // 6. Clean up the used OTP
     await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
 
-    // 7. Redirect to home page
+    // 7. Redirect to home page for fully registered users
     redirect('/');
 }
+
+    
