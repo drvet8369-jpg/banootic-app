@@ -54,13 +54,13 @@ export async function requestOtp(formData: FormData) {
   const token = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Store the phone and token.
-  // The `created_at` column will be automatically populated with `now()` by the database.
+  // We explicitly set created_at so the database doesn't have to.
   const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
     .upsert({ 
         phone: normalizedPhone, 
         token: token,
-        created_at: new Date().toISOString() // Explicitly set created_at
+        created_at: new Date().toISOString()
     }, { onConflict: 'phone' });
 
   if (upsertError) {
