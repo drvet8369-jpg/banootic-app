@@ -53,12 +53,17 @@ export async function requestOtp(formData: FormData) {
   
   // Generate a 6-digit random code
   const token = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresIn = 5 * 60 * 1000; // 5 minutes in milliseconds
+  const expires_at = new Date(Date.now() + expiresIn).toISOString();
 
-  // Store the phone and token in our custom OTP table.
-  // By not providing `created_at`, we let the database use its default `now()` function.
+  // Store the phone, token, and the exact expiration time.
   const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
-    .upsert({ phone: normalizedPhone, token: token }, { onConflict: 'phone' });
+    .upsert({ 
+        phone: normalizedPhone, 
+        token: token,
+        expires_at: expires_at 
+    }, { onConflict: 'phone' });
 
   if (upsertError) {
     console.error('Error storing OTP:', upsertError);
@@ -94,44 +99,26 @@ export async function verifyOtp(formData: FormData) {
 
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
+    const now = new Date().toISOString();
 
-    // 1. Fetch the stored OTP from our custom table
+    // 1. Fetch the OTP entry, but only if it matches and is not expired.
+    // The database will handle the time comparison.
     const { data: otpEntry, error: fetchError } = await supabaseAdmin
         .from('one_time_passwords')
-        .select('token, created_at')
+        .select('phone') // we only need to know if it exists
         .eq('phone', normalizedPhone)
+        .eq('token', token)
+        .gte('expires_at', now) // Check if the expiration time is greater than or equal to the current time
         .single();
     
     if (fetchError || !otpEntry) {
-        console.error('Error fetching OTP or OTP not found:', fetchError);
-        return { error: 'کد تایید یافت نشد یا نامعتبر است. لطفاً دوباره درخواست کد دهید.' };
-    }
-    
-    // 2. Check if the token is expired (e.g., 5 minutes validity)
-    // We get the current time from the DB itself to avoid server time mismatches.
-    const { data: rpcData, error: timeError } = await supabaseAdmin.rpc('get_current_server_time');
-
-    if (timeError || !rpcData) {
-      console.error('Could not get server time from DB:', timeError);
-      return { error: 'خطا در بررسی زمان انقضای کد.' };
-    }
-    
-    const serverNow = new Date(rpcData).getTime();
-    const otpCreatedAt = new Date(otpEntry.created_at).getTime();
-    const expiresIn = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-    if (serverNow - otpCreatedAt > expiresIn) {
+        console.error('Error fetching OTP or OTP is invalid/expired:', fetchError);
+        // We delete any expired/invalid tokens for this number to allow a retry.
         await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
-        return { error: 'کد تایید منقضی شده است. لطفاً دوباره درخواست کد دهید.' };
+        return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده. لطفاً دوباره درخواست کد دهید.' };
     }
-
-
-    // 3. Check if the token matches
-    if (otpEntry.token !== token) {
-        return { error: 'کد تایید وارد شده نامعتبر است.' };
-    }
-
-    // 4. OTP is correct. Now, get or create the user in Supabase Auth.
+    
+    // 2. OTP is correct. Now, get or create the user in Supabase Auth.
     const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
       perPage: 1000,
@@ -158,7 +145,7 @@ export async function verifyOtp(formData: FormData) {
         }
     }
     
-    // 5. User exists or was just created. Now, sign them in to create a session.
+    // 3. User exists or was just created. Now, sign them in to create a session.
     const supabase = createServerSupabaseClient();
     const { data: { session } , error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
@@ -176,11 +163,9 @@ export async function verifyOtp(formData: FormData) {
        redirect(`/register?phone=${phone}`);
      }
 
-    // 6. Clean up the used OTP
+    // 4. Clean up the used OTP
     await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
 
-    // 7. Redirect to home page for fully registered users
+    // 5. Redirect to home page for fully registered users
     redirect('/');
 }
-
-    
