@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
@@ -98,21 +99,17 @@ export async function verifyOtp(formData: FormData) {
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // 1. Check if a valid, non-expired OTP exists.
-    // The time comparison is now done entirely inside the database using its own clock.
+    // DEBUGGING STEP: Temporarily remove the time check to isolate the problem.
     const { data: otpEntry, error: selectError } = await supabaseAdmin
         .from('one_time_passwords')
         .select('*')
         .eq('phone', normalizedPhone)
         .eq('token', token)
-        .gte('created_at', `now() - interval '5 minutes'`)
         .single();
     
     if (selectError || !otpEntry) {
-        console.error('OTP validation failed:', selectError);
-        // We can delete any potentially expired tokens for this number to allow a clean retry.
-        await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
-        return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده. لطفاً دوباره درخواست کد دهید.' };
+        console.error('OTP validation failed (DEBUG MODE - NO TIME CHECK):', selectError);
+        return { error: 'کد تایید وارد شده نامعتبر است یا یافت نشد.' };
     }
     
     // 2. OTP is correct. Now, get or create the user in Supabase Auth.
