@@ -99,15 +99,13 @@ export async function verifyOtp(formData: FormData) {
     const normalizedPhone = normalizePhoneNumber(phone);
 
     // 1. Check if a valid, non-expired OTP exists.
-    // We check for the phone, the token, AND that the created_at timestamp is within the last 5 minutes.
-    // The comparison is done on the database server to avoid timezone issues.
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // The time comparison is now done entirely inside the database using its own clock.
     const { data: otpEntry, error: selectError } = await supabaseAdmin
         .from('one_time_passwords')
         .select('*')
         .eq('phone', normalizedPhone)
         .eq('token', token)
-        .gte('created_at', fiveMinutesAgo)
+        .gte('created_at', `now() - interval '5 minutes'`)
         .single();
     
     if (selectError || !otpEntry) {
