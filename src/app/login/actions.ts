@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
@@ -53,16 +52,14 @@ export async function requestOtp(formData: FormData) {
   
   // Generate a 6-digit random code
   const token = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresIn = 5 * 60 * 1000; // 5 minutes in milliseconds
-  const expires_at = new Date(Date.now() + expiresIn).toISOString();
 
-  // Store the phone, token, and the exact expiration time.
+  // Store the phone and token.
+  // The `created_at` column will be automatically populated with `now()` by the database.
   const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
     .upsert({ 
         phone: normalizedPhone, 
         token: token,
-        expires_at: expires_at 
     }, { onConflict: 'phone' });
 
   if (upsertError) {
@@ -99,21 +96,16 @@ export async function verifyOtp(formData: FormData) {
 
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
-    const now = new Date().toISOString();
 
-    // 1. Fetch the OTP entry, but only if it matches and is not expired.
-    // The database will handle the time comparison.
-    const { data: otpEntry, error: fetchError } = await supabaseAdmin
-        .from('one_time_passwords')
-        .select('phone') // we only need to know if it exists
-        .eq('phone', normalizedPhone)
-        .eq('token', token)
-        .gte('expires_at', now) // Check if the expiration time is greater than or equal to the current time
-        .single();
-    
-    if (fetchError || !otpEntry) {
-        console.error('Error fetching OTP or OTP is invalid/expired:', fetchError);
-        // We delete any expired/invalid tokens for this number to allow a retry.
+    // 1. Check if a valid, non-expired OTP exists using a database function.
+    const { data: otpEntry, error: rpcError } = await supabaseAdmin.rpc('verify_otp', {
+      user_phone: normalizedPhone,
+      user_token: token
+    });
+
+    if (rpcError || !otpEntry) {
+        console.error('RPC Error or OTP validation failed:', rpcError);
+        // We can delete any potentially expired tokens for this number to allow a clean retry.
         await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
         return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده. لطفاً دوباره درخواست کد دهید.' };
     }
