@@ -60,6 +60,7 @@ export async function requestOtp(formData: FormData) {
     .upsert({ 
         phone: normalizedPhone, 
         token: token,
+        created_at: new Date().toISOString() // Explicitly set created_at
     }, { onConflict: 'phone' });
 
   if (upsertError) {
@@ -97,15 +98,20 @@ export async function verifyOtp(formData: FormData) {
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // 1. Check if a valid, non-expired OTP exists using a database function (RPC).
-    // This is the most reliable way to handle time-sensitive checks.
-    const { data: otpEntry, error: rpcError } = await supabaseAdmin.rpc('verify_otp', {
-      user_phone: normalizedPhone,
-      user_token: token
-    });
-
-    if (rpcError || !otpEntry) {
-        console.error('RPC Error or OTP validation failed:', rpcError);
+    // 1. Check if a valid, non-expired OTP exists.
+    // We check for the phone, the token, AND that the created_at timestamp is within the last 5 minutes.
+    // The comparison is done on the database server to avoid timezone issues.
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: otpEntry, error: selectError } = await supabaseAdmin
+        .from('one_time_passwords')
+        .select('*')
+        .eq('phone', normalizedPhone)
+        .eq('token', token)
+        .gte('created_at', fiveMinutesAgo)
+        .single();
+    
+    if (selectError || !otpEntry) {
+        console.error('OTP validation failed:', selectError);
         // We can delete any potentially expired tokens for this number to allow a clean retry.
         await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
         return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده. لطفاً دوباره درخواست کد دهید.' };
