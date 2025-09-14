@@ -97,7 +97,8 @@ export async function verifyOtp(formData: FormData) {
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // 1. Check if a valid, non-expired OTP exists using a database function.
+    // 1. Check if a valid, non-expired OTP exists using a database function (RPC).
+    // This is the most reliable way to handle time-sensitive checks.
     const { data: otpEntry, error: rpcError } = await supabaseAdmin.rpc('verify_otp', {
       user_phone: normalizedPhone,
       user_token: token
