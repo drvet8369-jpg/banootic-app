@@ -98,18 +98,19 @@ export async function verifyOtp(formData: FormData) {
 
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-    // DEBUGGING STEP: Temporarily remove the time check to isolate the problem.
     const { data: otpEntry, error: selectError } = await supabaseAdmin
         .from('one_time_passwords')
         .select('*')
         .eq('phone', normalizedPhone)
         .eq('token', token)
+        .gte('created_at', fiveMinutesAgo)
         .single();
     
     if (selectError || !otpEntry) {
-        console.error('OTP validation failed (DEBUG MODE - NO TIME CHECK):', selectError);
-        return { error: 'کد تایید وارد شده نامعتبر است یا یافت نشد.' };
+        console.error('OTP validation failed:', selectError);
+        return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
     }
     
     // 2. OTP is correct. Now, get or create the user in Supabase Auth.
