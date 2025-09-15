@@ -14,6 +14,7 @@ export const createAdminClient = () => {
   }
 
   // When using the service_role key, we should disable session persistence.
+  // This correctly creates a client with admin privileges.
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
