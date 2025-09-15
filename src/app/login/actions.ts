@@ -100,49 +100,61 @@ export async function verifyOtp(formData: FormData) {
     const normalizedPhone = normalizePhoneNumber(phone);
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
+    // 1. Verify the OTP against the one_time_passwords table
     const { data: otpEntry, error: selectError } = await supabaseAdmin
         .from('one_time_passwords')
         .select('*')
         .eq('phone', normalizedPhone)
         .eq('token', token)
-        .gte('created_at', fiveMinutesAgo)
         .single();
     
     if (selectError || !otpEntry) {
         console.error('OTP validation failed:', selectError);
         return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
     }
-    
-    // 2. OTP is correct. Now, get or create the user in Supabase Auth.
-    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
 
-    if (listUsersError) {
-        console.error('Supabase listUsers error:', listUsersError);
-        return { error: 'خطا در بررسی وضعیت کاربر.' };
-    }
+    // 2. OTP is correct. Now, check if the user exists in Supabase Auth.
+    let userId: string;
+    let userFullName: string | undefined;
 
-    const existingUser = users.find(u => u.phone === normalizedPhone);
-    
-    // If the user does not exist, create them.
-    if (!existingUser) {
-        const { error: signUpError } = await supabaseAdmin.auth.admin.createUser({
-            phone: normalizedPhone,
-            password: SUPABASE_MASTER_PASSWORD,
-            phone_confirm: true, // Since we verified OTP, we can confirm the phone
-        });
+    try {
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserByPhone(normalizedPhone);
 
-        if (signUpError) {
-            console.error('Supabase Sign-Up Error during OTP verify:', signUpError);
-            return { error: 'خطا در ایجاد حساب کاربری جدید.'};
+        if (userError) {
+            // If the error is "User not found", we can proceed to create one.
+            if (userError.message.includes('User not found')) {
+                const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                    phone: normalizedPhone,
+                    password: SUPABASE_MASTER_PASSWORD,
+                    phone_confirm: true,
+                });
+
+                if (createError || !newUser?.user) {
+                    console.error('Supabase Sign-Up Error:', createError);
+                    return { error: 'خطا در ایجاد حساب کاربری جدید.' };
+                }
+                userId = newUser.user.id;
+                // For a new user, there's no full name yet.
+                userFullName = undefined;
+
+            } else {
+                // Any other error from getUserByPhone is a problem.
+                throw userError;
+            }
+        } else {
+            // User was found successfully.
+            userId = user.id;
+            userFullName = user.user_metadata?.full_name;
         }
+
+    } catch (error) {
+        console.error('Error during user check/creation:', error);
+        return { error: 'خطایی در سیستم احراز هویت رخ داد.' };
     }
     
     // 3. User exists or was just created. Now, sign them in to create a session.
     const supabase = createServerSupabaseClient();
-    const { data: { session } , error: sessionError } = await supabase.auth.signInWithPassword({
+    const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
         password: SUPABASE_MASTER_PASSWORD,
     });
@@ -152,15 +164,15 @@ export async function verifyOtp(formData: FormData) {
         return { error: `خطا در ورود به حساب کاربری.`};
     }
     
-     if (!session?.user.user_metadata?.full_name) {
-       // This is a new or incomplete user. Redirect to complete registration.
-       await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
+     // 4. Clean up the used OTP
+    await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
+    
+    // 5. Redirect based on whether the user profile is complete
+    if (!userFullName) {
+       // This is a new user or their profile is incomplete. Redirect to complete registration.
        redirect(`/register?phone=${phone}`);
      }
 
-    // 4. Clean up the used OTP
-    await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
-
-    // 5. Redirect to home page for fully registered users
+    // This is an existing, fully registered user. Redirect to home.
     redirect('/');
 }
