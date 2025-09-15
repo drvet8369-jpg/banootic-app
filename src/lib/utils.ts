@@ -34,21 +34,34 @@ export function normalizePhoneNumber(phone: string): string {
     convertedPhone += char;
   }
 
-  // Remove any non-digit characters except for a leading '+'
-  let normalized = convertedPhone.replace(/[^\d+]/g, '');
+  // Remove any non-digit characters
+  let normalized = convertedPhone.replace(/\D/g, '');
 
-  // If the number starts with 09, replace it with +989
-  if (normalized.startsWith('09')) {
-    normalized = '+989' + normalized.substring(2);
+  // If the number starts with 98, it's likely already in a good format but without the +
+  if (normalized.startsWith('98')) {
+    return `+${normalized}`;
   }
-  // If it starts with 9 (without leading 0), prepend +98
-  else if (normalized.startsWith('9')) {
-    normalized = '+98' + normalized;
-  }
-  // If it already starts with 98, prepend +
-  else if (normalized.startsWith('98')) {
-    normalized = '+' + normalized;
+
+  // If the number starts with 0, replace it with +98
+  if (normalized.startsWith('0')) {
+    return `+98${normalized.substring(1)}`;
   }
   
+  // If it's a 10-digit number starting with 9 (e.g. 912...), prepend +98
+  if (normalized.length === 10 && normalized.startsWith('9')) {
+    return `+98${normalized}`;
+  }
+  
+  // Fallback for numbers that might be missing the leading 0 (e.g. 912... instead of 0912...)
+  // This might not be hit if the regex in the form validation is strict.
+  if (normalized.length > 9 && !normalized.startsWith('+98')) {
+      return `+98${normalized}`;
+  }
+
+  // If it doesn't match known patterns but looks like a number, return with +98 prefix as a best guess
+  if (!normalized.startsWith('+')) {
+    return `+98${normalized}`;
+  }
+
   return normalized;
 }
