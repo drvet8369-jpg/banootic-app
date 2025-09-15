@@ -7,9 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Normalizes an Iranian phone number to the international +98 format.
- * It also converts Persian/Arabic numerals to English numerals.
+ * It handles Persian/Arabic numerals, leading zeros, and missing country codes.
  * @param phone The phone number to normalize.
- * @returns The normalized phone number.
+ * @returns The normalized phone number in +98 format.
  */
 export function normalizePhoneNumber(phone: string): string {
   if (!phone) return '';
@@ -18,6 +18,7 @@ export function normalizePhoneNumber(phone: string): string {
   const arabicNumerals = "٠١٢٣٤٥٦٧٨٩";
   const englishNumerals = "0123456789";
 
+  // Convert Persian/Arabic numerals to English
   let convertedPhone = "";
   for (let i = 0; i < phone.length; i++) {
     const char = phone[i];
@@ -34,34 +35,30 @@ export function normalizePhoneNumber(phone: string): string {
     convertedPhone += char;
   }
 
-  // Remove any non-digit characters
-  let normalized = convertedPhone.replace(/\D/g, '');
-
-  // If the number starts with 98, it's likely already in a good format but without the +
-  if (normalized.startsWith('98')) {
-    return `+${normalized}`;
+  // Remove any non-digit characters except for a leading +
+  let clean = convertedPhone.replace(/[\s-()]/g, '');
+  
+  // If it already starts with +98 and is the correct length, it's good.
+  if (clean.startsWith('+98') && clean.length === 13) {
+    return clean;
   }
 
-  // If the number starts with 0, replace it with +98
-  if (normalized.startsWith('0')) {
-    return `+98${normalized.substring(1)}`;
+  // Remove leading + if it's not followed by 98
+  if (clean.startsWith('+') && !clean.startsWith('+98')) {
+    clean = clean.substring(1);
+  }
+
+  // Remove leading 98 if it's not part of a +98 prefix
+  if (clean.startsWith('98')) {
+    clean = clean.substring(2);
   }
   
-  // If it's a 10-digit number starting with 9 (e.g. 912...), prepend +98
-  if (normalized.length === 10 && normalized.startsWith('9')) {
-    return `+98${normalized}`;
+  // If number starts with a 0, remove it (e.g., 0912 -> 912)
+  if (clean.startsWith('0')) {
+    clean = clean.substring(1);
   }
   
-  // Fallback for numbers that might be missing the leading 0 (e.g. 912... instead of 0912...)
-  // This might not be hit if the regex in the form validation is strict.
-  if (normalized.length > 9 && !normalized.startsWith('+98')) {
-      return `+98${normalized}`;
-  }
-
-  // If it doesn't match known patterns but looks like a number, return with +98 prefix as a best guess
-  if (!normalized.startsWith('+')) {
-    return `+98${normalized}`;
-  }
-
-  return normalized;
+  // After all cleaning, if the number is not 10 digits (like 9123456789), it's likely invalid,
+  // but we'll prepend +98 anyway as a best effort.
+  return `+98${clean}`;
 }
