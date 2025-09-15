@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
@@ -113,7 +112,7 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
     }
 
-    // 2. OTP is correct. Now, check if the user exists in Supabase Auth.
+    // 2. User exists or was just created. Now, check if the user exists in Supabase Auth.
     let userId: string;
     let userFullName: string | undefined;
 
@@ -131,7 +130,7 @@ export async function verifyOtp(formData: FormData) {
 
                 if (createError || !newUser?.user) {
                     console.error('Supabase Sign-Up Error:', createError);
-                    return { error: 'خطا در ایجاد حساب کاربری جدید.' };
+                    return { error: `خطا در ایجاد حساب کاربری جدید: ${createError?.message}` };
                 }
                 userId = newUser.user.id;
                 // For a new user, there's no full name yet.
@@ -147,9 +146,9 @@ export async function verifyOtp(formData: FormData) {
             userFullName = user.user_metadata?.full_name;
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error during user check/creation:', error);
-        return { error: 'خطایی در سیستم احراز هویت رخ داد.' };
+        return { error: `خطایی در سیستم احراز هویت رخ داد: ${error.message}` };
     }
     
     // 3. User exists or was just created. Now, sign them in to create a session.
@@ -161,7 +160,7 @@ export async function verifyOtp(formData: FormData) {
 
     if (sessionError) {
         console.error('Supabase Sign-In Error during OTP verify:', sessionError);
-        return { error: `خطا در ورود به حساب کاربری.`};
+        return { error: `خطا در ورود به حساب کاربری: ${sessionError.message}`};
     }
     
      // 4. Clean up the used OTP
