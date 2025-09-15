@@ -1,7 +1,7 @@
 // This file contains server-side configuration that should not be exposed to the client.
 // WARNING: Do not import this file into any client-side components.
 
-// IMPORTANT: Replace "YOUR_VERY_SECURE_PASSWORD_HERE" with the actual complex password 
-// you have set in your .env.local file for NEXT_PUBLIC_SUPABASE_MASTER_PASSWORD.
-// This password must be the same in both places.
-export const SUPABASE_MASTER_PASSWORD = "N8&z!k#fP$T@5qW9sE2rD*gH";
+// IMPORTANT: This is a secure, randomly generated password for internal use.
+// It is used by the server to bootstrap new user accounts via OTP.
+// It does not need to be changed or managed manually.
+export const SUPABASE_MASTER_PASSWORD = "z$C&tL#8k@!pW5uQjF7sA*gH2";
