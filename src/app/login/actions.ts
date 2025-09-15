@@ -105,6 +105,7 @@ export async function verifyOtp(formData: FormData) {
         .select('*')
         .eq('phone', normalizedPhone)
         .eq('token', token)
+        .gt('created_at', fiveMinutesAgo)
         .single();
     
     if (selectError || !otpEntry) {
@@ -147,7 +148,7 @@ export async function verifyOtp(formData: FormData) {
         }
 
     } catch (error: any) {
-        console.error('Error during user check/creation:', error);
+        console.error('Error during user check/creation:', error.message);
         return { error: `خطایی در سیستم احراز هویت رخ داد: ${error.message}` };
     }
     
