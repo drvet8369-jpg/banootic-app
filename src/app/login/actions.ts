@@ -88,11 +88,6 @@ export async function requestOtp(formData: FormData) {
  * Verifies the OTP, creates a user if they don't exist, and creates a session.
  */
 export async function verifyOtp(formData: FormData) {
-    console.log('--- STARTING OTP VERIFICATION ---');
-    console.log('SUPABASE URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('SERVICE ROLE KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'OK' : 'MISSING');
-    console.log('MASTER PASSWORD:', process.env.SUPABASE_MASTER_PASSWORD);
-
     const phone = formData.get('phone') as string;
     const token = formData.get('pin') as string;
 
@@ -102,7 +97,6 @@ export async function verifyOtp(formData: FormData) {
 
     const supabaseAdmin = createAdminClient();
     const normalizedPhone = normalizePhoneNumber(phone);
-    console.log('normalizedPhone:', normalizedPhone);
 
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
