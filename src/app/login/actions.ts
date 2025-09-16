@@ -21,7 +21,7 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
  * Helper function to invoke a Supabase Edge Function.
  */
 async function invokeSupabaseFunction(functionName: string, body: object) {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.functions.invoke(functionName, {
         body: JSON.stringify(body),
     });
@@ -142,7 +142,7 @@ export async function verifyOtp(formData: FormData) {
     }
     
     // After user exists, sign them in to create a session
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
         password: SUPABASE_MASTER_PASSWORD,
