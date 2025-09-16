@@ -67,7 +67,7 @@ function VerifyOTPForm() {
         const result = await verifyOtp(formData);
         
         if (result?.error) {
-            toast.error('خطا', { description: result.error });
+            toast.error('خطا در تایید', { description: result.error });
         }
         // On success, the action handles the redirect.
         setIsLoading(false);
@@ -107,16 +107,18 @@ function VerifyOTPForm() {
                                 <FormItem>
                                     <FormLabel>کد تایید</FormLabel>
                                     <FormControl>
-                                        <InputOTP maxLength={6} {...field}>
-                                            <InputOTPGroup dir="ltr">
-                                                <InputOTPSlot index={0} />
-                                                <InputOTPSlot index={1} />
-                                                <InputOTPSlot index={2} />
-                                                <InputOTPSlot index={3} />
-                                                <InputOTPSlot index={4} />
-                                                <InputOTPSlot index={5} />
-                                            </InputOTPGroup>
-                                        </InputOTP>
+                                        <div className="flex justify-center">
+                                            <InputOTP maxLength={6} {...field}>
+                                                <InputOTPGroup dir="ltr">
+                                                    <InputOTPSlot index={0} />
+                                                    <InputOTPSlot index={1} />
+                                                    <InputOTPSlot index={2} />
+                                                    <InputOTPSlot index={3} />
+                                                    <InputOTPSlot index={4} />
+                                                    <InputOTPSlot index={5} />
+                                                </InputOTPGroup>
+                                            </InputOTP>
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
