@@ -105,6 +105,11 @@ export async function requestOtp(formData: FormData) {
  * Verifies the OTP provided by the user.
  */
 export async function verifyOtp(formData: FormData) {
+    console.log('--- STARTING OTP VERIFICATION ---');
+    console.log('SUPABASE URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'OK' : 'MISSING');
+    console.log('SERVICE ROLE KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'OK' : 'MISSING');
+    console.log('MASTER PASSWORD:', process.env.SUPABASE_MASTER_PASSWORD ? 'OK' : 'MISSING');
+
     const phone = formData.get('phone') as string;
     const token = formData.get('pin') as string;
 
@@ -137,16 +142,20 @@ export async function verifyOtp(formData: FormData) {
         existingUser = await findUserByPhone(supabaseAdmin, normalizedPhone);
         
         if (!existingUser) {
+            console.log('User does not exist, attempting to create...');
             const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 phone: normalizedPhone,
                 password: SUPABASE_MASTER_PASSWORD,
                 phone_confirm: true,
             });
 
+            console.log('createUser error object:', createError);
+
             if (createError || !createData?.user) {
                 console.error('Supabase createUser error:', createError);
                 return { error: `خطا در ایجاد حساب کاربری جدید: ${createError?.message}` };
             }
+            console.log('User created successfully.');
             existingUser = createData.user;
         }
 
