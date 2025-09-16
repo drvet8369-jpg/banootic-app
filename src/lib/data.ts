@@ -3,15 +3,13 @@ import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
 
-// NOTE: This file is for server-side data fetching.
-
 export async function getProviders(query?: {
   categorySlug?: string;
   serviceSlug?: string;
   searchQuery?: string;
 }): Promise<Provider[]> {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient(); // ✅ اضافه کردن await
   
   let queryBuilder = supabase
     .from('providers')
@@ -36,7 +34,9 @@ export async function getProviders(query?: {
     queryBuilder = queryBuilder.eq('service_slug', query.serviceSlug);
   }
   if (query?.searchQuery) {
-    queryBuilder = queryBuilder.or(`name.ilike.%${query.searchQuery}%,bio.ilike.%${query.searchQuery}%,service.ilike.%${query.searchQuery}%`);
+    queryBuilder = queryBuilder.or(
+      `name.ilike.%${query.searchQuery}%,bio.ilike.%${query.searchQuery}%,service.ilike.%${query.searchQuery}%`
+    );
   }
 
   const { data, error } = await queryBuilder;
@@ -46,7 +46,6 @@ export async function getProviders(query?: {
     return [];
   }
 
-  // Convert to Provider type, ensuring snake_case from DB is mapped to camelCase in app
   return data.map(p => ({
     id: p.id,
     name: p.name,
@@ -59,13 +58,13 @@ export async function getProviders(query?: {
     rating: p.rating,
     reviewsCount: p.reviews_count,
     profileImage: p.profile_image,
-    portfolio: [], // Portfolio is fetched separately if needed
+    portfolio: [],
   }));
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient(); // ✅ اضافه کردن await
   const { data, error } = await supabase
     .from('providers')
     .select(`
@@ -83,7 +82,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     console.error('Error fetching provider by phone:', error);
     return null;
   }
-  
+
   return {
     id: data.id,
     name: data.name,
@@ -96,14 +95,16 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     rating: data.rating,
     reviewsCount: data.reviews_count,
     profileImage: data.profile_image,
-    portfolio: data.portfolio_items.map(item => ({ src: item.image_url, aiHint: item.ai_hint })),
+    portfolio: data.portfolio_items.map(item => ({
+      src: item.image_url,
+      aiHint: item.ai_hint,
+    })),
   };
 }
 
-
 export async function getReviewsForProvider(providerId: number): Promise<Review[]> {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient(); // ✅ اضافه کردن await
   const { data, error } = await supabase
     .from('reviews')
     .select('*')
@@ -114,13 +115,13 @@ export async function getReviewsForProvider(providerId: number): Promise<Review[
     console.error('Error fetching reviews:', error);
     return [];
   }
-  
+
   return data.map(r => ({
-      id: r.id.toString(),
-      providerId: r.provider_id,
-      authorName: r.author_name,
-      rating: r.rating,
-      comment: r.comment,
-      createdAt: r.created_at,
+    id: r.id.toString(),
+    providerId: r.provider_id,
+    authorName: r.author_name,
+    rating: r.rating,
+    comment: r.comment,
+    createdAt: r.created_at,
   }));
 }
