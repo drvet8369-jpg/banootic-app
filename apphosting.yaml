@@ -1,0 +1,24 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+# Add environment variables and secrets for the backend.
+# https://firebase.google.com/docs/app-hosting/configure-backend#environment-variables
+env:
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+  - variable: SUPABASE_MASTER_PASSWORD
+    secret: SUPABASE_MASTER_PASSWORD
+  - variable: KAVEHNEGAR_API_KEY
+    secret: KAVEHNEGAR_API_KEY
