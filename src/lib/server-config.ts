@@ -8,8 +8,8 @@
 // IMPORTANT: Replace these placeholder values with your actual secrets.
 // You can copy them from your .env file.
 
-export const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5Z25zaGZuZ2N5eGthbWFwZWpmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyMzU2NTAxMCwiZXhwIjoyMDM5MTQxMDEwfQ.9eY5lfkECp24fHT3s-0q_j-a-3i_xB1LpA1V3S3aW9w";
+export const SUPABASE_SERVICE_ROLE_KEY = "your-supabase-service-role-key-here";
 
 export const SUPABASE_MASTER_PASSWORD = "your-strong-master-password-for-otp-users";
 
-export const KAVEHNEGAR_API_KEY = "your-kavenegar-api-key";
+export const KAVEHNEGAR_API_KEY = "your-kavenegar-api-key-here";

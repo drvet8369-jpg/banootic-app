@@ -8,12 +8,11 @@ import { SUPABASE_SERVICE_ROLE_KEY } from '@/lib/server-config';
 
 export const createAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseServiceRoleKey = SUPABASE_SERVICE_ROLE_KEY;
 
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('Supabase URL or Service Role Key is not set in environment variables or server-config.');
+  if (!supabaseUrl || !supabaseServiceRoleKey || supabaseServiceRoleKey.includes('your-supabase-service-role-key-here')) {
+    throw new Error('Supabase URL or Service Role Key is not set in server-config.ts.');
   }
 
   // When using the service_role key, we should disable session persistence.
