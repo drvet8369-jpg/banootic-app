@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
-import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
+import { SUPABASE_MASTER_PASSWORD, KAVEHNEGAR_API_KEY } from '@/lib/server-config';
 
 
 /**
@@ -24,6 +24,9 @@ async function invokeSupabaseFunction(functionName: string, body: object) {
     const supabase = await createClient();
     const { data, error } = await supabase.functions.invoke(functionName, {
         body: JSON.stringify(body),
+        headers: {
+            'x-kavehnegar-api-key': KAVEHNEGAR_API_KEY,
+        }
     });
 
     if (error) {
@@ -163,3 +166,4 @@ export async function verifyOtp(formData: FormData) {
 
     redirect('/');
 }
+
