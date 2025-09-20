@@ -9,7 +9,7 @@ export async function getProviders(query?: {
   searchQuery?: string;
 }): Promise<Provider[]> {
   noStore();
-  const supabase = await createClient(); // ✅ اضافه کردن await
+  const supabase = createClient();
   
   let queryBuilder = supabase
     .from('providers')
@@ -46,7 +46,17 @@ export async function getProviders(query?: {
     return [];
   }
 
-  return data.map(p => ({
+  // Quick fix for portfolio items not being part of the main query
+  const providersWithPortfolio = await Promise.all(data.map(async (provider) => {
+      const { data: portfolioItems } = await supabase.from('portfolio_items').select('id, image_url, ai_hint').eq('provider_id', provider.id);
+      return {
+          ...provider,
+          portfolio: portfolioItems?.map(item => ({ src: item.image_url, aiHint: item.ai_hint })) || []
+      };
+  }));
+
+
+  return providersWithPortfolio.map(p => ({
     id: p.id,
     name: p.name,
     service: p.service,
@@ -58,13 +68,13 @@ export async function getProviders(query?: {
     rating: p.rating,
     reviewsCount: p.reviews_count,
     profileImage: p.profile_image,
-    portfolio: [],
+    portfolio: p.portfolio,
   }));
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   noStore();
-  const supabase = await createClient(); // ✅ اضافه کردن await
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('providers')
     .select(`
@@ -104,7 +114,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
 export async function getReviewsForProvider(providerId: number): Promise<Review[]> {
   noStore();
-  const supabase = await createClient(); // ✅ اضافه کردن await
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('reviews')
     .select('*')

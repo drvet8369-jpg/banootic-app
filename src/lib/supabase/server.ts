@@ -2,8 +2,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export const createClient = async () => {
-  const cookieStore = await cookies(); // ✅ حتما await کن
+// This function is now simplified and no longer async.
+// It directly returns the client instance.
+// The `cookies()` function from `next/headers` can be called multiple times
+// without performance issues, as it's memoized per request.
+export const createClient = () => {
+  const cookieStore = cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,14 +21,18 @@ export const createClient = async () => {
           try {
             cookieStore.set({ name, value, ...options });
           } catch (error) {
-            // Ignore in server components
+            // The `set` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options });
           } catch (error) {
-            // Ignore in server components
+            // The `delete` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
       },
