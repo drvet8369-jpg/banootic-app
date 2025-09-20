@@ -1,8 +1,10 @@
+
 import { getProviders } from '@/lib/data';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX } from 'lucide-react';
 import type { Provider } from '@/lib/types';
 import { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface SearchResultsProps {
   query: string;
@@ -56,7 +58,11 @@ export default function SearchPage({
         )}
       </div>
 
-      <Suspense fallback={<div>در حال جستجو...</div>}>
+      <Suspense fallback={
+        <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      }>
          <SearchResults query={query} />
       </Suspense>
     </div>

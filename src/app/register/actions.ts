@@ -150,7 +150,7 @@ export async function registerUser(formData: FormData) {
   }
 
   // 6. Sign the user in to create a session
-  const supabase = await createClient();
+  const supabase = createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
     phone: normalizedPhone,
     password: SUPABASE_MASTER_PASSWORD,
