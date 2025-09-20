@@ -1,4 +1,3 @@
-
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
@@ -9,7 +8,7 @@ export async function getProviders(query?: {
   searchQuery?: string;
 }): Promise<Provider[]> {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient();
   
   let queryBuilder = supabase
     .from('providers')
@@ -74,7 +73,7 @@ export async function getProviders(query?: {
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('providers')
     .select(`
@@ -114,7 +113,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
 export async function getReviewsForProvider(providerId: number): Promise<Review[]> {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('reviews')
     .select('*')

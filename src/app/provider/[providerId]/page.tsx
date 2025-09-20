@@ -60,7 +60,7 @@ const ReviewCard = ({ review }: { review: Review }) => (
 
 export default async function ProviderProfilePage({ params }: { params: { providerId: string }}) {
   noStore();
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   const providerPhone = params.providerId as string;

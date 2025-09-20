@@ -2,11 +2,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-// This function is now simplified and no longer async.
-// It directly returns the client instance.
-// The `cookies()` function from `next/headers` can be called multiple times
-// without performance issues, as it's memoized per request.
-export const createClient = () => {
+// This function is now async and must be awaited.
+export const createClient = async () => {
   const cookieStore = cookies();
 
   return createServerClient(
