@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
-import { SUPABASE_MASTER_PASSWORD, KAVEHNEGAR_API_KEY } from '@/lib/server-config';
 
 
 /**
@@ -25,7 +24,7 @@ async function invokeSupabaseFunction(functionName: string, body: object) {
     const { data, error } = await supabase.functions.invoke(functionName, {
         body: JSON.stringify(body),
         headers: {
-            'x-kavehnegar-api-key': KAVEHNEGAR_API_KEY,
+            'x-kavehnegar-api-key': process.env.KAVEHNEGAR_API_KEY,
         }
     });
 
@@ -125,7 +124,7 @@ export async function verifyOtp(formData: FormData) {
         if (!existingUser) {
             const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 phone: normalizedPhone,
-                password: SUPABASE_MASTER_PASSWORD, // Use a strong, static password for all OTP users
+                password: process.env.SUPABASE_MASTER_PASSWORD, // Use a strong, static password for all OTP users
                 phone_confirm: true,
             });
 
@@ -148,7 +147,7 @@ export async function verifyOtp(formData: FormData) {
     const supabase = await createClient();
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
-        password: SUPABASE_MASTER_PASSWORD,
+        password: process.env.SUPABASE_MASTER_PASSWORD,
     });
 
     if (sessionError) {

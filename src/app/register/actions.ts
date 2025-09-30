@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/server';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { categories, services as allServices } from '@/lib/constants';
 import * as z from 'zod';
-import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
 
 
 const formSchema = z.object({
@@ -89,7 +88,7 @@ export async function registerUser(formData: FormData) {
     // Create new user in auth.users
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       phone: normalizedPhone,
-      password: SUPABASE_MASTER_PASSWORD,
+      password: process.env.SUPABASE_MASTER_PASSWORD,
       phone_confirm: true,
       user_metadata: {
         full_name: name,
@@ -153,7 +152,7 @@ export async function registerUser(formData: FormData) {
   const supabase = await createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
     phone: normalizedPhone,
-    password: SUPABASE_MASTER_PASSWORD,
+    password: process.env.SUPABASE_MASTER_PASSWORD,
   });
 
   if (signInError) {
