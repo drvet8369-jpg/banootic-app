@@ -16,7 +16,3 @@ env:
     availability:
       - BUILD
       - RUNTIME
-  - variable: SUPABASE_SERVICE_ROLE_KEY
-    secret: SUPABASE_SERVICE_ROLE_KEY
-  - variable: SUPABASE_MASTER_PASSWORD
-    secret: SUPABASE_MASTER_PASSWORD
