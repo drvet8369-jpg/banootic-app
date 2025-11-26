@@ -18,47 +18,23 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
 }
 
 /**
- * Sends the OTP directly using Kavenegar API from the Next.js server.
+ * SIMULATES sending an OTP by printing it to the server console.
+ * This avoids network issues with Kavenegar in the current hosting environment.
  */
-async function sendKavenegarOtp(phone: string, token: string) {
-  const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
-  const params = new URLSearchParams({
-    receptor: phone,
-    template: 'logincode',
-    token: token,
-  });
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
-      // @ts-ignore - keepalive is a valid option in node-fetch
-      keepalive: true,
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Kavenegar API request failed with status ${response.status}: ${errorBody}`);
-    }
-
-    const responseData = await response.json() as any;
-     if (responseData.return.status !== 200) {
-        throw new Error(`Kavenegar returned an error: ${responseData.return.message}`);
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to send Kavenegar OTP:', error);
-    return { error: 'خطا در ارسال کد تایید از طریق کاوه‌نگار.' };
-  }
+async function sendSimulatedOtp(phone: string, token: string) {
+  console.log('**************************************************');
+  console.log('*** OTP SIMULATION - NO SMS SENT ***');
+  console.log(`*** Receptor: ${phone}`);
+  console.log(`*** OTP Code: ${token}`);
+  console.log('**************************************************');
+  
+  // We'll return success immediately as we are not making a real network call.
+  return { success: true };
 }
 
 
 /**
- * Initiates the login process by generating, storing, and sending an OTP.
+ * Initiates the login process by generating, storing, and "sending" a simulated OTP.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -83,8 +59,8 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
 
-  // Directly call the send OTP function
-  const sendResult = await sendKavenegarOtp(normalizedPhone, token);
+  // Use the simulated OTP sending function
+  const sendResult = await sendSimulatedOtp(normalizedPhone, token);
   if (sendResult.error) {
       return { error: sendResult.error };
   }
