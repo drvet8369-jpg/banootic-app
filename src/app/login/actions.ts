@@ -18,19 +18,20 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
 }
 
 /**
- * Sends OTP using the official Kavenegar Node.js library.
+ * Sends OTP using the Kavenegar VerifyLookup method.
  */
 async function sendKavenegarOtp(phone: string, token: string) {
     try {
         const api = Kavenegar.KavenegarApi({ apikey: KAVEHNEGAR_API_KEY });
         return new Promise((resolve, reject) => {
+            // Using VerifyLookup with a template is the correct way to send OTPs.
             api.VerifyLookup({
                 receptor: phone,
                 token: token,
-                template: 'logincode'
+                template: 'logincode' // This is the name of the template you created in your Kavenegar panel.
             }, function(response, status) {
                 if (status === 200) {
-                    console.log('Kavenegar response:', response);
+                    console.log('Kavenegar VerifyLookup response:', response);
                     resolve({ error: null });
                 } else {
                     console.error(`Kavenegar API Error: Status ${status}, Response:`, response);
@@ -72,7 +73,7 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
   
-  // Use the Kavenegar library to send the OTP
+  // Use the Kavenegar library to send the OTP via VerifyLookup
   const { error: smsError } = await sendKavenegarOtp(normalizedPhone, token);
   if (smsError) {
       return { error: smsError };
