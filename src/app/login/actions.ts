@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { KAVEHNEGAR_API_KEY, SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
+import Kavenegar from 'kavenegar';
 
 /**
  * Helper function to find a user by phone number using the admin SDK.
@@ -17,32 +18,30 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
 }
 
 /**
- * Helper function to invoke a Supabase Edge Function.
+ * Sends OTP using the official Kavenegar Node.js library.
  */
-async function invokeSupabaseFunction(functionName: string, body: object) {
-    const supabase = await createClient();
-    const { data, error } = await supabase.functions.invoke(functionName, {
-        body: JSON.stringify(body),
-        headers: {
-            'x-kavenegar-api-key': KAVEHNEGAR_API_KEY,
-        }
-    });
-
-    if (error) {
-        console.error(`Error invoking Supabase function '${functionName}':`, error);
-        return { error: `خطا در ارتباط با سرویس ابری (${functionName}).` };
-    }
-    
+async function sendKavenegarOtp(phone: string, token: string) {
     try {
-      const result = typeof data === 'string' ? JSON.parse(data) : data;
-       if(result.error){
-         console.error(`Error returned from Supabase function '${functionName}':`, result.error);
-         return { error: result.error };
-       }
-       return { data: result };
-    } catch (e) {
-      console.error(`Error parsing response from Supabase function '${functionName}':`, e);
-      return { error: 'پاسخ دریافتی از سرویس ابری نامعتبر است.' };
+        const api = Kavenegar.KavenegarApi({ apikey: KAVEHNEGAR_API_KEY });
+        return new Promise((resolve, reject) => {
+            api.VerifyLookup({
+                receptor: phone,
+                token: token,
+                template: 'logincode'
+            }, function(response, status) {
+                if (status === 200) {
+                    console.log('Kavenegar response:', response);
+                    resolve({ error: null });
+                } else {
+                    console.error(`Kavenegar API Error: Status ${status}, Response:`, response);
+                    const errorMessage = `خطا در ارسال پیامک. کد خطا: ${status}`;
+                    reject(new Error(errorMessage));
+                }
+            });
+        });
+    } catch (error: any) {
+        console.error('Failed to send Kavenegar OTP:', error);
+        return { error: error.message || 'خطای ناشناخته در ارسال کد تایید.' };
     }
 }
 
@@ -72,14 +71,11 @@ export async function requestOtp(formData: FormData) {
     console.error('Error storing OTP:', upsertError);
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
-
-  const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
-      phone: normalizedPhone,
-      data: { token: token }
-  });
-
-  if (functionError) {
-      return { error: `خطا در ارسال کد تایید: ${functionError}` };
+  
+  // Use the Kavenegar library to send the OTP
+  const { error: smsError } = await sendKavenegarOtp(normalizedPhone, token);
+  if (smsError) {
+      return { error: smsError };
   }
 
   redirect(`/login/verify?phone=${phone}`);
