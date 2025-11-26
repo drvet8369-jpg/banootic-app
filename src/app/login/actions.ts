@@ -6,7 +6,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { KAVEHNEGAR_API_KEY, SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
-import fetch from 'node-fetch';
 
 /**
  * Helper function to find a user by phone number using the admin SDK.
@@ -18,23 +17,38 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
 }
 
 /**
- * SIMULATES sending an OTP by printing it to the server console.
- * This avoids network issues with Kavenegar in the current hosting environment.
+ * Helper function to invoke a Supabase Edge Function.
  */
-async function sendSimulatedOtp(phone: string, token: string) {
-  console.log('**************************************************');
-  console.log('*** OTP SIMULATION - NO SMS SENT ***');
-  console.log(`*** Receptor: ${phone}`);
-  console.log(`*** OTP Code: ${token}`);
-  console.log('**************************************************');
-  
-  // We'll return success immediately as we are not making a real network call.
-  return { success: true };
+async function invokeSupabaseFunction(functionName: string, body: object) {
+    const supabase = await createClient();
+    // We pass the Kavenegar API key in the headers to the function.
+    // The function is protected and can only be called by authenticated users,
+    // so this is secure.
+    const { data, error } = await supabase.functions.invoke(functionName, {
+        body: JSON.stringify(body),
+        headers: {
+            'x-kavenegar-api-key': KAVEHNEGAR_API_KEY,
+        }
+    });
+
+    if (error) {
+        console.error(`Error invoking Supabase function '${functionName}':`, error);
+        return { error: `خطا در ارتباط با سرویس ابری (${functionName}).` };
+    }
+    
+    // The body of the response from the Edge Function is in the `data` property.
+    // We check if the function itself returned an error message.
+    if(data.error){
+         console.error(`Error returned from Supabase function '${functionName}':`, data.error);
+         return { error: data.error };
+    }
+
+    return { data };
 }
 
 
 /**
- * Initiates the login process by generating, storing, and "sending" a simulated OTP.
+ * Initiates the login process by generating, storing, and sending an OTP.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -59,12 +73,16 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
 
-  // Use the simulated OTP sending function
-  const sendResult = await sendSimulatedOtp(normalizedPhone, token);
-  if (sendResult.error) {
-      return { error: sendResult.error };
-  }
+  // Instead of calling Kavenegar directly, we invoke our Supabase Edge Function.
+  const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
+      phone: normalizedPhone,
+      data: { token: token }
+  });
 
+  if (functionError) {
+      // The error from the function is already user-friendly.
+      return { error: `خطا در ارسال کد تایید: ${functionError}` };
+  }
 
   redirect(`/login/verify?phone=${phone}`);
 }
