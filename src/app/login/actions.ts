@@ -21,9 +21,6 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
  */
 async function invokeSupabaseFunction(functionName: string, body: object) {
     const supabase = await createClient();
-    // We pass the Kavenegar API key in the headers to the function.
-    // The function is protected and can only be called by authenticated users,
-    // so this is secure.
     const { data, error } = await supabase.functions.invoke(functionName, {
         body: JSON.stringify(body),
         headers: {
@@ -36,14 +33,17 @@ async function invokeSupabaseFunction(functionName: string, body: object) {
         return { error: `خطا در ارتباط با سرویس ابری (${functionName}).` };
     }
     
-    // The body of the response from the Edge Function is in the `data` property.
-    // We check if the function itself returned an error message.
-    if(data.error){
-         console.error(`Error returned from Supabase function '${functionName}':`, data.error);
-         return { error: data.error };
+    try {
+      const result = typeof data === 'string' ? JSON.parse(data) : data;
+       if(result.error){
+         console.error(`Error returned from Supabase function '${functionName}':`, result.error);
+         return { error: result.error };
+       }
+       return { data: result };
+    } catch (e) {
+      console.error(`Error parsing response from Supabase function '${functionName}':`, e);
+      return { error: 'پاسخ دریافتی از سرویس ابری نامعتبر است.' };
     }
-
-    return { data };
 }
 
 
@@ -73,14 +73,12 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
 
-  // Instead of calling Kavenegar directly, we invoke our Supabase Edge Function.
   const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
       phone: normalizedPhone,
       data: { token: token }
   });
 
   if (functionError) {
-      // The error from the function is already user-friendly.
       return { error: `خطا در ارسال کد تایید: ${functionError}` };
   }
 
