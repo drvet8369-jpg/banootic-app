@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -5,7 +6,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { KAVEHNEGAR_API_KEY, SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
-import fetch from 'node-fetch';
 
 
 /**
@@ -18,35 +18,37 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
 }
 
 /**
- * Sends OTP using a direct fetch call to the Kavenegar VerifyLookup API.
+ * Helper function to invoke a Supabase Edge Function.
  */
-async function sendKavenegarOtp(phone: string, token: string) {
-    const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
-    const params = new URLSearchParams();
-    params.append("receptor", phone);
-    params.append("token", token);
-    params.append("template", "logincode"); // This is the template name in your Kavenegar panel.
-
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            body: params
-        });
-
-        const data = await response.json();
-
-        if (response.status === 200 && data.return.status === 200) {
-            console.log('Kavenegar VerifyLookup response:', data);
-            return { error: null };
-        } else {
-            const errorMessage = data?.return?.message || `خطا در ارسال پیامک. کد خطا: ${response.status}`;
-            console.error(`Kavenegar API Error: Status ${response.status}, Response:`, data);
-            return { error: errorMessage };
-        }
-    } catch (error: any) {
-        console.error('Failed to send Kavenegar OTP via fetch:', error);
-        return { error: error.message || 'خطای ناشناخته در ارسال کد تایید.' };
+async function invokeSupabaseFunction(functionName: string, body: object) {
+    const supabase = await createClient();
+    // We must pass the Authorization header manually to invoke a function with the user's session.
+    // The Kavenegar API key should be handled securely inside the Edge Function itself.
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if(sessionError) {
+        console.error('Error getting session for function invocation:', sessionError);
+        return { error: 'خطا در احراز هویت برای اجرای تابع ابری.' };
     }
+
+    const { data, error } = await supabase.functions.invoke(functionName, {
+        body: JSON.stringify(body),
+        headers: {
+            'Authorization': `Bearer ${sessionData.session?.access_token || ''}`
+        }
+    });
+
+    if (error) {
+        console.error(`Error invoking Supabase function '${functionName}':`, error);
+        return { error: `خطا در ارتباط با سرویس ابری (${functionName}). ${error.message}` };
+    }
+    
+    // Edge functions can return errors in their response body
+    if (data?.error) {
+        console.error(`Error returned from Supabase function '${functionName}':`, data.error);
+        return { error: data.error };
+    }
+    
+    return { data };
 }
 
 
@@ -76,10 +78,15 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
   
-  // Use the direct fetch function to send the OTP
-  const { error: smsError } = await sendKavenegarOtp(normalizedPhone, token);
-  if (smsError) {
-      return { error: smsError };
+  // Instead of calling Kavenegar directly, invoke the Edge Function
+  const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
+      receptor: normalizedPhone,
+      token: token,
+      template: "logincode" // This is the template name in your Kavenegar panel.
+  });
+
+  if (functionError) {
+      return { error: `خطا در ارسال کد تایید: ${functionError}` };
   }
 
   redirect(`/login/verify?phone=${phone}`);
