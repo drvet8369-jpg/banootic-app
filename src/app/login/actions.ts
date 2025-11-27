@@ -6,7 +6,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { KAVEHNEGAR_API_KEY, SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
-import Kavenegar from 'kavenegar';
+import fetch from 'node-fetch';
+
 
 /**
  * Helper function to find a user by phone number using the admin SDK.
@@ -18,30 +19,33 @@ async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClien
 }
 
 /**
- * Sends OTP using the Kavenegar VerifyLookup method.
+ * Sends OTP using a direct fetch call to the Kavenegar VerifyLookup API.
  */
 async function sendKavenegarOtp(phone: string, token: string) {
+    const url = `https://api.kavenegar.com/v1/${KAVEHNEGAR_API_KEY}/verify/lookup.json`;
+    const params = new URLSearchParams();
+    params.append("receptor", phone);
+    params.append("token", token);
+    params.append("template", "logincode"); // This is the template name in your Kavenegar panel.
+
     try {
-        const api = Kavenegar.KavenegarApi({ apikey: KAVEHNEGAR_API_KEY });
-        return new Promise((resolve, reject) => {
-            // Using VerifyLookup with a template is the correct way to send OTPs.
-            api.VerifyLookup({
-                receptor: phone,
-                token: token,
-                template: 'logincode' // This is the name of the template you created in your Kavenegar panel.
-            }, function(response, status) {
-                if (status === 200) {
-                    console.log('Kavenegar VerifyLookup response:', response);
-                    resolve({ error: null });
-                } else {
-                    console.error(`Kavenegar API Error: Status ${status}, Response:`, response);
-                    const errorMessage = `خطا در ارسال پیامک. کد خطا: ${status}`;
-                    reject(new Error(errorMessage));
-                }
-            });
+        const response = await fetch(url, {
+            method: "POST",
+            body: params
         });
+
+        const data = await response.json();
+
+        if (response.status === 200 && data.return.status === 200) {
+            console.log('Kavenegar VerifyLookup response:', data);
+            return { error: null };
+        } else {
+            const errorMessage = data?.return?.message || `خطا در ارسال پیامک. کد خطا: ${response.status}`;
+            console.error(`Kavenegar API Error: Status ${response.status}, Response:`, data);
+            return { error: errorMessage };
+        }
     } catch (error: any) {
-        console.error('Failed to send Kavenegar OTP:', error);
+        console.error('Failed to send Kavenegar OTP via fetch:', error);
         return { error: error.message || 'خطای ناشناخته در ارسال کد تایید.' };
     }
 }
@@ -73,7 +77,7 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
   
-  // Use the Kavenegar library to send the OTP via VerifyLookup
+  // Use the direct fetch function to send the OTP
   const { error: smsError } = await sendKavenegarOtp(normalizedPhone, token);
   if (smsError) {
       return { error: smsError };
