@@ -5,55 +5,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
-import { KAVEHNEGAR_API_KEY, SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
-
-
-/**
- * Helper function to find a user by phone number using the admin SDK.
- */
-async function findUserByPhone(supabaseAdmin: ReturnType<typeof createAdminClient>, phone: string) {
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    if (error) throw error;
-    return users.find(u => u.phone === phone) || null;
-}
+import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
 
 /**
- * Helper function to invoke a Supabase Edge Function.
- */
-async function invokeSupabaseFunction(functionName: string, body: object) {
-    const supabase = await createClient();
-    // We must pass the Authorization header manually to invoke a function with the user's session.
-    // The Kavenegar API key should be handled securely inside the Edge Function itself.
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if(sessionError) {
-        console.error('Error getting session for function invocation:', sessionError);
-        return { error: 'خطا در احراز هویت برای اجرای تابع ابری.' };
-    }
-
-    const { data, error } = await supabase.functions.invoke(functionName, {
-        body: JSON.stringify(body),
-        headers: {
-            'Authorization': `Bearer ${sessionData.session?.access_token || ''}`
-        }
-    });
-
-    if (error) {
-        console.error(`Error invoking Supabase function '${functionName}':`, error);
-        return { error: `خطا در ارتباط با سرویس ابری (${functionName}). ${error.message}` };
-    }
-    
-    // Edge functions can return errors in their response body
-    if (data?.error) {
-        console.error(`Error returned from Supabase function '${functionName}':`, data.error);
-        return { error: data.error };
-    }
-    
-    return { data };
-}
-
-
-/**
- * Initiates the login process by generating, storing, and sending an OTP.
+ * Initiates the login process by generating, storing, and sending an OTP via a custom API route.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -65,6 +20,7 @@ export async function requestOtp(formData: FormData) {
   const normalizedPhone = normalizePhoneNumber(phone);
   const token = Math.floor(100000 + Math.random() * 900000).toString();
 
+  // 1. Store the OTP in the database
   const { error: upsertError } = await supabaseAdmin
     .from('one_time_passwords')
     .upsert({ 
@@ -78,17 +34,25 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
   
-  // Instead of calling Kavenegar directly, invoke the Edge Function
-  const { error: functionError } = await invokeSupabaseFunction('kavenegar-otp-sender', {
-      receptor: normalizedPhone,
-      token: token,
-      template: "logincode" // This is the template name in your Kavenegar panel.
+  // 2. Call our internal API route to send the SMS
+  // We need to construct the full URL for the fetch call on the server.
+  const vercelUrl = process.env.VERCEL_URL;
+  const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:9004';
+  
+  const response = await fetch(`${baseUrl}/api/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: normalizedPhone, token: token }),
   });
+  
+  const result = await response.json();
 
-  if (functionError) {
-      return { error: `خطا در ارسال کد تایید: ${functionError}` };
+  if (!response.ok || result.error) {
+      console.error('Error from /api/send-otp:', result.error);
+      return { error: `خطا در ارسال کد تایید: ${result.error || 'مشکلی در سرویس پیامک رخ داد.'}` };
   }
 
+  // 3. Redirect to verification page on success
   redirect(`/login/verify?phone=${phone}`);
 }
 
@@ -121,36 +85,33 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
     }
     
-    let userId: string;
-    let userFullName: string | undefined;
-    let existingUser = null;
+    // Check if user exists in auth.users
+    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    if (listError) {
+        console.error("Supabase list users error:", listError);
+        return { error: "خطا در بررسی اطلاعات کاربر." };
+    }
+    let existingUser = users.find(u => u.phone === normalizedPhone);
+    let userFullName;
 
-    try {
-        existingUser = await findUserByPhone(supabaseAdmin, normalizedPhone);
-        
-        if (!existingUser) {
-            const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-                phone: normalizedPhone,
-                password: SUPABASE_MASTER_PASSWORD, // Use a strong, static password for all OTP users
-                phone_confirm: true,
-            });
+    if (!existingUser) {
+        // Create user if they don't exist
+        const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            phone: normalizedPhone,
+            password: SUPABASE_MASTER_PASSWORD,
+            phone_confirm: true,
+        });
 
-            if (createError || !createData?.user) {
-                console.error('Supabase createUser error:', createError);
-                return { error: `خطا در ایجاد حساب کاربری جدید: ${createError?.message}` };
-            }
-            existingUser = createData.user;
+        if (createError || !createData?.user) {
+            console.error('Supabase createUser error:', createError);
+            return { error: `خطا در ایجاد حساب کاربری جدید: ${createError?.message}` };
         }
-
-        userId = existingUser.id;
-        userFullName = existingUser.user_metadata?.full_name;
-
-    } catch (error: any) {
-        console.error('Error during user check/creation:', error.message);
-        return { error: `خطایی در سیستم احراز هویت رخ داد: ${error.message}` };
+        existingUser = createData.user;
     }
     
-    // After user exists, sign them in to create a session
+    userFullName = existingUser.user_metadata?.full_name;
+    
+    // Sign the user in to create a session
     const supabase = await createClient();
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
@@ -165,10 +126,12 @@ export async function verifyOtp(formData: FormData) {
     // Clean up the OTP
     await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
     
-    // If the user is new (has no name), redirect to complete registration. Otherwise, home.
-    if (!userFullName) {
+    // If the user is new (has no name/profile), redirect to complete registration. Otherwise, home.
+    const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('id', existingUser.id).single();
+    
+    if (!profile) {
        redirect(`/register?phone=${phone}`);
+     } else {
+       redirect('/');
      }
-
-    redirect('/');
 }
