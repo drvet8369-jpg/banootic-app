@@ -1,13 +1,11 @@
-
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
-import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 
-const KAVENEGAR_API_KEY = "425A38756C724A503571315964352B4E416946316754754B33616B7652526E6B706779327131496F756A453D";
+const KAVENEGAR_API_KEY = process.env.KAVENEGAR_API_KEY || "425A38756C724A503571315964352B4E416946316754754B33616B7652526E6B706779327131496F756A453D";
 
 /**
  * Initiates the login process by generating, storing, and sending an OTP directly.
@@ -58,6 +56,10 @@ export async function requestOtp(formData: FormData) {
 
   } catch (err: any) {
     console.error("Error in requestOtp sending SMS:", err);
+    // This will catch network errors like 'fetch failed'
+    if (err.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || err.message.includes('fetch failed')) {
+         return { error: "خطا در اتصال به سرویس پیامک. لطفاً اتصال اینترنت خود را بررسی کرده و دوباره تلاش کنید." };
+    }
     return { error: err.message || "An unknown error occurred while sending SMS." };
   }
 
@@ -101,13 +103,12 @@ export async function verifyOtp(formData: FormData) {
         return { error: "خطا در بررسی اطلاعات کاربر." };
     }
     let existingUser = users.find(u => u.phone === normalizedPhone);
-    let userFullName;
 
     if (!existingUser) {
         // Create user if they don't exist
         const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
             phone: normalizedPhone,
-            password: SUPABASE_MASTER_PASSWORD,
+            password: process.env.SUPABASE_MASTER_PASSWORD, // Use an env variable
             phone_confirm: true,
         });
 
@@ -118,13 +119,11 @@ export async function verifyOtp(formData: FormData) {
         existingUser = createData.user;
     }
     
-    userFullName = existingUser.user_metadata?.full_name;
-    
     // Sign the user in to create a session
     const supabase = await createClient();
     const { error: sessionError } = await supabase.auth.signInWithPassword({
         phone: normalizedPhone,
-        password: SUPABASE_MASTER_PASSWORD,
+        password: process.env.SUPABASE_MASTER_PASSWORD!, // Use an env variable
     });
 
     if (sessionError) {
@@ -135,7 +134,7 @@ export async function verifyOtp(formData: FormData) {
     // Clean up the OTP
     await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
     
-    // If the user is new (has no name/profile), redirect to complete registration. Otherwise, home.
+    // If the user is new (has no profile), redirect to complete registration. Otherwise, home.
     const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('id', existingUser.id).single();
     
     if (!profile) {
