@@ -5,11 +5,10 @@ import { normalizePhoneNumber } from '@/lib/utils';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
-const KAVENEGAR_API_KEY = process.env.KAVENEGAR_API_KEY || "425A38756C724A503571315964352B4E416946316754754B33616B7652526E6B706779327131496F756A453D";
-
 /**
- * Initiates the login process by generating, storing, and sending an OTP directly.
- * This now directly handles the SMS sending logic instead of fetching another API route.
+ * Initiates the login process by generating an OTP, storing it, 
+ * and then invoking a Supabase Edge Function to send the OTP via SMS.
+ * This avoids direct server-to-Kavenegar connection issues.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -35,33 +34,25 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
   
-  // 2. Send the SMS directly using Kavenegar API
+  // 2. Invoke the Edge Function to send the SMS
   try {
-    const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
-    const params = new URLSearchParams();
-    params.append("receptor", normalizedPhone);
-    params.append("token", token);
-    params.append("template", "logincode");
-
-    const kavenegarResponse = await fetch(url, {
-      method: "POST",
-      body: params,
+    const { data, error: functionError } = await supabaseAdmin.functions.invoke('kavenegar-otp-sender', {
+      body: { phone: normalizedPhone, token },
     });
 
-    const responseData = await kavenegarResponse.json();
-
-    if (kavenegarResponse.status !== 200 || responseData.return.status !== 200) {
-      console.error('Kavenegar API Error in Server Action:', responseData);
-      throw new Error(responseData?.return?.message || `Kavenegar API failed with status: ${kavenegarResponse.status}`);
+    if (functionError) {
+        console.error('Supabase function invocation error:', functionError);
+        throw new Error('خطا در فراخوانی سرویس ارسال پیامک.');
     }
 
+    if (data?.error) {
+        console.error('Error from inside edge function:', data.error);
+        throw new Error(data.error);
+    }
+    
   } catch (err: any) {
-    console.error("Error in requestOtp sending SMS:", err);
-    // This will catch network errors like 'fetch failed'
-    if (err.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || err.message.includes('fetch failed')) {
-         return { error: "خطا در اتصال به سرویس پیامک. لطفاً اتصال اینترنت خود را بررسی کرده و دوباره تلاش کنید." };
-    }
-    return { error: err.message || "An unknown error occurred while sending SMS." };
+    console.error("Error in requestOtp invoking function:", err);
+    return { error: err.message || "خطای ناشناخته در هنگام ارسال پیامک رخ داد." };
   }
 
   // 3. Redirect to verification page on success

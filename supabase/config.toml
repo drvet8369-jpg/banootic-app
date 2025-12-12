@@ -27,5 +27,6 @@ docker_image = "supabase/postgres:15.1.0.118"
 # Port to use for Supabase Studio
 port = 54323
 
-[functions]
-# This section is intentionally left blank as we are no longer using Supabase Edge Functions.
+# Declares the Edge Function for sending OTPs
+[functions.kavenegar-otp-sender]
+verify_jwt = false
