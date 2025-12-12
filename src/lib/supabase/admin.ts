@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_SERVICE_ROLE_KEY } from '@/lib/server-config';
 
 // This file is specifically for creating a Supabase admin client.
 // This client has admin privileges and should only be used in
@@ -8,12 +7,11 @@ import { SUPABASE_SERVICE_ROLE_KEY } from '@/lib/server-config';
 
 export const createAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // Read the service role key from the server-config file.
-  const supabaseServiceRoleKey = SUPABASE_SERVICE_ROLE_KEY;
+  // Read the service role key directly from environment variables.
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-
-  if (!supabaseUrl || !supabaseServiceRoleKey || supabaseServiceRoleKey.includes('your-supabase-service-role-key-here')) {
-    throw new Error('Supabase URL or Service Role Key is not set in server-config.ts.');
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('Supabase URL or Service Role Key is not set in environment variables.');
   }
 
   // When using the service_role key, we should disable session persistence.
