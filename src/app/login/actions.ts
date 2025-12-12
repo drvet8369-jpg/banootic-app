@@ -7,8 +7,10 @@ import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { SUPABASE_MASTER_PASSWORD } from '@/lib/server-config';
 
+const KAVENEGAR_API_KEY = "425A38756C724A503571315964352B4E416946316754754B33616B7652526E6B706779327131496F756A453D";
+
 /**
- * Initiates the login process by generating, storing, and sending an OTP via a custom API route.
+ * Initiates the login process by generating, storing, and sending an OTP directly.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -34,22 +36,29 @@ export async function requestOtp(formData: FormData) {
     return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
   }
   
-  // 2. Call our internal API route to send the SMS
-  // We need to construct the full URL for the fetch call on the server.
-  const vercelUrl = process.env.VERCEL_URL;
-  const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:9004';
-  
-  const response = await fetch(`${baseUrl}/api/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: normalizedPhone, token: token }),
-  });
-  
-  const result = await response.json();
+  // 2. Send the SMS directly using Kavenegar API
+  try {
+    const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
+    const params = new URLSearchParams();
+    params.append("receptor", normalizedPhone);
+    params.append("token", token);
+    params.append("template", "logincode");
 
-  if (!response.ok || result.error) {
-      console.error('Error from /api/send-otp:', result.error);
-      return { error: `خطا در ارسال کد تایید: ${result.error || 'مشکلی در سرویس پیامک رخ داد.'}` };
+    const kavenegarResponse = await fetch(url, {
+      method: "POST",
+      body: params,
+    });
+
+    const responseData = await kavenegarResponse.json();
+
+    if (kavenegarResponse.status !== 200 || responseData.return.status !== 200) {
+      console.error('Kavenegar API Error in Server Action:', responseData);
+      throw new Error(responseData?.return?.message || `Kavenegar API failed with status: ${kavenegarResponse.status}`);
+    }
+
+  } catch (err: any) {
+    console.error("Error in requestOtp sending SMS:", err);
+    return { error: err.message || "An unknown error occurred while sending SMS." };
   }
 
   // 3. Redirect to verification page on success
