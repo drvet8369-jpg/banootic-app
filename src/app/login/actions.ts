@@ -9,6 +9,7 @@ const KAVENEGAR_API_KEY = process.env.KAVENEGAR_API_KEY || "425A38756C724A503571
 
 /**
  * Initiates the login process by generating, storing, and sending an OTP directly.
+ * This now directly handles the SMS sending logic instead of fetching another API route.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
