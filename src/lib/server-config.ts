@@ -8,8 +8,4 @@ export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY |
 
 export const SUPABASE_MASTER_PASSWORD = process.env.SUPABASE_MASTER_PASSWORD || 'gS$t8!zP#kL@wE&q9R*v'
 
-export const KAVEHNEGAR_API_KEY = '425A38756C724A503571315964352B4E416946316754754B33616B7652526E6B706779327131496F756A453D'
-
-if (KAVEHNEGAR_API_KEY === '') {
-  console.warn('Kavenegar API Key is not set in src/lib/server-config.ts. OTP sending will fail.');
-}
+// Kavenegar key is no longer needed here as it's self-contained in the API route.
