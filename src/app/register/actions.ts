@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { categories, services as allServices } from '@/lib/constants';
 import * as z from 'zod';
+import { redirect } from 'next/navigation';
 
 
 const formSchema = z.object({
@@ -31,7 +32,9 @@ export async function registerUser(formData: FormData) {
   const supabaseAdmin = createAdminClient();
 
   // 1. Check if a user with this phone number already exists in auth.users
-  const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+  const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+      phone: normalizedPhone
+  });
   if (listError) {
       console.error("Supabase list users error:", listError);
       return { error: "خطا در بررسی اطلاعات کاربر." };
@@ -40,37 +43,26 @@ export async function registerUser(formData: FormData) {
   const existingUser = users.find(u => u.phone === normalizedPhone);
 
   if (existingUser) {
-    // If user exists, check if they already have a profile.
-    const { data: existingProfile, error: profileError } = await supabaseAdmin
+    const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
         .select('id')
         .eq('id', existingUser.id)
         .single();
         
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error("Error checking for existing profile:", profileError);
-        return { error: 'خطا در بررسی پروفایل کاربری.' };
-    }
-
     if (existingProfile) {
         return { error: 'شما قبلاً ثبت‌نام کرده‌اید. لطفاً وارد شوید.' };
     }
-    // If user exists in auth but not in profiles, we'll create the profile for them.
   }
-
+  
   // 2. If registering as a provider, check for duplicate business name
   if (accountType === 'provider') {
-    const { data: existingProvider, error: providerNameError } = await supabaseAdmin
+    const { data: existingProviderByName } = await supabaseAdmin
       .from('providers')
       .select('id')
       .ilike('name', name)
       .single();
 
-    if (providerNameError && providerNameError.code !== 'PGRST116') {
-        console.error("Error checking for existing provider name:", providerNameError);
-        return { error: 'خطا در بررسی نام کسب‌وکار.' };
-    }
-    if (existingProvider) {
+    if (existingProviderByName) {
       return { error: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.' };
     }
   }
@@ -79,21 +71,11 @@ export async function registerUser(formData: FormData) {
   let userId: string;
   if (existingUser) {
       userId = existingUser.id;
-      // Also update their metadata if needed (e.g., name)
-       await supabaseAdmin.auth.admin.updateUserById(userId, {
-            user_metadata: { ...existingUser.user_metadata, full_name: name, account_type: accountType },
-        });
-
   } else {
-    // Create new user in auth.users
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       phone: normalizedPhone,
       password: process.env.SUPABASE_MASTER_PASSWORD,
       phone_confirm: true,
-      user_metadata: {
-        full_name: name,
-        account_type: accountType,
-      },
     });
 
     if (createError || !newUser?.user) {
@@ -103,7 +85,18 @@ export async function registerUser(formData: FormData) {
     userId = newUser.user.id;
   }
   
-  // 4. Create profile in `profiles` table
+  // 4. Update user metadata
+   const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { full_name: name, account_type: accountType },
+    });
+   if (metadataError) {
+        console.error('Error updating user metadata:', metadataError);
+        return { error: 'خطا در به‌روزرسانی اطلاعات کاربر.' };
+   }
+
+
+  // 5. Create profile in `profiles` table
+  // This part is now the single source of truth for profile creation.
   const { error: profileInsertError } = await supabaseAdmin
     .from('profiles')
     .insert({
@@ -115,11 +108,15 @@ export async function registerUser(formData: FormData) {
 
   if (profileInsertError) {
       console.error('Error inserting into profiles table:', profileInsertError);
-      return { error: 'خطا در ساخت پروفایل کاربری.' };
+      // Attempt to clean up the created user if profile creation fails
+      if (!existingUser) {
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+      }
+      return { error: `خطای دیتابیس در ساخت پروفایل: ${profileInsertError.message}` };
   }
 
 
-  // 5. If it's a provider, create an entry in the `providers` table
+  // 6. If it's a provider, create an entry in the `providers` table
   if (accountType === 'provider') {
     if (!serviceId || !bio) {
         return { error: "برای هنرمندان، انتخاب نوع خدمات و نوشتن بیوگرافی الزامی است." };
@@ -133,7 +130,7 @@ export async function registerUser(formData: FormData) {
             profile_id: userId,
             name: name,
             service: selectedCategory?.name || 'خدمت جدید',
-            location: 'ارومیه', // Default location
+            location: 'ارومیه',
             bio: bio,
             category_slug: selectedCategory?.slug,
             service_slug: firstServiceInCat?.slug,
@@ -142,13 +139,15 @@ export async function registerUser(formData: FormData) {
     
     if (providerInsertError) {
       console.error('Error inserting into providers table:', providerInsertError);
-      // Attempt to clean up the created user if provider creation fails
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      return { error: 'خطا در ثبت اطلاعات هنرمند.' };
+      // Attempt to clean up user & profile if provider creation fails
+      if (!existingUser) {
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+      }
+      return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
     }
   }
 
-  // 6. Sign the user in to create a session
+  // 7. Sign the user in to create a session
   const supabase = await createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
     phone: normalizedPhone,
@@ -159,6 +158,7 @@ export async function registerUser(formData: FormData) {
     console.error('Error signing in after registration:', signInError);
     return { error: 'خطا در ورود خودکار پس از ثبت‌نام.' };
   }
-
-  return { error: null };
+  
+  const destination = accountType === 'provider' ? '/profile' : '/';
+  redirect(destination);
 }
