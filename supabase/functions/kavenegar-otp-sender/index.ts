@@ -6,22 +6,27 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// The main function that handles requests.
 serve(async (req: Request) => {
-  // This is needed if you're planning to invoke your function from a browser.
+  // This is needed for the browser's pre-flight request.
+  // The 'OPTIONS' method is sent before the actual 'POST' request.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
 
   try {
-    const { phone, token } = await req.json();
-
+    // 1. Verify that the Kavenegar API key is available.
     if (!KAVENEGAR_API_KEY) {
       throw new Error('Kavenegar API key is not set in environment variables.');
     }
+
+    // 2. Extract phone and token from the request body.
+    const { phone, token } = await req.json();
     if (!phone || !token) {
-      throw new Error('Phone number and token are required.');
+      throw new Error('Phone number and token are required in the request body.');
     }
 
+    // 3. Prepare and send the request to Kavenegar API.
     const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
     const params = new URLSearchParams();
     params.append('receptor', phone);
@@ -33,6 +38,7 @@ serve(async (req: Request) => {
       body: params,
     });
 
+    // 4. Handle the response from Kavenegar.
     const responseData = await kavenegarResponse.json();
 
     if (kavenegarResponse.status !== 200 || responseData.return.status !== 200) {
@@ -40,13 +46,15 @@ serve(async (req: Request) => {
       throw new Error(responseData?.return?.message || `Kavenegar API failed with status: ${kavenegarResponse.status}`);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'OTP sent successfully.' }), {
+    // 5. Send a success response back to Supabase.
+    return new Response(JSON.stringify({ success: true, message: 'OTP sent successfully via Kavenegar.' }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (err) {
-    console.error('Error in Edge Function:', err);
+    // Catch any errors and return a proper server error response.
+    console.error('Error in Kavenegar Edge Function:', err);
     return new Response(JSON.stringify({ error: err.message }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 500,
