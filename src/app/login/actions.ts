@@ -5,11 +5,13 @@ import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { categories, services as allServices } from '@/lib/constants';
+import * as z from 'zod';
+
 
 /**
- * Initiates the login process by generating an OTP, storing it, 
- * and then invoking a Supabase Edge Function to send the OTP via SMS.
- * This avoids direct server-to-Kavenegar connection issues.
+ * Initiates the login OR sign-up process by sending an OTP.
+ * It uses signInWithOtp which handles both existing and new users.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -17,52 +19,29 @@ export async function requestOtp(formData: FormData) {
     return { error: 'شماره تلفن الزامی است.' };
   }
   
-  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
   const normalizedPhone = normalizePhoneNumber(phone);
-  const token = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // 1. Store the OTP in the database
-  const { error: upsertError } = await supabaseAdmin
-    .from('one_time_passwords')
-    .upsert({ 
-        phone: normalizedPhone, 
-        token: token,
-        created_at: new Date().toISOString()
-    }, { onConflict: 'phone' });
+  // signInWithOtp is the correct method for a passwordless login/signup flow.
+  // It sends an OTP if the user exists, or creates the user and sends an OTP if they don't.
+  const { error } = await supabase.auth.signInWithOtp({
+    phone: normalizedPhone,
+  });
 
-  if (upsertError) {
-    console.error('Error storing OTP:', upsertError);
-    return { error: 'خطا در ذخیره‌سازی کد تایید. لطفاً دوباره تلاش کنید.' };
-  }
-  
-  // 2. Invoke the Edge Function to send the SMS
-  try {
-    const { data, error: functionError } = await supabaseAdmin.functions.invoke('kavenegar-otp-sender', {
-      body: { phone: normalizedPhone, token },
-    });
-
-    if (functionError) {
-        console.error('Supabase function invocation error:', functionError);
-        throw new Error('خطا در فراخوانی سرویس ارسال پیامک.');
-    }
-
-    if (data?.error) {
-        console.error('Error from inside edge function:', data.error);
-        throw new Error(data.error);
-    }
-    
-  } catch (err: any) {
-    console.error("Error in requestOtp invoking function:", err);
-    return { error: err.message || "خطای ناشناخته در هنگام ارسال پیامک رخ داد." };
+  if (error) {
+    console.error('Supabase signInWithOtp Error:', error);
+    // Provide a more user-friendly message
+    return { error: `خطا در ارسال کد: ${error.message}` };
   }
 
-  // 3. Redirect to verification page on success
+  // Redirect to verification page on success
   redirect(`/login/verify?phone=${phone}`);
 }
 
 
 /**
- * Verifies the OTP, creates a user if they don't exist, and creates a session.
+ * Verifies the OTP, and because the user is now logged in,
+ * checks if they have a profile. If not, redirects to complete registration.
  */
 export async function verifyOtp(formData: FormData) {
     const phone = formData.get('phone') as string;
@@ -71,123 +50,92 @@ export async function verifyOtp(formData: FormData) {
     if (!phone || !token) {
         return { error: 'شماره تلفن و کد تایید الزامی است.' };
     }
-
-    const supabaseAdmin = createAdminClient();
+    
+    const supabase = await createClient();
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-    const { data: otpEntry, error: selectError } = await supabaseAdmin
-        .from('one_time_passwords')
-        .select('*')
-        .eq('phone', normalizedPhone)
-        .eq('token', token)
-        .gt('created_at', fiveMinutesAgo)
-        .single();
-    
-    if (selectError || !otpEntry) {
-        return { error: 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
-    }
-    
-    // Check if user exists in auth.users
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-      phone: normalizedPhone
-    });
-
-    if (listError) {
-        console.error("Supabase list users error:", listError);
-        return { error: "خطا در بررسی اطلاعات کاربر." };
-    }
-    let existingUser = users.find(u => u.phone === normalizedPhone);
-
-    if (!existingUser) {
-        // Create user if they don't exist
-        const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            phone: normalizedPhone,
-            password: process.env.SUPABASE_MASTER_PASSWORD, // Use an env variable
-            phone_confirm: true,
-        });
-
-        if (createError || !createData?.user) {
-            console.error('Supabase createUser error:', createError);
-            return { error: `خطا در ایجاد حساب کاربری جدید: ${createError?.message}` };
-        }
-        existingUser = createData.user;
-    }
-    
-    // Sign the user in to create a session
-    const supabase = await createClient();
-    const { error: sessionError } = await supabase.auth.signInWithPassword({
+    // Verify the OTP which also creates the session for the user.
+    const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
         phone: normalizedPhone,
-        password: process.env.SUPABASE_MASTER_PASSWORD!, // Use an env variable
+        token: token,
+        type: 'sms',
     });
 
-    if (sessionError) {
-        console.error('Supabase Sign-In Error during OTP verify:', sessionError);
-        return { error: `خطا در ورود به حساب کاربری: ${sessionError.message}`};
+    if (verifyError || !session) {
+        console.error('Supabase verifyOtp Error:', verifyError);
+        return { error: verifyError?.message || 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
     }
     
-    // Clean up the OTP
-    await supabaseAdmin.from('one_time_passwords').delete().eq('phone', normalizedPhone);
-    
-    // If the user is new (has no profile), redirect to complete registration. Otherwise, home.
-    const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('id', existingUser.id).single();
+    // Now that the user is logged in, check if their profile exists.
+    const supabaseAdmin = createAdminClient();
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', session.user.id)
+      .single();
     
     if (!profile) {
+       // If no profile, they need to complete registration.
        redirect(`/register?phone=${phone}`);
      } else {
+       // If profile exists, they are fully registered.
        redirect('/');
      }
 }
 
+
+const formSchema = z.object({
+  accountType: z.enum(['customer', 'provider']),
+  name: z.string().min(2),
+  serviceId: z.string().optional(),
+  bio: z.string().optional(),
+});
+
+
 /**
- * Handles the complete user registration process, including creating the profile
- * and provider entry if applicable. This action is called from the /register page.
+ * Handles the final step of registration: creating the user's profile
+ * after they have already been authenticated via OTP.
  */
 export async function registerUser(formData: FormData) {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
-  // The user MUST be logged in to be on this page.
   if (!session) {
     return { error: 'جلسه کاربری شما منقضی شده است. لطفاً دوباره وارد شوید.' };
   }
 
   const userId = session.user.id;
   const userPhone = session.user.phone;
+
   if (!userPhone) {
-    return { error: 'شماره تلفن کاربر یافت نشد.' };
+    return { error: 'شماره تلفن کاربر یافت نشد. این یک خطای غیرمنتظره است.' };
   }
 
   const values = Object.fromEntries(formData.entries());
-
-  // We don't need phone from form, we use the one from the session.
-  const { name, accountType, serviceId, bio } = values;
-
-  // Basic validation
-  if (!name || (accountType === 'provider' && (!serviceId || !bio))) {
-      return { error: 'لطفا تمام فیلدهای لازم را پر کنید.' };
+  
+  const parsed = formSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: 'اطلاعات وارد شده نامعتبر است.' };
   }
 
-  const supabaseAdmin = createAdminClient();
+  const { name, accountType, serviceId, bio } = parsed.data;
 
+  const supabaseAdmin = createAdminClient();
+  
   // Double-check if a profile already exists, just in case.
   const { data: existingProfile } = await supabaseAdmin.from('profiles').select('id').eq('id', userId).single();
   if (existingProfile) {
-    return { error: 'شما قبلاً پروفایل خود را تکمیل کرده‌اید.' };
+    redirect('/'); // Already registered, send them to the home page.
   }
 
-  // If registering as a provider, check for duplicate business name
-  if (accountType === 'provider') {
-    const { data: existingProviderByName } = await supabaseAdmin
-      .from('providers')
-      .select('id')
-      .ilike('name', name as string)
-      .single();
+  // Update user metadata in auth schema
+  const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { full_name: name, account_type: accountType },
+  });
 
-    if (existingProviderByName) {
-      return { error: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.' };
-    }
+  if (metadataError) {
+        console.error('Error updating user metadata:', metadataError);
+        return { error: 'خطا در به‌روزرسانی اطلاعات کاربر.' };
   }
 
   // Create profile in `profiles` table
@@ -195,25 +143,16 @@ export async function registerUser(formData: FormData) {
     .from('profiles')
     .insert({
         id: userId,
-        full_name: name as string,
+        full_name: name,
         phone: userPhone,
-        account_type: accountType as 'customer' | 'provider',
+        account_type: accountType,
     });
-  
+
   if (profileInsertError) {
       console.error('Error inserting into profiles table:', profileInsertError);
       return { error: `خطای دیتابیس در ساخت پروفایل: ${profileInsertError.message}` };
   }
   
-  // Update user metadata in auth schema as well
-  const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: { full_name: name, account_type: accountType },
-  });
-  if (metadataError) {
-        console.error('Error updating user metadata:', metadataError);
-        // This is not a critical error, so we can just log it and continue.
-  }
-
   // If it's a provider, create an entry in the `providers` table
   if (accountType === 'provider') {
     const selectedCategory = categories.find(c => c.id.toString() === serviceId);
@@ -223,7 +162,7 @@ export async function registerUser(formData: FormData) {
         .from('providers')
         .insert({
             profile_id: userId,
-            name: name as string,
+            name: name,
             service: selectedCategory?.name || 'خدمت جدید',
             location: 'ارومیه',
             bio: bio as string,
@@ -239,7 +178,7 @@ export async function registerUser(formData: FormData) {
       return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
     }
   }
-  
+
   const destination = accountType === 'provider' ? '/profile' : '/';
   redirect(destination);
 }
