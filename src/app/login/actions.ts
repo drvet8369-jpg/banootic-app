@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -89,7 +90,10 @@ export async function verifyOtp(formData: FormData) {
     }
     
     // Check if user exists in auth.users
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+      phone: normalizedPhone
+    });
+
     if (listError) {
         console.error("Supabase list users error:", listError);
         return { error: "خطا در بررسی اطلاعات کاربر." };
@@ -134,4 +138,108 @@ export async function verifyOtp(formData: FormData) {
      } else {
        redirect('/');
      }
+}
+
+/**
+ * Handles the complete user registration process, including creating the profile
+ * and provider entry if applicable. This action is called from the /register page.
+ */
+export async function registerUser(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // The user MUST be logged in to be on this page.
+  if (!session) {
+    return { error: 'جلسه کاربری شما منقضی شده است. لطفاً دوباره وارد شوید.' };
+  }
+
+  const userId = session.user.id;
+  const userPhone = session.user.phone;
+  if (!userPhone) {
+    return { error: 'شماره تلفن کاربر یافت نشد.' };
+  }
+
+  const values = Object.fromEntries(formData.entries());
+
+  // We don't need phone from form, we use the one from the session.
+  const { name, accountType, serviceId, bio } = values;
+
+  // Basic validation
+  if (!name || (accountType === 'provider' && (!serviceId || !bio))) {
+      return { error: 'لطفا تمام فیلدهای لازم را پر کنید.' };
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  // Double-check if a profile already exists, just in case.
+  const { data: existingProfile } = await supabaseAdmin.from('profiles').select('id').eq('id', userId).single();
+  if (existingProfile) {
+    return { error: 'شما قبلاً پروفایل خود را تکمیل کرده‌اید.' };
+  }
+
+  // If registering as a provider, check for duplicate business name
+  if (accountType === 'provider') {
+    const { data: existingProviderByName } = await supabaseAdmin
+      .from('providers')
+      .select('id')
+      .ilike('name', name as string)
+      .single();
+
+    if (existingProviderByName) {
+      return { error: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.' };
+    }
+  }
+
+  // Create profile in `profiles` table
+  const { error: profileInsertError } = await supabaseAdmin
+    .from('profiles')
+    .insert({
+        id: userId,
+        full_name: name as string,
+        phone: userPhone,
+        account_type: accountType as 'customer' | 'provider',
+    });
+  
+  if (profileInsertError) {
+      console.error('Error inserting into profiles table:', profileInsertError);
+      return { error: `خطای دیتابیس در ساخت پروفایل: ${profileInsertError.message}` };
+  }
+  
+  // Update user metadata in auth schema as well
+  const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { full_name: name, account_type: accountType },
+  });
+  if (metadataError) {
+        console.error('Error updating user metadata:', metadataError);
+        // This is not a critical error, so we can just log it and continue.
+  }
+
+  // If it's a provider, create an entry in the `providers` table
+  if (accountType === 'provider') {
+    const selectedCategory = categories.find(c => c.id.toString() === serviceId);
+    const firstServiceInCat = allServices.find(s => s.category_id === selectedCategory?.id);
+
+    const { error: providerInsertError } = await supabaseAdmin
+        .from('providers')
+        .insert({
+            profile_id: userId,
+            name: name as string,
+            service: selectedCategory?.name || 'خدمت جدید',
+            location: 'ارومیه',
+            bio: bio as string,
+            category_slug: selectedCategory?.slug,
+            service_slug: firstServiceInCat?.slug,
+            phone: userPhone,
+        });
+    
+    if (providerInsertError) {
+      console.error('Error inserting into providers table:', providerInsertError);
+      // Attempt to clean up the created profile if provider creation fails
+      await supabaseAdmin.from('profiles').delete().eq('id', userId);
+      return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
+    }
+  }
+  
+  const destination = accountType === 'provider' ? '/profile' : '/';
+  redirect(destination);
 }
