@@ -22,15 +22,10 @@ export async function requestOtp(formData: FormData) {
   const supabase = await createClient();
   const normalizedPhone = normalizePhoneNumber(phone);
 
-  // signInWithOtp is the correct method for a passwordless login/signup flow.
-  // It sends an OTP if the user exists, or creates the user and sends an OTP if they don't.
-  // We explicitly set the channel to 'sms' to avoid ambiguity and ensure the SMS hook is always used.
+  // Reverted to the simplest call. This version was working before.
+  // It correctly handles both new user sign-up and existing user sign-in.
   const { error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
-    options: {
-      shouldCreateUser: true, // Explicitly allow user creation
-      channel: 'sms',
-    }
   });
 
   if (error) {
