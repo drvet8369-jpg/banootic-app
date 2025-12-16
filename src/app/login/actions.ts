@@ -28,6 +28,7 @@ export async function requestOtp(formData: FormData) {
   const { error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
     options: {
+      shouldCreateUser: true, // Explicitly allow user creation
       channel: 'sms',
     }
   });
