@@ -22,15 +22,18 @@ export async function requestOtp(formData: FormData) {
   const supabase = await createClient();
   const normalizedPhone = normalizePhoneNumber(phone);
 
-  // Reverted to the simplest call. This version was working before.
-  // It correctly handles both new user sign-up and existing user sign-in.
+  // Reverted to the simplest call that was confirmed to be working.
+  // This correctly handles both new user sign-up and existing user sign-in
+  // by using the SMS channel and preventing the "recovery" flow.
   const { error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
+    options: {
+      channel: 'sms',
+    }
   });
 
   if (error) {
     console.error('Supabase signInWithOtp Error:', error);
-    // Provide a more user-friendly message
     return { error: `خطا در ارسال کد: ${error.message}` };
   }
 

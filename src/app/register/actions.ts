@@ -12,7 +12,7 @@ import { redirect } from 'next/navigation';
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
   name: z.string().min(2),
-  phone: z.string().regex(/^09\d{9}$/),
+  phone: z.string().regex(/^(\+98|0)?9\d{9}$/),
   serviceId: z.string().optional(),
   bio: z.string().optional(),
 });
@@ -30,31 +30,35 @@ export async function registerUser(formData: FormData) {
   const normalizedPhone = normalizePhoneNumber(phone);
   
   const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
 
-  // 1. Check if a user with this phone number already exists in auth.users
-  const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-      phone: normalizedPhone
-  });
-  if (listError) {
-      console.error("Supabase list users error:", listError);
-      return { error: "خطا در بررسی اطلاعات کاربر." };
+  // Get the currently logged-in user from the session created by OTP
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return { error: 'جلسه کاربری شما معتبر نیست. لطفاً دوباره وارد شوید.' };
+  }
+
+  // Double-check that the phone number from the form matches the logged-in user
+  if (session.user.phone !== normalizedPhone) {
+      return { error: 'خطای امنیتی: شماره تلفن فرم با شماره تلفن کاربر وارد شده مطابقت ندارد.' };
+  }
+
+  const userId = session.user.id;
+
+  // Check if a profile already exists for this user ID. This is the correct way
+  // to prevent re-registration.
+  const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+  if (existingProfile) {
+    return { error: 'این کاربر قبلاً پروفایل خود را تکمیل کرده است.' };
   }
   
-  const existingUser = users.find(u => u.phone === normalizedPhone);
-
-  if (existingUser) {
-    const { data: existingProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('id', existingUser.id)
-        .single();
-        
-    if (existingProfile) {
-        return { error: 'شما قبلاً ثبت‌نام کرده‌اید. لطفاً وارد شوید.' };
-    }
-  }
-  
-  // 2. If registering as a provider, check for duplicate business name
+  // If registering as a provider, check for duplicate business name
   if (accountType === 'provider') {
     const { data: existingProviderByName } = await supabaseAdmin
       .from('providers')
@@ -65,24 +69,6 @@ export async function registerUser(formData: FormData) {
     if (existingProviderByName) {
       return { error: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.' };
     }
-  }
-
-  // 3. Create or get user ID
-  let userId: string;
-  if (existingUser) {
-      userId = existingUser.id;
-  } else {
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      phone: normalizedPhone,
-      password: process.env.SUPABASE_MASTER_PASSWORD,
-      phone_confirm: true,
-    });
-
-    if (createError || !newUser?.user) {
-      console.error('Error creating user in Supabase Auth:', createError);
-      return { error: 'خطا در ایجاد حساب کاربری جدید.' };
-    }
-    userId = newUser.user.id;
   }
   
   // 4. Update user metadata
@@ -96,7 +82,6 @@ export async function registerUser(formData: FormData) {
 
 
   // 5. Create profile in `profiles` table
-  // This part is now the single source of truth for profile creation.
   const { error: profileInsertError } = await supabaseAdmin
     .from('profiles')
     .insert({
@@ -108,10 +93,6 @@ export async function registerUser(formData: FormData) {
 
   if (profileInsertError) {
       console.error('Error inserting into profiles table:', profileInsertError);
-      // Attempt to clean up the created user if profile creation fails
-      if (!existingUser) {
-          await supabaseAdmin.auth.admin.deleteUser(userId);
-      }
       return { error: `خطای دیتابیس در ساخت پروفایل: ${profileInsertError.message}` };
   }
 
@@ -139,26 +120,11 @@ export async function registerUser(formData: FormData) {
     
     if (providerInsertError) {
       console.error('Error inserting into providers table:', providerInsertError);
-      // Attempt to clean up user & profile if provider creation fails
-      if (!existingUser) {
-          await supabaseAdmin.auth.admin.deleteUser(userId);
-      }
+      await supabaseAdmin.from('profiles').delete().eq('id', userId);
       return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
     }
   }
 
-  // 7. Sign the user in to create a session
-  const supabase = await createClient();
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    phone: normalizedPhone,
-    password: process.env.SUPABASE_MASTER_PASSWORD,
-  });
-
-  if (signInError) {
-    console.error('Error signing in after registration:', signInError);
-    return { error: 'خطا در ورود خودکار پس از ثبت‌نام.' };
-  }
-  
   const destination = accountType === 'provider' ? '/profile' : '/';
   redirect(destination);
 }
