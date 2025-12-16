@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { categories } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { registerUser } from './actions';
+import { registerUser } from '../login/actions';
 import { useAuth } from '@/context/AuthContext';
 
 
