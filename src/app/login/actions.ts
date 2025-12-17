@@ -22,9 +22,10 @@ export async function requestOtp(formData: FormData) {
   const supabase = await createClient();
   const normalizedPhone = normalizePhoneNumber(phone);
 
-  // Reverted to the simplest call that was confirmed to be working.
-  // This correctly handles both new user sign-up and existing user sign-in
-  // by using the SMS channel and preventing the "recovery" flow.
+  // FIX: Supabase requires the 'channel' to be set to 'sms' for the custom
+  // provider hook to be triggered correctly. This was missing and caused the
+  // 'hook requires authorization' error because Supabase was falling back
+  // to a different, unauthorized flow.
   const { error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
     options: {
