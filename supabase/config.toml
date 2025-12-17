@@ -29,4 +29,4 @@ port = 54323
 
 # Declares the Edge Function for sending OTPs
 [functions.kavenegar-otp-sender]
-verify_jwt = false
+verify_jwt = true
