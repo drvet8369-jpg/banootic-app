@@ -5,13 +5,10 @@ import { redirect } from 'next/navigation';
 import { normalizePhoneNumber } from '@/lib/utils';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { headers } from 'next/headers';
-
 
 /**
- * Initiates the login OR sign-up process by sending an OTP.
- * This function now bypasses the problematic Auth Hook by invoking the 
- * 'kavenegar-otp-sender' Edge Function directly with the required secret.
+ * Initiates the login OR sign-up process by generating an OTP and then
+ * directly invoking our custom Edge Function to send it via Kavenegar.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -22,30 +19,23 @@ export async function requestOtp(formData: FormData) {
   const supabase = await createClient();
   const normalizedPhone = normalizePhoneNumber(phone);
 
-  // Instead of signInWithOtp, we now use the admin client to generate the OTP
-  // and then manually invoke our own function to send it.
+  // Step 1: Use the admin client to generate an OTP for the user.
+  // This creates the user if they don't exist and returns a token, but does NOT send it.
   const supabaseAdmin = createAdminClient();
-
-  // Generate an OTP for the user. This creates the user if they don't exist.
-  // We use `generateLink` with `type: 'magiclink'` as a way to get an OTP (`token`).
-  // The 'sms' type for generateLink is not available, but this works.
-  const { data, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
+  const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'magiclink', // Using 'magiclink' type is a way to get an OTP for a phone number.
     phone: normalizedPhone,
   });
 
-  if (generateError || !data.properties?.hashed_token) {
+  if (generateError || !otpData?.properties?.otp_code) {
     console.error('Supabase admin.generateLink Error:', generateError);
     return { error: `خطا در ایجاد کد یکبار مصرف: ${generateError?.message}` };
   }
-  
-  // The 'otp_code' is the plain text token we need to send.
-  const otpCode = data.properties.otp_code;
-  if(!otpCode) {
-    return { error: 'خطا: کد یکبار مصرف توسط سوپابیس تولید نشد.' };
-  }
 
-  // Now, manually invoke the Edge Function with the required secret.
+  const otpCode = otpData.properties.otp_code;
+
+  // Step 2: Manually invoke our 'kavenegar-otp-sender' Edge Function.
+  // We send the function secret in the Authorization header to bypass JWT verification.
   const functionSecret = process.env.SUPABASE_FUNCTION_SECRET;
   if (!functionSecret) {
       console.error('SUPABASE_FUNCTION_SECRET is not set in environment variables.');
@@ -55,7 +45,6 @@ export async function requestOtp(formData: FormData) {
   const { error: invokeError } = await supabase.functions.invoke('kavenegar-otp-sender', {
     body: { phone: normalizedPhone, token: otpCode },
     headers: {
-      // This is the crucial part: sending the secret.
       'Authorization': `Bearer ${functionSecret}`
     }
   });
@@ -65,7 +54,7 @@ export async function requestOtp(formData: FormData) {
     return { error: `خطا در ارسال کد از طریق سرویس پیامک: ${invokeError.message}` };
   }
 
-  // Redirect to verification page on success
+  // Step 3: Redirect to verification page on success
   redirect(`/login/verify?phone=${phone}`);
 }
 
@@ -101,16 +90,16 @@ export async function verifyOtp(formData: FormData) {
     const supabaseAdmin = createAdminClient();
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .select('id, full_name, account_type') // Select fields to check for completion
       .eq('id', session.user.id)
       .single();
     
-    if (!profile) {
+    // A profile is considered incomplete if it doesn't exist OR if the full_name is missing.
+    if (!profile || !profile.full_name) {
        // If no profile, they need to complete registration.
        redirect(`/register?phone=${phone}`);
      } else {
-       // If profile exists, they are fully registered.
+       // If profile exists and is complete, go home.
        redirect('/');
      }
 }
-
