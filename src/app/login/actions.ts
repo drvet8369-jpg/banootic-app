@@ -16,12 +16,14 @@ export async function requestOtp(formData: FormData) {
     return { error: 'شماره تلفن الزامی است.' };
   }
 
-  const supabase = await createClient();
+  // Ensure the phone number is in E.164 format (+98...) before any Supabase call.
   const normalizedPhone = normalizePhoneNumber(phone);
+
+  const supabase = await createClient();
+  const supabaseAdmin = createAdminClient();
 
   // Step 1: Use the admin client to generate an OTP for the user.
   // This creates the user if they don't exist and returns a token, but does NOT send it.
-  const supabaseAdmin = createAdminClient();
   const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink', // Using 'magiclink' type is a way to get an OTP for a phone number.
     phone: normalizedPhone,
@@ -29,6 +31,10 @@ export async function requestOtp(formData: FormData) {
 
   if (generateError || !otpData?.properties?.otp_code) {
     console.error('Supabase admin.generateLink Error:', generateError);
+    // Provide a more user-friendly error for validation issues.
+    if (generateError?.code === 'validation_failed') {
+        return { error: 'شماره تلفن وارد شده معتبر نیست. لطفاً دوباره بررسی کنید.' };
+    }
     return { error: `خطا در ایجاد کد یکبار مصرف: ${generateError?.message}` };
   }
 
@@ -54,7 +60,7 @@ export async function requestOtp(formData: FormData) {
     return { error: `خطا در ارسال کد از طریق سرویس پیامک: ${invokeError.message}` };
   }
 
-  // Step 3: Redirect to verification page on success
+  // Step 3: Redirect to verification page on success, passing the original (non-normalized) phone for display.
   redirect(`/login/verify?phone=${phone}`);
 }
 
@@ -72,6 +78,7 @@ export async function verifyOtp(formData: FormData) {
     }
     
     const supabase = await createClient();
+    // Use the normalized phone number for verification with Supabase.
     const normalizedPhone = normalizePhoneNumber(phone);
 
     // Verify the OTP which also creates the session for the user.
