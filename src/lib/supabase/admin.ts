@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 // This file is specifically for creating a Supabase admin client.
