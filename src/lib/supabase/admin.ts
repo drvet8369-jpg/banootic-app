@@ -5,21 +5,28 @@ import { createClient } from '@supabase/supabase-js';
 // secure server-side environments (like Server Actions or Route Handlers).
 // It must never be exposed to the client-side.
 
+let adminClient: ReturnType<typeof createClient> | null = null;
+
 export const createAdminClient = () => {
+  // Singleton pattern: if the client is already created, return it.
+  if (adminClient) {
+    return adminClient;
+  }
+  
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // Read the service role key directly from environment variables.
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('Supabase URL or Service Role Key is not set in environment variables.');
+    throw new Error('Supabase URL or Service Role Key is not set in environment variables for admin client.');
   }
 
-  // When using the service_role key, we should disable session persistence.
-  // This correctly creates a client with admin privileges.
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  // Create and store the client for future use.
+  adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+  
+  return adminClient;
 };
