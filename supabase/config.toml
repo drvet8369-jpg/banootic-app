@@ -2,7 +2,7 @@
 # Supabase project configuration.
 # https://supabase.com/docs/guides/cli/config
 
-project_id = "gygnshfngcyxkamapejf"
+project_id = "rfiybvlqdibtwckbgscu"
 
 [api]
 # Port to use for Supabase API URL
@@ -28,5 +28,6 @@ docker_image = "supabase/postgres:15.1.0.118"
 port = 54323
 
 # Declares the Edge Function for sending OTPs
+# and ensures JWT verification is enabled.
 [functions.kavenegar-otp-sender]
 verify_jwt = true
