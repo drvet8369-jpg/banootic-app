@@ -25,13 +25,14 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { requestOtp } from './actions';
+import { normalizeForKavenegar } from '@/lib/utils';
 
-// This schema validates common Iranian phone number formats on the client side.
+
+// This schema now performs a very basic client-side check.
+// The robust normalization and validation happens on the server.
 const LoginSchema = z.object({
   phone: z.string().min(10, {
     message: 'شماره تلفن باید حداقل ۱۰ رقم باشد.',
-  }).regex(/^(09|\+989|989|9)\d{9}$/, {
-    message: "فرمت شماره تلفن معتبر نیست."
   }),
 });
 
@@ -54,6 +55,7 @@ export default function LoginPage() {
     try {
       const result = await requestOtp(formData);
       if (result?.error) {
+          // The error message from the server action is now displayed directly.
           toast.error('خطا در ارسال کد', { description: result.error });
       }
       // On success, the action handles the redirect itself.

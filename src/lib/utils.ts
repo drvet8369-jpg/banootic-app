@@ -6,39 +6,56 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Reliably normalizes a phone number to the international E.164 format (+98...).
- * This function is robust and designed to handle various common Iranian formats.
- * It is the single source of truth for phone number normalization before sending to Supabase.
+ * Normalizes a phone number to the local Iranian format (09...).
+ * This is the primary internal format for services like Kavenegar.
  * @param phone The phone number string to normalize.
- * @returns The normalized phone number in "+98..." format.
- * @throws {Error} if the final number is not a valid 9-digit mobile number after normalization.
+ * @returns The normalized phone number in "09..." format.
+ * @throws {Error} if the phone number is invalid.
  */
-export function normalizePhoneNumber(phone: string): string {
+export function normalizeForKavenegar(phone: string): string {
   if (!phone) {
-    throw new Error('شماره تلفن نمی‌تواند خالی باشد.');
+    throw new Error("شماره تلفن نمی‌تواند خالی باشد.");
   }
 
-  // 1. Remove all non-digit characters.
-  let digits = phone.replace(/\D/g, '');
+  // Convert to string, trim whitespace
+  let normalized = phone.toString().trim();
 
-  // 2. Handle country code prefixes.
-  if (digits.startsWith('98')) {
-    digits = digits.substring(2);
-  } else if (digits.startsWith('0098')) {
-    digits = digits.substring(4);
+  // Remove all non-digit characters except for a leading '+'
+  normalized = normalized.replace(/[^0-9+]/g, '');
+
+  if (normalized.startsWith('+98')) {
+    // Convert +989... to 09...
+    return '0' + normalized.slice(3);
   }
   
-  // 3. Handle the leading zero for local format.
-  if (digits.startsWith('0')) {
-    digits = digits.substring(1);
+  if (normalized.startsWith('98')) {
+    // Convert 989... to 09...
+    return '0' + normalized.slice(2);
   }
 
-  // 4. At this point, we should have the core 10 digits (e.g., 9123456789).
-  // We expect the number to start with '9' and be 10 digits long.
-  if (digits.length !== 10 || !digits.startsWith('9')) {
-    throw new Error('فرمت شماره موبایل وارد شده معتبر نیست. شماره باید با ۹ شروع شده و ۱۰ رقم باشد.');
+  if (normalized.startsWith('9') && normalized.length === 10) {
+    // Convert 9... to 09...
+    return '0' + normalized;
+  }
+  
+  // Check if it's already a valid format
+  if (/^09\d{9}$/.test(normalized)) {
+    return normalized;
   }
 
-  // 5. Prepend the international code.
-  return `+98${digits}`;
+  throw new Error("فرمت شماره تلفن موبایل وارد شده معتبر نیست.");
+}
+
+/**
+ * Normalizes a phone number to the international E.164 format for Supabase Auth.
+ * @param phone The phone number string to normalize.
+ * @returns The normalized phone number in "+98..." format.
+ * @throws {Error} if the phone number is invalid.
+ */
+export function normalizeForSupabaseAuth(phone: string): string {
+  // First, normalize to the standard local format
+  const localFormat = normalizeForKavenegar(phone);
+  
+  // Then, convert "09..." to "+989..."
+  return '+98' + localFormat.slice(1);
 }
