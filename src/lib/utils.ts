@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Normalizes a phone number to the international E.164 format (+98...) required by Supabase.
+ * Reliably normalizes a phone number to the international E.164 format (+98...).
  * It handles various common Iranian formats.
  * @param phone The phone number string to normalize.
  * @returns The normalized phone number in "+98..." format.
@@ -14,29 +14,30 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function normalizePhoneNumber(phone: string): string {
     if (!phone) {
-        throw new Error('Phone number cannot be empty.');
+        throw new Error('شماره تلفن نمی‌تواند خالی باشد.');
     }
 
-    // Convert Persian/Arabic numerals to English numerals
-    let englishPhone = phone
+    // Convert Persian/Arabic numerals to English numerals and remove all non-digit characters.
+    const digitsOnly = phone
         .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
-        .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
+        .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
+        .replace(/\D/g, '');
 
-    // Remove all non-digit characters
-    const digitsOnly = englishPhone.replace(/\D/g, '');
-
-    // Check for different valid starting formats
-    if (digitsOnly.startsWith('989') && digitsOnly.length === 12) {
-        // Format: 989...
-        return `+${digitsOnly}`;
-    } else if (digitsOnly.startsWith('09') && digitsOnly.length === 11) {
-        // Format: 09...
+    // Case 1: Starts with '09' (e.g., "09123456789") -> Convert to "+989..."
+    if (digitsOnly.startsWith('09') && digitsOnly.length === 11) {
         return `+98${digitsOnly.substring(1)}`;
-    } else if (digitsOnly.startsWith('9') && digitsOnly.length === 10) {
-        // Format: 9... (e.g., 9123456789)
+    }
+    
+    // Case 2: Starts with '989' (e.g., "989123456789") -> Convert to "+989..."
+    if (digitsOnly.startsWith('989') && digitsOnly.length === 12) {
+        return `+${digitsOnly}`;
+    }
+
+    // Case 3: Starts with '9' (e.g., "9123456789") -> Convert to "+989..."
+    if (digitsOnly.startsWith('9') && digitsOnly.length === 10) {
         return `+98${digitsOnly}`;
     }
 
-    // If none of the above match, the format is invalid.
-    throw new Error('Invalid Iranian mobile number format.');
+    // If none of the above rules match, the format is invalid.
+    throw new Error('فرمت شماره موبایل وارد شده معتبر نیست.');
 }
