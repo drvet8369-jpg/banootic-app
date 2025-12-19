@@ -6,19 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Normalizes an Iranian phone number to the international +98 format.
- * It handles Persian/Arabic numerals, leading zeros, and missing country codes.
+ * Normalizes an Iranian phone number to the internal 09... format for validation.
  * @param phone The phone number to normalize.
- * @returns The normalized phone number in +98 format.
+ * @returns The normalized phone number in 09... format.
  */
-export function normalizePhoneNumber(phone: string): string {
+export function normalizeIranPhone(phone: string): string {
   if (!phone) return '';
-  
+  // Convert Persian/Arabic numerals to English
   const persianNumerals = "۰۱۲۳۴۵۶۷۸۹";
   const arabicNumerals = "٠١٢٣٤٥٦٧٨٩";
   const englishNumerals = "0123456789";
 
-  // Convert Persian/Arabic numerals to English
   let convertedPhone = "";
   for (let i = 0; i < phone.length; i++) {
     const char = phone[i];
@@ -34,31 +32,36 @@ export function normalizePhoneNumber(phone: string): string {
     }
     convertedPhone += char;
   }
-
+  
   // Remove any non-digit characters except for a leading +
   let clean = convertedPhone.replace(/[\s-()]/g, '');
-  
-  // If it already starts with +98 and is the correct length, it's good.
-  if (clean.startsWith('+98') && clean.length === 13) {
-    return clean;
+
+  if (clean.startsWith('+98')) {
+    return '0' + clean.slice(3);
+  } else if (clean.startsWith('98')) {
+    return '0' + clean.slice(2);
   }
 
-  // Remove leading + if it's not followed by 98
-  if (clean.startsWith('+') && !clean.startsWith('+98')) {
-    clean = clean.substring(1);
-  }
+  return clean;
+}
 
-  // Remove leading 98 if it's not part of a +98 prefix
-  if (clean.startsWith('98')) {
-    clean = clean.substring(2);
+
+/**
+ * Normalizes an Iranian phone number to the international +98 format for Supabase.
+ * @param phone The phone number to normalize.
+ * @returns The normalized phone number in +98 format.
+ */
+export function normalizePhoneNumber(phone: string): string {
+  if (!phone) return '';
+  
+  const internalFormat = normalizeIranPhone(phone); // First, get it to 09... format
+
+  // If it's a valid internal format, convert to E.164
+  if (/^09\d{9}$/.test(internalFormat)) {
+    return '+98' + internalFormat.slice(1);
   }
   
-  // If number starts with a 0, remove it (e.g., 0912 -> 912)
-  if (clean.startsWith('0')) {
-    clean = clean.substring(1);
-  }
-  
-  // After all cleaning, if the number is not 10 digits (like 9123456789), it's likely invalid,
-  // but we'll prepend +98 anyway as a best effort.
-  return `+98${clean}`;
+  // Return the partially cleaned number as a fallback, Supabase will likely reject it
+  // which is the desired behavior for invalid numbers.
+  return internalFormat;
 }

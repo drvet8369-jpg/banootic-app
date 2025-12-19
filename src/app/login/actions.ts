@@ -16,8 +16,9 @@ export async function requestOtp(formData: FormData) {
   }
 
   // Ensure the phone number is in E.164 format (+98...) before any Supabase call.
-  const normalizedPhone = normalizePhoneNumber(phone);
-  if (!normalizedPhone || !/^\+989\d{9}$/.test(normalizedPhone)) {
+  const normalizedPhoneForSupabase = normalizePhoneNumber(phone);
+  if (!normalizedPhoneForSupabase || !/^\+989\d{9}$/.test(normalizedPhoneForSupabase)) {
+    console.error('Invalid phone number format after normalization:', normalizedPhoneForSupabase);
     return { error: 'فرمت شماره تلفن پس از نرمال‌سازی نامعتبر است.' };
   }
 
@@ -27,7 +28,7 @@ export async function requestOtp(formData: FormData) {
   // This creates the user if they don't exist and returns a token, but does NOT send it.
   const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink', // Using 'magiclink' type is a way to get an OTP for a phone number.
-    phone: normalizedPhone,
+    phone: normalizedPhoneForSupabase,
   });
 
   if (generateError || !otpData?.properties?.otp_code) {
@@ -51,7 +52,7 @@ export async function requestOtp(formData: FormData) {
   }
 
   const { error: invokeError } = await supabase.functions.invoke('kavenegar-otp-sender', {
-    body: { phone: normalizedPhone, token: otpCode },
+    body: { phone: normalizedPhoneForSupabase, token: otpCode },
     headers: {
       'Authorization': `Bearer ${functionSecret}`
     }

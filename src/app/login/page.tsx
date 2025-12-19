@@ -25,12 +25,15 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { requestOtp } from './actions';
+import { normalizeIranPhone } from '@/lib/utils';
 
 
 const formSchema = z.object({
-  phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ۱۱ رقمی که با 09 شروع می‌شود وارد کنید.',
-  }),
+  phone: z.string()
+    .transform((val) => normalizeIranPhone(val)) // First, normalize the input
+    .pipe(z.string().regex(/^09\d{9}$/, { // Then, validate the normalized string
+      message: 'لطفاً یک شماره تلفن معتبر ۱۱ رقمی که با 09 شروع می‌شود وارد کنید.',
+  })),
 });
 
 export default function LoginPage() {
@@ -47,6 +50,7 @@ export default function LoginPage() {
     setIsLoading(true);
     
     const formData = new FormData();
+    // Use the validated (and transformed) value from the form
     formData.append('phone', values.phone);
 
     const result = await requestOtp(formData);
