@@ -28,8 +28,7 @@ import { requestOtp } from './actions';
 
 
 const LoginSchema = z.object({
-  // This regex accepts various common formats: 09..., 9..., +989..., 989...
-  // The actual, strict validation and normalization will happen on the server.
+  // A lenient regex that accepts most common formats. The server will handle final validation.
   phone: z.string().min(10, { message: 'شماره تلفن باید حداقل ۱۰ رقم باشد.' }),
 });
 

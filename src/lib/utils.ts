@@ -6,63 +6,37 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Normalizes a phone number from various Iranian formats to the "09..." standard internal format.
- * It handles Persian/Arabic numerals and different prefixes.
- * @param phone The phone number to normalize.
- * @returns The normalized phone number in "09..." format.
- * @throws {Error} if the number is not a valid Iranian mobile format after cleaning.
- */
-export function normalizeIranPhone(phone: string): string {
-    if (!phone) {
-        throw new Error('شماره تلفن نمی‌تواند خالی باشد.');
-    }
-
-    // Convert Persian/Arabic numerals to English
-    const persianNumerals = "۰۱۲۳۴۵۶۷۸۹";
-    const arabicNumerals = "٠١٢٣٤٥٦٧٨٩";
-    let englishPhone = "";
-    for (const char of phone) {
-        let pIndex = persianNumerals.indexOf(char);
-        if (pIndex !== -1) {
-            englishPhone += pIndex;
-            continue;
-        }
-        let aIndex = arabicNumerals.indexOf(char);
-        if (aIndex !== -1) {
-            englishPhone += aIndex;
-            continue;
-        }
-        englishPhone += char;
-    }
-
-    // Remove any non-digit characters except for a potential leading '+'
-    let clean = englishPhone.replace(/[^\d+]/g, '');
-
-    // Normalize based on prefix
-    if (clean.startsWith('+98')) {
-        clean = '0' + clean.slice(3);
-    } else if (clean.startsWith('98')) {
-        clean = '0' + clean.slice(2);
-    } else if (clean.startsWith('0098')) {
-        clean = '0' + clean.slice(4);
-    }
-
-    // After normalization, it must be in the format 09...
-    if (!/^09\d{9}$/.test(clean)) {
-        throw new Error('فرمت شماره تلفن نامعتبر است. لطفاً یک شماره موبایل صحیح ایرانی وارد کنید.');
-    }
-
-    return clean;
-}
-
-/**
  * Normalizes a phone number to the international E.164 format (+98...) required by Supabase.
- * @param phone The phone number in any common Iranian format.
+ * It handles various common Iranian formats.
+ * @param phone The phone number string to normalize.
  * @returns The normalized phone number in "+98..." format.
- * @throws {Error} if the number cannot be converted to a valid Iranian format.
+ * @throws {Error} if the number cannot be converted to a valid Iranian mobile format.
  */
 export function normalizePhoneNumber(phone: string): string {
-  const internalFormat = normalizeIranPhone(phone); // This will throw if invalid
-  // Convert the valid "09..." format to "+989..."
-  return '+98' + internalFormat.slice(1);
+    if (!phone) {
+        throw new Error('Phone number cannot be empty.');
+    }
+
+    // Convert Persian/Arabic numerals to English numerals
+    let englishPhone = phone
+        .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+        .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
+
+    // Remove all non-digit characters
+    const digitsOnly = englishPhone.replace(/\D/g, '');
+
+    // Check for different valid starting formats
+    if (digitsOnly.startsWith('989') && digitsOnly.length === 12) {
+        // Format: 989...
+        return `+${digitsOnly}`;
+    } else if (digitsOnly.startsWith('09') && digitsOnly.length === 11) {
+        // Format: 09...
+        return `+98${digitsOnly.substring(1)}`;
+    } else if (digitsOnly.startsWith('9') && digitsOnly.length === 10) {
+        // Format: 9... (e.g., 9123456789)
+        return `+98${digitsOnly}`;
+    }
+
+    // If none of the above match, the format is invalid.
+    throw new Error('Invalid Iranian mobile number format.');
 }
