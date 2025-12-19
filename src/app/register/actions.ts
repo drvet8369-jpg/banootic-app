@@ -3,7 +3,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { normalizePhoneNumber } from '@/lib/utils';
+import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { categories, services as allServices } from '@/lib/constants';
 import * as z from 'zod';
 import { redirect } from 'next/navigation';
@@ -27,7 +27,6 @@ export async function registerUser(formData: FormData) {
   }
   
   const { name, phone, accountType, serviceId, bio } = parsed.data;
-  const normalizedPhone = normalizePhoneNumber(phone);
   
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
@@ -38,6 +37,8 @@ export async function registerUser(formData: FormData) {
   if (!session?.user) {
     return { error: 'جلسه کاربری شما معتبر نیست. لطفاً دوباره وارد شوید.' };
   }
+  
+  const normalizedPhone = normalizeForSupabaseAuth(phone);
 
   // Double-check that the phone number from the form matches the logged-in user
   if (session.user.phone !== normalizedPhone) {
