@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { categories } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { registerUser } from '../login/actions';
+import { registerUser } from './actions';
 import { useAuth } from '@/context/AuthContext';
 
 
@@ -36,8 +36,8 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: 'نام باید حداقل ۲ حرف داشته باشد.',
   }),
-  phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+  phone: z.string().regex(/^(09|\+989)\d{9}$/, {
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید.',
   }),
   serviceId: z.string().optional(),
   bio: z.string().optional(),
@@ -121,16 +121,7 @@ export default function RegisterForm() {
     if (result?.error) {
         toast.error('خطا در ثبت‌نام', { description: result.error });
         setIsLoading(false);
-    } else {
-        toast.success('ثبت‌نام با موفقیت انجام شد!', {
-            description: 'خوش آمدید! به صفحه خود هدایت می‌شوید.',
-            onAutoClose: () => {
-                const destination = values.accountType === 'provider' ? '/profile' : '/';
-                router.push(destination);
-                router.refresh(); // Force a router refresh to get new server state
-            }
-        });
-    }
+    } 
   }
   
   // Do not render the form until loading is false AND we have a valid session or phone param
