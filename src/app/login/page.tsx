@@ -58,6 +58,11 @@ export default function LoginPage() {
     setIsLoading(false);
   }
 
+  function onInvalid(errors: any) {
+    console.error("Validation Errors:", errors);
+    toast.error('خطا در اعتبارسنجی', { description: 'لطفا خطاهای فرم را بررسی کنید. برای جزئیات بیشتر کنسول مرورگر را ببینید.' });
+  }
+
   return (
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
@@ -69,7 +74,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="phone"
