@@ -11,38 +11,40 @@ export function cn(...inputs: ClassValue[]) {
  * @returns The normalized phone number in 09... format.
  */
 export function normalizeIranPhone(phone: string): string {
-  if (!phone) return '';
-  // Convert Persian/Arabic numerals to English
-  const persianNumerals = "۰۱۲۳۴۵۶۷۸۹";
-  const arabicNumerals = "٠١٢٣٤٥٦٧٨٩";
-  const englishNumerals = "0123456789";
+    if (!phone) return '';
+    // Convert Persian/Arabic numerals to English
+    const persianNumerals = "۰۱۲۳۴۵۶۷۸۹";
+    const arabicNumerals = "٠١٢٣٤٥٦٧٨٩";
+    const englishNumerals = "0123456789";
 
-  let convertedPhone = "";
-  for (let i = 0; i < phone.length; i++) {
-    const char = phone[i];
-    let numeralIndex = persianNumerals.indexOf(char);
-    if (numeralIndex > -1) {
-      convertedPhone += englishNumerals[numeralIndex];
-      continue;
+    let convertedPhone = "";
+    for (let i = 0; i < phone.length; i++) {
+        const char = phone[i];
+        let numeralIndex = persianNumerals.indexOf(char);
+        if (numeralIndex > -1) {
+        convertedPhone += englishNumerals[numeralIndex];
+        continue;
+        }
+        numeralIndex = arabicNumerals.indexOf(char);
+        if (numeralIndex > -1) {
+        convertedPhone += englishNumerals[numeralIndex];
+        continue;
+        }
+        convertedPhone += char;
     }
-    numeralIndex = arabicNumerals.indexOf(char);
-    if (numeralIndex > -1) {
-      convertedPhone += englishNumerals[numeralIndex];
-      continue;
+    
+    // Remove any non-digit characters
+    let clean = convertedPhone.replace(/\D/g, '');
+
+    if (clean.startsWith('98')) {
+        return '0' + clean.slice(2);
     }
-    convertedPhone += char;
-  }
-  
-  // Remove any non-digit characters except for a leading +
-  let clean = convertedPhone.replace(/[\s-()]/g, '');
+    
+    if (clean.length === 10 && clean.startsWith('9')) {
+        return '0' + clean;
+    }
 
-  if (clean.startsWith('+98')) {
-    return '0' + clean.slice(3);
-  } else if (clean.startsWith('98')) {
-    return '0' + clean.slice(2);
-  }
-
-  return clean;
+    return clean;
 }
 
 
