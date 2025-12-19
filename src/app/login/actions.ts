@@ -11,31 +11,30 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
-  if (!phone) {
-    return { error: 'شماره تلفن الزامی است.' };
-  }
+  let normalizedPhoneForSupabase: string;
 
-  // Ensure the phone number is in E.164 format (+98...) before any Supabase call.
-  const normalizedPhoneForSupabase = normalizePhoneNumber(phone);
-  if (!normalizedPhoneForSupabase || !/^\+989\d{9}$/.test(normalizedPhoneForSupabase)) {
-    console.error('Invalid phone number format after normalization:', normalizedPhoneForSupabase);
-    return { error: 'فرمت شماره تلفن پس از نرمال‌سازی نامعتبر است.' };
+  try {
+    // This is the single point of truth for normalization. If it fails, we stop.
+    normalizedPhoneForSupabase = normalizePhoneNumber(phone);
+  } catch (error: any) {
+    console.error('Phone normalization error:', error.message);
+    return { error: error.message };
   }
 
   const supabaseAdmin = createAdminClient();
 
   // Step 1: Use the admin client to generate an OTP for the user.
-  // This creates the user if they don't exist and returns a token, but does NOT send it.
   const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink', // Using 'magiclink' type is a way to get an OTP for a phone number.
+    type: 'magiclink',
     phone: normalizedPhoneForSupabase,
   });
 
   if (generateError || !otpData?.properties?.otp_code) {
     console.error('Supabase admin.generateLink Error:', generateError);
-    // Provide a more user-friendly error for validation issues.
-    if (generateError?.code === 'validation_failed') {
-        return { error: 'شماره تلفن وارد شده معتبر نیست. لطفاً دوباره بررسی کنید.' };
+    // Supabase often returns a generic message for validation failures.
+    // We provide a more user-friendly error.
+    if (generateError?.code === 'validation_failed' || generateError?.message.includes('Invalid phone number')) {
+        return { error: 'شماره تلفن وارد شده در سمت سرور نامعتبر تشخیص داده شد.' };
     }
     return { error: `خطا در ایجاد کد یکبار مصرف: ${generateError?.message}` };
   }
@@ -44,11 +43,10 @@ export async function requestOtp(formData: FormData) {
   const supabase = await createClient();
 
   // Step 2: Manually invoke our 'kavenegar-otp-sender' Edge Function.
-  // We send the function secret in the Authorization header to bypass JWT verification.
   const functionSecret = process.env.SUPABASE_FUNCTION_SECRET;
   if (!functionSecret) {
-      console.error('SUPABASE_FUNCTION_SECRET is not set in environment variables.');
-      return { error: 'پیکربندی سمت سرور ناقص است. لطفاً با پشتیبانی تماس بگیرید.' };
+      console.error('SUPABASE_FUNCTION_SECRET is not set.');
+      return { error: 'پیکربندی سمت سرور ناقص است.' };
   }
 
   const { error: invokeError } = await supabase.functions.invoke('kavenegar-otp-sender', {
@@ -63,7 +61,7 @@ export async function requestOtp(formData: FormData) {
     return { error: `خطا در ارسال کد از طریق سرویس پیامک: ${invokeError.message}` };
   }
 
-  // Step 3: Redirect to verification page on success, passing the original (non-normalized) phone for display.
+  // Step 3: Redirect to verification page on success. Pass the original, unnormalized phone for display purposes.
   redirect(`/login/verify?phone=${phone}`);
 }
 
@@ -80,9 +78,14 @@ export async function verifyOtp(formData: FormData) {
         return { error: 'شماره تلفن و کد تایید الزامی است.' };
     }
     
+    let normalizedPhone: string;
+    try {
+        normalizedPhone = normalizePhoneNumber(phone);
+    } catch (error: any) {
+        return { error: error.message };
+    }
+
     const supabase = await createClient();
-    // Use the normalized phone number for verification with Supabase.
-    const normalizedPhone = normalizePhoneNumber(phone);
 
     // Verify the OTP which also creates the session for the user.
     const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({

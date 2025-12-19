@@ -26,11 +26,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { requestOtp } from './actions';
 
-
+// This schema is intentionally lenient. It just checks for common patterns.
+// The robust validation and normalization happens on the server in the action.
 const LoginSchema = z.object({
-  // A lenient validation that just checks for minimum length.
-  // The server-side action will handle the robust normalization and validation.
-  phone: z.string().min(10, { message: 'شماره تلفن باید حداقل ۱۰ رقم باشد.' }),
+  phone: z.string().min(10, {
+    message: 'شماره تلفن باید حداقل ۱۰ رقم باشد.',
+  }).max(14, {
+      message: 'شماره تلفن نمی‌تواند بیشتر از ۱۴ کاراکتر باشد.'
+  }),
 });
 
 export default function LoginPage() {
@@ -50,6 +53,7 @@ export default function LoginPage() {
     formData.append('phone', values.phone);
 
     try {
+      // The server action now holds the primary responsibility for validation.
       const result = await requestOtp(formData);
       if (result?.error) {
           toast.error('خطا در ارسال کد', { description: result.error });
