@@ -59,8 +59,11 @@ export default function LoginPage() {
   }
 
   function onInvalid(errors: any) {
-    console.error("Validation Errors:", errors);
-    toast.error('خطا در اعتبارسنجی', { description: 'لطفا خطاهای فرم را بررسی کنید. برای جزئیات بیشتر کنسول مرورگر را ببینید.' });
+    // Show the detailed validation error object in a toast notification
+    toast.error('خطای اعتبارسنجی فرم:', { 
+      description: JSON.stringify(errors, null, 2),
+      duration: 10000, // Show for 10 seconds
+    });
   }
 
   return (
