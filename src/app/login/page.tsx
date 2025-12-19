@@ -3,9 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import Link from "next/link";
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,7 +29,7 @@ import { requestOtp } from './actions';
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
+    message: 'لطفاً یک شماره تلفن معتبر ۱۱ رقمی وارد کنید (مثال: 09123456789).',
   }),
 });
 
@@ -49,8 +47,6 @@ export default function LoginPage() {
     setIsLoading(true);
     
     const formData = new FormData();
-    // Send the phone number as entered by the user.
-    // Normalization will be handled entirely by the server action.
     formData.append('phone', values.phone);
 
     const result = await requestOtp(formData);
