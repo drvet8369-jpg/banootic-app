@@ -18,8 +18,10 @@ export async function requestOtp(formData: FormData) {
 
   // Ensure the phone number is in E.164 format (+98...) before any Supabase call.
   const normalizedPhone = normalizePhoneNumber(phone);
+  if (!normalizedPhone || !/^\+989\d{9}$/.test(normalizedPhone)) {
+    return { error: 'فرمت شماره تلفن پس از نرمال‌سازی نامعتبر است.' };
+  }
 
-  const supabase = await createClient();
   const supabaseAdmin = createAdminClient();
 
   // Step 1: Use the admin client to generate an OTP for the user.
@@ -39,6 +41,7 @@ export async function requestOtp(formData: FormData) {
   }
 
   const otpCode = otpData.properties.otp_code;
+  const supabase = await createClient();
 
   // Step 2: Manually invoke our 'kavenegar-otp-sender' Edge Function.
   // We send the function secret in the Authorization header to bypass JWT verification.

@@ -27,11 +27,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { requestOtp } from './actions';
-import { normalizePhoneNumber } from '@/lib/utils';
 
 
 const formSchema = z.object({
-  phone: z.string().regex(/^(09|\+989)\d{9}$/, {
+  phone: z.string().regex(/^09\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
@@ -50,8 +49,9 @@ export default function LoginPage() {
     setIsLoading(true);
     
     const formData = new FormData();
-    // Always send the normalized version to the server action
-    formData.append('phone', normalizePhoneNumber(values.phone));
+    // Send the phone number as entered by the user.
+    // Normalization will be handled entirely by the server action.
+    formData.append('phone', values.phone);
 
     const result = await requestOtp(formData);
 
