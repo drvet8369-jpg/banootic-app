@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -11,13 +12,24 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
+  
+  // --- STEP 1: LOG RAW INPUT ---
+  console.log('--- STARTING requestOtp ACTION ---');
+  console.log('1. RAW PHONE FROM FORM:', phone);
+  console.log(`   - Type: ${typeof phone}, Length: ${phone?.length}`);
+
   let normalizedForSupabase: string;
   let normalizedForKavenegar: string;
 
   try {
-    // Normalize for each service. If it fails, it will throw an error.
+    // Normalize for each service.
     normalizedForSupabase = normalizeForSupabaseAuth(phone);
     normalizedForKavenegar = normalizeForKavenegar(phone);
+
+    // --- STEP 2: LOG NORMALIZED OUTPUTS ---
+    console.log('2. NORMALIZED FOR SUPABASE (E.164):', normalizedForSupabase);
+    console.log('3. NORMALIZED FOR KAVENEGAR (LOCAL):', normalizedForKavenegar);
+
   } catch (error: any) {
     console.error('Phone normalization error:', error.message);
     return { error: error.message };
@@ -25,30 +37,32 @@ export async function requestOtp(formData: FormData) {
 
   const supabaseAdmin = createAdminClient();
 
-  // Step 1: Use the admin client to generate an OTP for the user, using the Supabase-compatible format.
+  // Step 3: Use the admin client to generate an OTP for the user.
+  console.log('4. Calling Supabase admin.generateLink with:', normalizedForSupabase);
   const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink',
     phone: normalizedForSupabase,
   });
 
   if (generateError || !otpData?.properties?.otp_code) {
-    console.error('Supabase admin.generateLink Error:', generateError);
+    console.error('5. Supabase admin.generateLink FAILED:', generateError);
     if (generateError?.code === 'validation_failed' || generateError?.message.includes('Invalid phone number')) {
         return { error: 'شماره تلفن وارد شده در سمت سرور معتبر تشخیص داده نشد.' };
     }
     return { error: `خطا در ایجاد کد یکبار مصرف: ${generateError?.message}` };
   }
+  console.log('5. Supabase admin.generateLink SUCCEEDED.');
 
   const otpCode = otpData.properties.otp_code;
   const supabase = await createClient();
 
-  // Step 2: Manually invoke our 'kavenegar-otp-sender' Edge Function, using the Kavenegar-compatible format.
+  // Step 4: Manually invoke our 'kavenegar-otp-sender' Edge Function.
   const functionSecret = process.env.SUPABASE_FUNCTION_SECRET;
   if (!functionSecret) {
-      console.error('SUPABASE_FUNCTION_SECRET is not set.');
+      console.error('6. SUPABASE_FUNCTION_SECRET is not set.');
       return { error: 'پیکربندی سمت سرور ناقص است.' };
   }
-
+  console.log('6. Calling Kavenegar Edge Function...');
   const { error: invokeError } = await supabase.functions.invoke('kavenegar-otp-sender', {
     body: { phone: normalizedForKavenegar, token: otpCode },
     headers: {
@@ -57,11 +71,13 @@ export async function requestOtp(formData: FormData) {
   });
 
   if (invokeError) {
-    console.error('Supabase functions.invoke Error:', invokeError);
+    console.error('7. Kavenegar Edge Function FAILED:', invokeError);
     return { error: `خطا در ارسال کد از طریق سرویس پیامک: ${invokeError.message}` };
   }
+  console.log('7. Kavenegar Edge Function SUCCEEDED.');
 
-  // Step 3: Redirect to verification page on success. Pass the original, unnormalized phone for display purposes.
+  // Step 5: Redirect to verification page on success.
+  console.log('--- ACTION COMPLETED SUCCESSFULLY. REDIRECTING... ---');
   redirect(`/login/verify?phone=${phone}`);
 }
 
