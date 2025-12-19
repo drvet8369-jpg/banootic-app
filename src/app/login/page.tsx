@@ -29,7 +29,7 @@ import { requestOtp } from './actions';
 
 const formSchema = z.object({
   phone: z.string().regex(/^09\d{9}$/, {
-    message: 'لطفاً یک شماره تلفن معتبر ۱۱ رقمی وارد کنید (مثال: 09123456789).',
+    message: 'لطفاً یک شماره تلفن معتبر ۱۱ رقمی که با 09 شروع می‌شود وارد کنید.',
   }),
 });
 
@@ -58,14 +58,6 @@ export default function LoginPage() {
     setIsLoading(false);
   }
 
-  function onInvalid(errors: any) {
-    // Show the detailed validation error object in a toast notification
-    toast.error('خطای اعتبارسنجی فرم:', { 
-      description: JSON.stringify(errors, null, 2),
-      duration: 10000, // Show for 10 seconds
-    });
-  }
-
   return (
     <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
       <Card className="mx-auto max-w-sm w-full">
@@ -77,7 +69,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="phone"
