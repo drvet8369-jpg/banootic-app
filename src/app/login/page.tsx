@@ -1,9 +1,11 @@
-
 'use client';
 
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,50 +15,51 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { requestOtp } from './actions';
-import { normalizeIranPhone } from '@/lib/utils';
 
-// We are intentionally NOT using Zod here for debugging purposes.
+
+const LoginSchema = z.object({
+  // This regex accepts various common formats: 09..., 9..., +989..., 989...
+  // The actual, strict validation and normalization will happen on the server.
+  phone: z.string().min(10, { message: 'شماره تلفن باید حداقل ۱۰ رقم باشد.' }),
+});
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [debugMessage, setDebugMessage] = useState('');
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const form = useForm<z.infer<typeof LoginSchema>>({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: {
+      phone: '',
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof LoginSchema>) {
     setIsLoading(true);
-    setDebugMessage(''); // Clear previous message
-
-    // --- Start Debugging Block ---
-    let normalizedPhone: string;
-    try {
-      // Manually run the normalization and validation function
-      normalizedPhone = normalizeIranPhone(phone);
-      // If it succeeds without throwing an error, we know this part is working.
-      setDebugMessage(`مرحله اشکال‌زدایی: تابع نرمال‌سازی موفق بود. نتیجه: ${normalizedPhone}`);
-    } catch (error: any) {
-      // If it throws an error, we catch it and display the exact message.
-      setDebugMessage(`متن دقیق خطا از تابع نرمال‌سازی: ${error.message}`);
-      setIsLoading(false);
-      return; // Stop execution
-    }
-    // --- End Debugging Block ---
 
     const formData = new FormData();
-    formData.append('phone', normalizedPhone);
+    formData.append('phone', values.phone);
 
-    const result = await requestOtp(formData);
-
-    if (result?.error) {
-        toast.error('خطا', { description: result.error });
-        // Also show server error in our debug view
-        setDebugMessage(`خطای بازگشتی از سرور: ${result.error}`);
+    try {
+      const result = await requestOtp(formData);
+      if (result?.error) {
+          toast.error('خطا در ارسال کد', { description: result.error });
+      }
+      // On success, the action handles the redirect itself.
+    } catch (e: any) {
+        toast.error('خطای پیش‌بینی نشده', { description: e.message || "لطفاً دوباره تلاش کنید." });
+    } finally {
+        setIsLoading(false);
     }
-    // On success, the action handles the redirect itself.
-    setIsLoading(false);
   }
 
   return (
@@ -69,34 +72,33 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">شماره تلفن</Label>
-              <Input 
-                id="phone"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
                 name="phone"
-                placeholder="مثال: 09123456789" 
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={isLoading}
-                dir="ltr"
-                className="text-center"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>شماره تلفن</FormLabel>
+                    <FormControl>
+                       <Input 
+                          placeholder="مثال: 09123456789" 
+                          {...field}
+                          disabled={isLoading}
+                          dir="ltr"
+                          className="text-center"
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              ارسال کد تایید
-            </Button>
-          </form>
-
-          {/* This div will ALWAYS display our debug message */}
-          {debugMessage && (
-            <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-              <h3 className="font-bold">پیام اشکال‌زدایی:</h3>
-              <pre className="whitespace-pre-wrap break-words text-xs font-mono">{debugMessage}</pre>
-            </div>
-          )}
-
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                ارسال کد تایید
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
