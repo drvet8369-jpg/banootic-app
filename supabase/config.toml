@@ -28,7 +28,7 @@ docker_image = "supabase/postgres:15.1.0.118"
 port = 54323
 
 # Declares the Edge Function for sending OTPs
-# and ensures JWT verification is enabled.
+# and ensures JWT verification is disabled as per our debugging.
 [functions.kavenegar-otp-sender]
 verify_jwt = false
 

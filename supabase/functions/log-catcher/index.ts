@@ -1,11 +1,9 @@
 
 // This is a temporary debugging function.
-// It catches the payload from the Supabase SMS hook and logs it.
-// This helps us understand the exact structure of the data Supabase sends.
+// It catches the payload from any request and returns a success message.
+// This helps us verify that the function is deployed and callable.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-
-console.log("Log Catcher function initialized.");
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,15 +19,11 @@ serve(async (req: Request) => {
   try {
     const requestBody = await req.json();
 
-    // --- CRITICAL LOGGING ---
-    console.log("--- LOG-CATCHER PAYLOAD START ---");
-    console.log("Received Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
-    console.log("Received Body:", JSON.stringify(requestBody, null, 2));
-    console.log("--- LOG-CATCHER PAYLOAD END ---");
+    // In a real scenario, you'd log this to your monitoring service.
+    // For now, we just acknowledge receipt.
+    console.log("Log-catcher received payload:", JSON.stringify(requestBody, null, 2));
 
-    // We must return a successful (200) response, otherwise Supabase
-    // will think the hook failed. We are not sending an SMS here, just logging.
-    return new Response(JSON.stringify({ success: true, message: "Payload logged successfully." }), {
+    return new Response(JSON.stringify({ success: true, message: "Payload received by log-catcher.", received_body: requestBody }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 200,
     });
@@ -37,7 +31,7 @@ serve(async (req: Request) => {
   } catch (err) {
     console.error("Error inside log-catcher:", err.message);
     // Return a 500 error if we can't even parse the request.
-    return new Response(JSON.stringify({ error: "Failed to process log-catcher request." }), {
+    return new Response(JSON.stringify({ error: "Failed to process log-catcher request.", details: err.message }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 500,
     });
