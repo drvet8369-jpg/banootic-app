@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
 const KAVENEGAR_API_KEY = Deno.env.get('KAVENEGAR_API_KEY');
@@ -7,10 +6,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// The main function that handles requests.
+// The main function that handles requests from the Supabase Hook.
 serve(async (req: Request) => {
   // This is needed for the browser's pre-flight request.
-  // The 'OPTIONS' method is sent before the actual 'POST' request.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
@@ -22,20 +20,25 @@ serve(async (req: Request) => {
     }
 
     // 2. Extract the entire payload from the request.
-    // Supabase nests the data, so we can't destructure it directly.
+    // The data sent from the Supabase SMS hook is nested.
+    // We access it via `payload.phone` and `payload.token`.
     const payload = await req.json();
     const phone = payload?.phone;
     const token = payload?.token;
 
+    // 3. Validate that we received the necessary data from the hook.
     if (!phone || !token) {
       console.error("Invalid payload from Supabase hook:", payload);
-      throw new Error('Phone number and token are required in the request body from the hook.');
+      throw new Error('The phone number and token were not received correctly from the Supabase hook.');
     }
 
-    // 3. Prepare and send the request to Kavenegar API.
+    // 4. Prepare and send the request to Kavenegar API.
     const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
     const params = new URLSearchParams();
-    params.append('receptor', phone);
+    // The receptor needs to be in the local format (e.g., 09xxxxxxxxx) for Kavenegar.
+    // Supabase sends it in E.164 format (+989...), so we normalize it.
+    const kavenegarReceptor = phone.replace('+98', '0');
+    params.append('receptor', kavenegarReceptor);
     params.append('token', token);
     params.append('template', 'logincode');
 
@@ -44,7 +47,7 @@ serve(async (req: Request) => {
       body: params,
     });
 
-    // 4. Handle the response from Kavenegar.
+    // 5. Handle the response from Kavenegar.
     const responseData = await kavenegarResponse.json();
 
     if (kavenegarResponse.status !== 200 || responseData.return.status !== 200) {
@@ -52,8 +55,9 @@ serve(async (req: Request) => {
       throw new Error(responseData?.return?.message || `Kavenegar API failed with status: ${kavenegarResponse.status}`);
     }
 
-    // 5. Send a success response back to Supabase.
-    return new Response(JSON.stringify({ success: true, message: 'OTP sent successfully via Kavenegar.' }), {
+    // 6. Send a success response back to Supabase.
+    // An empty JSON object {} is sufficient to signal success.
+    return new Response(JSON.stringify({}), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 200,
     });

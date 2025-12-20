@@ -1,61 +1,49 @@
-
 'use server';
 
 import { redirect } from 'next/navigation';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
+import { toast } from 'sonner';
 
-/**
- * THIS IS A TEMPORARY DEBUGGING FUNCTION.
- * It directly calls the Kavenegar edge function to see its response.
- */
+
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const functionUrl = `${supabaseUrl}/functions/v1/kavenegar-otp-sender`;
-
-  const testPayload = {
-    phone: phone,
-    token: "123456" // A test token
-  };
+  let normalizedPhone: string;
 
   try {
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anonKey}`
-      },
-      body: JSON.stringify(testPayload),
-    });
-
-    const responseBody = await response.text();
-
-    const debugString = `
-      EDGE FUNCTION DEBUG:
-      - Status: ${response.status} ${response.statusText}
-      - Response Body: ${responseBody}
-    `;
-
-    // Return the debug string as an error to be displayed in the toast.
-    return { error: debugString };
-
-  } catch (e: any) {
-    const errorString = `
-      FETCH FAILED:
-      - Error: ${e.message}
-      - Cause: ${e.cause || 'N/A'}
-    `;
-    return { error: errorString };
+    normalizedPhone = normalizeForSupabaseAuth(phone);
+  } catch (error: any) {
+    return { error: error.message };
   }
+
+  const supabase = await createClient();
+
+  // This is the final, correct call. It tells Supabase:
+  // 1. To generate and save an OTP.
+  // 2. To use your Kavenegar Hook to send it.
+  // 3. To use the service_role key for a secure hook call, which avoids JWT errors.
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone: normalizedPhone,
+    options: {
+      // This line is crucial for Supabase to securely call your hook.
+      // We are NOT sending a token manually. This tells Supabase to use its own internal secure token.
+      data: {
+        use_service_role: true,
+      },
+    },
+  });
+
+  if (error) {
+    console.error('Supabase signInWithOtp Error:', error);
+    // Return a user-friendly error from Supabase.
+    return { error: error.message || 'خطا در ارتباط با سرویس احراز هویت.' };
+  }
+  
+  // On success, redirect the user to the verification page.
+  redirect(`/login/verify?phone=${phone}`);
 }
 
 
-/**
- * Verifies the OTP, and because the user is now logged in,
- * checks if they have a profile. If not, redirects to complete registration.
- */
 export async function verifyOtp(formData: FormData) {
     const phone = formData.get('phone') as string;
     const token = formData.get('pin') as string;
@@ -90,9 +78,12 @@ export async function verifyOtp(formData: FormData) {
       .eq('id', session.user.id)
       .single();
     
+    // If the user has logged in but has not completed their profile,
+    // redirect them to the registration completion page.
     if (!profile || !profile.full_name) {
        redirect(`/register?phone=${phone}`);
      } else {
+       // Otherwise, send them to the homepage.
        redirect('/');
      }
 }
