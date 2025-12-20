@@ -7,37 +7,43 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * Initiates the login OR sign-up process by generating an OTP and then
- * directly invoking our custom Edge Function to send it via Kavenegar.
+ * DEBUGGING VERSION:
+ * This function is temporarily modified to return debug information
+ * directly to the client instead of processing the login.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
-  
-  // --- STEP 1: LOG RAW INPUT ---
-  console.log('--- STARTING requestOtp ACTION ---');
-  console.log('1. RAW PHONE FROM FORM:', phone);
-  console.log(`   - Type: ${typeof phone}, Length: ${phone?.length}`);
 
-  let normalizedForSupabase: string;
-  let normalizedForKavenegar: string;
+  let rawPhoneInfo = `1. RAW PHONE FROM FORM: '${phone}' (Length: ${phone?.length})`;
+  let normalizedForSupabase = 'N/A';
+  let normalizedForKavenegar = 'N/A';
+  let normalizationError = '';
 
   try {
-    // Normalize for each service.
     normalizedForSupabase = normalizeForSupabaseAuth(phone);
     normalizedForKavenegar = normalizeForKavenegar(phone);
-
-    // --- STEP 2: LOG NORMALIZED OUTPUTS ---
-    console.log('2. NORMALIZED FOR SUPABASE (E.164):', normalizedForSupabase);
-    console.log('3. NORMALIZED FOR KAVENEGAR (LOCAL):', normalizedForKavenegar);
-
   } catch (error: any) {
-    console.error('Phone normalization error:', error.message);
-    return { error: error.message };
+    normalizationError = `ERROR during normalization: ${error.message}`;
   }
 
+  const supabaseDebugInfo = `2. NORMALIZED FOR SUPABASE: '${normalizedForSupabase}'`;
+  const kavenegarDebugInfo = `3. NORMALIZED FOR KAVENEGAR: '${normalizedForKavenegar}'`;
+
+  // Combine all debug info into a single message.
+  const debugMessage = [
+    rawPhoneInfo,
+    supabaseDebugInfo,
+    kavenegarDebugInfo,
+    normalizationError,
+  ].filter(Boolean).join(' | ');
+
+  // Return the debug message as an error to be displayed on the client.
+  return { error: debugMessage };
+
+  // The original logic is commented out below for now.
+  /*
   const supabaseAdmin = createAdminClient();
 
-  // Step 3: Use the admin client to generate an OTP for the user.
   console.log('4. Calling Supabase admin.generateLink with:', normalizedForSupabase);
   const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink',
@@ -56,7 +62,6 @@ export async function requestOtp(formData: FormData) {
   const otpCode = otpData.properties.otp_code;
   const supabase = await createClient();
 
-  // Step 4: Manually invoke our 'kavenegar-otp-sender' Edge Function.
   const functionSecret = process.env.SUPABASE_FUNCTION_SECRET;
   if (!functionSecret) {
       console.error('6. SUPABASE_FUNCTION_SECRET is not set.');
@@ -76,9 +81,8 @@ export async function requestOtp(formData: FormData) {
   }
   console.log('7. Kavenegar Edge Function SUCCEEDED.');
 
-  // Step 5: Redirect to verification page on success.
-  console.log('--- ACTION COMPLETED SUCCESSFULLY. REDIRECTING... ---');
   redirect(`/login/verify?phone=${phone}`);
+  */
 }
 
 
@@ -103,7 +107,6 @@ export async function verifyOtp(formData: FormData) {
 
     const supabase = await createClient();
 
-    // Verify the OTP which also creates the session for the user.
     const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
         phone: normalizedPhone,
         token: token,
@@ -115,20 +118,16 @@ export async function verifyOtp(formData: FormData) {
         return { error: verifyError?.message || 'کد تایید وارد شده نامعتبر است یا منقضی شده است.' };
     }
     
-    // Now that the user is logged in, check if their profile exists.
     const supabaseAdmin = createAdminClient();
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('id, full_name, account_type') // Select fields to check for completion
+      .select('id, full_name, account_type')
       .eq('id', session.user.id)
       .single();
     
-    // A profile is considered incomplete if it doesn't exist OR if the full_name is missing.
     if (!profile || !profile.full_name) {
-       // If no profile, they need to complete registration.
        redirect(`/register?phone=${phone}`);
      } else {
-       // If profile exists and is complete, go home.
        redirect('/');
      }
 }
