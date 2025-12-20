@@ -4,6 +4,7 @@
 import { redirect } from 'next/navigation';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
+import { toast } from 'sonner';
 
 export async function requestOtp(formData: FormData) {
   'use server';
@@ -14,6 +15,8 @@ export async function requestOtp(formData: FormData) {
     const supabase = await createClient();
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
+    // This option tells Supabase to use its `service_role` key when invoking the hook,
+    // which is required for security.
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalizedPhone,
       options: {

@@ -1,36 +1,66 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { KAVENEGAR_API_KEY } from '../_shared/secrets.ts';
 
-// This is a temporary debug function.
-// It captures all incoming request headers and returns them as an error.
-// This allows us to see the exact payload structure sent by the Supabase Hook in the UI.
+// These headers are required for the browser (CORS) and Supabase Functions.
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req: Request) => {
+  // This is needed for the OPTIONS pre-flight request.
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS });
+  }
+
   try {
-    const headersObject: { [key: string]: string } = {};
-    for (const [key, value] of req.headers.entries()) {
-      headersObject[key] = value;
+    if (!KAVENEGAR_API_KEY) {
+      throw new Error('Kavenegar API key is not set in secrets.ts');
     }
 
-    // Stringify the headers object to be returned in the error message.
-    const headersString = JSON.stringify(headersObject, null, 2);
+    // Supabase sends the data in a nested `record` object.
+    // This was the source of the bug. We now correctly parse it.
+    const body = await req.json();
+    const phone = body?.record?.phone;
+    const token = body?.record?.token;
 
-    // Return a 500 error intentionally to send the debug information back to the client.
-    // The message is "Headers received" plus the stringified headers.
-    return new Response(
-      JSON.stringify({
-        error: "DEBUG_MODE: Headers received by Edge Function",
-        headers: headersString,
-      }),
-      {
-        status: 500, // Important: We force a 500 to see the output in the client's error handler.
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    if (!phone || !token) {
+      throw new Error('Phone number and token were not found in the hook payload (body.record).');
+    }
+
+    // IMPORTANT: The phone number from Supabase is already in the correct international format (e.g., +989...).
+    // We only need to remove the '+' for the Kavenegar API.
+    const receptor = phone.replace('+', '');
+    const template = 'HonarBanoo-Verify';
+    const type = 'sms';
+
+    // Construct the Kavenegar API URL
+    const url = new URL(`https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`);
+    url.searchParams.append('receptor', receptor);
+    url.searchParams.append('token', token);
+    url.searchParams.append('template', template);
+    url.searchParams.append('type', type);
+    
+    // Make the request to the Kavenegar API
+    const kavenegarResponse = await fetch(url.toString());
+
+    if (!kavenegarResponse.ok) {
+      const errorText = await kavenegarResponse.text();
+      throw new Error(`Kavenegar API request failed: ${kavenegarResponse.status} ${errorText}`);
+    }
+
+    // On success, return a 200 OK response.
+    return new Response(JSON.stringify({ message: 'OTP sent successfully via Kavenegar.' }), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
   } catch (err) {
-    // Fallback error
-    return new Response(JSON.stringify({ error: `Critical error inside the logger: ${err.message}` }), {
+    // If any error occurs, log it and return a 500 Internal Server Error.
+    console.error('Error in Kavenegar Edge Function:', err.message);
+    return new Response(JSON.stringify({ error: err.message }), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
     });
   }
 });
