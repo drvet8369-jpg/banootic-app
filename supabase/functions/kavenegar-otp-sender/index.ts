@@ -1,18 +1,14 @@
-// This is the final, production-ready version of the Kavenegar OTP sender function.
-// It is designed to work securely with Supabase Auth Hooks.
+// This is a simplified "boilerplate" function for debugging.
+// It removes all external dependencies and logic to test the core function execution.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-
-// Get the Kavenegar API key from the function's secrets.
-// This must be set in your Supabase dashboard under Edge Functions -> kavenegar-otp-sender -> Settings -> Secrets.
-const KAVENEGAR_API_KEY = Deno.env.get('KAVENEGAR_API_KEY');
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-console.log('Kavenegar OTP Sender function initialized.');
+console.log('Simple boilerplate function initialized.');
 
 serve(async (req: Request) => {
   // This is a standard pre-flight request handler for CORS.
@@ -21,59 +17,28 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Check if the Kavenegar API key is configured.
-    if (!KAVENEGAR_API_KEY) {
-      console.error('KAVENEGAR_API_KEY secret is not set.');
-      throw new Error('Server configuration error: Missing Kavenegar API key.');
-    }
+    const body = await req.json();
+    console.log('Hook payload received:', body);
 
-    // When using Auth Hooks, Supabase sends the data inside a 'record' object.
-    const { record } = await req.json();
-    console.log('Received hook payload:', JSON.stringify(record, null, 2));
-
-    const phone = record?.phone;
-    const token = record?.otp;
-
-    if (!phone || !token) {
-      console.error('Phone or OTP token not found in the hook payload record.');
-      // It's important to throw an error here so Supabase knows the hook failed.
-      throw new Error('Invalid payload structure from Supabase hook.');
-    }
-
-    // Prepare the request for the Kavenegar API.
-    const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
-    const params = new URLSearchParams();
-    params.append('receptor', phone);
-    params.append('token', token);
-    params.append('template', 'logincode');
-
-    const kavenegarResponse = await fetch(url, {
-      method: 'POST',
-      body: params,
-    });
-
-    const responseData = await kavenegarResponse.json();
-
-    // Check if the request to Kavenegar was successful.
-    if (!kavenegarResponse.ok || responseData?.return?.status !== 200) {
-      console.error('Kavenegar API Error:', responseData);
-      throw new Error(responseData?.return?.message || `Kavenegar API request failed with status: ${kavenegarResponse.status}`);
-    }
-    
-    console.log('Successfully sent OTP via Kavenegar for phone:', phone);
-
-    // Send a success response back to Supabase.
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+    // Instead of doing anything, just return a success message.
+    // This tests if the function can execute without crashing.
+    return new Response(
+      JSON.stringify({ message: 'Hello from Functions!' }),
+      {
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
 
   } catch (err) {
-    console.error('Critical error in Kavenegar Edge Function:', err.message);
-    // Return a server error response so Supabase knows the hook invocation failed.
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    // If even this simple code fails, the error is fundamental.
+    console.error('Critical error in boilerplate function:', err.message);
+    return new Response(
+        JSON.stringify({ error: err.message }), 
+        {
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            status: 500,
+        }
+    );
   }
 });
