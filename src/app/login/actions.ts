@@ -6,47 +6,49 @@ import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * Requests Supabase to generate and send an OTP using the pre-configured Auth Hook.
+ * THIS IS A TEMPORARY DEBUGGING FUNCTION.
+ * It directly calls the Kavenegar edge function to see its response.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
-  const supabase = await createClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const functionUrl = `${supabaseUrl}/functions/v1/kavenegar-otp-sender`;
 
-  let normalizedPhone: string;
-  try {
-    normalizedPhone = normalizeForSupabaseAuth(phone);
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  const testPayload = {
+    phone: phone,
+    token: "123456" // A test token
+  };
 
-  // This is the key part: we wrap the Supabase call in a try/catch.
-  // If ANY error happens (including errors from the hook), we catch it
-  // and return it to the UI.
   try {
-    const { data, error } = await supabase.auth.signInWithOtp({
-      phone: normalizedPhone,
-      options: {
-        // This line tells Supabase to use its powerful service_role key
-        // to call our Edge Function, which is necessary when the function is secured.
-        data: {
-          use_service_role: true,
-        },
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${anonKey}`
       },
+      body: JSON.stringify(testPayload),
     });
 
-    if (error) {
-      // If Supabase itself returns an error object, return its message.
-      return { error: `Supabase Error: ${error.message}` };
-    }
+    const responseBody = await response.text();
+
+    const debugString = `
+      EDGE FUNCTION DEBUG:
+      - Status: ${response.status} ${response.statusText}
+      - Response Body: ${responseBody}
+    `;
+
+    // Return the debug string as an error to be displayed in the toast.
+    return { error: debugString };
 
   } catch (e: any) {
-    // If the call throws a completely unexpected exception, catch that too.
-    return { error: `Caught Exception: ${e.message}` };
+    const errorString = `
+      FETCH FAILED:
+      - Error: ${e.message}
+      - Cause: ${e.cause || 'N/A'}
+    `;
+    return { error: errorString };
   }
-
-
-  // On success, redirect the user to the verification page.
-  redirect(`/login/verify?phone=${phone}`);
 }
 
 
@@ -88,11 +90,9 @@ export async function verifyOtp(formData: FormData) {
       .eq('id', session.user.id)
       .single();
     
-    // If the user has logged in but has no profile, they need to complete registration.
     if (!profile || !profile.full_name) {
        redirect(`/register?phone=${phone}`);
      } else {
-       // Otherwise, they are a returning user, send them to the home page.
        redirect('/');
      }
 }
