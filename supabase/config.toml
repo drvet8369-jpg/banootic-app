@@ -30,4 +30,8 @@ port = 54323
 # Declares the Edge Function for sending OTPs
 # and ensures JWT verification is enabled.
 [functions.kavenegar-otp-sender]
-verify_jwt = true
+verify_jwt = false
+
+# Temporary logger function to debug hook payloads
+[functions.log-catcher]
+verify_jwt = false
