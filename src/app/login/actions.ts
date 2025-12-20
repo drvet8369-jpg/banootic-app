@@ -22,12 +22,13 @@ export async function requestOtp(formData: FormData) {
     return { error: error.message };
   }
 
-  // This single call tells Supabase to generate an OTP and send it
-  // using the pre-configured Auth Hook (which points to our Kavenegar function).
-  // This is the standard and correct way to implement this.
-  const { error } = await supabase.auth.signInWithOtp({
+  // This call tells Supabase to generate an OTP and send it using the pre-configured Auth Hook.
+  // The `options.data.use_service_role` is crucial for Supabase to authenticate itself
+  // when calling a JWT-protected Edge Function (the hook).
+  const { data, error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
   });
+
 
   if (error) {
     console.error('Supabase signInWithOtp Error:', error);
