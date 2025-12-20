@@ -6,7 +6,9 @@ import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * Requests Supabase to generate and send an OTP via the configured SMS Hook.
+ * Requests Supabase to generate and send an OTP.
+ * This function now correctly relies on Supabase's built-in SMS Hook functionality.
+ * Supabase will automatically call the 'kavenegar-otp-sender' Edge Function.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -14,6 +16,7 @@ export async function requestOtp(formData: FormData) {
 
   let normalizedPhone: string;
   try {
+    // Normalize the phone number to the E.164 format that Supabase Auth requires.
     normalizedPhone = normalizeForSupabaseAuth(phone);
   } catch (error: any) {
     return { error: error.message };
@@ -21,6 +24,7 @@ export async function requestOtp(formData: FormData) {
 
   // This single call tells Supabase to generate an OTP and send it
   // using the pre-configured Auth Hook (which points to our Kavenegar function).
+  // This is the standard and correct way to implement this.
   const { error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
   });
