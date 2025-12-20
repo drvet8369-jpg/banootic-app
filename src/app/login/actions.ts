@@ -2,72 +2,52 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { normalizeForSupabaseAuth, normalizeForKavenegar } from '@/lib/utils';
+import { normalizeForKavenegar, normalizeForSupabaseAuth } from '@/lib/utils';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * DEBUGGING VERSION:
- * This function is temporarily modified to return debug information
- * directly to the client instead of processing the login.
+ * Generates an OTP via Supabase and sends it using the Kavenegar Edge Function.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
 
-  let rawPhoneInfo = `1. RAW PHONE FROM FORM: '${phone}' (Length: ${phone?.length})`;
-  let normalizedForSupabase = 'N/A';
-  let normalizedForKavenegar = 'N/A';
-  let normalizationError = '';
-
+  let normalizedForSupabase: string;
+  let normalizedForKavenegar: string;
   try {
     normalizedForSupabase = normalizeForSupabaseAuth(phone);
     normalizedForKavenegar = normalizeForKavenegar(phone);
   } catch (error: any) {
-    normalizationError = `ERROR during normalization: ${error.message}`;
+    return { error: error.message };
   }
 
-  const supabaseDebugInfo = `2. NORMALIZED FOR SUPABASE: '${normalizedForSupabase}'`;
-  const kavenegarDebugInfo = `3. NORMALIZED FOR KAVENEGAR: '${normalizedForKavenegar}'`;
-
-  // Combine all debug info into a single message.
-  const debugMessage = [
-    rawPhoneInfo,
-    supabaseDebugInfo,
-    kavenegarDebugInfo,
-    normalizationError,
-  ].filter(Boolean).join(' | ');
-
-  // Return the debug message as an error to be displayed on the client.
-  return { error: debugMessage };
-
-  // The original logic is commented out below for now.
-  /*
   const supabaseAdmin = createAdminClient();
 
-  console.log('4. Calling Supabase admin.generateLink with:', normalizedForSupabase);
+  // This call generates the OTP code associated with the phone number.
   const { data: otpData, error: generateError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink',
     phone: normalizedForSupabase,
   });
 
   if (generateError || !otpData?.properties?.otp_code) {
-    console.error('5. Supabase admin.generateLink FAILED:', generateError);
+    console.error('Supabase admin.generateLink FAILED:', generateError);
+    // This custom error message is key to debugging Supabase phone auth setup.
     if (generateError?.code === 'validation_failed' || generateError?.message.includes('Invalid phone number')) {
-        return { error: 'شماره تلفن وارد شده در سمت سرور معتبر تشخیص داده نشد.' };
+        return { error: 'شماره تلفن وارد شده در سمت سرور معتبر تشخیص داده نشد. (ممکن است احراز هویت با شماره تلفن در Supabase فعال نباشد)' };
     }
     return { error: `خطا در ایجاد کد یکبار مصرف: ${generateError?.message}` };
   }
-  console.log('5. Supabase admin.generateLink SUCCEEDED.');
 
   const otpCode = otpData.properties.otp_code;
   const supabase = await createClient();
 
   const functionSecret = process.env.SUPABASE_FUNCTION_SECRET;
   if (!functionSecret) {
-      console.error('6. SUPABASE_FUNCTION_SECRET is not set.');
+      console.error('SUPABASE_FUNCTION_SECRET is not set.');
       return { error: 'پیکربندی سمت سرور ناقص است.' };
   }
-  console.log('6. Calling Kavenegar Edge Function...');
+
+  // This call invokes our custom Edge Function to send the SMS via Kavenegar.
   const { error: invokeError } = await supabase.functions.invoke('kavenegar-otp-sender', {
     body: { phone: normalizedForKavenegar, token: otpCode },
     headers: {
@@ -76,13 +56,12 @@ export async function requestOtp(formData: FormData) {
   });
 
   if (invokeError) {
-    console.error('7. Kavenegar Edge Function FAILED:', invokeError);
+    console.error('Kavenegar Edge Function FAILED:', invokeError);
     return { error: `خطا در ارسال کد از طریق سرویس پیامک: ${invokeError.message}` };
   }
-  console.log('7. Kavenegar Edge Function SUCCEEDED.');
 
+  // On success, redirect the user to the verification page.
   redirect(`/login/verify?phone=${phone}`);
-  */
 }
 
 
@@ -125,9 +104,11 @@ export async function verifyOtp(formData: FormData) {
       .eq('id', session.user.id)
       .single();
     
+    // If the user has logged in but has no profile, they need to complete registration.
     if (!profile || !profile.full_name) {
        redirect(`/register?phone=${phone}`);
      } else {
+       // Otherwise, they are a returning user, send them to the home page.
        redirect('/');
      }
 }
