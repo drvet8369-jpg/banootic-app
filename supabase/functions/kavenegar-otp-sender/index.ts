@@ -1,36 +1,55 @@
-// Deno Standard Library for serving HTTP.
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { KAVENEGAR_API_KEY } from '../_shared/secrets.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// THIS IS A TEMPORARY DEBUGGING FUNCTION.
-// It captures the incoming request from the Supabase hook and returns it
-// as an error message, so we can see the exact payload structure on the client-side.
 serve(async (req: Request) => {
-  // Immediately handle pre-flight OPTIONS requests.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
 
   try {
-    const requestBody = await req.json();
-    const bodyString = JSON.stringify(requestBody, null, 2); // Pretty-print JSON
+    if (!KAVENEGAR_API_KEY || KAVENEGAR_API_KEY === "YOUR_KAVENEGAR_API_KEY_HERE") {
+      throw new Error('Kavenegar API Key is not configured in _shared/secrets.ts');
+    }
 
-    // Intentionally throw an error containing the request body.
-    // This will be sent back to the Supabase server and then to our client.
-    throw new Error(
-      'DEBUG PAYLOAD: \n' + bodyString
-    );
+    const payload = await req.json();
+    const phone = payload.phone;
+    const token = payload.token;
+
+    if (!phone || !token) {
+      throw new Error('Phone number or token is missing from the request body.');
+    }
+    
+    // Normalize phone number to be without the leading '+' or '00' for Kavenegar
+    const receptor = phone.replace(/^\+98/, '0');
+
+    const kavenegarUrl = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
+    const params = new URLSearchParams({
+      receptor: receptor,
+      token: token,
+      template: 'banootik-verify',
+    });
+
+    const response = await fetch(`${kavenegarUrl}?${params.toString()}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Kavenegar API Error: ${response.status} ${errorText}`);
+    }
+
+    return new Response(JSON.stringify({ message: "OTP sent successfully via Kavenegar." }), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      status: 200,
+    });
 
   } catch (err) {
-    // If reading the body fails, or for our intentional throw,
-    // return the error message in a 500 response.
     return new Response(JSON.stringify({ error: err.message }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      status: 500, // Return 500 to ensure Supabase forwards the error.
+      status: 500,
     });
   }
 });
