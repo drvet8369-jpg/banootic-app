@@ -22,9 +22,9 @@ export async function requestOtp(formData: FormData) {
     });
 
     if (error) {
-      // This is the error that the user was seeing.
-      // It happens before the edge function is even called if the hook is misconfigured.
-      const detailedError = `Supabase signInWithOtp Error: ${JSON.stringify(error, null, 2)}`;
+      // This is the primary error that the user sees.
+      // If it says "unexpected failure", it's an issue with the Auth Hook configuration.
+      const detailedError = `Supabase signInWithOtp Error: ${error.message}`;
       console.error(detailedError);
       return { error: detailedError };
     }
