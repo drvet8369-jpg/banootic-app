@@ -21,10 +21,15 @@ serve(async (req: Request) => {
       throw new Error('Kavenegar API key is not set in environment variables.');
     }
 
-    // 2. Extract phone and token from the request body.
-    const { phone, token } = await req.json();
+    // 2. Extract the entire payload from the request.
+    // Supabase nests the data, so we can't destructure it directly.
+    const payload = await req.json();
+    const phone = payload?.phone;
+    const token = payload?.token;
+
     if (!phone || !token) {
-      throw new Error('Phone number and token are required in the request body.');
+      console.error("Invalid payload from Supabase hook:", payload);
+      throw new Error('Phone number and token are required in the request body from the hook.');
     }
 
     // 3. Prepare and send the request to Kavenegar API.
