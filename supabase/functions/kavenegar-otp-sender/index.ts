@@ -28,7 +28,6 @@ serve(async (req: Request) => {
     }
 
     // When using Auth Hooks, Supabase sends the data inside a 'record' object.
-    // This is the correct and final way to access the data.
     const { record } = await req.json();
     console.log('Received hook payload:', JSON.stringify(record, null, 2));
 
