@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -13,27 +14,21 @@ export async function requestOtp(formData: FormData) {
     const supabase = await createClient();
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
-    // This is the standard and correct way to trigger OTP with a hook.
-    // The `data: { use_service_role: true }` is essential for allowing
-    // Supabase to securely call your Edge Function hook.
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalizedPhone,
       options: {
-        // This option tells Supabase to use its internal, secure service_role key
-        // to authorize the call to your Edge Function hook. This bypasses the
-        // need for JWT verification on the hook for this specific internal call.
         data: { use_service_role: true } as any, 
       },
     });
 
     if (error) {
       console.error('Supabase signInWithOtp Error:', error);
-      // Return a user-friendly error message.
-      return { error: `خطا در ارسال کد: ${error.message}` };
+      // Return the full error message to be displayed in the UI.
+      return { error: `Supabase Error: ${error.message}` };
     }
   } catch (e: any) {
     console.error('Critical error in requestOtp action:', e);
-    return { error: `یک خطای پیش‌بینی نشده رخ داد: ${e.message}` };
+    return { error: `A critical error occurred: ${e.message}` };
   }
 
   // On successful OTP request, redirect to the verification page.

@@ -1,55 +1,36 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { KAVENEGAR_API_KEY } from '../_shared/secrets.ts';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// This is a temporary debug function.
+// It captures all incoming request headers and returns them as an error.
+// This allows us to see the exact payload structure sent by the Supabase Hook in the UI.
 
 serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
-  }
-
   try {
-    if (!KAVENEGAR_API_KEY || KAVENEGAR_API_KEY === "YOUR_KAVENEGAR_API_KEY_HERE") {
-      throw new Error('Kavenegar API Key is not configured in _shared/secrets.ts');
+    const headersObject: { [key: string]: string } = {};
+    for (const [key, value] of req.headers.entries()) {
+      headersObject[key] = value;
     }
 
-    const payload = await req.json();
-    const phone = payload.phone;
-    const token = payload.token;
+    // Stringify the headers object to be returned in the error message.
+    const headersString = JSON.stringify(headersObject, null, 2);
 
-    if (!phone || !token) {
-      throw new Error('Phone number or token is missing from the request body.');
-    }
-    
-    // Normalize phone number to be without the leading '+' or '00' for Kavenegar
-    const receptor = phone.replace(/^\+98/, '0');
-
-    const kavenegarUrl = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
-    const params = new URLSearchParams({
-      receptor: receptor,
-      token: token,
-      template: 'banootik-verify',
-    });
-
-    const response = await fetch(`${kavenegarUrl}?${params.toString()}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Kavenegar API Error: ${response.status} ${errorText}`);
-    }
-
-    return new Response(JSON.stringify({ message: "OTP sent successfully via Kavenegar." }), {
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      status: 200,
-    });
-
+    // Return a 500 error intentionally to send the debug information back to the client.
+    // The message is "Headers received" plus the stringified headers.
+    return new Response(
+      JSON.stringify({
+        error: "DEBUG_MODE: Headers received by Edge Function",
+        headers: headersString,
+      }),
+      {
+        status: 500, // Important: We force a 500 to see the output in the client's error handler.
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    // Fallback error
+    return new Response(JSON.stringify({ error: `Critical error inside the logger: ${err.message}` }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 });
