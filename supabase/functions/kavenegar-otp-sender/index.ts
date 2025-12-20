@@ -1,4 +1,4 @@
-// This is the final, simplified, and correct version of the Edge Function.
+// This is the final, correct version of the Edge Function.
 // It is designed to work with Supabase's standard Auth Hook behavior.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -16,13 +16,15 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Supabase sends hook data in a nested 'record' object.
+    // Supabase sends hook data in a nested 'record' object when using JWT verification.
     const body = await req.json();
-    const { phone, token } = body.record;
+    
+    // IMPORTANT: The phone and token are inside the 'record' object.
+    const { phone, otp: token } = body.record;
 
     // Validate the necessary data.
     if (!phone || !token) {
-      throw new Error(`'phone' or 'token' not found in request body.record. Received: ${JSON.stringify(body)}`);
+      throw new Error(`'phone' or 'otp' not found in request body.record. Received: ${JSON.stringify(body)}`);
     }
     if (!KAVENEGAR_API_KEY) {
       throw new Error('KAVENEGAR_API_KEY is not set in function secrets.');
@@ -49,8 +51,8 @@ serve(async (req: Request) => {
       throw new Error(responseData?.return?.message || `Kavenegar API failed with status: ${kavenegarResponse.status}`);
     }
 
-    // Return a success response to Supabase.
-    return new Response(JSON.stringify({ success: true }), {
+    // Return a success response to Supabase. An empty object is sufficient.
+    return new Response(JSON.stringify({}), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       status: 200,
     });

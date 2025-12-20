@@ -29,3 +29,4 @@ port = 54323
 # JWT verification is now managed by Supabase dashboard settings.
 # The verify_jwt flag is removed to ensure default behavior.
 [functions.kavenegar-otp-sender]
+verify_jwt = true
