@@ -26,7 +26,7 @@ docker_image = "supabase/postgres:15.1.0.118"
 # Port to use for Supabase Studio
 port = 54323
 
-# JWT verification is now managed by Supabase dashboard settings.
-# The verify_jwt flag is removed to ensure default behavior.
+# JWT verification is now fully managed by the Supabase dashboard.
+# The verify_jwt flag is removed to ensure default behavior and prevent conflicts.
 [functions.kavenegar-otp-sender]
-verify_jwt = true
+# verify_jwt is intentionally removed.

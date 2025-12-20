@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
 const KAVENEGAR_API_KEY = Deno.env.get('KAVENEGAR_API_KEY');
@@ -7,58 +6,66 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// تابع اشکال زدایی نهایی: این تابع تحت هیچ شرایطی نباید کرش کند.
+// This is the final, standard version of the function.
 serve(async (req: Request) => {
-  const debugInfo: Record<string, any> = {
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    url: req.url,
-    headers: {},
-  };
-
-  req.headers.forEach((value, key) => {
-    // هدر حساس Authorization را برای امنیت در لاگ ثبت نمی کنیم
-    if (key.toLowerCase() !== 'authorization') {
-      debugInfo.headers[key] = value;
-    } else {
-      debugInfo.headers[key] = 'Present, but not logged for security.';
-    }
-  });
-
-  try {
-    // به عنوان متن خام بخوانید تا از خطای JSON جلوگیری شود
-    const rawBody = await req.text();
-    debugInfo.rawBody = rawBody;
-
-    // سعی کنید آن را به عنوان JSON تجزیه کنید، اگر نشد مهم نیست
-    try {
-      debugInfo.parsedBody = JSON.parse(rawBody);
-    } catch (e) {
-      debugInfo.parsingError = `Failed to parse body as JSON: ${e.message}`;
-    }
-    
-    // شبیه سازی تلاش برای ارسال به کاوه نگار
-    const phone = debugInfo.parsedBody?.record?.phone || debugInfo.parsedBody?.phone;
-    const token = debugInfo.parsedBody?.record?.otp || debugInfo.parsedBody?.otp;
-
-    debugInfo.kavenegarAttempt = {
-      attempted: true,
-      hasApiKey: !!KAVENEGAR_API_KEY,
-      phoneDetected: phone,
-      tokenDetected: token,
-      note: "This is a simulation. No actual SMS was sent in this debug mode."
-    };
-
-
-  } catch (err) {
-    debugInfo.fatalError = `An unexpected error occurred: ${err.message}`;
-    debugInfo.fatalErrorStack = err.stack;
+  // Handle the pre-flight OPTIONS request for CORS.
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS });
   }
 
-  // مهمترین بخش: همیشه یک پاسخ موفقیت آمیز 200 با تمام اطلاعات اشکال زدایی برگردانید
-  // این از خطای 500 جلوگیری می کند و به ما اجازه می دهد خروجی را در کلاینت ببینیم.
-  return new Response(JSON.stringify(debugInfo, null, 2), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    status: 200,
-  });
+  try {
+    // Kavenegar API Key must be set in the function's secrets.
+    if (!KAVENEGAR_API_KEY) {
+      throw new Error('Kavenegar API key is not set in environment variables.');
+    }
+
+    // Supabase sends the data within a 'record' object. This is the correct path.
+    const { record } = await req.json();
+    const phone = record?.phone;
+    const token = record?.otp;
+
+    // Check if the necessary data is present.
+    if (!phone || !token) {
+      throw new Error(`'phone' or 'otp' not found in the request body record. Received: ${JSON.stringify(record)}`);
+    }
+
+    // Prepare the request for the Kavenegar API.
+    const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
+    const params = new URLSearchParams();
+    params.append('receptor', phone);
+    params.append('token', token);
+    params.append('template', 'logincode');
+
+    const kavenegarResponse = await fetch(url, {
+      method: 'POST',
+      body: params,
+    });
+
+    // Check if the request to Kavenegar was successful.
+    if (!kavenegarResponse.ok) {
+        const errorText = await kavenegarResponse.text();
+        throw new Error(`Kavenegar API request failed with status ${kavenegarResponse.status}: ${errorText}`);
+    }
+
+    const responseData = await kavenegarResponse.json();
+
+    // Check for application-level errors from Kavenegar.
+    if (responseData?.return?.status !== 200) {
+      throw new Error(responseData?.return?.message || 'Kavenegar returned a non-200 status in its response.');
+    }
+
+    // Send a success response back to Supabase.
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+  } catch (err) {
+    // Catch any errors and return a proper server error response.
+    console.error('Error in Kavenegar Edge Function:', err.message);
+    return new Response(JSON.stringify({ error: err.message }), {
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      status: 500, // Return a 500 status to indicate failure to Supabase.
+    });
+  }
 });

@@ -22,8 +22,8 @@ export async function requestOtp(formData: FormData) {
     });
 
     if (error) {
-      // این بخش حیاتی است: ما کل شیء خطا را به رشته تبدیل می کنیم
-      // تا اطلاعات دقیق اشکال زدایی که از تابع دریافت می شود را ببینیم.
+      // This is the error that the user was seeing.
+      // It happens before the edge function is even called if the hook is misconfigured.
       const detailedError = `Supabase signInWithOtp Error: ${JSON.stringify(error, null, 2)}`;
       console.error(detailedError);
       return { error: detailedError };
@@ -33,7 +33,7 @@ export async function requestOtp(formData: FormData) {
     return { error: `A critical error occurred: ${e.message}` };
   }
 
-  // در صورت درخواست موفقیت آمیز OTP، به صفحه تایید هدایت شوید.
+  // On successful OTP request, redirect to the verification page.
   redirect(`/login/verify?phone=${phone}`);
 }
 
@@ -62,7 +62,7 @@ export async function verifyOtp(formData: FormData) {
     return { error: `کد تایید نامعتبر است: ${error.message}` };
   }
 
-  // بررسی کنید که آیا پروفایلی برای این کاربر وجود دارد یا خیر.
+  // Check if a profile exists for this user.
   if (data.user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -70,12 +70,12 @@ export async function verifyOtp(formData: FormData) {
       .eq('id', data.user.id)
       .single();
 
-    // اگر پروفایل وجود دارد و کامل است، به صفحه مناسب هدایت شوید.
+    // If the profile exists and is complete, redirect to the appropriate page.
     if (profile?.full_name) {
        redirect(profile.account_type === 'provider' ? '/profile' : '/');
     }
   }
   
-  // اگر پروفایلی وجود ندارد، یا ناقص است، به صفحه تکمیل ثبت نام هدایت شوید.
+  // If no profile exists, or it's incomplete, redirect to the registration completion page.
   redirect(`/register?phone=${phone}`);
 }
