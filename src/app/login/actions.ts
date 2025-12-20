@@ -4,7 +4,6 @@
 import { redirect } from 'next/navigation';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
-import { toast } from 'sonner';
 
 export async function requestOtp(formData: FormData) {
   'use server';
@@ -20,6 +19,7 @@ export async function requestOtp(formData: FormData) {
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalizedPhone,
       options: {
+        shouldCreateUser: true,
         data: { use_service_role: true } as any, 
       },
     });

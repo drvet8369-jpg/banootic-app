@@ -18,17 +18,17 @@ serve(async (req: Request) => {
       throw new Error('Kavenegar API key is not set in secrets.ts');
     }
 
-    // Supabase sends the data in a nested `record` object.
-    // This was the source of the bug. We now correctly parse it.
+    // Supabase sends the data in a nested `record` object for auth hooks.
     const body = await req.json();
     const phone = body?.record?.phone;
     const token = body?.record?.token;
 
     if (!phone || !token) {
+      console.error('Hook payload was missing phone or token:', JSON.stringify(body, null, 2));
       throw new Error('Phone number and token were not found in the hook payload (body.record).');
     }
 
-    // IMPORTANT: The phone number from Supabase is already in the correct international format (e.g., +989...).
+    // The phone number from Supabase is already in the correct international format (e.g., +989...).
     // We only need to remove the '+' for the Kavenegar API.
     const receptor = phone.replace('+', '');
     const template = 'HonarBanoo-Verify';
