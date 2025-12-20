@@ -28,8 +28,7 @@ docker_image = "supabase/postgres:15.1.0.118"
 port = 54323
 
 # Declares the Edge Function for sending OTPs.
-# JWT verification is disabled because we will rely on the 
-# `use_service_role` option in the `signInWithOtp` call to provide security,
-# which is the modern and recommended approach for internal hook calls.
+# JWT verification is now enabled for security. The secret must be set
+# in the function's environment variables in the Supabase dashboard.
 [functions.kavenegar-otp-sender]
-verify_jwt = false
+verify_jwt = true
