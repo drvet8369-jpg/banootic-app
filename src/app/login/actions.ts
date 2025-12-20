@@ -14,31 +14,36 @@ export async function requestOtp(formData: FormData) {
 
   let normalizedPhone: string;
   try {
-    // Normalize the phone number to the E.164 format that Supabase Auth requires.
     normalizedPhone = normalizeForSupabaseAuth(phone);
   } catch (error: any) {
     return { error: error.message };
   }
 
-  // This call tells Supabase to generate an OTP and send it using the pre-configured Auth Hook.
-  // The `options.data.use_service_role` is crucial for Supabase to authenticate itself
-  // when calling a JWT-protected Edge Function (the hook).
-  const { data, error } = await supabase.auth.signInWithOtp({
-    phone: normalizedPhone,
-    options: {
-      data: {
-        // This line is the key fix. It tells Supabase to use the service_role key
-        // to call the SMS hook, which is required when the hook is JWT-protected.
-        use_service_role: true,
-      }
-    }
-  });
+  // This is the key part: we wrap the Supabase call in a try/catch.
+  // If ANY error happens (including errors from the hook), we catch it
+  // and return it to the UI.
+  try {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      phone: normalizedPhone,
+      options: {
+        // This line tells Supabase to use its powerful service_role key
+        // to call our Edge Function, which is necessary when the function is secured.
+        data: {
+          use_service_role: true,
+        },
+      },
+    });
 
-  if (error) {
-    console.error('Supabase signInWithOtp Error:', error);
-    // Provide a user-friendly error message. The detailed error is logged on the server.
-    return { error: `خطا در ارسال کد: ${error.message}` };
+    if (error) {
+      // If Supabase itself returns an error object, return its message.
+      return { error: `Supabase Error: ${error.message}` };
+    }
+
+  } catch (e: any) {
+    // If the call throws a completely unexpected exception, catch that too.
+    return { error: `Caught Exception: ${e.message}` };
   }
+
 
   // On success, redirect the user to the verification page.
   redirect(`/login/verify?phone=${phone}`);
