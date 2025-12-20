@@ -12,7 +12,7 @@ import { redirect } from 'next/navigation';
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
   name: z.string().min(2),
-  phone: z.string().regex(/^(\+98|0)?9\d{9}$/),
+  phone: z.string().regex(/^(09|\+989)\d{9}$/),
   serviceId: z.string().optional(),
   bio: z.string().optional(),
 });
