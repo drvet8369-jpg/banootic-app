@@ -14,13 +14,10 @@ export async function requestOtp(formData: FormData) {
     const supabase = await createClient();
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
-    // This option tells Supabase to use its `service_role` key when invoking the hook,
-    // which is required for security.
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalizedPhone,
       options: {
         shouldCreateUser: true,
-        data: { use_service_role: true } as any, 
       },
     });
 
