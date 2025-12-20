@@ -6,9 +6,7 @@ import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * Requests Supabase to generate and send an OTP.
- * This function now correctly relies on Supabase's built-in SMS Hook functionality.
- * Supabase will automatically call the 'kavenegar-otp-sender' Edge Function.
+ * Requests Supabase to generate and send an OTP using the pre-configured Auth Hook.
  */
 export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
@@ -27,8 +25,14 @@ export async function requestOtp(formData: FormData) {
   // when calling a JWT-protected Edge Function (the hook).
   const { data, error } = await supabase.auth.signInWithOtp({
     phone: normalizedPhone,
+    options: {
+      data: {
+        // This line is the key fix. It tells Supabase to use the service_role key
+        // to call the SMS hook, which is required when the hook is JWT-protected.
+        use_service_role: true,
+      }
+    }
   });
-
 
   if (error) {
     console.error('Supabase signInWithOtp Error:', error);
