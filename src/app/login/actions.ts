@@ -22,16 +22,18 @@ export async function requestOtp(formData: FormData) {
     });
 
     if (error) {
-      console.error('Supabase signInWithOtp Error:', error);
-      // Return the full error message to be displayed in the UI.
-      return { error: `Supabase Error: ${error.message}` };
+      // این بخش حیاتی است: ما کل شیء خطا را به رشته تبدیل می کنیم
+      // تا اطلاعات دقیق اشکال زدایی که از تابع دریافت می شود را ببینیم.
+      const detailedError = `Supabase signInWithOtp Error: ${JSON.stringify(error, null, 2)}`;
+      console.error(detailedError);
+      return { error: detailedError };
     }
   } catch (e: any) {
     console.error('Critical error in requestOtp action:', e);
     return { error: `A critical error occurred: ${e.message}` };
   }
 
-  // On successful OTP request, redirect to the verification page.
+  // در صورت درخواست موفقیت آمیز OTP، به صفحه تایید هدایت شوید.
   redirect(`/login/verify?phone=${phone}`);
 }
 
@@ -60,7 +62,7 @@ export async function verifyOtp(formData: FormData) {
     return { error: `کد تایید نامعتبر است: ${error.message}` };
   }
 
-  // Check if a profile already exists for this user.
+  // بررسی کنید که آیا پروفایلی برای این کاربر وجود دارد یا خیر.
   if (data.user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -68,12 +70,12 @@ export async function verifyOtp(formData: FormData) {
       .eq('id', data.user.id)
       .single();
 
-    // If profile exists and is complete, redirect to the appropriate page.
+    // اگر پروفایل وجود دارد و کامل است، به صفحه مناسب هدایت شوید.
     if (profile?.full_name) {
        redirect(profile.account_type === 'provider' ? '/profile' : '/');
     }
   }
   
-  // If no profile exists, or it's incomplete, redirect to the registration completion page.
+  // اگر پروفایلی وجود ندارد، یا ناقص است، به صفحه تکمیل ثبت نام هدایت شوید.
   redirect(`/register?phone=${phone}`);
 }
