@@ -30,13 +30,17 @@ serve(async (req: Request) => {
       throw new Error("Kavenegar API key is missing in environment variables.");
     }
 
-    // گرفتن phone و token از body
+    // خواندن بدنه درخواست
     const body = await req.json();
-    const { phone, token } = body;
+
+    // استخراج phone و token از ساختار صحیح Supabase Auth Hook
+    const phone = body.record?.phone;
+    const token = body.record?.confirmation_token;
 
     if (!phone || !token) {
+      console.error("Invalid payload received:", body);
       return new Response(
-        JSON.stringify({ error: "Phone number and token are required." }),
+        JSON.stringify({ error: "Phone number and token are required from the 'record' object." }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
