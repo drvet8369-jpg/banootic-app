@@ -38,9 +38,9 @@ serve(async (req: Request) => {
     const token = body.record?.confirmation_token;
 
     if (!phone || !token) {
-      console.error("Invalid payload received:", body);
+      console.error("Invalid payload received from Supabase Auth Hook:", body);
       return new Response(
-        JSON.stringify({ error: "Phone number and token are required from the 'record' object." }),
+        JSON.stringify({ error: "Phone number or confirmation_token missing in hook payload." }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
