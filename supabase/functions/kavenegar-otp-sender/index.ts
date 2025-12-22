@@ -1,67 +1,79 @@
-// @ts-ignore
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+// supabase/functions/kavenegar-otp-sender/index.ts
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
-// This is the main handler for the Supabase Edge Function.
-console.log('Kavenegar OTP Sender function initialized.');
+// گرفتن API Key از محیط
+const KAVENEGAR_API_KEY = Deno.env.get("KAVENEGAR_API_KEY");
 
-// Define CORS headers to allow requests from any origin.
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// فانکشن اصلی
 serve(async (req: Request) => {
-  // First, handle pre-flight CORS requests.
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
-  }
-
   try {
-    // Retrieve the Kavenegar API key from the environment variables.
-    const KAVENEGAR_API_KEY = Deno.env.get('KAVENEGAR_API_KEY');
-    if (!KAVENEGAR_API_KEY) {
-      throw new Error('KAVENEGAR_API_KEY is not set in Edge Function secrets.');
+    // OPTIONS برای Preflight
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: CORS_HEADERS });
     }
 
-    // Parse the JSON payload sent by the Supabase Auth hook.
-    const { record } = await req.json();
+    // فقط POST مجازه
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
 
-    // Extract the user's phone number and the OTP from the payload.
-    const phone = record?.phone;
-    const otp = record?.confirmation_token;
+    // چک کردن API Key
+    if (!KAVENEGAR_API_KEY) {
+      throw new Error("Kavenegar API key is missing in environment variables.");
+    }
 
-    // Check if both phone and OTP are present.
-    if (!phone || !otp) {
+    // گرفتن phone و token از body
+    const body = await req.json();
+    const { phone, token } = body;
+
+    if (!phone || !token) {
       return new Response(
-        JSON.stringify({ error: 'Phone number or OTP not found in the request payload.' }),
-        {
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-          status: 400,
-        }
+        JSON.stringify({ error: "Phone number and token are required." }),
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
 
-    // Construct the URL for the Kavenegar Verify Lookup API.
-    const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json?receptor=${phone}&token=${otp}&template=banootik-otp`;
+    // ساخت URL و پارامترها برای Kavenegar
+    const url = `https://api.kavenegar.com/v1/${KAVENEGAR_API_KEY}/verify/lookup.json`;
+    const params = new URLSearchParams();
+    params.append("receptor", phone);
+    params.append("token", token);
+    params.append("template", "logincode");
 
-    // Make the API call to Kavenegar.
-    await fetch(url);
-
-    // Return a success response (empty JSON object).
-    return new Response(JSON.stringify({}), {
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      status: 200,
+    // ارسال درخواست
+    const response = await fetch(url, {
+      method: "POST",
+      body: params,
     });
 
-  } catch (err) {
-    // Log the error for debugging and return a 500 status.
-    console.error('Error in Kavenegar OTP Sender:', err.message);
+    const data = await response.json();
+
+    if (response.status !== 200 || data.return.status !== 200) {
+      console.error("Kavenegar API error:", data);
+      return new Response(
+        JSON.stringify({ error: data.return?.message || "Failed to send OTP" }),
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      );
+    }
+
+    // موفقیت
     return new Response(
-      JSON.stringify({ error: `Internal Server Error: ${err.message}` }),
-      {
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      JSON.stringify({ success: true, message: "OTP sent successfully." }),
+      { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     );
+  } catch (err: any) {
+    console.error("Error in function:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
   }
 });
