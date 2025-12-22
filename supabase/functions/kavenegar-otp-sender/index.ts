@@ -33,14 +33,14 @@ serve(async (req: Request) => {
     // خواندن بدنه درخواست
     const body = await req.json();
 
-    // استخراج phone و token از ساختار صحیح Supabase Auth Hook
-    const phone = body.record?.phone;
-    const token = body.record?.confirmation_token;
+    // **اصلاح نهایی:** استخراج phone و otp از ساختار صحیح sms
+    const phone = body.sms?.phone;
+    const token = body.sms?.otp; // توجه: اسم فیلد otp است نه token
 
     if (!phone || !token) {
-      console.error("Invalid payload received from Supabase Auth Hook:", body);
+      console.error("Invalid payload structure received from Supabase Auth Hook:", body);
       return new Response(
-        JSON.stringify({ error: "Phone number or confirmation_token missing in hook payload." }),
+        JSON.stringify({ error: "Phone number or OTP missing in 'sms' object of hook payload." }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
