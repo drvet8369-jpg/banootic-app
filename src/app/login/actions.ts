@@ -4,6 +4,7 @@
 import { redirect } from 'next/navigation';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 export async function requestOtp(formData: FormData) {
   'use server';
@@ -11,7 +12,7 @@ export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
 
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
     const { error } = await supabase.auth.signInWithOtp({
@@ -48,7 +49,7 @@ export async function verifyOtp(formData: FormData) {
     return { error: "شماره تلفن و کد تایید الزامی است." };
   }
 
-  const supabase = await createClient();
+  const supabase = createClient();
   const normalizedPhone = normalizeForSupabaseAuth(phone);
 
   const { data, error } = await supabase.auth.verifyOtp({
@@ -61,6 +62,9 @@ export async function verifyOtp(formData: FormData) {
     console.error("Supabase verifyOtp Error:", error);
     return { error: `کد تایید نامعتبر است: ${error.message}` };
   }
+
+  // Revalidate the path to ensure the middleware runs and picks up the new session.
+  revalidatePath('/', 'layout');
 
   // Check if a profile exists for this user.
   if (data.user) {
