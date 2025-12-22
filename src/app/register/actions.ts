@@ -29,8 +29,7 @@ export async function registerUser(formData: FormData) {
   
   const { name, phone, accountType, location, serviceId, bio } = parsed.data;
   
-  const supabaseAdmin = createAdminClient();
-  const supabase = await createClient();
+  const supabase = createClient();
 
   // Get the currently logged-in user from the session created by OTP
   const { data: { session } } = await supabase.auth.getSession();
@@ -47,6 +46,7 @@ export async function registerUser(formData: FormData) {
   }
 
   const userId = session.user.id;
+  const supabaseAdmin = createAdminClient();
 
   // Check if a profile already exists for this user ID. This is the correct way
   // to prevent re-registration.

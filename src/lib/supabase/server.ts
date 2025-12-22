@@ -3,7 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 // This function is now async and must be awaited.
-export const createClient = async () => {
+export const createClient = () => {
   const cookieStore = cookies();
 
   return createServerClient(
