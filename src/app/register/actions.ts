@@ -13,6 +13,7 @@ const formSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
   name: z.string().min(2),
   phone: z.string().regex(/^(09|\+989)\d{9}$/),
+  location: z.string().optional(),
   serviceId: z.string().optional(),
   bio: z.string().optional(),
 });
@@ -26,7 +27,7 @@ export async function registerUser(formData: FormData) {
     return { error: 'اطلاعات وارد شده نامعتبر است.' };
   }
   
-  const { name, phone, accountType, serviceId, bio } = parsed.data;
+  const { name, phone, accountType, location, serviceId, bio } = parsed.data;
   
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
@@ -100,8 +101,8 @@ export async function registerUser(formData: FormData) {
 
   // 6. If it's a provider, create an entry in the `providers` table
   if (accountType === 'provider') {
-    if (!serviceId || !bio) {
-        return { error: "برای هنرمندان، انتخاب نوع خدمات و نوشتن بیوگرافی الزامی است." };
+    if (!serviceId || !bio || !location) {
+        return { error: "برای هنرمندان، انتخاب شهر، نوع خدمات و نوشتن بیوگرافی الزامی است." };
     }
     const selectedCategory = categories.find(c => c.id.toString() === serviceId);
     const firstServiceInCat = allServices.find(s => s.category_id === selectedCategory?.id);
@@ -112,7 +113,7 @@ export async function registerUser(formData: FormData) {
             profile_id: userId,
             name: name,
             service: selectedCategory?.name || 'خدمت جدید',
-            location: 'ارومیه',
+            location: location,
             bio: bio,
             category_slug: selectedCategory?.slug,
             service_slug: firstServiceInCat?.slug,

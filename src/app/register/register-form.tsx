@@ -39,8 +39,17 @@ const formSchema = z.object({
   phone: z.string().regex(/^(09|\+989)\d{9}$/, {
     message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید.',
   }),
+  location: z.string().optional(),
   serviceId: z.string().optional(),
   bio: z.string().optional(),
+}).refine(data => {
+    if (data.accountType === 'provider') {
+        return !!data.location;
+    }
+    return true;
+},{
+    message: 'لطفاً شهر خود را انتخاب کنید.',
+    path: ['location'],
 }).refine(data => {
     if (data.accountType === 'provider') {
         return !!data.serviceId;
@@ -79,6 +88,7 @@ export default function RegisterForm() {
       phone: phoneFromParams || phoneFromAuth || '',
       accountType: 'customer',
       bio: '',
+      location: 'ارومیه',
     },
   });
 
@@ -210,6 +220,27 @@ export default function RegisterForm() {
 
             {accountType === 'provider' && (
               <>
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>شهر</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="شهر خود را انتخاب کنید" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                           <SelectItem value="ارومیه">ارومیه</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="serviceId"
