@@ -13,8 +13,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - /login (login flow pages)
+     * - /register (registration flow pages)
+     * This prevents the middleware from interfering with the auth flow.
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register).*)',
   ],
 }
