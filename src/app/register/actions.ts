@@ -20,21 +20,29 @@ const formSchema = z.object({
 
 
 export async function registerUser(formData: FormData) {
-  const supabase = await createClient();
+  // Diagnostic Log: Check environment variables available to the Server Action.
+  console.log('--- Register User Server Action Executing ---');
+  console.log('Action - NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Loaded' : 'MISSING');
+  console.log('Action - NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Loaded' : 'MISSING');
+  console.log('Action - SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Loaded' : 'MISSING');
+  console.log('-------------------------------------------');
 
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const supabase = createClient();
 
-  if (sessionError) {
-      console.error('Supabase getSession Error:', sessionError);
-      return { error: `خطا در دریافت جلسه از سرور: ${sessionError.message}` };
-  }
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  if (!session?.user) {
-      console.log('No active session found on server action.');
-      return { error: `جلسه کاربری معتبر یافت نشد. محتوای جلسه روی سرور: ${JSON.stringify(session)}` };
-  }
+    if (sessionError) {
+        console.error('Supabase getSession Error in Action:', sessionError);
+        return { error: `خطا در دریافت جلسه از سرور: ${sessionError.message}` };
+    }
 
-  const userId = session.user.id;
+    if (!session?.user) {
+        console.log('No active session found on server action.');
+        return { error: `جلسه کاربری معتبر یافت نشد. محتوای جلسه روی سرور: ${JSON.stringify(session)}` };
+    }
+
+    const userId = session.user.id;
 
 
     const values = Object.fromEntries(formData.entries());
@@ -127,8 +135,11 @@ export async function registerUser(formData: FormData) {
         return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
       }
     }
+  } catch (e: any) {
+    console.error('A critical error occurred in registerUser action:', e);
+    return { error: `یک خطای پیش‌بینی نشده در سرور رخ داد: ${e.message}` };
+  }
 
-    const destination = accountType === 'provider' ? '/profile' : '/';
-    redirect(destination);
-
+  const destination = formData.get('accountType') === 'provider' ? '/profile' : '/';
+  redirect(destination);
 }
