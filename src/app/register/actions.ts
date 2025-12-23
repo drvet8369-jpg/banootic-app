@@ -20,25 +20,21 @@ const formSchema = z.object({
 
 
 export async function registerUser(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
-  // --- START OF DETAILED LOGGING BLOCK ---
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (sessionError) {
-        console.error('Supabase getSession Error:', sessionError);
-        return { error: `خطا در دریافت جلسه از سرور: ${sessionError.message}` };
-    }
+  if (sessionError) {
+      console.error('Supabase getSession Error:', sessionError);
+      return { error: `خطا در دریافت جلسه از سرور: ${sessionError.message}` };
+  }
 
-    if (!session?.user) {
-        console.log('No active session found on server action.');
-        // This will now be shown in the toast message.
-        return { error: `جلسه کاربری معتبر یافت نشد. محتوای جلسه روی سرور: ${JSON.stringify(session)}` };
-    }
+  if (!session?.user) {
+      console.log('No active session found on server action.');
+      return { error: `جلسه کاربری معتبر یافت نشد. محتوای جلسه روی سرور: ${JSON.stringify(session)}` };
+  }
 
-    const userId = session.user.id;
-    // --- END OF DETAILED LOGGING BLOCK ---
+  const userId = session.user.id;
 
 
     const values = Object.fromEntries(formData.entries());
@@ -135,8 +131,4 @@ export async function registerUser(formData: FormData) {
     const destination = accountType === 'provider' ? '/profile' : '/';
     redirect(destination);
 
-  } catch (e: any) {
-      console.error('A critical error occurred in registerUser action:', e);
-      return { error: `یک خطای پیش‌بینی نشده در سرور رخ داد: ${e.message}` };
-  }
 }
