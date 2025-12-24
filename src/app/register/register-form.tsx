@@ -96,7 +96,6 @@ export default function RegisterForm() {
   const phoneFromAuth = user?.phone;
   
   const [state, formAction] = useActionState(registerUser, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -153,11 +152,8 @@ export default function RegisterForm() {
       <CardContent className="p-6">
         <Form {...form}>
           <form 
-            ref={formRef} 
             action={formAction}
             className="space-y-8"
-            // We trigger validation before submitting to the server action
-            onSubmit={form.handleSubmit(() => formRef.current?.submit())}
            >
             <FormField
               control={form.control}
@@ -170,6 +166,7 @@ export default function RegisterForm() {
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
+                      name={field.name}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
