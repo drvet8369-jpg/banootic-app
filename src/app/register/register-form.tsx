@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useEffect, useRef } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -94,7 +95,7 @@ export default function RegisterForm() {
   const phoneFromParams = searchParams.get('phone');
   const phoneFromAuth = user?.phone;
   
-  const [state, formAction] = useFormState(registerUser, initialState);
+  const [state, formAction] = useActionState(registerUser, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
