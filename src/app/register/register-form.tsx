@@ -97,8 +97,7 @@ const DebugBox = ({ title, data }: { title: string; data: object }) => (
   </div>
 );
 
-
-export default function RegisterForm() {
+function RegisterFormComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, session } = useAuth();
@@ -324,3 +323,5 @@ export default function RegisterForm() {
     </Card>
   );
 }
+
+export default RegisterFormComponent;
