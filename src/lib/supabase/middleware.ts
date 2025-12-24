@@ -2,10 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  let supabaseResponse = NextResponse.next({
+    request,
   })
 
   const supabase = createServerClient(
@@ -17,36 +15,38 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          // If the cookie is set, update the request cookies and response cookies
+          // If the cookie is set, update the request cookies.
           request.cookies.set({
             name,
             value,
             ...options,
           })
-          response = NextResponse.next({
+          // Also update the response so it sends the cookie back to the browser.
+          supabaseResponse = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
-          response.cookies.set({
+          supabaseResponse.cookies.set({
             name,
             value,
             ...options,
           })
         },
         remove(name: string, options: CookieOptions) {
-          // If the cookie is removed, update the request cookies and response cookies
+          // If the cookie is removed, update the request cookies.
           request.cookies.set({
             name,
             value: '',
             ...options,
           })
-          response = NextResponse.next({
+           // Also update the response so it sends the cookie removal back to the browser.
+          supabaseResponse = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
-          response.cookies.set({
+          supabaseResponse.cookies.set({
             name,
             value: '',
             ...options,
@@ -57,8 +57,7 @@ export async function updateSession(request: NextRequest) {
   )
 
   // This will refresh the session if it's expired.
-  // It will also be able to read the session from the request cookies.
   await supabase.auth.getUser()
 
-  return response
+  return supabaseResponse
 }
