@@ -5,11 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { verifyOtp } from '../actions';
 import { toast } from 'sonner';
 
+import { createClient } from '@/lib/supabase/client';
+import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,9 +41,11 @@ const OTPSchema = z.object({
 });
 
 function VerifyOTPForm() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const phone = searchParams.get('phone');
     const [isLoading, setIsLoading] = useState(false);
+    const supabase = createClient();
 
     const form = useForm<z.infer<typeof OTPSchema>>({
         resolver: zodResolver(OTPSchema),
@@ -59,17 +62,54 @@ function VerifyOTPForm() {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('phone', phone);
-        formData.append('pin', data.pin);
+        try {
+            const normalizedPhone = normalizeForSupabaseAuth(phone);
+            
+            const { data: authData, error } = await supabase.auth.verifyOtp({
+                phone: normalizedPhone,
+                token: data.pin,
+                type: 'sms',
+            });
 
-        const result = await verifyOtp(formData);
-        
-        if (result?.error) {
-            toast.error('خطا در تایید', { description: result.error });
+            if (error) {
+                console.error("Supabase verifyOtp Error:", error);
+                toast.error('خطا در تایید', { description: `کد تایید نامعتبر است: ${error.message}` });
+                setIsLoading(false);
+                return;
+            }
+            
+            // On successful verification, Supabase client library automatically handles the session.
+            // Now, let's check if the user has a complete profile.
+             if (authData.user) {
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, account_type')
+                    .eq('id', authData.user.id)
+                    .single();
+
+                if (profileError && profileError.code !== 'PGRST116') { // PGRST116 means no rows found
+                     toast.error('خطا در بررسی پروفایل', { description: profileError.message });
+                     setIsLoading(false);
+                     return;
+                }
+                
+                // If profile exists and is complete, redirect them.
+                if (profile?.full_name) {
+                    router.push(profile.account_type === 'provider' ? '/profile' : '/');
+                } else {
+                    // Otherwise, send them to complete registration.
+                    router.push(`/register?phone=${phone}`);
+                }
+            } else {
+                 // Fallback to registration page if user data is somehow missing
+                 router.push(`/register?phone=${phone}`);
+            }
+
+        } catch (e: any) {
+            toast.error("خطای پیش‌بینی نشده", { description: e.message || "لطفاً دوباره تلاش کنید." });
+            setIsLoading(false);
         }
-        // On success, the action handles the redirect.
-        setIsLoading(false);
+        // setLoading is handled in each branch.
     }
 
     if (!phone) {
@@ -125,7 +165,7 @@ function VerifyOTPForm() {
                         />
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                            تایید و ورود
+                            تایید و ادامه
                         </Button>
                     </form>
                 </Form>
