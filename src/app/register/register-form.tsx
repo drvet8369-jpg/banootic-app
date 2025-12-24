@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useActionState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -87,6 +87,17 @@ function SubmitButton() {
   );
 }
 
+// Temporary debug component
+const DebugBox = ({ title, data }: { title: string; data: object }) => (
+  <div className="p-2 border bg-gray-50/50 rounded-md mt-2 text-left" dir="ltr">
+    <p className="text-xs font-bold font-mono">{title}</p>
+    <pre className="text-[10px] font-mono break-all whitespace-pre-wrap">
+      {JSON.stringify(data, null, 2)}
+    </pre>
+  </div>
+);
+
+
 export default function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -107,18 +118,23 @@ export default function RegisterForm() {
       location: 'ارومیه',
     },
   });
+  
+  const formValues = form.watch();
 
   useEffect(() => {
     if (!loading && !session && !phoneFromParams) {
+        toast.warning("جلسه کاربری یافت نشد", { description: "در حال بازگشت به صفحه ورود..." });
         router.push('/login');
     }
     
     if (!loading && user && session && user.full_name) {
+        toast.info("شما قبلاً ثبت‌نام کرده‌اید", { description: "در حال هدایت به صفحه پروفایل..."});
         router.push(user.account_type === 'provider' ? '/profile' : '/');
     }
     
-    if (phoneFromAuth) {
-      form.setValue('phone', phoneFromAuth);
+    const effectivePhone = phoneFromParams || phoneFromAuth;
+    if (effectivePhone) {
+      form.setValue('phone', effectivePhone);
     }
 
   }, [user, session, loading, router, phoneFromParams, phoneFromAuth, form]);
@@ -253,7 +269,7 @@ export default function RegisterForm() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
-                          </SelectTrigger>
+                          </Trigger>
                         </FormControl>
                         <SelectContent>
                           {categories.map((category) => (
@@ -291,6 +307,16 @@ export default function RegisterForm() {
             )}
             
             <SubmitButton />
+
+             {/* === DEBUG BOX === */}
+             <div className="p-4 border-2 border-dashed border-red-400 rounded-lg bg-red-50">
+                <h3 className="font-bold text-red-700 text-center">جعبه سیاه تشخیصی (موقت)</h3>
+                 <DebugBox title="Auth Context" data={{ user, session: session ? `Authenticated (Expires: ${new Date(session.expires_at! * 1000).toLocaleTimeString()})` : 'null', loading }} />
+                 <DebugBox title="Search Params" data={{ phoneFromParams }} />
+                 <DebugBox title="Form Values" data={formValues} />
+                 <DebugBox title="Server Action State" data={state} />
+             </div>
+             {/* ================= */}
             
           </form>
         </Form>
