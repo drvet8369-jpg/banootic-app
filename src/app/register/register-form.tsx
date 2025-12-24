@@ -87,7 +87,6 @@ function SubmitButton() {
   );
 }
 
-// Temporary debug component
 const DebugBox = ({ title, data }: { title: string; data: object }) => (
   <div className="p-2 border bg-gray-50/50 rounded-md mt-2 text-left" dir="ltr">
     <p className="text-xs font-bold font-mono">{title}</p>
@@ -306,16 +305,14 @@ export default function RegisterFormComponent() {
             )}
             
             <SubmitButton />
-
-             {/* === DEBUG BOX === */}
+            
              <div className="p-4 border-2 border-dashed border-red-400 rounded-lg bg-red-50">
                 <h3 className="font-bold text-red-700 text-center">جعبه سیاه تشخیصی (موقت)</h3>
-                 <DebugBox title="Auth Context" data={{ user, session: session ? `Authenticated (Expires: ${new Date(session.expires_at! * 1000).toLocaleTimeString()})` : 'null', loading }} />
+                 <DebugBox title="Auth Context" data={{ user, session: session ? `Authenticated (Expires: ${session.expires_at ? new Date(session.expires_at * 1000).toLocaleTimeString() : 'N/A'})` : 'null', loading }} />
                  <DebugBox title="Search Params" data={{ phoneFromParams }} />
                  <DebugBox title="Form Values" data={formValues} />
                  <DebugBox title="Server Action State" data={state} />
              </div>
-             {/* ================= */}
             
           </form>
         </Form>
