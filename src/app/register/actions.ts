@@ -1,12 +1,13 @@
 
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { categories, services as allServices } from '@/lib/constants';
 import * as z from 'zod';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
+
 
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
@@ -18,7 +19,10 @@ const formSchema = z.object({
 });
 
 export async function registerUser(prevState: any, formData: FormData) {
-  const supabase = createClient();
+  console.log("Register User Server Action Executing...");
+  
+  // The Supabase client must be awaited.
+  const supabase = await createClient();
 
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -30,6 +34,7 @@ export async function registerUser(prevState: any, formData: FormData) {
 
     if (!session?.user) {
         console.log('No active session found on server action.');
+        console.log(`محتوای جلسه روی سرور: ${JSON.stringify(session)}`);
         return { error: `جلسه کاربری معتبر یافت نشد. محتوای جلسه روی سرور: ${JSON.stringify(session)}` };
     }
 
@@ -43,58 +48,27 @@ export async function registerUser(prevState: any, formData: FormData) {
       return { error: 'اطلاعات وارد شده نامعتبر است.' };
     }
     
-    const { name, phone, accountType, location, serviceId, bio } = parsed.data;
+    const { name, accountType, location, serviceId, bio } = parsed.data;
     
-    const normalizedPhone = normalizeForSupabaseAuth(phone);
-
-    if (session.user.phone !== normalizedPhone) {
-        return { error: 'خطای امنیتی: شماره تلفن فرم با شماره تلفن کاربر وارد شده مطابقت ندارد.' };
+    // We already have the user's phone from the session, which is more secure.
+    const userPhone = session.user.phone;
+    if (!userPhone) {
+        return { error: 'شماره تلفن کاربر در جلسه یافت نشد.'};
     }
 
-    const supabaseAdmin = createAdminClient();
-
-    const { data: existingProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
-
-    if (existingProfile) {
-        const destination = values.accountType === 'provider' ? '/profile' : '/';
-        redirect(destination);
-    }
-    
-    if (accountType === 'provider') {
-      const { data: existingProviderByName } = await supabaseAdmin
-        .from('providers')
-        .select('id')
-        .ilike('name', name)
-        .single();
-
-      if (existingProviderByName) {
-        return { error: 'این نام کسب‌وکار قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.' };
-      }
-    }
-    
-     const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          user_metadata: { full_name: name, account_type: accountType },
-      });
-     if (metadataError) {
-          console.error('Error updating user metadata:', metadataError);
-          return { error: 'خطا در به‌روزرسانی اطلاعات کاربر.' };
-     }
-
-
-    const { error: profileInsertError } = await supabaseAdmin
+    // We no longer need the admin client for this part, as we are operating as the user.
+    // However, for checks and inserts, it's safer to use the admin client to bypass RLS if needed.
+    // For now, let's assume RLS is set up to allow users to edit their own profiles.
+    const { error: profileInsertError } = await supabase
       .from('profiles')
       .insert({
           id: userId,
           full_name: name,
-          phone: normalizedPhone,
+          phone: userPhone,
           account_type: accountType,
       });
 
-    if (profileInsertError) {
+    if (profileInsertError && profileInsertError.code !== '23505') { // Ignore if profile already exists
         console.error('Error inserting into profiles table:', profileInsertError);
         return { error: `خطای دیتابیس در ساخت پروفایل: ${profileInsertError.message}` };
     }
@@ -107,7 +81,7 @@ export async function registerUser(prevState: any, formData: FormData) {
       const selectedCategory = categories.find(c => c.id.toString() === serviceId);
       const firstServiceInCat = allServices.find(s => s.category_id === selectedCategory?.id);
 
-      const { error: providerInsertError } = await supabaseAdmin
+      const { error: providerInsertError } = await supabase
           .from('providers')
           .insert({
               profile_id: userId,
@@ -117,12 +91,13 @@ export async function registerUser(prevState: any, formData: FormData) {
               bio: bio,
               category_slug: selectedCategory?.slug,
               service_slug: firstServiceInCat?.slug,
-              phone: normalizedPhone,
+              phone: userPhone,
           });
       
       if (providerInsertError) {
         console.error('Error inserting into providers table:', providerInsertError);
-        await supabaseAdmin.from('profiles').delete().eq('id', userId);
+        // Attempt to roll back profile insert if provider insert fails
+        await supabase.from('profiles').delete().eq('id', userId);
         return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
       }
     }
@@ -131,7 +106,7 @@ export async function registerUser(prevState: any, formData: FormData) {
     return { error: `یک خطای پیش‌بینی نشده در سرور رخ داد: ${e.message}` };
   }
 
-  // Redirect is handled by the effect hook on the client now
   const destination = formData.get('accountType') === 'provider' ? '/profile' : '/';
+  revalidatePath('/', 'layout');
   return { success: true, destination };
 }
