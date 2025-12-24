@@ -159,16 +159,13 @@ export default function RegisterFormComponent() {
 
   return (
     <Card className="w-full">
-        <CardHeader>
-            <CardTitle className="text-3xl font-headline">تکمیل اطلاعات ثبت‌نام</CardTitle>
-            <CardDescription>فقط چند قدم تا پیوستن به جامعه بانوتیک باقی مانده است.</CardDescription>
-        </CardHeader>
+      <CardHeader>
+        <CardTitle className="text-3xl font-headline">تکمیل اطلاعات ثبت‌نام</CardTitle>
+        <CardDescription>فقط چند قدم تا پیوستن به جامعه بانوتیک باقی مانده است.</CardDescription>
+      </CardHeader>
       <CardContent className="p-6">
         <Form {...form}>
-          <form 
-            action={formAction}
-            className="space-y-8"
-           >
+          <form action={formAction} className="space-y-8">
             <FormField
               control={form.control}
               name="accountType"
