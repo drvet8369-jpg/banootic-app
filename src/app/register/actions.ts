@@ -8,7 +8,6 @@ import { categories, services as allServices } from '@/lib/constants';
 import * as z from 'zod';
 import { redirect } from 'next/navigation';
 
-
 const formSchema = z.object({
   accountType: z.enum(['customer', 'provider']),
   name: z.string().min(2),
@@ -18,15 +17,7 @@ const formSchema = z.object({
   bio: z.string().optional(),
 });
 
-
-export async function registerUser(formData: FormData) {
-  // Diagnostic Log: Check environment variables available to the Server Action.
-  console.log('--- Register User Server Action Executing ---');
-  console.log('Action - NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Loaded' : 'MISSING');
-  console.log('Action - NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Loaded' : 'MISSING');
-  console.log('Action - SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Loaded' : 'MISSING');
-  console.log('-------------------------------------------');
-
+export async function registerUser(prevState: any, formData: FormData) {
   const supabase = createClient();
 
   try {
@@ -43,12 +34,12 @@ export async function registerUser(formData: FormData) {
     }
 
     const userId = session.user.id;
-
-
-    const values = Object.fromEntries(formData.entries());
     
+    const values = Object.fromEntries(formData.entries());
     const parsed = formSchema.safeParse(values);
+    
     if (!parsed.success) {
+      console.error("Form parsing failed", parsed.error);
       return { error: 'اطلاعات وارد شده نامعتبر است.' };
     }
     
@@ -56,7 +47,6 @@ export async function registerUser(formData: FormData) {
     
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
-    // Double-check that the phone number from the form matches the logged-in user
     if (session.user.phone !== normalizedPhone) {
         return { error: 'خطای امنیتی: شماره تلفن فرم با شماره تلفن کاربر وارد شده مطابقت ندارد.' };
     }
@@ -70,7 +60,8 @@ export async function registerUser(formData: FormData) {
         .single();
 
     if (existingProfile) {
-      return { error: 'این کاربر قبلاً پروفایل خود را تکمیل کرده است.' };
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        redirect(destination);
     }
     
     if (accountType === 'provider') {
@@ -140,6 +131,7 @@ export async function registerUser(formData: FormData) {
     return { error: `یک خطای پیش‌بینی نشده در سرور رخ داد: ${e.message}` };
   }
 
+  // Redirect is handled by the effect hook on the client now
   const destination = formData.get('accountType') === 'provider' ? '/profile' : '/';
-  redirect(destination);
+  return { success: true, destination };
 }

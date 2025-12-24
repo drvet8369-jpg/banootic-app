@@ -1,10 +1,11 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -68,20 +69,35 @@ const formSchema = z.object({
     path: ['bio'],
 });
 
-type UserRegistrationInput = z.infer<typeof formSchema>;
+const initialState = {
+  error: null,
+  success: false,
+  destination: null
+};
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" className="w-full" size="lg" disabled={pending}>
+      {pending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+      تکمیل ثبت‌نام و ورود
+    </Button>
+  );
+}
 
 export default function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, session } = useAuth();
   
-  // Get phone from URL or from logged-in user session
   const phoneFromParams = searchParams.get('phone');
   const phoneFromAuth = user?.phone;
-
-  const [isLoading, setIsLoading] = useState(false);
   
-  const form = useForm<UserRegistrationInput>({
+  const [state, formAction] = useFormState(registerUser, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -93,49 +109,32 @@ export default function RegisterForm() {
   });
 
   useEffect(() => {
-    // If user is not logged in and there's no phone in params, they must log in first.
     if (!loading && !session && !phoneFromParams) {
         router.push('/login');
     }
     
-    // If the user is already fully registered and somehow lands here, redirect them.
-    if (!loading && user && session) {
-        if(user.account_type === 'provider' && user.full_name) {
-            router.push('/profile');
-        } else if (user.account_type === 'customer' && user.full_name) {
-            router.push('/');
-        }
+    if (!loading && user && session && user.full_name) {
+        router.push(user.account_type === 'provider' ? '/profile' : '/');
     }
     
-    // Pre-fill phone number if it becomes available from auth
     if (phoneFromAuth) {
       form.setValue('phone', phoneFromAuth);
     }
 
   }, [user, session, loading, router, phoneFromParams, phoneFromAuth, form]);
 
+  useEffect(() => {
+    if (state.error) {
+      toast.error('خطا در ثبت‌نام', { description: state.error });
+    }
+    if (state.success && state.destination) {
+      toast.success('ثبت‌نام با موفقیت انجام شد!', { description: 'در حال هدایت شما...' });
+      router.push(state.destination);
+    }
+  }, [state, router]);
+
   const accountType = form.watch('accountType');
-
-  async function onSubmit(values: UserRegistrationInput) {
-    setIsLoading(true);
-    
-    const formData = new FormData();
-    Object.entries(values).forEach(([key, value]) => {
-      if (value) {
-        formData.append(key, value);
-      }
-    });
-
-    const result = await registerUser(formData);
-
-    if (result?.error) {
-        toast.error('خطا در ثبت‌نام', { description: result.error });
-        setIsLoading(false);
-    } 
-  }
   
-  // Do not render the form until loading is false AND we have a valid session or phone param
-  // This prevents the flicker of the form before the redirect logic in useEffect runs.
   if (loading || (!session && !phoneFromParams)) {
       return (
         <div className="flex w-full justify-center items-center py-20">
@@ -152,7 +151,13 @@ export default function RegisterForm() {
         </CardHeader>
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form 
+            ref={formRef} 
+            action={formAction}
+            className="space-y-8"
+            // We trigger validation before submitting to the server action
+            onSubmit={form.handleSubmit(() => formRef.current?.submit())}
+           >
             <FormField
               control={form.control}
               name="accountType"
@@ -164,21 +169,20 @@ export default function RegisterForm() {
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
-                      disabled={isLoading}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="customer" />
+                          <RadioGroupItem value="customer" id="customer"/>
                         </FormControl>
-                        <FormLabel className="font-normal">
+                        <FormLabel htmlFor="customer" className="font-normal">
                          مشتری هستم (برای یافتن و رزرو خدمات)
                         </FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="provider" />
+                          <RadioGroupItem value="provider" id="provider" />
                         </FormControl>
-                        <FormLabel className="font-normal">
+                        <FormLabel htmlFor="provider" className="font-normal">
                           ارائه‌دهنده خدمات هستم (برای ارائه هنر و تخصص خود)
                         </FormLabel>
                       </FormItem>
@@ -196,7 +200,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isLoading} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -210,7 +214,7 @@ export default function RegisterForm() {
                 <FormItem>
                   <FormLabel>شماره تلفن</FormLabel>
                   <FormControl>
-                    <Input placeholder="09123456789" {...field} disabled={true} />
+                    <Input {...field} readOnly disabled className="bg-muted/50"/>
                   </FormControl>
                   <FormDescription>این شماره تلفن تایید شده و قابل تغییر نیست.</FormDescription>
                   <FormMessage />
@@ -226,7 +230,7 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>شهر</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="شهر خود را انتخاب کنید" />
@@ -247,7 +251,7 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -276,7 +280,6 @@ export default function RegisterForm() {
                           placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
                           className="resize-none"
                           {...field}
-                          disabled={isLoading}
                         />
                       </FormControl>
                       <FormDescription>
@@ -289,10 +292,7 @@ export default function RegisterForm() {
               </>
             )}
             
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              تکمیل ثبت‌نام و ورود
-            </Button>
+            <SubmitButton />
             
           </form>
         </Form>
