@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from "@/components/ui/sonner"
+import { Button } from '@/components/ui/button';
 
 
 const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
@@ -42,6 +43,11 @@ export default function RootLayout({
         .catch(error => console.log('Service Worker registration failed:', error));
     }
   }, []);
+  
+  const handleHardRefresh = () => {
+    const randomParam = `cacheBust=${new Date().getTime()}`;
+    window.location.href = `/?${randomParam}`;
+  };
 
   return (
     <html lang="fa" dir="rtl">
@@ -58,6 +64,11 @@ export default function RootLayout({
         )}
       >
         <AuthProvider>
+           <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[101] animate-pulse">
+                <Button onClick={handleHardRefresh} variant="destructive" size="sm" className="shadow-lg">
+                  رفرش کامل (مخصوص موبایل)
+                </Button>
+            </div>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
