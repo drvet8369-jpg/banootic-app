@@ -56,6 +56,8 @@ function VerifyOTPForm() {
 
     async function onSubmit(data: z.infer<typeof OTPSchema>) {
         setIsLoading(true);
+        toast.info("در حال تایید کد...", { description: "لطفاً چند لحظه صبر کنید..." });
+
         if (!phone) {
             toast.error("خطا", { description: "شماره تلفن یافت نشد."});
             setIsLoading(false);
@@ -64,47 +66,58 @@ function VerifyOTPForm() {
 
         try {
             const normalizedPhone = normalizeForSupabaseAuth(phone);
-            
+            const token = data.pin;
+
+            console.log("--- DEBUG: Attempting to verify OTP ---");
+            console.log("Phone (normalized):", normalizedPhone);
+            console.log("Token (PIN):", token);
+
             const { data: authData, error } = await supabase.auth.verifyOtp({
                 phone: normalizedPhone,
-                token: data.pin,
+                token: token,
                 type: 'sms',
             });
+            
+            console.log("--- DEBUG: Supabase verifyOtp Response ---");
+            console.log("Data:", authData);
+            console.log("Error:", error);
+
+            // Display the full response in a toast for debugging
+            const responseDataString = JSON.stringify(authData, null, 2);
+            const responseErrorString = JSON.stringify(error, null, 2);
 
             if (error) {
-                console.error("Supabase verifyOtp Error:", error);
-                toast.error('خطا در تایید', { description: `کد تایید نامعتبر است.` });
+                toast.error("خطای Supabase در تایید کد", { 
+                    description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{responseErrorString}</pre>,
+                    duration: 20000, // Keep toast open longer
+                });
                 setIsLoading(false);
                 return;
             }
             
-            if (authData.user) {
-                // The onAuthStateChange listener in AuthContext will handle the session.
-                // We just need to trigger a full page reload to ensure the new cookie is sent to the server
-                // and the middleware can correctly process the session.
+            if (authData && (authData.user || authData.session)) {
+                 toast.success("تایید موفقیت‌آمیز!", { 
+                    description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{responseDataString}</pre>,
+                    duration: 20000,
+                });
                 
-                toast.success('ورود موفقیت‌آمیز بود!', { description: 'در حال هدایت شما...' });
+                // Temporarily disable redirect to see the toast message
+                // window.location.href = `/register?phone=${phone}`;
 
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('id, full_name')
-                    .eq('id', authData.user.id)
-                    .single();
-
-                if (profile?.full_name) {
-                    // Profile is complete, force reload to the home page.
-                    window.location.href = '/';
-                } else {
-                    // Profile is incomplete, force reload to the registration page.
-                    window.location.href = `/register?phone=${phone}`;
-                }
             } else {
-                 // Fallback to registration page if user data is somehow missing
-                 window.location.href = `/register?phone=${phone}`;
+                 toast.warning("پاسخ موفقیت آمیز بود اما session یا user وجود ندارد!", {
+                     description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{responseDataString}</pre>,
+                     duration: 20000,
+                 });
             }
 
         } catch (e: any) {
-            toast.error("خطای پیش‌بینی نشده", { description: e.message || "لطفاً دوباره تلاش کنید." });
+            const catchErrorString = JSON.stringify(e, Object.getOwnPropertyNames(e), 2);
+            toast.error("خطای پیش‌بینی نشده در بلوک try/catch", { 
+              description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{catchErrorString}</pre>,
+              duration: 20000,
+            });
+        } finally {
             setIsLoading(false);
         }
     }
