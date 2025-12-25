@@ -1,8 +1,6 @@
-
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { categories, services as allServices } from '@/lib/constants';
 import * as z from 'zod';
 import { redirect } from 'next/navigation';
@@ -18,38 +16,23 @@ const formSchema = z.object({
   bio: z.string().optional(),
 });
 
-export async function registerUser(prevState: any, formData: FormData) {
-  console.log("DEBUG: Register User Server Action Executing...");
-  
+// The function now returns an error object or nothing (on success, it redirects).
+export async function registerUser(formData: FormData): Promise<{ error: string } | void> {
   const supabase = await createClient();
 
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    // --- START DEBUG LOGGING ---
-    console.log("DEBUG: Supabase getSession() result in server action:");
-    console.log("DEBUG: Session object:", JSON.stringify(session, null, 2));
-    console.log("DEBUG: Error object:", JSON.stringify(sessionError, null, 2));
-    // --- END DEBUG LOGGING ---
-
-    if (sessionError) {
-        console.error('DEBUG: Supabase getSession Error in Action:', sessionError);
-        return { error: `خطا در دریافت جلسه از سرور: ${sessionError.message}` };
-    }
+    const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
-        console.log('DEBUG: No active session found on server action.');
         return { error: 'خطای حیاتی: سرور نتوانست هویت شما را از کوکی جلسه بخواند. لطفاً یک بار دیگر از صفحه ورود تلاش کنید.' };
     }
 
     const userId = session.user.id;
-    console.log(`DEBUG: User ID found from session: ${userId}`);
-    
     const values = Object.fromEntries(formData.entries());
     const parsed = formSchema.safeParse(values);
     
     if (!parsed.success) {
-      console.error("DEBUG: Form parsing failed", parsed.error);
+      console.error("Form parsing failed", parsed.error);
       return { error: 'اطلاعات وارد شده در فرم نامعتبر است.' };
     }
     
@@ -70,10 +53,9 @@ export async function registerUser(prevState: any, formData: FormData) {
       }, { onConflict: 'id' });
 
     if (profileInsertError) { 
-        console.error('DEBUG: Error upserting into profiles table:', profileInsertError);
+        console.error('Error upserting into profiles table:', profileInsertError);
         return { error: `خطای دیتابیس در ساخت پروفایل: ${profileInsertError.message}` };
     }
-    console.log(`DEBUG: Profile for user ${userId} upserted successfully.`);
 
 
     if (accountType === 'provider') {
@@ -97,20 +79,18 @@ export async function registerUser(prevState: any, formData: FormData) {
           }, { onConflict: 'profile_id' });
       
       if (providerInsertError) {
-        console.error('DEBUG: Error upserting into providers table:', providerInsertError);
+        console.error('Error upserting into providers table:', providerInsertError);
         return { error: `خطا در ثبت اطلاعات هنرمند: ${providerInsertError.message}` };
       }
-      console.log(`DEBUG: Provider data for user ${userId} upserted successfully.`);
     }
   } catch (e: any) {
-    console.error('DEBUG: A critical error occurred in registerUser action:', e);
+    console.error('A critical error occurred in registerUser action:', e);
     return { error: `یک خطای پیش‌بینی نشده در سرور رخ داد: ${e.message}` };
   }
 
   const destination = formData.get('accountType') === 'provider' ? '/profile' : '/';
   revalidatePath('/', 'layout');
   
-  // Instead of returning success, we directly redirect here.
-  // This is a more robust pattern after a successful form action.
+  // On success, redirect instead of returning a value.
   redirect(destination);
 }

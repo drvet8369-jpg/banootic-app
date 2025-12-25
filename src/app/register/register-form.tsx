@@ -1,12 +1,9 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useEffect } from 'react';
-import { useFormStatus } from 'react-dom';
-import { useActionState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -69,29 +66,11 @@ const formSchema = z.object({
     path: ['bio'],
 });
 
-const initialState = {
-  error: null,
-  success: false,
-  destination: null
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" className="w-full" size="lg" disabled={pending}>
-      {pending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-      تکمیل ثبت‌نام و ورود
-    </Button>
-  );
-}
-
 export default function RegisterFormComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const phoneFromParams = searchParams.get('phone');
-  
-  const [state, formAction] = useActionState(registerUser, initialState);
+  const [isPending, startTransition] = useTransition();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -111,17 +90,24 @@ export default function RegisterFormComponent() {
     }
   }, [phoneFromParams, router]);
 
-  useEffect(() => {
-    if (state.error) {
-      toast.error('خطا در ثبت‌نام', { description: state.error });
-    }
-    if (state.success && state.destination) {
-      toast.success('ثبت‌نام با موفقیت انجام شد!', { description: 'در حال هدایت شما...' });
-      // Use window.location.href for a full refresh to ensure auth state is up to date everywhere
-      window.location.href = state.destination;
-    }
-  }, [state, router]);
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    startTransition(async () => {
+      const formData = new FormData();
+      Object.entries(values).forEach(([key, value]) => {
+        if (value) {
+          formData.append(key, value);
+        }
+      });
+      
+      const result = await registerUser(formData);
 
+      if (result?.error) {
+        toast.error('خطا در ثبت‌نام', { description: result.error });
+      }
+      // On success, the server action will redirect, so no client-side navigation is needed here.
+    });
+  };
+  
   const accountType = form.watch('accountType');
   
   if (!phoneFromParams) {
@@ -141,7 +127,7 @@ export default function RegisterFormComponent() {
       </CardHeader>
       <CardContent className="p-6">
         <Form {...form}>
-          <form action={formAction} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
               control={form.control}
               name="accountType"
@@ -154,6 +140,7 @@ export default function RegisterFormComponent() {
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
                       name={field.name}
+                      disabled={isPending}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
@@ -185,7 +172,7 @@ export default function RegisterFormComponent() {
                 <FormItem>
                   <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
                   <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} />
+                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isPending}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -215,7 +202,7 @@ export default function RegisterFormComponent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>شهر</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isPending}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="شهر خود را انتخاب کنید" />
@@ -236,7 +223,7 @@ export default function RegisterFormComponent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isPending}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
@@ -265,6 +252,7 @@ export default function RegisterFormComponent() {
                           placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
                           className="resize-none"
                           {...field}
+                          disabled={isPending}
                         />
                       </FormControl>
                       <FormDescription>
@@ -277,7 +265,10 @@ export default function RegisterFormComponent() {
               </>
             )}
             
-            <SubmitButton />
+            <Button type="submit" className="w-full" size="lg" disabled={isPending}>
+              {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              تکمیل ثبت‌نام و ورود
+            </Button>
             
           </form>
         </Form>

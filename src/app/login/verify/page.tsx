@@ -79,8 +79,7 @@ function VerifyOTPForm() {
                 toast.error("خطا در تایید کد", { 
                     description: "کد وارد شده صحیح نیست یا منقضی شده است. لطفا دوباره تلاش کنید.",
                 });
-                setIsLoading(false);
-                return;
+                return; // Stop execution on error
             }
             
             if (authData && authData.session) {
@@ -88,7 +87,7 @@ function VerifyOTPForm() {
                     description: "شما با موفقیت وارد شدید. در حال هدایت به صفحه تکمیل اطلاعات...",
                 });
                 
-                // Force a full page reload to ensure the new session cookie is sent to the server.
+                // Force a full page reload to ensure the new session cookie is sent to the server on the next navigation.
                 window.location.href = `/register?phone=${phone}`;
 
             } else {
