@@ -93,23 +93,25 @@ function VerifyOTPForm() {
                      return;
                 }
                 
-                // If profile exists and is complete, redirect them.
+                toast.success('ورود موفقیت‌آمیز بود!', { description: 'در حال هدایت شما...' });
+
+                // If profile exists and is complete, redirect them with a full page reload.
                 if (profile?.full_name) {
-                    router.push(profile.account_type === 'provider' ? '/profile' : '/');
+                    const destination = profile.account_type === 'provider' ? '/profile' : '/';
+                    window.location.href = destination;
                 } else {
-                    // Otherwise, send them to complete registration.
-                    router.push(`/register?phone=${phone}`);
+                    // Otherwise, send them to complete registration with a full page reload.
+                    window.location.href = `/register?phone=${phone}`;
                 }
             } else {
                  // Fallback to registration page if user data is somehow missing
-                 router.push(`/register?phone=${phone}`);
+                 window.location.href = `/register?phone=${phone}`;
             }
 
         } catch (e: any) {
             toast.error("خطای پیش‌بینی نشده", { description: e.message || "لطفاً دوباره تلاش کنید." });
             setIsLoading(false);
         }
-        // setLoading is handled in each branch.
     }
 
     if (!phone) {
