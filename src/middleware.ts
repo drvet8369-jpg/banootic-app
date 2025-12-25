@@ -15,8 +15,12 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - /login (and its sub-pages like /login/verify)
+     * - /register
+     * - /api (API routes)
+     * This prevents the middleware from running on public auth pages,
+     * solving the race condition after OTP verification.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register|api).*)',
   ],
 }
