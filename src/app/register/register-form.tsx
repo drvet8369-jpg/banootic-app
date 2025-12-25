@@ -28,7 +28,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { categories } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { registerUser } from './actions';
-import { useAuth } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -87,22 +86,10 @@ function SubmitButton() {
   );
 }
 
-const DebugBox = ({ title, data }: { title: string; data: object }) => (
-  <div className="p-2 border bg-gray-50/50 rounded-md mt-2 text-left" dir="ltr">
-    <p className="text-xs font-bold font-mono">{title}</p>
-    <pre className="text-[10px] font-mono break-all whitespace-pre-wrap">
-      {JSON.stringify(data, null, 2)}
-    </pre>
-  </div>
-);
-
 export default function RegisterFormComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading, session } = useAuth();
-  
   const phoneFromParams = searchParams.get('phone');
-  const phoneFromAuth = user?.phone;
   
   const [state, formAction] = useActionState(registerUser, initialState);
   
@@ -110,32 +97,19 @@ export default function RegisterFormComponent() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: phoneFromParams || phoneFromAuth || '',
+      phone: phoneFromParams || '',
       accountType: 'customer',
       bio: '',
       location: 'ارومیه',
     },
   });
-  
-  const formValues = form.watch();
 
   useEffect(() => {
-    if (!loading && !session && !phoneFromParams) {
-        toast.warning("جلسه کاربری یافت نشد", { description: "در حال بازگشت به صفحه ورود..." });
+    if (!phoneFromParams) {
+        toast.error("خطای اعتبارسنجی", { description: "شماره تلفن تایید شده برای ثبت نام یافت نشد. در حال بازگشت به صفحه ورود..." });
         router.push('/login');
     }
-    
-    if (!loading && user && session && user.full_name) {
-        toast.info("شما قبلاً ثبت‌نام کرده‌اید", { description: "در حال هدایت به صفحه پروفایل..."});
-        router.push(user.account_type === 'provider' ? '/profile' : '/');
-    }
-    
-    const effectivePhone = phoneFromParams || phoneFromAuth;
-    if (effectivePhone) {
-      form.setValue('phone', effectivePhone);
-    }
-
-  }, [user, session, loading, router, phoneFromParams, phoneFromAuth, form]);
+  }, [phoneFromParams, router]);
 
   useEffect(() => {
     if (state.error) {
@@ -143,15 +117,17 @@ export default function RegisterFormComponent() {
     }
     if (state.success && state.destination) {
       toast.success('ثبت‌نام با موفقیت انجام شد!', { description: 'در حال هدایت شما...' });
-      router.push(state.destination);
+      // Use window.location.href for a full refresh to ensure auth state is up to date everywhere
+      window.location.href = state.destination;
     }
   }, [state, router]);
 
   const accountType = form.watch('accountType');
   
-  if (loading || (!session && !phoneFromParams)) {
+  if (!phoneFromParams) {
       return (
         <div className="flex w-full justify-center items-center py-20">
+          <p>در حال بازگشت به صفحه ورود...</p>
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
       );
@@ -302,14 +278,6 @@ export default function RegisterFormComponent() {
             )}
             
             <SubmitButton />
-            
-             <div className="p-4 border-2 border-dashed border-red-400 rounded-lg bg-red-50">
-                <h3 className="font-bold text-red-700 text-center">جعبه سیاه تشخیصی (موقت)</h3>
-                 <DebugBox title="Auth Context" data={{ user, session: session ? `Authenticated (Expires: ${session.expires_at ? new Date(session.expires_at * 1000).toLocaleTimeString() : 'N/A'})` : 'null', loading }} />
-                 <DebugBox title="Search Params" data={{ phoneFromParams }} />
-                 <DebugBox title="Form Values" data={formValues} />
-                 <DebugBox title="Server Action State" data={state} />
-             </div>
             
           </form>
         </Form>

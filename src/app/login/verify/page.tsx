@@ -68,54 +68,39 @@ function VerifyOTPForm() {
             const normalizedPhone = normalizeForSupabaseAuth(phone);
             const token = data.pin;
 
-            console.log("--- DEBUG: Attempting to verify OTP ---");
-            console.log("Phone (normalized):", normalizedPhone);
-            console.log("Token (PIN):", token);
-
             const { data: authData, error } = await supabase.auth.verifyOtp({
                 phone: normalizedPhone,
                 token: token,
                 type: 'sms',
             });
             
-            console.log("--- DEBUG: Supabase verifyOtp Response ---");
-            console.log("Data:", authData);
-            console.log("Error:", error);
-
-            // Display the full response in a toast for debugging
-            const responseDataString = JSON.stringify(authData, null, 2);
-            const responseErrorString = JSON.stringify(error, null, 2);
-
             if (error) {
-                toast.error("خطای Supabase در تایید کد", { 
-                    description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{responseErrorString}</pre>,
-                    duration: 20000, // Keep toast open longer
+                console.error("Supabase verifyOtp Error:", error);
+                toast.error("خطا در تایید کد", { 
+                    description: "کد وارد شده صحیح نیست یا منقضی شده است. لطفا دوباره تلاش کنید.",
                 });
                 setIsLoading(false);
                 return;
             }
             
-            if (authData && (authData.user || authData.session)) {
+            if (authData && authData.session) {
                  toast.success("تایید موفقیت‌آمیز!", { 
-                    description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{responseDataString}</pre>,
-                    duration: 20000,
+                    description: "شما با موفقیت وارد شدید. در حال هدایت به صفحه تکمیل اطلاعات...",
                 });
                 
-                // Temporarily disable redirect to see the toast message
-                // window.location.href = `/register?phone=${phone}`;
+                // Force a full page reload to ensure the new session cookie is sent to the server.
+                window.location.href = `/register?phone=${phone}`;
 
             } else {
-                 toast.warning("پاسخ موفقیت آمیز بود اما session یا user وجود ندارد!", {
-                     description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{responseDataString}</pre>,
-                     duration: 20000,
+                 toast.warning("پاسخ موفقیت آمیز بود اما جلسه کاربری ایجاد نشد.", {
+                     description: "لطفاً برای بررسی بیشتر با پشتیبانی تماس بگیرید.",
                  });
             }
 
         } catch (e: any) {
-            const catchErrorString = JSON.stringify(e, Object.getOwnPropertyNames(e), 2);
-            toast.error("خطای پیش‌بینی نشده در بلوک try/catch", { 
-              description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-white text-left" dir="ltr">{catchErrorString}</pre>,
-              duration: 20000,
+             console.error("Critical error in verifyOtp:", e);
+             toast.error("خطای پیش‌بینی نشده", { 
+              description: "مشکلی در سیستم رخ داده است. لطفاً دوباره تلاش کنید.",
             });
         } finally {
             setIsLoading(false);
