@@ -73,34 +73,29 @@ function VerifyOTPForm() {
 
             if (error) {
                 console.error("Supabase verifyOtp Error:", error);
-                toast.error('خطا در تایید', { description: `کد تایید نامعتبر است: ${error.message}` });
+                toast.error('خطا در تایید', { description: `کد تایید نامعتبر است.` });
                 setIsLoading(false);
                 return;
             }
             
-            // On successful verification, Supabase client library automatically handles the session.
-            // Now, let's check if the user has a complete profile.
-             if (authData.user) {
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, account_type')
-                    .eq('id', authData.user.id)
-                    .single();
-
-                if (profileError && profileError.code !== 'PGRST116') { // PGRST116 means no rows found
-                     toast.error('خطا در بررسی پروفایل', { description: profileError.message });
-                     setIsLoading(false);
-                     return;
-                }
+            if (authData.user) {
+                // The onAuthStateChange listener in AuthContext will handle the session.
+                // We just need to trigger a full page reload to ensure the new cookie is sent to the server
+                // and the middleware can correctly process the session.
                 
                 toast.success('ورود موفقیت‌آمیز بود!', { description: 'در حال هدایت شما...' });
 
-                // If profile exists and is complete, redirect them with a full page reload.
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('id', authData.user.id)
+                    .single();
+
                 if (profile?.full_name) {
-                    const destination = profile.account_type === 'provider' ? '/profile' : '/';
-                    window.location.href = destination;
+                    // Profile is complete, force reload to the home page.
+                    window.location.href = '/';
                 } else {
-                    // Otherwise, send them to complete registration with a full page reload.
+                    // Profile is incomplete, force reload to the registration page.
                     window.location.href = `/register?phone=${phone}`;
                 }
             } else {
@@ -122,6 +117,7 @@ function VerifyOTPForm() {
                 </CardHeader>
                 <CardContent>
                     <p className="text-destructive">شماره تلفنی برای تایید یافت نشد. لطفاً به صفحه ورود بازگردید.</p>
+                     <Button onClick={() => router.push('/login')} className="mt-4">بازگشت به ورود</Button>
                 </CardContent>
             </Card>
         )
