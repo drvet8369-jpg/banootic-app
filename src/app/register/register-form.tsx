@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -73,7 +73,7 @@ export default function RegisterFormComponent() {
   const phoneFromParams = searchParams.get('phone');
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
-  const { user, loading } = useAuth(); // Get user from our reliable AuthContext
+  const { user, loading, session } = useAuth();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -95,14 +95,17 @@ export default function RegisterFormComponent() {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
-      if (loading) {
-          toast.info("کمی صبر کنید...", { description: "جلسه کاربری شما در حال بارگذاری است."});
-          return;
-      }
 
       if (!user?.id || !user.phone) {
-        toast.error('خطای احراز هویت', { description: 'جلسه کاربری شما یافت نشد. لطفاً دوباره وارد شوید.' });
-        router.push('/login');
+        const debugDescription = `
+          loading: ${loading}, 
+          session: ${session ? 'موجود است' : 'موجود نیست'}, 
+          user (profile): ${user ? 'موجود است' : 'موجود نیست'}
+        `;
+        toast.error('لاگ اشکال‌زدایی: وضعیت useAuth در لحظه کلیک', { 
+            description: <pre className="whitespace-pre-wrap">{debugDescription}</pre>,
+            duration: 10000
+        });
         return;
       }
 
