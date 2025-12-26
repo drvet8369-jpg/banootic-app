@@ -19,16 +19,13 @@ const formSchema = z.object({
 
 // The function now returns an error object or nothing (on success, it redirects).
 export async function registerUser(formData: FormData): Promise<{ error: string } | void> {
-  const cookieStore = cookies();
-  const allCookies = cookieStore.getAll();
   const supabase = await createClient();
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
-        const cookieDetails = JSON.stringify(allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 30) + '...' })));
-        return { error: `خطای حیاتی: سرور نتوانست هویت شما را از کوکی جلسه بخواند. کوکی‌های دریافتی: ${cookieDetails}` };
+        return { error: 'خطای حیاتی: سرور نتوانست هویت شما را از کوکی جلسه بخواند. لطفاً یکبار دیگر فرآیند ورود را امتحان کنید.' };
     }
 
     const userId = session.user.id;
