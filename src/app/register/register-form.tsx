@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { createClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -22,9 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { categories } from '@/lib/constants';
+import { categories, services as allServices } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { registerUser } from './actions';
 
 
 const formSchema = z.object({
@@ -71,6 +71,7 @@ export default function RegisterFormComponent() {
   const searchParams = useSearchParams();
   const phoneFromParams = searchParams.get('phone');
   const [isPending, startTransition] = useTransition();
+  const supabase = createClient();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -92,19 +93,77 @@ export default function RegisterFormComponent() {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
-      const formData = new FormData();
-      Object.entries(values).forEach(([key, value]) => {
-        if (value) {
-          formData.append(key, value);
-        }
-      });
-      
-      const result = await registerUser(formData);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      if (result?.error) {
-        toast.error('خطا در ثبت‌نام', { description: result.error });
+        if (userError || !user) {
+          toast.error('خطای احراز هویت', { description: 'جلسه کاربری شما یافت نشد. لطفاً دوباره وارد شوید.' });
+          router.push('/login');
+          return;
+        }
+
+        const userId = user.id;
+        const userPhone = user.phone;
+
+        if (!userPhone) {
+          toast.error('خطای اطلاعات کاربر', { description: 'شماره تلفن در جلسه کاربری شما موجود نیست.' });
+          return;
+        }
+        
+        const { name, accountType, location, serviceId, bio } = values;
+
+        const { error: profileInsertError } = await supabase
+          .from('profiles')
+          .upsert({
+              id: userId,
+              full_name: name,
+              phone: userPhone,
+              account_type: accountType,
+          }, { onConflict: 'id' });
+
+        if (profileInsertError) { 
+            console.error('Error upserting into profiles table:', profileInsertError);
+            toast.error('خطای دیتابیس', { description: `خطا در ساخت پروفایل: ${profileInsertError.message}` });
+            return;
+        }
+
+        if (accountType === 'provider') {
+          if (!serviceId || !bio || !location) {
+              toast.error("اطلاعات ناقص", { description: "برای هنرمندان، انتخاب شهر، نوع خدمات و نوشتن بیوگرافی الزامی است." });
+              return;
+          }
+          const selectedCategory = categories.find(c => c.id.toString() === serviceId);
+          const firstServiceInCat = allServices.find(s => s.category_id === selectedCategory?.id);
+
+          const { error: providerInsertError } = await supabase
+              .from('providers')
+              .upsert({
+                  profile_id: userId,
+                  name: name,
+                  service: selectedCategory?.name || 'خدمت جدید',
+                  location: location,
+                  bio: bio,
+                  category_slug: selectedCategory?.slug,
+                  service_slug: firstServiceInCat?.slug,
+                  phone: userPhone,
+              }, { onConflict: 'profile_id' });
+          
+          if (providerInsertError) {
+            console.error('Error upserting into providers table:', providerInsertError);
+            toast.error('خطا در ثبت اطلاعات هنرمند', { description: providerInsertError.message });
+            return;
+          }
+        }
+
+        toast.success("ثبت‌نام با موفقیت انجام شد!", { description: "خوش آمدید! در حال هدایت..." });
+        const destination = values.accountType === 'provider' ? '/profile' : '/';
+        // Using a hard reload to ensure server components get the latest session info.
+        window.location.href = destination;
+
+      } catch (e: any) {
+        console.error('A critical error occurred in client-side registration:', e);
+        toast.error('خطای پیش‌بینی نشده', { description: `یک خطای پیش‌بینی نشده در کلاینت رخ داد: ${e.message}` });
       }
-      // On success, the server action will redirect, so no client-side navigation is needed here.
     });
   };
   
