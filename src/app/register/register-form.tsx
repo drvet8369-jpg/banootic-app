@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { categories, services as allServices } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useAuth } from '@/context/AuthContext';
 
 
 const formSchema = z.object({
@@ -72,6 +73,7 @@ export default function RegisterFormComponent() {
   const phoneFromParams = searchParams.get('phone');
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
+  const { user, loading } = useAuth(); // Get user from our reliable AuthContext
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,30 +87,28 @@ export default function RegisterFormComponent() {
   });
 
   useEffect(() => {
-    if (!phoneFromParams) {
+    if (!loading && !phoneFromParams) {
         toast.error("خطای اعتبارسنجی", { description: "شماره تلفن تایید شده برای ثبت نام یافت نشد. در حال بازگشت به صفحه ورود..." });
         router.push('/login');
     }
-  }, [phoneFromParams, router]);
+  }, [phoneFromParams, router, loading]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !user) {
-          toast.error('خطای احراز هویت', { description: 'جلسه کاربری شما یافت نشد. لطفاً دوباره وارد شوید.' });
-          router.push('/login');
+      if (loading) {
+          toast.info("کمی صبر کنید...", { description: "جلسه کاربری شما در حال بارگذاری است."});
           return;
-        }
+      }
 
+      if (!user?.id || !user.phone) {
+        toast.error('خطای احراز هویت', { description: 'جلسه کاربری شما یافت نشد. لطفاً دوباره وارد شوید.' });
+        router.push('/login');
+        return;
+      }
+
+      try {
         const userId = user.id;
         const userPhone = user.phone;
-
-        if (!userPhone) {
-          toast.error('خطای اطلاعات کاربر', { description: 'شماره تلفن در جلسه کاربری شما موجود نیست.' });
-          return;
-        }
         
         const { name, accountType, location, serviceId, bio } = values;
 
@@ -157,7 +157,6 @@ export default function RegisterFormComponent() {
 
         toast.success("ثبت‌نام با موفقیت انجام شد!", { description: "خوش آمدید! در حال هدایت..." });
         const destination = values.accountType === 'provider' ? '/profile' : '/';
-        // Using a hard reload to ensure server components get the latest session info.
         window.location.href = destination;
 
       } catch (e: any) {
@@ -169,11 +168,18 @@ export default function RegisterFormComponent() {
   
   const accountType = form.watch('accountType');
   
-  if (!phoneFromParams) {
+  if (loading) {
       return (
         <div className="flex w-full justify-center items-center py-20">
-          <p>در حال بازگشت به صفحه ورود...</p>
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      );
+  }
+  
+  if (!phoneFromParams) {
+       return (
+        <div className="flex w-full justify-center items-center py-20">
+          <p>خطا: شماره تلفن یافت نشد. در حال بازگشت...</p>
         </div>
       );
   }
@@ -324,7 +330,7 @@ export default function RegisterFormComponent() {
               </>
             )}
             
-            <Button type="submit" className="w-full" size="lg" disabled={isPending}>
+            <Button type="submit" className="w-full" size="lg" disabled={isPending || loading}>
               {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               تکمیل ثبت‌نام و ورود
             </Button>
