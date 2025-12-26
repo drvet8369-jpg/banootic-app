@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -20,12 +21,24 @@ const formSchema = z.object({
 // The function now returns an error object or nothing (on success, it redirects).
 export async function registerUser(formData: FormData): Promise<{ error: string } | void> {
   const supabase = await createClient();
+  const cookieStore = cookies();
+  
+  // --- Start of Precise Debugging ---
+  const allCookies = cookieStore.getAll();
+  const supabaseCookieFound = allCookies.some(cookie => cookie.name.startsWith('sb-'));
+
+  if (!supabaseCookieFound) {
+      return { error: 'خطای اشکال‌زدایی: کوکی جلسه Supabase (که با sb- شروع می‌شود) به سرور نرسید. لطفاً یکبار دیگر فرآیند ورود را از ابتدا انجام دهید.' };
+  }
+  // --- End of Precise Debugging ---
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
-        return { error: 'خطای حیاتی: سرور نتوانست هویت شما را از کوکی جلسه بخواند. لطفاً یکبار دیگر فرآیند ورود را امتحان کنید.' };
+        // This error will now only trigger if the cookie exists but Supabase can't validate it.
+        const allCookieDetails = JSON.stringify(allCookies, null, 2);
+        return { error: `خطای حیاتی: کوکی جلسه به سرور رسید اما Supabase نتوانست آن را تایید کند. جزئیات کوکی: ${allCookieDetails}` };
     }
 
     const userId = session.user.id;
@@ -95,3 +108,4 @@ export async function registerUser(formData: FormData): Promise<{ error: string 
   // On success, redirect instead of returning a value.
   redirect(destination);
 }
+
