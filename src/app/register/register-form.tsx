@@ -1,11 +1,13 @@
+
+      
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useEffect, useTransition } from 'react';
+import { useEffect, useTransition, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
@@ -69,17 +71,16 @@ const formSchema = z.object({
 
 export default function RegisterFormComponent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const phoneFromParams = searchParams.get('phone');
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
-  const { user, loading, session } = useAuth();
+  const { session, user, loading } = useAuth();
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: phoneFromParams || '',
+      phone: session?.user?.phone || '',
       accountType: 'customer',
       bio: '',
       location: 'ارومیه',
@@ -87,11 +88,23 @@ export default function RegisterFormComponent() {
   });
 
   useEffect(() => {
-    if (!loading && !session && !phoneFromParams) {
-        toast.error("خطای اعتبارسنجی", { description: "جلسه کاربری معتبر برای ثبت نام یافت نشد. در حال بازگشت به صفحه ورود..." });
-        router.push('/login');
+    // If auth is done loading and there's a session...
+    if (!loading && session) {
+      // If a user profile already exists, they don't need to be here.
+      if (user) {
+        toast.info("شما قبلاً ثبت‌نام کرده‌اید.", { description: "در حال هدایت به صفحه اصلی..." });
+        router.push('/');
+      } else {
+        // Otherwise, they are a new user and can proceed with registration.
+        setIsCheckingProfile(false);
+        form.setValue('phone', session.user.phone || '');
+      }
+    } else if (!loading && !session) {
+      // If there's no session, they shouldn't be here.
+      toast.error("خطای اعتبارسنجی", { description: "برای ثبت نام ابتدا باید وارد شوید." });
+      router.push('/login');
     }
-  }, [phoneFromParams, router, loading, session]);
+  }, [session, user, loading, router, form]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
@@ -155,7 +168,7 @@ export default function RegisterFormComponent() {
 
         toast.success("ثبت‌نام با موفقیت انجام شد!", { description: "خوش آمدید! در حال هدایت..." });
         const destination = values.accountType === 'provider' ? '/profile' : '/';
-        window.location.href = destination;
+        window.location.href = destination; // Hard refresh to ensure server components get the new cookie
 
       } catch (e: any) {
         console.error('A critical error occurred in client-side registration:', e);
@@ -166,18 +179,11 @@ export default function RegisterFormComponent() {
   
   const accountType = form.watch('accountType');
   
-  if (loading) {
+  if (loading || isCheckingProfile) {
       return (
         <div className="flex w-full justify-center items-center py-20">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        </div>
-      );
-  }
-  
-  if (!phoneFromParams && !session) {
-       return (
-        <div className="flex w-full justify-center items-center py-20">
-          <p>خطا: اطلاعات کاربری یافت نشد. در حال بازگشت...</p>
+           <p className="ml-4">در حال بررسی اطلاعات حساب...</p>
         </div>
       );
   }
@@ -328,7 +334,7 @@ export default function RegisterFormComponent() {
               </>
             )}
             
-            <Button type="submit" className="w-full" size="lg" disabled={isPending || loading}>
+            <Button type="submit" className="w-full" size="lg" disabled={isPending || loading || isCheckingProfile}>
               {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               تکمیل ثبت‌نام و ورود
             </Button>
@@ -339,3 +345,5 @@ export default function RegisterFormComponent() {
     </Card>
   );
 }
+
+    

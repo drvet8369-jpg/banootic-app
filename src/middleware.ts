@@ -1,4 +1,5 @@
 
+      
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
@@ -15,12 +16,20 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - / (the homepage)
      * - /login (and its sub-pages like /login/verify)
      * - /register
      * - /api (API routes)
-     * This prevents the middleware from running on public auth pages,
-     * solving the race condition after OTP verification.
+     * - /services (category and service listing pages)
+     * - /search (search results page)
+     * - /provider (public provider profile pages)
+     * This MATCHER is now very specific. It only protects routes that ABSOLUTELY
+     * require a valid, server-recognized session, like /profile and /inbox.
+     * All other pages are public to prevent session invalidation issues.
      */
-    '/((?!_next/static|_next/image|favicon.ico|login|register|api).*)',
+    '/profile/:path*',
+    '/inbox/:path*',
   ],
 }
+
+    
