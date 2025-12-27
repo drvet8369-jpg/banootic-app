@@ -1,5 +1,4 @@
 
-      
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -74,13 +73,12 @@ export default function RegisterFormComponent() {
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
   const { session, user, loading } = useAuth();
-  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      phone: session?.user?.phone || '',
+      phone: '',
       accountType: 'customer',
       bio: '',
       location: 'ارومیه',
@@ -88,27 +86,23 @@ export default function RegisterFormComponent() {
   });
 
   useEffect(() => {
-    // If auth is done loading and there's a session...
-    if (!loading && session) {
-      // If a user profile already exists, they don't need to be here.
-      if (user) {
+    if (!loading) {
+      if (!session) {
+        toast.error("خطای اعتبارسنجی", { description: "برای ثبت نام ابتدا باید وارد شوید." });
+        router.push('/login');
+      } else if (user) {
+        // User has a session AND a profile, they shouldn't be here.
         toast.info("شما قبلاً ثبت‌نام کرده‌اید.", { description: "در حال هدایت به صفحه اصلی..." });
         router.push('/');
       } else {
-        // Otherwise, they are a new user and can proceed with registration.
-        setIsCheckingProfile(false);
+        // User has a session but no profile, so we set the phone number.
         form.setValue('phone', session.user.phone || '');
       }
-    } else if (!loading && !session) {
-      // If there's no session, they shouldn't be here.
-      toast.error("خطای اعتبارسنجی", { description: "برای ثبت نام ابتدا باید وارد شوید." });
-      router.push('/login');
     }
   }, [session, user, loading, router, form]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
-
       if (!session?.user?.id || !session?.user?.phone) {
         toast.error('خطای احراز هویت', { 
             description: "جلسه کاربری شما یافت نشد. لطفاً دوباره وارد شوید.",
@@ -123,6 +117,7 @@ export default function RegisterFormComponent() {
         
         const { name, accountType, location, serviceId, bio } = values;
 
+        // Step 1: Create the profile in the 'profiles' table.
         const { error: profileInsertError } = await supabase
           .from('profiles')
           .upsert({
@@ -138,6 +133,7 @@ export default function RegisterFormComponent() {
             return;
         }
 
+        // Step 2: If the user is a provider, create the entry in the 'providers' table.
         if (accountType === 'provider') {
           if (!serviceId || !bio || !location) {
               toast.error("اطلاعات ناقص", { description: "برای هنرمندان، انتخاب شهر، نوع خدمات و نوشتن بیوگرافی الزامی است." });
@@ -162,13 +158,15 @@ export default function RegisterFormComponent() {
           if (providerInsertError) {
             console.error('Error upserting into providers table:', providerInsertError);
             toast.error('خطا در ثبت اطلاعات هنرمند', { description: providerInsertError.message });
+            // IMPORTANT: If this step fails, we should ideally roll back the profile creation.
+            // For now, we just show an error.
             return;
           }
         }
 
         toast.success("ثبت‌نام با موفقیت انجام شد!", { description: "خوش آمدید! در حال هدایت..." });
-        const destination = values.accountType === 'provider' ? '/profile' : '/';
-        window.location.href = destination; // Hard refresh to ensure server components get the new cookie
+        // Hard refresh to ensure all server components get the new auth state.
+        window.location.href = accountType === 'provider' ? '/profile' : '/';
 
       } catch (e: any) {
         console.error('A critical error occurred in client-side registration:', e);
@@ -179,7 +177,7 @@ export default function RegisterFormComponent() {
   
   const accountType = form.watch('accountType');
   
-  if (loading || isCheckingProfile) {
+  if (loading) {
       return (
         <div className="flex w-full justify-center items-center py-20">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -188,162 +186,167 @@ export default function RegisterFormComponent() {
       );
   }
 
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-3xl font-headline">تکمیل اطلاعات ثبت‌نام</CardTitle>
-        <CardDescription>فقط چند قدم تا پیوستن به جامعه بانوتیک باقی مانده است.</CardDescription>
-      </CardHeader>
-      <CardContent className="p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="accountType"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex flex-col space-y-1"
-                      name={field.name}
-                      disabled={isPending}
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="customer" id="customer"/>
-                        </FormControl>
-                        <FormLabel htmlFor="customer" className="font-normal">
-                         مشتری هستم (برای یافتن و رزرو خدمات)
-                        </FormLabel>
+  // If user has a session but no profile, show the form.
+  // The useEffect handles other cases (no session, or session+profile).
+  if (session && !user) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-3xl font-headline">تکمیل اطلاعات ثبت‌نام</CardTitle>
+          <CardDescription>فقط چند قدم تا پیوستن به جامعه بانوتیک باقی مانده است.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField
+                control={form.control}
+                name="accountType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-col space-y-1"
+                        name={field.name}
+                        disabled={isPending}
+                      >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="customer" id="customer"/>
+                          </FormControl>
+                          <FormLabel htmlFor="customer" className="font-normal">
+                          مشتری هستم (برای یافتن و رزرو خدمات)
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="provider" id="provider" />
+                          </FormControl>
+                          <FormLabel htmlFor="provider" className="font-normal">
+                            ارائه‌دهنده خدمات هستم (برای ارائه هنر و تخصص خود)
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
+                    <FormControl>
+                      <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isPending}/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>شماره تلفن</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly disabled className="bg-muted/50"/>
+                    </FormControl>
+                    <FormDescription>این شماره تلفن تایید شده و قابل تغییر نیست.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {accountType === 'provider' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>شهر</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isPending}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="شهر خود را انتخاب کنید" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="ارومیه">ارومیه</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
                       </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="provider" id="provider" />
-                        </FormControl>
-                        <FormLabel htmlFor="provider" className="font-normal">
-                          ارائه‌دهنده خدمات هستم (برای ارائه هنر و تخصص خود)
-                        </FormLabel>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="serviceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نوع خدمات</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isPending}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
                       </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
-                  <FormControl>
-                    <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی خود را وارد کنید"} {...field} disabled={isPending}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>شماره تلفن</FormLabel>
-                  <FormControl>
-                    <Input {...field} readOnly disabled className="bg-muted/50"/>
-                  </FormControl>
-                  <FormDescription>این شماره تلفن تایید شده و قابل تغییر نیست.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {accountType === 'provider' && (
-              <>
-                 <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>شهر</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isPending}>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>بیوگرافی کوتاه</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="شهر خود را انتخاب کنید" />
-                          </SelectTrigger>
+                          <Textarea
+                            placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
+                            className="resize-none"
+                            {...field}
+                            disabled={isPending}
+                          />
                         </FormControl>
-                        <SelectContent>
-                           <SelectItem value="ارومیه">ارومیه</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormDescription>
+                          توضیح مختصری درباره آنچه ارائه می‌دهید.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+              
+              <Button type="submit" className="w-full" size="lg" disabled={isPending || loading}>
+                {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                تکمیل ثبت‌نام و ورود
+              </Button>
+              
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    );
+  }
 
-                <FormField
-                  control={form.control}
-                  name="serviceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>نوع خدمات</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} disabled={isPending}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>بیوگرافی کوتاه</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="کمی در مورد خدمات و هنر خود به ما بگویید"
-                          className="resize-none"
-                          {...field}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        توضیح مختصری درباره آنچه ارائه می‌دهید.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-            
-            <Button type="submit" className="w-full" size="lg" disabled={isPending || loading || isCheckingProfile}>
-              {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              تکمیل ثبت‌نام و ورود
-            </Button>
-            
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
+  // This will be shown while loading or if the user gets here in an unexpected state.
+  return null;
 }
-
-    

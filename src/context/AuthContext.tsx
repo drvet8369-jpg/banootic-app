@@ -1,12 +1,10 @@
 
-      
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 import type { Profile } from '@/lib/types';
-import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   session: Session | null;
@@ -23,33 +21,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // This function fetches the profile based on the session.
+    const fetchProfile = async (session: Session) => {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine for a new user.
+          console.error('Error fetching profile:', error.message);
+          setUser(null);
+        } else {
+          setUser(profile ?? null);
+        }
+      } catch (e) {
+        console.error("A critical error occurred fetching user profile:", e);
+        setUser(null);
+      }
+    };
+    
+    // First, get the initial session.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    });
+
+
+    // Then, listen for auth state changes.
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
-        if (session?.user) {
-          try {
-            // Fetch profile only if a session exists
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (error && error.code !== 'PGRST116') { // PGRST116 = 0 rows returned
-              console.error('Error fetching profile:', error);
-            }
-            
-            setUser(profile ?? null);
-
-          } catch (e) {
-            console.error("An error occurred fetching user profile:", e);
-            setUser(null);
-          }
+        if (session) {
+          // If a new session comes in, fetch the profile again.
+          await fetchProfile(session);
         } else {
-          // If no session, clear the user profile
+          // If session is null, there is no user.
           setUser(null);
         }
-        setLoading(false);
       }
     );
 
@@ -70,5 +84,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
