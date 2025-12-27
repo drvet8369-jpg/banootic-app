@@ -3,11 +3,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
 
-// This is an in-memory store to circumvent cross-domain cookie issues in embedded environments.
-// It will only persist for the lifetime of the page. A proper solution for production
-// would involve custom domains or more robust storage mechanisms if required.
-const cookieStore: { [key: string]: string } = {};
-
 export const createClient = () =>
   createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,13 +10,23 @@ export const createClient = () =>
     {
       cookies: {
         get(name: string): string | undefined {
-          return cookieStore[name];
+          if (typeof window === 'undefined') {
+            return undefined;
+          }
+          const item = localStorage.getItem(name);
+          return item ? item : undefined;
         },
         set(name: string, value: string, options: CookieOptions) {
-          cookieStore[name] = value;
+          if (typeof window === 'undefined') {
+            return;
+          }
+          localStorage.setItem(name, value);
         },
         remove(name: string, options: CookieOptions) {
-          delete cookieStore[name];
+          if (typeof window === 'undefined') {
+            return;
+          }
+          localStorage.removeItem(name);
         },
       },
     }

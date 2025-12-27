@@ -87,31 +87,26 @@ export default function RegisterFormComponent() {
   });
 
   useEffect(() => {
-    if (!loading && !phoneFromParams) {
-        toast.error("خطای اعتبارسنجی", { description: "شماره تلفن تایید شده برای ثبت نام یافت نشد. در حال بازگشت به صفحه ورود..." });
+    if (!loading && !session && !phoneFromParams) {
+        toast.error("خطای اعتبارسنجی", { description: "جلسه کاربری معتبر برای ثبت نام یافت نشد. در حال بازگشت به صفحه ورود..." });
         router.push('/login');
     }
-  }, [phoneFromParams, router, loading]);
+  }, [phoneFromParams, router, loading, session]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
 
-      if (!user?.id || !user.phone) {
-        const debugDescription = `
-          loading: ${loading}, 
-          session: ${session ? 'موجود است' : 'موجود نیست'}, 
-          user (profile): ${user ? 'موجود است' : 'موجود نیست'}
-        `;
-        toast.error('لاگ اشکال‌زدایی: وضعیت useAuth در لحظه کلیک', { 
-            description: <pre className="whitespace-pre-wrap">{debugDescription}</pre>,
+      if (!session?.user?.id || !session?.user?.phone) {
+        toast.error('خطای احراز هویت', { 
+            description: "جلسه کاربری شما یافت نشد. لطفاً دوباره وارد شوید.",
             duration: 10000
         });
         return;
       }
 
       try {
-        const userId = user.id;
-        const userPhone = user.phone;
+        const userId = session.user.id;
+        const userPhone = session.user.phone;
         
         const { name, accountType, location, serviceId, bio } = values;
 
@@ -179,10 +174,10 @@ export default function RegisterFormComponent() {
       );
   }
   
-  if (!phoneFromParams) {
+  if (!phoneFromParams && !session) {
        return (
         <div className="flex w-full justify-center items-center py-20">
-          <p>خطا: شماره تلفن یافت نشد. در حال بازگشت...</p>
+          <p>خطا: اطلاعات کاربری یافت نشد. در حال بازگشت...</p>
         </div>
       );
   }
