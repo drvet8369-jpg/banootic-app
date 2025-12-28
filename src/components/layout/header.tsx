@@ -71,8 +71,7 @@ export default async function Header() {
                         <Link href="/profile">
                             <UserRound className="ml-2 h-4 w-4" />
                             <span>پروفایل من</span>
-                        </Link>
-                        </DropdownMenuItem>
+                        </Link>                        </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
                         <Link href="/inbox" className="relative">
