@@ -57,10 +57,10 @@ function VerifyOTPForm() {
 
     async function onSubmit(data: z.infer<typeof OTPSchema>) {
         setIsLoading(true);
-        toast.info("در حال تایید کد...", { description: "لطفاً چند لحظه صبر کنید..." });
+        const toastId = toast.loading("۱. در حال تایید کد...", { description: "لطفاً چند لحظه صبر کنید..." });
 
         if (!phone) {
-            toast.error("خطای داخلی", { description: "شماره تلفن در آدرس صفحه یافت نشد.", duration: 10000 });
+            toast.error("خطای داخلی", { id: toastId, description: "شماره تلفن در آدرس صفحه یافت نشد.", duration: 10000 });
             setIsLoading(false);
             return;
         }
@@ -69,29 +69,36 @@ function VerifyOTPForm() {
             const normalizedPhone = normalizeForSupabaseAuth(phone);
             const token = data.pin;
 
-            // نمایش اطلاعات دیباگ روی صفحه
-            toast.info("اطلاعات ارسالی برای تایید", {
+            // گام ۱: نمایش اطلاعات ارسالی
+            toast.info("۲. اطلاعات در حال ارسال به سرور", {
+                id: toastId,
                 description: `شماره نرمال‌شده: ${normalizedPhone}\nکد وارد شده: ${token}`,
-                duration: 15000,
+                duration: 20000,
             });
 
+            // گام ۲: فراخوانی تابع تایید
             const { data: authData, error } = await supabase.auth.verifyOtp({
                 phone: normalizedPhone,
                 token: token,
                 type: 'sms',
             });
             
+            // گام ۳: بررسی دقیق نتیجه
             if (error) {
-                // نمایش دقیق خطا روی صفحه
-                toast.error("Supabase: خطا در verifyOtp", { 
-                    description: `متن خطا: ${error.message}`,
-                    duration: 20000,
+                // اگر خطا وجود داشت، آن را نمایش بده
+                toast.error("۳. Supabase: خطا در تایید کد", { 
+                    id: toastId,
+                    description: `متن خطا: ${error.message}. کد وارد شده صحیح نیست یا منقضی شده.`,
+                    duration: 30000, // زمان بیشتر برای خواندن خطا
                 });
-                return;
+                setIsLoading(false);
+                return; // اجرای تابع را متوقف کن
             }
             
+            // گام ۴: بررسی وجود جلسه کاربری
             if (authData && authData.session) {
-                toast.success("تایید موفقیت‌آمیز!", { 
+                toast.success("۴. تایید موفقیت‌آمیز!", { 
+                    id: toastId,
                     description: "جلسه کاربری با موفقیت ایجاد شد. در حال هدایت...",
                     duration: 10000,
                 });
@@ -100,18 +107,21 @@ function VerifyOTPForm() {
                 window.location.href = `/register?phone=${phone}`;
 
             } else {
-                 toast.warning("تایید موفق بود اما جلسه کاربری ایجاد نشد.", {
+                 // این حالت یعنی تایید موفق بود اما جلسه‌ای ساخته نشد (خیلی نادر)
+                 toast.warning("۵. تایید موفق بود اما جلسه ایجاد نشد!", {
+                     id: toastId,
                      description: "این یک خطای غیرمنتظره است. لطفاً برای بررسی بیشتر با پشتیبانی تماس بگیرید.",
-                     duration: 20000,
+                     duration: 30000,
                  });
+                 setIsLoading(false);
             }
 
         } catch (e: any) {
              toast.error("خطای بحرانی در سیستم", { 
-              description: `متن خطا: ${e.message}`,
-              duration: 20000,
+              id: toastId,
+              description: `یک خطای پیش‌بینی نشده در کلاینت رخ داد: ${e.message}`,
+              duration: 30000,
             });
-        } finally {
             setIsLoading(false);
         }
     }
