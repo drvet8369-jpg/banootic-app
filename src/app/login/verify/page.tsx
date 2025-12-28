@@ -41,11 +41,21 @@ const OTPSchema = z.object({
   }),
 });
 
+// --- Debug Info Type ---
+interface DebugInfo {
+  status: 'Success' | 'Failure';
+  error: string | null;
+  session: any | null;
+  cookies: string;
+}
+
 function VerifyOTPForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const phone = searchParams.get('phone');
     const [isLoading, setIsLoading] = useState(false);
+    // --- State for Debug Report ---
+    const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
     const supabase = createClient();
 
     const form = useForm<z.infer<typeof OTPSchema>>({
@@ -57,10 +67,10 @@ function VerifyOTPForm() {
 
     async function onSubmit(data: z.infer<typeof OTPSchema>) {
         setIsLoading(true);
-        const toastId = toast.loading("۱. در حال تایید کد...", { description: "لطفاً چند لحظه صبر کنید..." });
+        toast.loading("در حال تایید کد...");
 
         if (!phone) {
-            toast.error("خطای داخلی", { id: toastId, description: "شماره تلفن در آدرس صفحه یافت نشد.", duration: 10000 });
+            toast.error("خطای داخلی: شماره تلفن یافت نشد.");
             setIsLoading(false);
             return;
         }
@@ -69,61 +79,25 @@ function VerifyOTPForm() {
             const normalizedPhone = normalizeForSupabaseAuth(phone);
             const token = data.pin;
 
-            // گام ۱: نمایش اطلاعات ارسالی
-            toast.info("۲. اطلاعات در حال ارسال به سرور", {
-                id: toastId,
-                description: `شماره نرمال‌شده: ${normalizedPhone}\nکد وارد شده: ${token}`,
-                duration: 20000,
-            });
-
-            // گام ۲: فراخوانی تابع تایید
             const { data: authData, error } = await supabase.auth.verifyOtp({
                 phone: normalizedPhone,
                 token: token,
                 type: 'sms',
             });
             
-            // گام ۳: بررسی دقیق نتیجه
-            if (error) {
-                // اگر خطا وجود داشت، آن را نمایش بده
-                toast.error("۳. Supabase: خطا در تایید کد", { 
-                    id: toastId,
-                    description: `متن خطا: ${error.message}. کد وارد شده صحیح نیست یا منقضی شده.`,
-                    duration: 30000, // زمان بیشتر برای خواندن خطا
-                });
-                setIsLoading(false);
-                return; // اجرای تابع را متوقف کن
-            }
-            
-            // گام ۴: بررسی وجود جلسه کاربری
-            if (authData && authData.session) {
-                toast.success("۴. تایید موفقیت‌آمیز!", { 
-                    id: toastId,
-                    description: "جلسه کاربری با موفقیت ایجاد شد. لطفاً چند لحظه صبر کنید...",
-                    duration: 5000,
-                });
-                
-                // یک تاخیر کوتاه برای اطمینان از ست شدن کوکی قبل از ریدایرکت
-                setTimeout(() => {
-                    window.location.href = `/register?phone=${phone}`;
-                }, 1500); // 1.5 ثانیه تاخیر
+            toast.dismiss();
 
-            } else {
-                 // این حالت یعنی تایید موفق بود اما جلسه‌ای ساخته نشد (خیلی نادر)
-                 toast.warning("۵. تایید موفق بود اما جلسه ایجاد نشد!", {
-                     id: toastId,
-                     description: "این یک خطای غیرمنتظره است. لطفاً برای بررسی بیشتر با پشتیبانی تماس بگیرید.",
-                     duration: 30000,
-                 });
-                 setIsLoading(false);
-            }
+            // --- Capture and Show Debug Info ---
+            setDebugInfo({
+                status: error ? 'Failure' : 'Success',
+                error: error ? error.message : null,
+                session: authData?.session ?? null,
+                cookies: document.cookie || '(کوکی‌ای یافت نشد)',
+            });
 
         } catch (e: any) {
-             toast.error("خطای بحرانی در سیستم", { 
-              id: toastId,
-              description: `یک خطای پیش‌بینی نشده در کلاینت رخ داد: ${e.message}`,
-              duration: 30000,
-            });
+             toast.error("خطای بحرانی در سیستم", { description: e.message });
+        } finally {
             setIsLoading(false);
         }
     }
@@ -142,6 +116,48 @@ function VerifyOTPForm() {
         )
     }
 
+    // --- Render Debug Report View if available ---
+    if (debugInfo) {
+        return (
+             <Card className="mx-auto max-w-md w-full">
+                <CardHeader>
+                    <CardTitle className="text-xl font-headline">گزارش اشکال‌زدایی (Debug Report)</CardTitle>
+                    <CardDescription>این اطلاعات به ما کمک می‌کند مشکل را پیدا کنیم.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm" style={{ direction: 'ltr', textAlign: 'left' }}>
+                    <div className="p-2 bg-muted rounded-md">
+                        <p className="font-bold">1. Verification Status:</p>
+                        <p className={debugInfo.status === 'Success' ? 'text-green-600' : 'text-red-600'}>{debugInfo.status}</p>
+                    </div>
+                     <div className="p-2 bg-muted rounded-md">
+                        <p className="font-bold">2. Supabase Error:</p>
+                        <p className="whitespace-pre-wrap break-words">{debugInfo.error || 'No error.'}</p>
+                    </div>
+                    <div className="p-2 bg-muted rounded-md">
+                        <p className="font-bold">3. Browser Cookies:</p>
+                        <p className="whitespace-pre-wrap break-words font-mono text-xs">{debugInfo.cookies}</p>
+                    </div>
+                     <div className="p-2 bg-muted rounded-md">
+                        <p className="font-bold">4. Received Session:</p>
+                        <pre className="whitespace-pre-wrap break-words font-mono text-xs">{JSON.stringify(debugInfo.session, null, 2) || 'Session is null.'}</pre>
+                    </div>
+
+                    <Button 
+                        onClick={() => window.location.href = `/register?phone=${phone}`}
+                        className="w-full mt-6"
+                        disabled={debugInfo.status === 'Failure'}
+                    >
+                        ادامه به صفحه ثبت‌نام
+                    </Button>
+                     {debugInfo.status === 'Failure' && (
+                        <p className="text-xs text-center text-red-500 pt-2">امکان ادامه وجود ندارد چون تایید ناموفق بود.</p>
+                    )}
+                </CardContent>
+             </Card>
+        );
+    }
+
+    // --- Render OTP Form ---
     return (
         <Card className="mx-auto max-w-sm w-full">
             <CardHeader>
@@ -182,7 +198,7 @@ function VerifyOTPForm() {
                         />
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                            تایید و ادامه
+                            تایید و مشاهده گزارش
                         </Button>
                     </form>
                 </Form>
