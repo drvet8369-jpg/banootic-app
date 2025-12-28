@@ -1,13 +1,10 @@
-// This file now uses a Server Component as its root, which is better for performance.
-// The AuthProvider is now a client component that fetches session data.
-
 import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from '@/context/AuthContext';
-import Header from '@/components/layout/header'; // Now a server component
+import { AuthProvider } from '@/components/providers/auth-provider'; // Updated import path
+import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/layout/footer';
 
