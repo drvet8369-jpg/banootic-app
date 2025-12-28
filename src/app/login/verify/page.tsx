@@ -87,9 +87,9 @@ function VerifyOTPForm() {
                     description: "شما با موفقیت وارد شدید. در حال هدایت به صفحه بعد...",
                 });
                 
-                // IMPORTANT FIX: Use window.location.href for a hard reload.
+                // CRITICAL FIX: Use window.location.href for a hard reload.
                 // This ensures the new session cookie is sent to the server on the next navigation,
-                // preventing race conditions with Server Actions.
+                // preventing race conditions with Server Components and Middleware.
                 window.location.href = `/register?phone=${phone}`;
 
             } else {

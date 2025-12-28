@@ -1,7 +1,6 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import type { CookieOptions } from '@supabase/ssr';
 
 // This is the standard and recommended way to create a client-side Supabase client.
 // It will automatically handle cookie management for both client and server components.
