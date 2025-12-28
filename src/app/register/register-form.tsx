@@ -1,11 +1,12 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useEffect, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
@@ -69,6 +70,7 @@ const formSchema = z.object({
 
 export default function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
   const { session, user, loading } = useAuth();
@@ -85,22 +87,19 @@ export default function RegisterForm() {
   });
 
   useEffect(() => {
-    // This effect runs when the auth state is finally determined.
     if (!loading) {
       if (!session) {
-        // If there's no session, the user MUST log in first.
         toast.error("خطای اعتبارسنجی", { description: "برای ثبت نام ابتدا باید وارد شوید." });
         router.replace('/login');
       } else if (user) {
-        // User has a session AND an existing profile, they should not be here.
         toast.info("شما قبلاً ثبت‌نام کرده‌اید.", { description: "در حال هدایت به صفحه اصلی..." });
         router.replace('/');
       } else if (session?.user?.phone) {
-        // User has a session but no profile, so we pre-fill the phone number.
         form.setValue('phone', session.user.phone);
       }
     }
   }, [session, user, loading, router, form]);
+
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
@@ -186,7 +185,6 @@ export default function RegisterForm() {
   }
 
   // If user has a session but no profile, show the form.
-  // The useEffect handles other cases (no session, or session+profile).
   if (session && !user) {
     return (
       <Card className="w-full">
