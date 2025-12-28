@@ -67,7 +67,7 @@ const formSchema = z.object({
     path: ['bio'],
 });
 
-export default function RegisterFormComponent() {
+export default function RegisterForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
@@ -85,17 +85,19 @@ export default function RegisterFormComponent() {
   });
 
   useEffect(() => {
+    // This effect runs when the auth state is finally determined.
     if (!loading) {
       if (!session) {
+        // If there's no session, the user MUST log in first.
         toast.error("خطای اعتبارسنجی", { description: "برای ثبت نام ابتدا باید وارد شوید." });
-        router.push('/login');
+        router.replace('/login');
       } else if (user) {
-        // User has a session AND a profile, they shouldn't be here.
+        // User has a session AND an existing profile, they should not be here.
         toast.info("شما قبلاً ثبت‌نام کرده‌اید.", { description: "در حال هدایت به صفحه اصلی..." });
-        router.push('/');
-      } else {
-        // User has a session but no profile, so we set the phone number.
-        form.setValue('phone', session.user.phone || '');
+        router.replace('/');
+      } else if (session?.user?.phone) {
+        // User has a session but no profile, so we pre-fill the phone number.
+        form.setValue('phone', session.user.phone);
       }
     }
   }, [session, user, loading, router, form]);
@@ -157,8 +159,6 @@ export default function RegisterFormComponent() {
           if (providerInsertError) {
             console.error('Error upserting into providers table:', providerInsertError);
             toast.error('خطا در ثبت اطلاعات هنرمند', { description: providerInsertError.message });
-            // IMPORTANT: If this step fails, we should ideally roll back the profile creation.
-            // For now, we just show an error.
             return;
           }
         }
@@ -296,7 +296,7 @@ export default function RegisterFormComponent() {
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" />
-                            </SelectTrigger>
+                            </Trigger>
                           </FormControl>
                           <SelectContent>
                             {categories.map((category) => (

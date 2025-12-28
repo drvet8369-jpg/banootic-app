@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 import type { Profile } from '@/lib/types';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   session: Session | null;
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       listener?.subscription.unsubscribe();
     };
-  }, [supabase.auth]);
+  }, [supabase]);
 
   const value = { session, user, loading };
 

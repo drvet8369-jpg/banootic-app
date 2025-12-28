@@ -1,11 +1,12 @@
-'use client';
+// This component is now a Server Component by default, which is more performant.
+// It gets the user session directly from Supabase on the server.
 
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LogOut, LogIn, UserPlus, UserRound } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/server';
+import { logout as logoutAction } from './actions';
+import { UserRound, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,107 +16,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { logout as logoutAction } from './actions';
+import { MobileNav } from './mobile-nav'; // Mobile nav is extracted to a client component
+import { unstable_noStore as noStore } from 'next/cache';
 
-const InboxBadge = dynamic(() => import('@/components/layout/inbox-badge').then(mod => mod.InboxBadge), { ssr: false });
+const getInitials = (name: string) => {
+  if (!name) return '..';
+  const names = name.split(' ');
+  if (names.length > 1 && names[1]) {
+    return `${names[0][0]}${names[1][0]}`;
+  }
+  return name.substring(0, 2);
+}
 
-
-export default function Header() {
-  const { user, loading, session } = useAuth();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    setIsSheetOpen(false);
-  }, [pathname]);
-
-  const isLoggedIn = !!session;
-
-  const getInitials = (name: string) => {
-    if (!name) return '..';
-    const names = name.split(' ');
-    if (names.length > 1 && names[1]) {
-      return `${names[0][0]}${names[1][0]}`;
-    }
-    return name.substring(0, 2);
+export default async function Header() {
+  noStore(); // Ensure the header is always dynamic
+  const supabase = createClient();
+  const { data: { user: sessionUser } } = await supabase.auth.getUser();
+  
+  let userProfile = null;
+  if (sessionUser) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
+    userProfile = data;
   }
 
-  const MobileNavMenu = () => (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-         <SheetClose asChild>
-            <Link href="/" className="flex items-center gap-2">
-              <Logo className="h-8 w-8 text-primary-foreground" />
-              <span className="font-display text-2xl font-bold">بانوتیک</span>
-            </Link>
-         </SheetClose>
-      </div>
-      <nav className="flex-grow p-4 space-y-2">
-        {isLoggedIn && user ? (
-           <>
-             {user?.account_type === 'provider' && (
-                <SheetClose asChild>
-                  <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                    <UserRound className="h-5 w-5" />
-                    پروفایل من
-                  </Link>
-                </SheetClose>
-             )}
-            <SheetClose asChild>
-              <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                 <span>صندوق ورودی</span>
-                 <InboxBadge />
-              </Link>
-            </SheetClose>
-           </>
-        ) : (
-          <>
-            <SheetClose asChild>
-              <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                <LogIn className="h-5 w-5" />
-                ورود / ثبت‌نام
-              </Link>
-            </SheetClose>
-          </>
-        )}
-      </nav>
-      {isLoggedIn && user && (
-        <div className="mt-auto p-4 border-t">
-            <div className="flex items-center gap-3 mb-4">
-              <Avatar>
-                <AvatarFallback>{getInitials(user.full_name || '')}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                  <span className="font-medium">{user.full_name}</span>
-                  <span className="text-xs text-muted-foreground">{user.phone}</span>
-              </div>
-            </div>
-            <SheetClose asChild>
-              <form action={logoutAction}>
-                <Button type="submit" variant="ghost" className="w-full justify-start">
-                    <LogOut className="ml-2 h-5 w-5" />
-                    خروج
-                </Button>
-              </form>
-            </SheetClose>
-        </div>
-      )}
-    </div>
-  );
-
-  if (loading) {
-    return (
-     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-           {/* Skeleton loader */}
-        </div>
-     </header>
-    )
-  }
+  const isLoggedIn = !!sessionUser;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -124,25 +48,25 @@ export default function Header() {
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                {isLoggedIn && user ? (
+                {isLoggedIn && userProfile ? (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                         <Avatar>
-                        <AvatarFallback>{getInitials(user.full_name || '')}</AvatarFallback>
+                        <AvatarFallback>{getInitials(userProfile.full_name || '')}</AvatarFallback>
                         </Avatar>
-                        <InboxBadge isMenu />
+                        {/* InboxBadge can be added here later if needed */}
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.full_name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.phone}</p>
+                        <p className="text-sm font-medium leading-none">{userProfile.full_name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{userProfile.phone}</p>
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.account_type === 'provider' && (
+                    {userProfile.account_type === 'provider' && (
                         <DropdownMenuItem asChild>
                         <Link href="/profile">
                             <UserRound className="ml-2 h-4 w-4" />
@@ -154,13 +78,12 @@ export default function Header() {
                         <Link href="/inbox" className="relative">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                             <span>صندوق ورودی</span>
-                            <InboxBadge />
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                      <form action={logoutAction}>
                         <DropdownMenuItem asChild>
-                            <button type="submit" className="w-full">
+                            <button type="submit" className="w-full flex items-center cursor-pointer">
                                 <LogOut className="ml-2 h-4 w-4" />
                                 <span>خروج</span>
                             </button>
@@ -176,22 +99,9 @@ export default function Header() {
                 </>
                 )}
             </nav>
-            {/* Mobile Nav */}
+            {/* Mobile Nav Trigger */}
             <div className="md:hidden">
-                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">باز کردن منو</span>
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
-                    <SheetHeader className="sr-only">
-                        <SheetTitle>Menu</SheetTitle>
-                    </SheetHeader>
-                    <MobileNavMenu />
-                </SheetContent>
-                </Sheet>
+                <MobileNav userProfile={userProfile} isLoggedIn={isLoggedIn} />
             </div>
         </div>
 
