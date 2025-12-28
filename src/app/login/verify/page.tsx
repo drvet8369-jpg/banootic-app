@@ -99,12 +99,14 @@ function VerifyOTPForm() {
             if (authData && authData.session) {
                 toast.success("۴. تایید موفقیت‌آمیز!", { 
                     id: toastId,
-                    description: "جلسه کاربری با موفقیت ایجاد شد. در حال هدایت...",
-                    duration: 10000,
+                    description: "جلسه کاربری با موفقیت ایجاد شد. لطفاً چند لحظه صبر کنید...",
+                    duration: 5000,
                 });
                 
-                // رفرش کامل صفحه برای همگام‌سازی جلسه با سرور
-                window.location.href = `/register?phone=${phone}`;
+                // یک تاخیر کوتاه برای اطمینان از ست شدن کوکی قبل از ریدایرکت
+                setTimeout(() => {
+                    window.location.href = `/register?phone=${phone}`;
+                }, 1500); // 1.5 ثانیه تاخیر
 
             } else {
                  // این حالت یعنی تایید موفق بود اما جلسه‌ای ساخته نشد (خیلی نادر)
