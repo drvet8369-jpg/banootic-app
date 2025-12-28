@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Menu, LogOut, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePathname } from 'next/navigation';
@@ -43,6 +43,9 @@ export function MobileNav({ userProfile, isLoggedIn }: MobileNavProps) {
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+        <SheetHeader>
+            <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
+        </SheetHeader>
         <div className="flex flex-col h-full">
             <div className="p-4 border-b">
                 <SheetClose asChild>
