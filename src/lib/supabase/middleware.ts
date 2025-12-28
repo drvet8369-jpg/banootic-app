@@ -37,22 +37,8 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  console.log('--- Middleware Log: Start ---');
-  console.log(`Request Path: ${request.nextUrl.pathname}`);
-  
-  // Log existing cookies before refresh
-  const sessionCookie = request.cookies.get('sb-rfiybvlqdibtwckbgscu-auth-token');
-  console.log(`1. Before refresh: Session cookie exists? ${!!sessionCookie}`);
-
   // This will refresh the session if it's expired.
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Log session status after refresh
-  console.log(`2. After refresh: User object exists? ${!!user}`);
-  if (user) {
-    console.log(`   User ID: ${user.id}`);
-  }
-  console.log('--- Middleware Log: End ---');
+  await supabase.auth.getUser();
 
   // The response object has been modified by the Supabase client.
   return response;
