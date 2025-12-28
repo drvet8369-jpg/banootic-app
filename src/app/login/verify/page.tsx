@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense } from 'react';
@@ -59,7 +60,7 @@ function VerifyOTPForm() {
         toast.info("در حال تایید کد...", { description: "لطفاً چند لحظه صبر کنید..." });
 
         if (!phone) {
-            toast.error("خطا", { description: "شماره تلفن یافت نشد."});
+            toast.error("خطای داخلی", { description: "شماره تلفن در آدرس صفحه یافت نشد.", duration: 10000 });
             setIsLoading(false);
             return;
         }
@@ -68,6 +69,12 @@ function VerifyOTPForm() {
             const normalizedPhone = normalizeForSupabaseAuth(phone);
             const token = data.pin;
 
+            // نمایش اطلاعات دیباگ روی صفحه
+            toast.info("اطلاعات ارسالی برای تایید", {
+                description: `شماره نرمال‌شده: ${normalizedPhone}\nکد وارد شده: ${token}`,
+                duration: 15000,
+            });
+
             const { data: authData, error } = await supabase.auth.verifyOtp({
                 phone: normalizedPhone,
                 token: token,
@@ -75,33 +82,34 @@ function VerifyOTPForm() {
             });
             
             if (error) {
-                console.error("Supabase verifyOtp Error:", error);
-                toast.error("خطا در تایید کد", { 
-                    description: "کد وارد شده صحیح نیست یا منقضی شده است. لطفا دوباره تلاش کنید.",
+                // نمایش دقیق خطا روی صفحه
+                toast.error("Supabase: خطا در verifyOtp", { 
+                    description: `متن خطا: ${error.message}`,
+                    duration: 20000,
                 });
                 return;
             }
             
             if (authData && authData.session) {
-                 toast.success("تایید موفقیت‌آمیز!", { 
-                    description: "شما با موفقیت وارد شدید. در حال هدایت به صفحه بعد...",
+                toast.success("تایید موفقیت‌آمیز!", { 
+                    description: "جلسه کاربری با موفقیت ایجاد شد. در حال هدایت...",
+                    duration: 10000,
                 });
                 
-                // CRITICAL FIX: Use window.location.href for a hard reload.
-                // This ensures the new session cookie is sent to the server on the next navigation,
-                // preventing race conditions with Server Components and Middleware.
+                // رفرش کامل صفحه برای همگام‌سازی جلسه با سرور
                 window.location.href = `/register?phone=${phone}`;
 
             } else {
-                 toast.warning("پاسخ موفقیت آمیز بود اما جلسه کاربری ایجاد نشد.", {
+                 toast.warning("تایید موفق بود اما جلسه کاربری ایجاد نشد.", {
                      description: "این یک خطای غیرمنتظره است. لطفاً برای بررسی بیشتر با پشتیبانی تماس بگیرید.",
+                     duration: 20000,
                  });
             }
 
         } catch (e: any) {
-             console.error("Critical error in verifyOtp:", e);
-             toast.error("خطای پیش‌بینی نشده", { 
-              description: "مشکلی در سیستم رخ داده است. لطفاً دوباره تلاش کنید.",
+             toast.error("خطای بحرانی در سیستم", { 
+              description: `متن خطا: ${e.message}`,
+              duration: 20000,
             });
         } finally {
             setIsLoading(false);
