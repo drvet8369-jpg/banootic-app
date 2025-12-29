@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { logout as logoutAction } from './actions';
 import { UserRound, LogOut, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
 import { useState, useEffect } from 'react';
@@ -39,6 +40,9 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Menu</SheetTitle>
+          </SheetHeader>
           <div className="p-4 border-b">
             <SheetClose asChild>
               <Link href="/" className="flex items-center gap-2">
@@ -68,6 +72,9 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Menu</SheetTitle>
+        </SheetHeader>
         <div className="flex flex-col h-full">
             <div className="p-4 border-b">
                 <SheetClose asChild>
