@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -9,8 +8,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { createClient } from '@/lib/supabase/client';
-import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import {
   Card,

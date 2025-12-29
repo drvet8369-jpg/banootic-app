@@ -2,12 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
-  // This response object will be modified by the Supabase client.
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  // This approach is recommended by Supabase and ensures cookies are handled correctly.
+  // It creates a clean response object, lets Supabase client modify it, and then returns it.
+  const response = NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

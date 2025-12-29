@@ -1,6 +1,0 @@
---- Debug Log ---
-This file will contain server-side logs to help trace the application's behavior.
-It will be populated automatically when you run the app and perform actions.
-[2025-12-29T18:27:47.539Z] Header: Rendering started.
-[2025-12-29T18:27:48.048Z] Header: No session user found.
-[2025-12-29T18:27:48.210Z] Header: Final login state: isLoggedIn = false
