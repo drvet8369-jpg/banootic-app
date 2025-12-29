@@ -1,7 +1,6 @@
-
 'use client';
 
-import { getProviderByPhone } from '@/lib/data';
+import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Provider } from '@/lib/types';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-
 
 interface Message {
   id: string;
@@ -35,10 +32,10 @@ interface OtherPersonDetails {
 
 export default function ChatPage() {
   const params = useParams();
-  const supabase = createClient();
   const otherPersonIdOrProviderId = params.providerId as string;
   
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<{full_name: string} | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
@@ -51,19 +48,23 @@ export default function ChatPage() {
 
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-  
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        setIsLoggedIn(!!session?.user);
-      }
-    );
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [supabase]);
+  // Fetch user from Supabase on mount
+  useEffect(() => {
+    const supabase = createClient();
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if(session) {
+        setUser(session.user);
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single();
+        setUserProfile(profile);
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+      }
+    }
+    getUser();
+  }, []);
 
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
@@ -84,14 +85,16 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    async function loadData() {
-        if (!isLoggedIn || !user) {
+    const loadChatData = async () => {
+        if (!isLoggedIn || !user || !user.phone) {
             setIsLoading(false);
             return;
         }
 
         let details: OtherPersonDetails | null = null;
-        const provider = await getProviderByPhone(otherPersonIdOrProviderId);
+        // The data fetching is async now
+        const allProviders = await getProviders();
+        const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
         
         if (provider) {
           details = provider;
@@ -109,8 +112,6 @@ export default function ChatPage() {
         
         const chatId = getChatId(user.phone, details.phone);
         if (chatId) {
-          // This chat implementation is temporary and uses localStorage.
-          // A real implementation would use a database.
           try {
               const storedMessages = localStorage.getItem(`chat_${chatId}`);
               if (storedMessages) {
@@ -130,13 +131,16 @@ export default function ChatPage() {
         
         setIsLoading(false);
     }
+    
+    // We wait for the user to be loaded before fetching chat data
+    if (user !== null) {
+      loadChatData();
+    }
 
-    loadData();
-
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId, supabase]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId]);
 
 
-  if (!isLoggedIn || !user) {
+  if (!isLoggedIn) {
     return (
         <div className="flex flex-col items-center justify-center text-center py-20">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
@@ -169,7 +173,7 @@ export default function ChatPage() {
   };
   
   const handleSaveEdit = () => {
-    if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
+    if (!editingMessageId || !editingText.trim() || !user || !user.phone || !otherPersonDetails) return;
 
     const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (!chatId) return;
@@ -184,6 +188,7 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
 
+    // Also update the last message in the inbox if this was the last message
     const lastMessage = updatedMessages[updatedMessages.length - 1];
     if (lastMessage.id === editingMessageId) {
         const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
@@ -201,14 +206,14 @@ export default function ChatPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
-    if (!text || isSending || !otherPersonDetails || !user) return;
+    if (!text || isSending || !otherPersonDetails || !user || !user.phone || !userProfile) return;
     
     setIsSending(true);
     
     const tempUiMessage: Message = {
       id: Date.now().toString(),
       text: text,
-      senderId: user.phone!,
+      senderId: user.phone,
       createdAt: new Date().toISOString(),
     };
     
@@ -220,21 +225,20 @@ export default function ChatPage() {
     if (chatId) {
         try {
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-            const { data } = await supabase.from('profiles').select('full_name, account_type').eq('id', user.id).single();
-            const senderName = data?.full_name || `کاربر ${user.phone?.slice(-4)}`;
-
             const currentChat = allChats[chatId] || {
                 id: chatId,
                 members: [user.phone, otherPersonDetails.phone],
                 participants: {
-                    [user.phone!]: { name: senderName, unreadCount: 0 },
+                    [user.phone]: { name: userProfile.full_name, unreadCount: 0 },
                     [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
                 }
             };
             
+            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
+            // Increment unread count for the receiver
             const receiverPhone = otherPersonDetails.phone;
             if (currentChat.participants[receiverPhone]) {
                 currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
@@ -242,8 +246,9 @@ export default function ChatPage() {
                  currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
 
-            if (!currentChat.participants[user.phone!]) {
-                currentChat.participants[user.phone!] = { name: senderName, unreadCount: 0 };
+            // Ensure sender's participant data exists
+            if (!currentChat.participants[user.phone]) {
+                currentChat.participants[user.phone] = { name: userProfile.full_name, unreadCount: 0 };
             }
 
             allChats[chatId] = currentChat;
@@ -252,7 +257,7 @@ export default function ChatPage() {
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
-            toast.error("خطا", { description: "پیام شما در حافظه موقت ذخیره نشد." });
+            toast.error("خطا", { description: "پیام شما در حافظه موقت ذخیره نشد."});
         }
     }
    
@@ -262,9 +267,15 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    // This logic needs to be updated to not rely on localStorage for the user's account type if possible
-    // For now, it's a temporary client-side check
-    return '/inbox'; 
+    // For customers, check if they have any chats, if so link to inbox, otherwise home.
+    try {
+      if (user?.phone) {
+        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+        const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
+        if (userChats.length > 0) return '/inbox';
+      }
+    } catch (e) { /* ignore */ }
+    return '/'; 
   }
 
 

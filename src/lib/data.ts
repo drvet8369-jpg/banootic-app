@@ -1,29 +1,25 @@
 import { createClient } from './supabase/server';
-import type { Provider, Review } from './types';
+import type { Provider, Review, PortfolioItem } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
 
-export async function getProviders(query?: {
+// This file is simplified. All data now comes from Supabase.
+// The functions are now async as they fetch data from the database.
+
+type GetProvidersQuery = {
   categorySlug?: string;
   serviceSlug?: string;
   searchQuery?: string;
-}): Promise<Provider[]> {
+}
+
+export async function getProviders(query?: GetProvidersQuery): Promise<Provider[]> {
   noStore();
-  const supabase = await createClient();
+  const supabase = createClient();
   
   let queryBuilder = supabase
     .from('providers')
     .select(`
-      id,
-      name,
-      service,
-      location,
-      phone,
-      bio,
-      category_slug,
-      service_slug,
-      rating,
-      reviews_count,
-      profile_image
+      *,
+      portfolio_items ( id, image_url, ai_hint )
     `);
 
   if (query?.categorySlug) {
@@ -45,35 +41,33 @@ export async function getProviders(query?: {
     return [];
   }
 
-  // Quick fix for portfolio items not being part of the main query
-  const providersWithPortfolio = await Promise.all(data.map(async (provider) => {
-      const { data: portfolioItems } = await supabase.from('portfolio_items').select('id, image_url, ai_hint').eq('provider_id', provider.id);
-      return {
-          ...provider,
-          portfolio: portfolioItems?.map(item => ({ src: item.image_url, aiHint: item.ai_hint })) || []
-      };
-  }));
-
-
-  return providersWithPortfolio.map(p => ({
+  // Map the data to the simplified Provider type
+  return data.map(p => ({
     id: p.id,
+    profile_id: p.profile_id,
     name: p.name,
-    service: p.service,
-    location: p.location,
+    service: p.service ?? '',
+    location: p.location ?? '',
     phone: p.phone,
-    bio: p.bio,
-    categorySlug: p.category_slug,
-    serviceSlug: p.service_slug,
-    rating: p.rating,
-    reviewsCount: p.reviews_count,
-    profileImage: p.profile_image,
-    portfolio: p.portfolio,
+    bio: p.bio ?? '',
+    categorySlug: p.category_slug ?? 'beauty',
+    serviceSlug: p.service_slug ?? '',
+    rating: p.rating ?? 0,
+    reviewsCount: p.reviews_count ?? 0,
+    profileImage: { 
+        src: p.profile_image?.src || '', 
+        aiHint: p.profile_image?.aiHint || 'woman portrait' 
+    },
+    portfolio: p.portfolio_items.map((item: any): PortfolioItem => ({
+      src: item.image_url,
+      aiHint: item.ai_hint,
+    })),
   }));
 }
 
-export async function getProviderByPhone(phone: string): Promise<Provider | null> {
+export async function getProviderByPhone(phone: string): Promise<(Provider & { profile_id: string }) | null> {
   noStore();
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('providers')
     .select(`
@@ -88,23 +82,27 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     .single();
 
   if (error || !data) {
-    console.error('Error fetching provider by phone:', error);
+    console.error(`Error fetching provider by phone ${phone}:`, error);
     return null;
   }
 
   return {
     id: data.id,
+    profile_id: data.profile_id,
     name: data.name,
-    service: data.service,
-    location: data.location,
+    service: data.service ?? '',
+    location: data.location ?? '',
     phone: data.phone,
-    bio: data.bio,
-    categorySlug: data.category_slug,
-    serviceSlug: data.service_slug,
-    rating: data.rating,
-    reviewsCount: data.reviews_count,
-    profileImage: data.profile_image,
-    portfolio: data.portfolio_items.map(item => ({
+    bio: data.bio ?? '',
+    categorySlug: data.category_slug ?? 'beauty',
+    serviceSlug: data.service_slug ?? '',
+    rating: data.rating ?? 0,
+    reviewsCount: data.reviews_count ?? 0,
+    profileImage: {
+        src: data.profile_image?.src || '',
+        aiHint: data.profile_image?.aiHint || 'woman portrait'
+    },
+    portfolio: data.portfolio_items.map((item: any): PortfolioItem => ({
       src: item.image_url,
       aiHint: item.ai_hint,
     })),
@@ -113,7 +111,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
 export async function getReviewsForProvider(providerId: number): Promise<Review[]> {
   noStore();
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('reviews')
     .select('*')

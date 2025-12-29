@@ -1,17 +1,28 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
 }
 
 export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
-  const { user } = useAuth();
+  const supabase = createClient();
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    }
+    getUser();
+  }, [supabase]);
 
   useEffect(() => {
     if (!user?.phone) {

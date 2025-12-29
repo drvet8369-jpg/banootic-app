@@ -1,31 +1,21 @@
-
-import { getProviderByPhone, getReviewsForProvider } from '@/lib/data';
-import type { Review } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { cn } from "@/lib/utils";
 import { createClient } from '@/lib/supabase/server';
+import { getProviderByPhone, getReviewsForProvider } from '@/lib/data';
+import type { Review } from '@/lib/types';
 
-import { MessageSquare, Phone, User, Star, X } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { MessageSquare, Phone, User, Star } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
 
-import { ReviewForm } from './review-form';
 import { PortfolioGallery } from './portfolio-gallery';
-import { unstable_noStore as noStore } from 'next/cache';
+import { ReviewForm } from './review-form';
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -58,20 +48,20 @@ const ReviewCard = ({ review }: { review: Review }) => (
 );
 
 
-export default async function ProviderProfilePage({ params }: { params: { providerId: string }}) {
-  noStore();
-  const supabase = await createClient();
+export default async function ProviderProfilePage({ params }: { params: { providerId: string } }) {
+  const providerPhone = params.providerId;
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const providerPhone = params.providerId as string;
   const provider = await getProviderByPhone(providerPhone);
 
   if (!provider) {
     notFound();
   }
-
+  
   const reviews = await getReviewsForProvider(provider.id);
-  const isOwnerViewing = user && user.phone === provider?.phone;
+
+  const isOwnerViewing = user && user.id === provider.profile_id;
 
   return (
     <div className="py-12 md:py-20 flex justify-center">
@@ -85,7 +75,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                         alt={provider.name}
                         fill
                         className="object-cover"
-                        data-ai-hint={provider.profileImage.aiHint || 'profile photo'}
+                        data-ai-hint={provider.profileImage.aiHint}
                         />
                     ) : (
                         <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -104,13 +94,13 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                     <p className="text-base text-foreground/80 leading-relaxed mb-6 text-center">{provider.bio}</p>
                     <Separator className="my-4" />
                     <h3 className="font-headline text-xl mb-4 text-center">نمونه کارها</h3>
-                     <PortfolioGallery provider={provider} isOwner={isOwnerViewing} />
+                    <PortfolioGallery provider={provider} isOwner={isOwnerViewing} />
                 </CardContent>
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
                     <Button asChild className="w-full">
-                        <Link href={user ? `/chat/${provider.phone}`: '/login'}>
+                        <Link href={user ? `/chat/${provider.phone}` : '/login'}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
