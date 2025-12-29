@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,6 +36,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { categories } from '@/lib/constants';
 import { completeRegistrationAction } from './actions';
 import type { Session } from '@supabase/supabase-js';
@@ -75,8 +76,7 @@ function VerifyOTPAndRegisterForm() {
     const searchParams = useSearchParams();
     const phone = searchParams.get('phone');
     const [verificationState, setVerificationState] = useState<VerificationState>('enter_otp');
-    const [sessionData, setSessionData] = useState<Session | null>(null);
-
+    
     const supabase = createClient();
 
     // --- OTP Form ---
@@ -122,21 +122,20 @@ function VerifyOTPAndRegisterForm() {
             setVerificationState('enter_otp');
         } else {
             toast.success("کد با موفقیت تایید شد!");
-            setSessionData(authData.session);
             
-            // Check if user profile already exists
+            // Check if user profile already exists and is COMPLETE
              const { data: profile } = await supabase
                 .from('profiles')
-                .select('id')
+                .select('id, full_name')
                 .eq('id', authData.session.user.id)
                 .single();
             
-            if (profile) {
-                // Profile exists, user is just logging in. Redirect to home.
+            if (profile && profile.full_name) {
+                // Profile exists and is complete, user is just logging in. Redirect to home.
                 toast.info("خوش آمدید! در حال انتقال به صفحه اصلی...");
-                window.location.href = '/';
+                window.location.href = '/'; // Hard refresh to sync session everywhere
             } else {
-                // New user, show registration form
+                // New user or incomplete profile, show registration form
                 setVerificationState('show_registration_form');
             }
         }
@@ -225,6 +224,42 @@ function VerifyOTPAndRegisterForm() {
                 <CardContent>
                     <Form {...registrationForm}>
                         <form onSubmit={registrationForm.handleSubmit(onRegistrationSubmit)} className="space-y-6">
+                             <FormField
+                              control={registrationForm.control}
+                              name="accountType"
+                              render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                  <FormLabel>نوع حساب کاربری خود را انتخاب کنید:</FormLabel>
+                                  <FormControl>
+                                    <RadioGroup
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                      className="flex flex-col space-y-1"
+                                      disabled={verificationState === 'submitting_registration'}
+                                    >
+                                      <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="customer" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                         مشتری هستم (برای یافتن و رزرو خدمات)
+                                        </FormLabel>
+                                      </FormItem>
+                                      <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="provider" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                          هنرمند هستم (برای ارائه هنر و تخصص خود)
+                                        </FormLabel>
+                                      </FormItem>
+                                    </RadioGroup>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
                             <FormField
                                 control={registrationForm.control}
                                 name="name"
@@ -234,25 +269,6 @@ function VerifyOTPAndRegisterForm() {
                                         <FormControl>
                                             <Input placeholder={accountType === 'provider' ? "مثال: سالن زیبایی سارا" : "نام و نام خانوادگی"} {...field} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={registrationForm.control}
-                                name="accountType"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>نوع حساب کاربری</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger><SelectValue placeholder="یک نوع حساب انتخاب کنید" /></SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="customer">مشتری هستم</SelectItem>
-                                                <SelectItem value="provider">هنرمند (ارائه‌دهنده خدمات) هستم</SelectItem>
-                                            </SelectContent>
-                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -320,7 +336,7 @@ function VerifyOTPAndRegisterForm() {
 export default function VerifyPage() {
     return (
         <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
-            <Suspense fallback={<div>در حال بارگذاری...</div>}>
+            <Suspense fallback={<div className="flex items-center gap-2"><Loader2 className="animate-spin" /> در حال بارگذاری...</div>}>
                 <VerifyOTPAndRegisterForm />
             </Suspense>
         </div>
