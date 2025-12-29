@@ -4,7 +4,6 @@ import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from '@/components/providers/auth-provider'; // Updated import path
 import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/layout/footer';
@@ -37,7 +36,6 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <AuthProvider>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
@@ -47,7 +45,6 @@ export default function RootLayout({
             <Footer />
           </div>
           <Toaster />
-        </AuthProvider>
       </body>
     </html>
   );

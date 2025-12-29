@@ -1,3 +1,4 @@
+
 // This component is now a Server Component by default, which is more performant.
 // It gets the user session directly from Supabase on the server.
 
@@ -39,7 +40,7 @@ export default async function Header() {
     userProfile = data;
   }
 
-  const isLoggedIn = !!sessionUser;
+  const isLoggedIn = !!sessionUser && !!userProfile?.full_name;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -4,8 +4,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { categories } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
+import { normalizeForSupabaseAuth } from '@/lib/utils';
+import { cookies } from 'next/headers';
 
-// This type must match the one in the client form
 type RegistrationFormValues = {
   name: string;
   accountType: 'customer' | 'provider';
@@ -14,68 +15,93 @@ type RegistrationFormValues = {
   location?: string;
 };
 
+export async function verifyOtpAction(phone: string, token: string) {
+    const supabase = createClient();
+    const normalizedPhone = normalizeForSupabaseAuth(phone);
+
+    const { data: { session }, error: authError } = await supabase.auth.verifyOtp({
+        phone: normalizedPhone,
+        token: token,
+        type: 'sms',
+    });
+
+    if (authError || !session) {
+        return { error: 'کد تایید نامعتبر است یا منقضی شده.', isNewUser: false, redirectPath: null };
+    }
+    
+    // Now check if a profile exists
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('id', session.user.id)
+        .single();
+    
+    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = "exact one row not found"
+        return { error: 'خطا در بررسی پروفایل: ' + profileError.message, isNewUser: false, redirectPath: null };
+    }
+
+    const isNewUser = !profile || !profile.full_name;
+    let redirectPath = '/';
+    if(isNewUser) {
+      redirectPath = `/login/verify?phone=${phone}`; // Stay on the same page to show registration form
+    } else {
+      const {data: providerProfile} = await supabase.from('providers').select('id').eq('profile_id', session.user.id).single();
+      if(providerProfile) {
+        redirectPath = '/profile';
+      }
+    }
+    
+    revalidatePath('/', 'layout');
+    return { error: null, isNewUser, redirectPath };
+}
+
+
 export async function completeRegistrationAction(values: RegistrationFormValues) {
   const supabase = createClient();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    return { error: 'جلسه کاربری معتبر نیست. لطفاً دوباره وارد شوید.', redirectPath: '/login' };
+    return { error: 'جلسه کاربری معتبر نیست. لطفاً دوباره وارد شوید.' };
   }
 
   const { user } = session;
 
-  // 1. Insert into 'profiles' table
-  const { error: profileError } = await supabase.from('profiles').insert({
+  const { error: profileError } = await supabase.from('profiles').upsert({
     id: user.id,
     full_name: values.name,
-    phone: user.phone, // Phone comes from the authenticated user session
+    phone: user.phone,
     account_type: values.accountType,
   });
 
   if (profileError) {
-    // This could happen if the user refreshes and tries to submit again.
-    // We can check if it's a unique constraint violation.
-    if (profileError.code === '23505') { // unique_violation
-        console.warn(`Profile for user ${user.id} already exists. Proceeding...`);
-    } else {
-        console.error('Error creating profile:', profileError);
-        return { error: 'خطا در ساخت پروفایل: ' + profileError.message, redirectPath: null };
-    }
+    console.error('Error upserting profile:', profileError);
+    return { error: 'خطا در ساخت/به‌روزرسانی پروفایل: ' + profileError.message };
   }
 
-  // 2. If user is a provider, insert into 'providers' table
-  let redirectPath = '/';
   if (values.accountType === 'provider') {
     if (!values.serviceType || !values.bio || !values.location) {
-        return { error: 'اطلاعات هنرمند ناقص است.', redirectPath: null };
+      return { error: 'اطلاعات هنرمند ناقص است.' };
     }
     const category = categories.find(c => c.slug === values.serviceType);
 
-    const { error: providerError } = await supabase.from('providers').insert({
+    const { error: providerError } = await supabase.from('providers').upsert({
       profile_id: user.id,
       name: values.name,
       location: values.location,
       bio: values.bio,
       phone: user.phone!,
-      service: category?.name || 'خدمات عمومی', // The general service name
+      service: category?.name || 'خدمات عمومی',
       category_slug: values.serviceType,
-      // You can add default values for other provider fields here
       rating: 0,
       reviews_count: 0,
-    });
+    }, { onConflict: 'profile_id' });
 
     if (providerError) {
-      console.error('Error creating provider profile:', providerError);
-      return { error: 'خطا در ساخت پروفایل هنرمند: ' + providerError.message, redirectPath: null };
+      console.error('Error upserting provider profile:', providerError);
+      return { error: 'خطا در ساخت پروفایل هنرمند: ' + providerError.message };
     }
-    redirectPath = '/profile'; // Redirect providers to their profile
   }
-  
-  // Revalidate the root path to reflect the new login state in the header
-  revalidatePath('/', 'layout');
 
-  return { error: null, redirectPath };
+  revalidatePath('/', 'layout');
+  return { error: null };
 }

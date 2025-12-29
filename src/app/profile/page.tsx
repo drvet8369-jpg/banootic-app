@@ -1,6 +1,6 @@
 // This file is now a Server Component
 import { createClient } from '@/lib/supabase/server';
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import Link from 'next/link';
 
@@ -17,31 +17,20 @@ export default async function ProfilePage() {
 
   if (!user) {
     // If no user is logged in, redirect to the login page.
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
-        <User className="w-24 h-24 text-muted-foreground mb-6" />
-        <h1 className="font-display text-4xl md:text-5xl font-bold">صفحه پروفایل</h1>
-        <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
-          برای مشاهده پروفایل خود، لطفاً ابتدا وارد شوید.
-        </p>
-        <Button asChild size="lg" className="mt-8">
-          <Link href="/login">ورود به حساب کاربری</Link>
-        </Button>
-      </div>
-    );
+    redirect('/login');
   }
 
   // Fetch the user's profile from the 'profiles' table
   const { data: profile } = await supabase
     .from('profiles')
-    .select('account_type')
+    .select('account_type, full_name')
     .eq('id', user.id)
     .single();
 
-  if (!profile) {
-    // This case shouldn't happen for a logged-in user, but it's a good safeguard.
-    // It might mean their profile wasn't created correctly during registration.
-    redirect('/login/verify'); // Redirect to complete registration
+  if (!profile || !profile.full_name) {
+    // This case happens if a user is logged in but their profile is incomplete.
+    // We redirect them to the verify page which handles the registration flow.
+    redirect(`/login/verify?phone=${user.phone}`);
   }
 
   // If the user is a customer, they shouldn't access this page directly.
@@ -82,5 +71,3 @@ export default async function ProfilePage() {
   // Pass the server-fetched data to the client component for interactivity.
   return <ProfileClientContent providerData={providerData} />;
 }
-
-    

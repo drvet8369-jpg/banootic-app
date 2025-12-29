@@ -1,6 +1,7 @@
+
 'use client';
 
-import { getProviders } from '@/lib/data';
+import { getProviderByPhone } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +10,11 @@ import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-r
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import type { Provider } from '@/lib/types';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 
 interface Message {
@@ -33,8 +35,11 @@ interface OtherPersonDetails {
 
 export default function ChatPage() {
   const params = useParams();
+  const supabase = createClient();
   const otherPersonIdOrProviderId = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
+  
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
@@ -46,6 +51,19 @@ export default function ChatPage() {
 
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        setIsLoggedIn(!!session?.user);
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
@@ -66,51 +84,56 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoggedIn || !user) {
-        setIsLoading(false);
-        return;
-    }
+    async function loadData() {
+        if (!isLoggedIn || !user) {
+            setIsLoading(false);
+            return;
+        }
 
-    let details: OtherPersonDetails | null = null;
-    const allProviders = getProviders();
-    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
-    
-    if (provider) {
-      details = provider;
-    } else {
-      const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
-    }
-    
-    if (!details) {
-        toast.error("خطا", { description: "اطلاعات کاربر یا هنرمند یافت نشد." });
-        setIsLoading(false);
-        return;
-    }
-    setOtherPersonDetails(details);
-    
-    const chatId = getChatId(user.phone, details.phone);
-    if (chatId) {
-      try {
-          const storedMessages = localStorage.getItem(`chat_${chatId}`);
-          if (storedMessages) {
-              setMessages(JSON.parse(storedMessages));
+        let details: OtherPersonDetails | null = null;
+        const provider = await getProviderByPhone(otherPersonIdOrProviderId);
+        
+        if (provider) {
+          details = provider;
+        } else {
+          const customerPhone = otherPersonIdOrProviderId;
+          details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
+        }
+        
+        if (!details) {
+            toast.error("خطا", { description: "اطلاعات کاربر یا هنرمند یافت نشد." });
+            setIsLoading(false);
+            return;
+        }
+        setOtherPersonDetails(details);
+        
+        const chatId = getChatId(user.phone, details.phone);
+        if (chatId) {
+          // This chat implementation is temporary and uses localStorage.
+          // A real implementation would use a database.
+          try {
+              const storedMessages = localStorage.getItem(`chat_${chatId}`);
+              if (storedMessages) {
+                  setMessages(JSON.parse(storedMessages));
+              }
+
+              // Mark messages as read when chat is opened
+              const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+              if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+                  allChats[chatId].participants[user.phone].unreadCount = 0;
+                  localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+              }
+          } catch(e) {
+              console.error("Failed to load/update chat from localStorage", e);
           }
-
-          // Mark messages as read when chat is opened
-          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-              allChats[chatId].participants[user.phone].unreadCount = 0;
-              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-          }
-      } catch(e) {
-          console.error("Failed to load/update chat from localStorage", e);
-      }
+        }
+        
+        setIsLoading(false);
     }
-    
-    setIsLoading(false);
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId]);
+    loadData();
+
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId, supabase]);
 
 
   if (!isLoggedIn || !user) {
@@ -161,7 +184,6 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
 
-    // Also update the last message in the inbox if this was the last message
     const lastMessage = updatedMessages[updatedMessages.length - 1];
     if (lastMessage.id === editingMessageId) {
         const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
@@ -186,7 +208,7 @@ export default function ChatPage() {
     const tempUiMessage: Message = {
       id: Date.now().toString(),
       text: text,
-      senderId: user.phone,
+      senderId: user.phone!,
       createdAt: new Date().toISOString(),
     };
     
@@ -198,20 +220,21 @@ export default function ChatPage() {
     if (chatId) {
         try {
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+            const { data } = await supabase.from('profiles').select('full_name, account_type').eq('id', user.id).single();
+            const senderName = data?.full_name || `کاربر ${user.phone?.slice(-4)}`;
+
             const currentChat = allChats[chatId] || {
                 id: chatId,
                 members: [user.phone, otherPersonDetails.phone],
                 participants: {
-                    [user.phone]: { name: user.name, unreadCount: 0 },
+                    [user.phone!]: { name: senderName, unreadCount: 0 },
                     [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
                 }
             };
             
-            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
-            // Increment unread count for the receiver
             const receiverPhone = otherPersonDetails.phone;
             if (currentChat.participants[receiverPhone]) {
                 currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
@@ -219,9 +242,8 @@ export default function ChatPage() {
                  currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
 
-            // Ensure sender's participant data exists
-            if (!currentChat.participants[user.phone]) {
-                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
+            if (!currentChat.participants[user.phone!]) {
+                currentChat.participants[user.phone!] = { name: senderName, unreadCount: 0 };
             }
 
             allChats[chatId] = currentChat;
@@ -240,14 +262,9 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    if (user.accountType === 'provider') return '/inbox';
-    // For customers, check if they have any chats, if so link to inbox, otherwise home.
-    try {
-      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
-      if (userChats.length > 0) return '/inbox';
-    } catch (e) { /* ignore */ }
-    return '/'; 
+    // This logic needs to be updated to not rely on localStorage for the user's account type if possible
+    // For now, it's a temporary client-side check
+    return '/inbox'; 
   }
 
 
