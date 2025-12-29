@@ -1,5 +1,5 @@
-// This component is intentionally designed to be a Server Component's child.
-// It does not use client-side hooks and receives all its data via props.
+'use client';
+
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 const getInitials = (name: string | null) => {
     if (!name) return '..';
@@ -20,9 +22,16 @@ const getInitials = (name: string | null) => {
 }
 
 export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Profile | null, isLoggedIn: boolean }) {
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsSheetOpen(false);
+  }, [pathname]);
+
   if (!isLoggedIn || !userProfile) {
     return (
-      <Sheet>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon">
             <Menu className="h-6 w-6" />
@@ -51,7 +60,7 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
     );
   }
   return (
-    <Sheet>
+    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
           <Menu className="h-6 w-6" />
