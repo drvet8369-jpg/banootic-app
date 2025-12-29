@@ -19,6 +19,8 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MobileNav } from './mobile-nav'; // Mobile nav is extracted to a client component
 import { unstable_noStore as noStore } from 'next/cache';
+import { logToFile } from '@/lib/logger';
+
 
 const getInitials = (name: string) => {
   if (!name) return '..';
@@ -31,16 +33,26 @@ const getInitials = (name: string) => {
 
 export default async function Header() {
   noStore(); // Ensure the header is always dynamic
+  await logToFile('Header: Rendering started.');
   const supabase = createClient();
   const { data: { user: sessionUser } } = await supabase.auth.getUser();
   
   let userProfile = null;
   if (sessionUser) {
+    await logToFile(`Header: Found session user ID: ${sessionUser.id}. Fetching profile...`);
     const { data } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
-    userProfile = data;
+    if(data) {
+        await logToFile(`Header: Profile found for user: ${data.full_name}`);
+        userProfile = data;
+    } else {
+        await logToFile(`Header: WARNING - Session exists but no profile found in DB for user ID: ${sessionUser.id}`);
+    }
+  } else {
+     await logToFile('Header: No session user found.');
   }
 
   const isLoggedIn = !!sessionUser && !!userProfile?.full_name;
+  await logToFile(`Header: Final login state: isLoggedIn = ${isLoggedIn}`);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
