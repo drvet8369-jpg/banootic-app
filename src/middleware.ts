@@ -1,9 +1,9 @@
-
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
   // updateSession handles reading, refreshing, and setting the session cookie.
+  // It must be called on every request that needs auth.
   return await updateSession(request);
 }
 
