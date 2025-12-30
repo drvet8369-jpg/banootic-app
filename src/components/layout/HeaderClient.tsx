@@ -40,6 +40,12 @@ interface HeaderClientProps {
 
 export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientProps) {
 
+  // This will log the data received from the server to the browser console.
+  useEffect(() => {
+    console.log("BROWSER HEADER - isLoggedIn:", isLoggedIn);
+    console.log("BROWSER HEADER - userProfile:", userProfile);
+  }, [isLoggedIn, userProfile]);
+
   return (
     <>
       <div style={{
