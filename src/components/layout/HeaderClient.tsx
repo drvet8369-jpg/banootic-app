@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -38,14 +39,25 @@ interface HeaderClientProps {
 }
 
 export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientProps) {
-  useEffect(() => {
-    // This log WILL appear in your browser's developer console (F12)
-    console.log('BROWSER HEADER - Received userProfile:', userProfile);
-    console.log('BROWSER HEADER - Received isLoggedIn:', isLoggedIn);
-  }, [userProfile, isLoggedIn]);
 
   return (
     <>
+      <div style={{
+        backgroundColor: 'black',
+        color: 'lime',
+        padding: '10px',
+        margin: '0',
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+        zIndex: 100,
+        position: 'relative'
+      }}>
+        <p style={{color: 'white', fontWeight: 'bold', borderBottom: '1px solid white', paddingBottom: '5px', marginBottom: '5px' }}>DEBUG INFO (ON-SCREEN):</p>
+        <pre>isLoggedIn: {JSON.stringify(isLoggedIn, null, 2)}</pre>
+        <pre>userProfile: {JSON.stringify(userProfile, null, 2)}</pre>
+      </div>
       <ClientUtils />
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
