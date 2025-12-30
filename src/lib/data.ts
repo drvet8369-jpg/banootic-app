@@ -1,5 +1,5 @@
 import { createClient } from './supabase/server';
-import type { Provider, Review, PortfolioItem } from './types';
+import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
 
 // This file is simplified. All data now comes from Supabase.
@@ -18,8 +18,17 @@ export async function getProviders(query?: GetProvidersQuery): Promise<Provider[
   let queryBuilder = supabase
     .from('providers')
     .select(`
-      *,
-      portfolio_items ( id, image_url, ai_hint )
+      id,
+      name,
+      service,
+      location,
+      phone,
+      bio,
+      category_slug,
+      service_slug,
+      rating,
+      reviews_count,
+      profile_image
     `);
 
   if (query?.categorySlug) {
@@ -44,7 +53,6 @@ export async function getProviders(query?: GetProvidersQuery): Promise<Provider[
   // Map the data to the simplified Provider type
   return data.map(p => ({
     id: p.id,
-    profile_id: p.profile_id,
     name: p.name,
     service: p.service ?? '',
     location: p.location ?? '',
@@ -58,10 +66,8 @@ export async function getProviders(query?: GetProvidersQuery): Promise<Provider[
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    portfolio: p.portfolio_items.map((item: any): PortfolioItem => ({
-      src: item.image_url,
-      aiHint: item.ai_hint,
-    })),
+    // Portfolio is fetched separately to avoid large joins
+    portfolio: [], 
   }));
 }
 
@@ -102,7 +108,8 @@ export async function getProviderByPhone(phone: string): Promise<(Provider & { p
         src: data.profile_image?.src || '',
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
-    portfolio: data.portfolio_items.map((item: any): PortfolioItem => ({
+    portfolio: data.portfolio_items.map((item: any) => ({
+      id: item.id,
       src: item.image_url,
       aiHint: item.ai_hint,
     })),
