@@ -1,24 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-/**
- * Global middleware
- * This is responsible for:
- * - Reading Supabase cookies
- * - Refreshing the session if needed
- * - Injecting the valid session into subsequent requests
- */
 export async function middleware(request: NextRequest) {
-  // This function will handle refreshing the user's session and updating the cookies.
+  // updateSession handles reading, refreshing, and setting the session cookie.
   return await updateSession(request);
 }
 
-/**
- * matcher:
- * - Covers all paths
- * - Excludes static files, images, and the favicon
- * - Includes server actions and auth pages
- */
 export const config = {
   matcher: [
     /*
