@@ -7,11 +7,12 @@ import { unstable_noStore as noStore } from 'next/cache';
 import type { Profile } from '@/lib/types';
 
 export default async function Header() {
-  noStore(); // Ensure the header is always dynamic and not cached
+  noStore(); // Force dynamic rendering to ensure cookies are always read.
   const supabase = createClient();
   const { data: { user: sessionUser } } = await supabase.auth.getUser();
 
-  console.log('SERVER HEADER USER:', sessionUser); // <-- This will log in the terminal
+  // This log is for debugging purposes.
+  console.log('SERVER HEADER USER:', sessionUser); 
   
   let userProfile: Profile | null = null;
   if (sessionUser) {
