@@ -17,6 +17,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
+import Footer from './footer';
+import SearchBar from '../ui/search-bar';
 
 const getInitials = (name: string | null) => {
   if (!name) return '..';
@@ -35,15 +37,9 @@ interface HeaderClientProps {
 export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientProps) {
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        {/* DEBUG INFO - REMOVE LATER */}
-        <div className="absolute top-full left-0 w-full bg-black text-white p-2 text-xs z-50">
-          <p>DEBUG INFO (ON-SCREEN)</p>
-          <p>isLoggedIn: {isLoggedIn.toString()}</p>
-          <p>userProfile: {JSON.stringify(userProfile, null, 2)}</p>
-        </div>
-        {/* END DEBUG INFO */}
         {/* Left Side: Actions */}
         <div className="flex items-center gap-2">
             {/* Desktop Nav */}
@@ -75,7 +71,7 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
                     )}
                     <DropdownMenuItem asChild>
                         <Link href="/inbox" className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
                             <span>صندوق ورودی</span>
                             <InboxBadge />
                         </Link>
@@ -112,5 +108,8 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
         </Link>
       </div>
     </header>
+    <SearchBar />
+    <Footer />
+    </>
   );
 }
