@@ -11,7 +11,7 @@ export default async function Header() {
   const supabase = createClient();
   const { data: { user: sessionUser } } = await supabase.auth.getUser();
 
-  console.log('SERVER HEADER USER:', sessionUser); // <-- DEBUG LOG ADDED
+  console.log('SERVER HEADER USER:', sessionUser); // <-- This will log in the terminal
   
   let userProfile: Profile | null = null;
   if (sessionUser) {
