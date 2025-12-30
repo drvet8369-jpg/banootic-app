@@ -1,22 +1,12 @@
-// 'use client'; // This is intentionally commented out for the test.
 
 import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-// import { useEffect } from 'react';
-// import dynamic from 'next/dynamic';
-
-// const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
-import Header from '@/components/layout/header'; // Direct import for testing
-import SearchBar from '@/components/ui/search-bar';
-import Footer from '@/components/layout/footer';
 import { Toaster } from "@/components/ui/sonner";
-import dynamic from 'next/dynamic';
-
-
-// This component is now imported and rendered inside HeaderClient.tsx
-// const ClientUtils = dynamic(() => import('@/components/layout/client-utils'), { ssr: false });
+import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer';
+import { AuthProvider } from '@/components/providers/auth-provider';
 
 
 const vazirmatn = Vazirmatn({
@@ -25,13 +15,12 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-// This can't be a dynamic export in a client component, 
-// so we define it statically here.
-// export const metadata: Metadata = {
-//   title: 'هنربانو',
-//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
-//   manifest: '/manifest.json',
-// };
+export const metadata: Metadata = {
+  title: 'بانوتیک',
+  description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+  manifest: '/manifest.json',
+};
+
 
 export default function RootLayout({
   children,
@@ -39,20 +28,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  // useEffect(() => {
-  //   if ('serviceWorker' in navigator) {
-  //     navigator.serviceWorker
-  //       .register('/sw.js')
-  //       .catch(error => console.log('Service Worker registration failed:', error));
-  //   }
-  // }, []);
-
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>بانوتیک</title>
-          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
-          <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
@@ -61,15 +39,16 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <div className="relative flex min-h-screen flex-col">
+        <AuthProvider>
+          <div className="relative flex min-h-screen flex-col">
             <Header />
-            {/* SearchBar is now rendered within HeaderClient */}
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
               {children}
             </main>
             <Footer />
           </div>
           <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

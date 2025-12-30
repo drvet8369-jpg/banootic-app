@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -50,7 +51,9 @@ export async function verifyOtpAction(phone: string, token: string) {
       }
     }
     
+    // Revalidate all relevant paths after successful login
     revalidatePath('/', 'layout');
+    revalidatePath('/profile', 'page');
     return { error: null, isNewUser, redirectPath };
 }
 
@@ -99,6 +102,8 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
     }
   }
 
+  // Revalidate all relevant paths after registration
   revalidatePath('/', 'layout');
+  revalidatePath('/profile', 'page');
   return { error: null };
 }

@@ -34,6 +34,8 @@ export async function requestOtp(formData: FormData) {
     return { error: `A critical error occurred: ${e.message}` };
   }
 
+  // Revalidate the path to ensure the next page isn't cached
+  revalidatePath('/login/verify');
   // On successful OTP request, redirect to the verification page.
   redirect(`/login/verify?phone=${phone}`);
 }
