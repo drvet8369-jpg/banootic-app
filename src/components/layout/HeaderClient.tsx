@@ -17,8 +17,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
-import Footer from './footer';
-import SearchBar from '../ui/search-bar';
 
 const getInitials = (name: string | null) => {
   if (!name) return '..';
@@ -37,89 +35,82 @@ interface HeaderClientProps {
 export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientProps) {
 
   return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-            {/* DEBUG INFO - REMOVE LATER */}
-            <div className="absolute top-full left-0 w-full bg-black text-white p-2 text-xs z-50">
-              <p>DEBUG INFO (ON-SCREEN)</p>
-              <p>isLoggedIn: {isLoggedIn.toString()}</p>
-              <p>userProfile: {JSON.stringify(userProfile, null, 2)}</p>
-            </div>
-            {/* END DEBUG INFO */}
-          {/* Left Side: Actions */}
-          <div className="flex items-center gap-2">
-              {/* Desktop Nav */}
-              <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
-                  {isLoggedIn && userProfile ? (
-                  <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                          <Avatar>
-                          <AvatarFallback>{getInitials(userProfile.full_name)}</AvatarFallback>
-                          </Avatar>
-                          <InboxBadge isMenu />
-                      </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-56" align="start" forceMount>
-                      <DropdownMenuLabel className="font-normal">
-                          <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{userProfile.full_name}</p>
-                          <p className="text-xs leading-none text-muted-foreground">{userProfile.phone}</p>
-                          </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {userProfile.account_type === 'provider' && (
-                          <DropdownMenuItem asChild>
-                          <Link href="/profile">
-                              <UserRound className="ml-2 h-4 w-4" />
-                              <span>پروفایل من</span>
-                          </Link>                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem asChild>
-                          <Link href="/inbox" className="relative">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                              <span>صندوق ورودی</span>
-                              <InboxBadge />
-                          </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <form action={logoutAction}>
-                          <DropdownMenuItem asChild>
-                              <button type="submit" className="w-full flex items-center cursor-pointer">
-                                  <LogOut className="ml-2 h-4 w-4" />
-                                  <span>خروج</span>
-                              </button>
-                          </DropdownMenuItem>
-                      </form>
-                      </DropdownMenuContent>
-                  </DropdownMenu>
-                  ) : (
-                  <>
-                      <Button asChild>
-                        <Link href="/login">ورود / ثبت‌نام</Link>
-                      </Button>
-                  </>
-                  )}
-              </nav>
-              {/* Mobile Nav Trigger */}
-              <div className="md:hidden">
-                  <MobileNav userProfile={userProfile} isLoggedIn={isLoggedIn} />
-              </div>
-          </div>
-
-          {/* Right Side: Branding */}
-          <Link href="/" className="flex items-center gap-2">
-              <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
-              <Logo className="h-10 w-10 text-primary-foreground" />
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        {/* DEBUG INFO - REMOVE LATER */}
+        <div className="absolute top-full left-0 w-full bg-black text-white p-2 text-xs z-50">
+          <p>DEBUG INFO (ON-SCREEN)</p>
+          <p>isLoggedIn: {isLoggedIn.toString()}</p>
+          <p>userProfile: {JSON.stringify(userProfile, null, 2)}</p>
         </div>
-      </header>
-      <SearchBar />
-      <div className="flex-grow">
-        {/* The main content is passed as children to RootLayout, so it will be rendered here automatically by Next.js */}
+        {/* END DEBUG INFO */}
+        {/* Left Side: Actions */}
+        <div className="flex items-center gap-2">
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-2 text-sm font-medium">
+                {isLoggedIn && userProfile ? (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                        <Avatar>
+                        <AvatarFallback>{getInitials(userProfile.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <InboxBadge isMenu />
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="start" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{userProfile.full_name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{userProfile.phone}</p>
+                        </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {userProfile.account_type === 'provider' && (
+                        <DropdownMenuItem asChild>
+                        <Link href="/profile">
+                            <UserRound className="ml-2 h-4 w-4" />
+                            <span>پروفایل من</span>
+                        </Link>                        </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem asChild>
+                        <Link href="/inbox" className="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                            <span>صندوق ورودی</span>
+                            <InboxBadge />
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <form action={logoutAction}>
+                        <DropdownMenuItem asChild>
+                            <button type="submit" className="w-full flex items-center cursor-pointer">
+                                <LogOut className="ml-2 h-4 w-4" />
+                                <span>خروج</span>
+                            </button>
+                        </DropdownMenuItem>
+                    </form>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                ) : (
+                <>
+                    <Button asChild>
+                      <Link href="/login">ورود / ثبت‌نام</Link>
+                    </Button>
+                </>
+                )}
+            </nav>
+            {/* Mobile Nav Trigger */}
+            <div className="md:hidden">
+                <MobileNav userProfile={userProfile} isLoggedIn={isLoggedIn} />
+            </div>
+        </div>
+
+        {/* Right Side: Branding */}
+        <Link href="/" className="flex items-center gap-2">
+            <span className="hidden sm:inline-block font-display text-2xl font-bold whitespace-nowrap">بانوتیک</span>
+            <Logo className="h-10 w-10 text-primary-foreground" />
+        </Link>
       </div>
-      <Footer />
-    </>
+    </header>
   );
 }

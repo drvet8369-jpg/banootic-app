@@ -4,10 +4,8 @@
 import { createClient } from '@/lib/supabase/server';
 import HeaderClient from './HeaderClient';
 import type { Profile } from '@/lib/types';
-import { unstable_noStore as noStore } from 'next/cache';
 
 export default async function Header() {
-  noStore();
   const supabase = createClient();
   const { data: { user: sessionUser } } = await supabase.auth.getUser();
   
