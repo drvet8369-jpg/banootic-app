@@ -20,7 +20,5 @@ export default async function Header() {
   // A user is fully logged in only if they have a session AND a complete profile
   const isLoggedIn = !!sessionUser && !!userProfile?.full_name;
   
-  const serverUserStatus = sessionUser ? `Logged In (ID: ${sessionUser.id})` : 'null';
-
-  return <HeaderClient userProfile={userProfile} isLoggedIn={isLoggedIn} serverUserStatus={serverUserStatus} />;
+  return <HeaderClient userProfile={userProfile} isLoggedIn={isLoggedIn} />;
 }

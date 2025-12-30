@@ -17,10 +17,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
-import Footer from './footer';
-import SearchBar from '../ui/search-bar';
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 
 const getInitials = (name: string | null) => {
@@ -35,33 +31,11 @@ const getInitials = (name: string | null) => {
 interface HeaderClientProps {
     userProfile: Profile | null;
     isLoggedIn: boolean;
-    serverUserStatus: string;
 }
 
-export default function HeaderClient({ userProfile, isLoggedIn, serverUserStatus }: HeaderClientProps) {
-  const [clientUserStatus, setClientUserStatus] = useState('Checking...');
-
-  useEffect(() => {
-    const supabase = createClient();
-    const checkClientSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setClientUserStatus(`Logged In (ID: ${session.user.id})`);
-      } else {
-        setClientUserStatus('Not Logged In');
-      }
-    };
-    checkClientSession();
-  }, []);
+export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientProps) {
 
   return (
-    <>
-    <div className="bg-yellow-200 text-black p-2 text-center text-xs font-mono">
-      <h3 className="font-bold">[DIAGNOSTIC REPORT]</h3>
-      <p>Server-Side User Status: <span className="font-bold">{serverUserStatus}</span></p>
-      <p>Client-Side User Status: <span className="font-bold">{clientUserStatus}</span></p>
-      <p>isLoggedIn (from server): <span className="font-bold">{isLoggedIn.toString()}</span></p>
-    </div>
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         {/* Left Side: Actions */}
@@ -132,8 +106,5 @@ export default function HeaderClient({ userProfile, isLoggedIn, serverUserStatus
         </Link>
       </div>
     </header>
-    <SearchBar />
-    <Footer />
-    </>
   );
 }
