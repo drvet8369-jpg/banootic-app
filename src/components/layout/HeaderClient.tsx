@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -21,8 +20,9 @@ import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
 import dynamic from 'next/dynamic';
 
+// Dynamic imports for client-side components are now here
 const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
-const ClientUtils = dynamic(() => import('@/components/layout/client-utils'), { ssr: false });
+const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 
 const getInitials = (name: string | null) => {
   if (!name) return '..';
@@ -40,15 +40,9 @@ interface HeaderClientProps {
 
 export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientProps) {
 
-  // This will log the data received from the server to the browser console.
-  useEffect(() => {
-    console.log("BROWSER HEADER - isLoggedIn:", isLoggedIn);
-    console.log("BROWSER HEADER - userProfile:", userProfile);
-  }, [isLoggedIn, userProfile]);
-
   return (
     <>
-      <div style={{
+      {/* <div style={{
         backgroundColor: 'black',
         color: 'lime',
         padding: '10px',
@@ -63,8 +57,7 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
         <p style={{color: 'white', fontWeight: 'bold', borderBottom: '1px solid white', paddingBottom: '5px', marginBottom: '5px' }}>DEBUG INFO (ON-SCREEN):</p>
         <pre>isLoggedIn: {JSON.stringify(isLoggedIn, null, 2)}</pre>
         <pre>userProfile: {JSON.stringify(userProfile, null, 2)}</pre>
-      </div>
-      <ClientUtils />
+      </div> */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           {/* Left Side: Actions */}
@@ -136,6 +129,7 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
         </div>
       </header>
       <SearchBar />
+      <Footer />
     </>
   );
 }
