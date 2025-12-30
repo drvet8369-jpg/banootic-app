@@ -1,9 +1,10 @@
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import Header from '@/components/layout/header'; // Import Header directly
+import Header from '@/components/layout/header';
 import { Toaster } from "@/components/ui/sonner";
 import ClientUtils from '@/components/layout/client-utils';
+import { AuthProvider } from '@/components/providers/auth-provider';
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -17,6 +18,9 @@ export const metadata = {
   manifest: '/manifest.json',
 };
 
+// Force dynamic rendering for all routes to ensure server components can access cookies.
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl">
@@ -29,14 +33,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           vazirmatn.variable
         )}
       >
-        <ClientUtils />
-        <div className="relative flex min-h-screen flex-col">
-          <Header /> {/* Renders HeaderClient which now includes SearchBar and Footer */}
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-            {children}
-          </main>
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <ClientUtils />
+          <div className="relative flex min-h-screen flex-col">
+            <Header /> 
+            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+              {children}
+            </main>
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

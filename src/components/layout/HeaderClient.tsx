@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
@@ -19,10 +18,10 @@ import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
 import dynamic from 'next/dynamic';
+import Footer from '@/components/layout/footer';
 
 // Dynamic imports for client-side components are now here
 const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
-const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 
 const getInitials = (name: string | null) => {
   if (!name) return '..';
@@ -42,22 +41,6 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
 
   return (
     <>
-      {/* <div style={{
-        backgroundColor: 'black',
-        color: 'lime',
-        padding: '10px',
-        margin: '0',
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-all',
-        zIndex: 100,
-        position: 'relative'
-      }}>
-        <p style={{color: 'white', fontWeight: 'bold', borderBottom: '1px solid white', paddingBottom: '5px', marginBottom: '5px' }}>DEBUG INFO (ON-SCREEN):</p>
-        <pre>isLoggedIn: {JSON.stringify(isLoggedIn, null, 2)}</pre>
-        <pre>userProfile: {JSON.stringify(userProfile, null, 2)}</pre>
-      </div> */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           {/* Left Side: Actions */}

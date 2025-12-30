@@ -3,16 +3,13 @@
 
 import { createClient } from '@/lib/supabase/server';
 import HeaderClient from './HeaderClient';
-import { unstable_noStore as noStore } from 'next/cache';
 import type { Profile } from '@/lib/types';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export default async function Header() {
-  noStore(); // Force dynamic rendering to ensure cookies are always read.
+  noStore();
   const supabase = createClient();
   const { data: { user: sessionUser } } = await supabase.auth.getUser();
-
-  // This log is for debugging purposes.
-  console.log('SERVER HEADER USER:', sessionUser); 
   
   let userProfile: Profile | null = null;
   if (sessionUser) {
