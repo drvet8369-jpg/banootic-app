@@ -17,11 +17,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { InboxBadge } from './inbox-badge';
 import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
-import dynamic from 'next/dynamic';
-import Footer from '@/components/layout/footer';
-
-// Dynamic imports for client-side components are now here
-const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+import Footer from './footer';
+import SearchBar from '../ui/search-bar';
 
 const getInitials = (name: string | null) => {
   if (!name) return '..';
@@ -43,6 +40,13 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
+            {/* DEBUG INFO - REMOVE LATER */}
+            <div className="absolute top-full left-0 w-full bg-black text-white p-2 text-xs z-50">
+              <p>DEBUG INFO (ON-SCREEN)</p>
+              <p>isLoggedIn: {isLoggedIn.toString()}</p>
+              <p>userProfile: {JSON.stringify(userProfile, null, 2)}</p>
+            </div>
+            {/* END DEBUG INFO */}
           {/* Left Side: Actions */}
           <div className="flex items-center gap-2">
               {/* Desktop Nav */}
@@ -112,6 +116,9 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
         </div>
       </header>
       <SearchBar />
+      <div className="flex-grow">
+        {/* The main content is passed as children to RootLayout, so it will be rendered here automatically by Next.js */}
+      </div>
       <Footer />
     </>
   );
