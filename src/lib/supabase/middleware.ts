@@ -4,7 +4,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function updateSession(request: NextRequest) {
   // This approach is recommended by Supabase and ensures cookies are handled correctly.
   // It creates a clean response object, lets Supabase client modify it, and then returns it.
-  const response = NextResponse.next();
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,6 +20,16 @@ export async function updateSession(request: NextRequest) {
         },
         set(name: string, value: string, options: CookieOptions) {
           // The Supabase client will modify the response directly.
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
           response.cookies.set({
             name,
             value,
@@ -24,6 +38,16 @@ export async function updateSession(request: NextRequest) {
         },
         remove(name: string, options: CookieOptions) {
           // The Supabase client will modify the response directly.
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+           response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
           response.cookies.set({
             name,
             value: '',

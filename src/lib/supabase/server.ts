@@ -1,8 +1,8 @@
-
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-// This function is now async and must be awaited.
+// This function can be used in Server Components, Server Actions, and Route Handlers.
+// It must not be used in middleware.
 export const createClient = () => {
   const cookieStore = cookies();
 

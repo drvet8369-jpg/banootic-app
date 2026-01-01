@@ -15,6 +15,7 @@ type RegistrationFormValues = {
 };
 
 export async function verifyOtpAction(phone: string, token: string) {
+    console.log(`[Action:verifyOtp] Attempting to verify OTP for phone: ${phone}`);
     const supabase = createClient();
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
@@ -25,8 +26,11 @@ export async function verifyOtpAction(phone: string, token: string) {
     });
 
     if (authError || !session) {
+        console.error(`[Action:verifyOtp] OTP verification failed. Error: ${authError?.message}`);
         return { error: 'کد تایید نامعتبر است یا منقضی شده.', isNewUser: false, redirectPath: null };
     }
+    
+    console.log(`[Action:verifyOtp] OTP successful. User ID: ${session.user.id}`);
     
     // Now check if a profile exists
     const { data: profile, error: profileError } = await supabase
@@ -36,10 +40,12 @@ export async function verifyOtpAction(phone: string, token: string) {
         .single();
     
     if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = "exact one row not found"
+        console.error(`[Action:verifyOtp] Profile check failed: ${profileError.message}`);
         return { error: 'خطا در بررسی پروفایل: ' + profileError.message, isNewUser: false, redirectPath: null };
     }
 
     const isNewUser = !profile || !profile.full_name;
+    console.log(`[Action:verifyOtp] Is new user? ${isNewUser}`);
 
     let redirectPath = '/';
     if(isNewUser) {
@@ -51,6 +57,7 @@ export async function verifyOtpAction(phone: string, token: string) {
       }
     }
     
+    console.log(`[Action:verifyOtp] Revalidating layout and redirecting to: ${redirectPath}`);
     // Revalidate all relevant paths after successful login
     revalidatePath('/', 'layout');
     return { error: null, isNewUser, redirectPath };
