@@ -1,11 +1,17 @@
+'use client';
+
+import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import Header from '@/components/layout/header';
-import Footer from '@/components/layout/footer';
-import SearchBar from '@/components/ui/search-bar';
-import { Toaster } from "@/components/ui/sonner";
-import { unstable_noStore as noStore } from 'next/cache';
+import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
+const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
+const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
+
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -13,21 +19,35 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'هنربانو',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
+
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
-  // 🔴 این خط کلیدی است
-  noStore();
+}>) {
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .catch(error => console.log('Service Worker registration failed:', error));
+    }
+  }, []);
 
   return (
     <html lang="fa" dir="rtl">
-      <head>
-        <title>بانوتیک</title>
-        <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
-        <meta name="theme-color" content="#A3BEA6" />
-        <link rel="manifest" href="/manifest.json" />
+       <head>
+          <title>هنربانو</title>
+          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
+          <link rel="manifest" href="/manifest.json" />
+          <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
         className={cn(
@@ -35,15 +55,17 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <div className="relative flex min-h-screen flex-col">
-          <Header />
-          <SearchBar />
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-            {children}
-          </main>
-          <Footer />
-        </div>
-        <Toaster />
+        
+          <div className="relative flex min-h-screen flex-col">
+            <Header />
+            <SearchBar />
+            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+              {children}
+            </main>
+            <Footer />
+          </div>
+          <Toaster />
+        
       </body>
     </html>
   );
