@@ -1,9 +1,10 @@
+import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
 
-// This file is simplified. All data now comes from Supabase.
-// The functions are now async as they fetch data from the database.
+// This file is for data fetching on the server.
+// The 'server-only' package prevents it from being imported into client components.
 
 type GetProvidersQuery = {
   categorySlug?: string;
@@ -58,7 +59,7 @@ export async function getProviders(query?: GetProvidersQuery): Promise<Provider[
     location: p.location ?? '',
     phone: p.phone,
     bio: p.bio ?? '',
-    categorySlug: p.category_slug ?? 'beauty',
+    categorySlug: p.category_slug as any ?? 'beauty',
     serviceSlug: p.service_slug ?? '',
     rating: p.rating ?? 0,
     reviewsCount: p.reviews_count ?? 0,
@@ -100,7 +101,7 @@ export async function getProviderByPhone(phone: string): Promise<(Provider & { p
     location: data.location ?? '',
     phone: data.phone,
     bio: data.bio ?? '',
-    categorySlug: data.category_slug ?? 'beauty',
+    categorySlug: data.category_slug as any ?? 'beauty',
     serviceSlug: data.service_slug ?? '',
     rating: data.rating ?? 0,
     reviewsCount: data.reviews_count ?? 0,

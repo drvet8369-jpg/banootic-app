@@ -1,10 +1,7 @@
-
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
-  // This approach is recommended by Supabase and ensures cookies are handled correctly.
-  // It creates a clean response object, lets Supabase client modify it, and then returns it.
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -20,7 +17,6 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          // The Supabase client will modify the response directly.
           request.cookies.set({
             name,
             value,
@@ -38,13 +34,12 @@ export async function updateSession(request: NextRequest) {
           });
         },
         remove(name: string, options: CookieOptions) {
-          // The Supabase client will modify the response directly.
           request.cookies.set({
             name,
             value: '',
             ...options,
           });
-           response = NextResponse.next({
+          response = NextResponse.next({
             request: {
               headers: request.headers,
             },
@@ -59,9 +54,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // This will refresh the session if it's expired.
   await supabase.auth.getUser();
 
-  // The response object has been modified by the Supabase client.
   return response;
 }
