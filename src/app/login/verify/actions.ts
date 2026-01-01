@@ -53,7 +53,6 @@ export async function verifyOtpAction(phone: string, token: string) {
     
     // Revalidate all relevant paths after successful login
     revalidatePath('/', 'layout');
-    revalidatePath('/profile', 'page');
     return { error: null, isNewUser, redirectPath };
 }
 
