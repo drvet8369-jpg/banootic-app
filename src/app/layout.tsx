@@ -1,17 +1,14 @@
 'use client';
 
-import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import dynamic from 'next/dynamic';
+import ClientProviders from '@/components/providers/client-providers';
+import Header from '@/components/layout/header';
+import SearchBar from '@/components/ui/search-bar';
+import Footer from '@/components/layout/footer';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import ClientUtils from '@/components/layout/client-utils';
-import ClientProviders from '@/components/providers/client-providers';
-
-const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
-const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
-const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
 
 
 const vazirmatn = Vazirmatn({
@@ -37,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>بانوتیک</title>
+          <title>هنربانو</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
