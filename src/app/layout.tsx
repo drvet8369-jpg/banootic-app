@@ -4,13 +4,14 @@ import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
+import ClientUtils from '@/components/layout/client-utils';
+import ClientProviders from '@/components/providers/client-providers';
 
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
 const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
 const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
-const Toaster = dynamic(() => import('@/components/ui/toaster').then(mod => mod.Toaster), { ssr: false });
 
 
 const vazirmatn = Vazirmatn({
@@ -33,18 +34,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .catch(error => console.log('Service Worker registration failed:', error));
-    }
-  }, []);
-
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>هنربانو</title>
+          <title>بانوتیک</title>
           <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
@@ -55,7 +48,7 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        
+        <ClientProviders>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
@@ -64,8 +57,9 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-          <Toaster />
-        
+          <SonnerToaster />
+          <ClientUtils />
+        </ClientProviders>
       </body>
     </html>
   );
