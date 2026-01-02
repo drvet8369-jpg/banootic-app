@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
+import type { Profile } from '@/lib/types';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Chat {
@@ -33,8 +34,8 @@ const getInitials = (name: string) => {
 
 export default function InboxPage() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<{account_type: string} | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | undefined>(undefined);
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function InboxPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if(session) {
           setUser(session.user);
-          const { data: profile } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single();
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
           setUserProfile(profile);
           setIsLoggedIn(true);
       } else {
@@ -59,9 +60,15 @@ export default function InboxPage() {
   }, []);
 
   useEffect(() => {
+    if (isLoggedIn === false) {
+        setIsLoading(false);
+        setChats([]);
+        return;
+    }
+    
     if (!user?.phone) {
-      if(isLoggedIn) setIsLoading(false);
-      return;
+        if(isLoggedIn) setIsLoading(false);
+        return;
     }
 
     setIsLoading(true);
@@ -105,7 +112,7 @@ export default function InboxPage() {
   }, [user?.phone, isLoggedIn]);
 
 
-  if (isLoading) {
+  if (isLoading || isLoggedIn === undefined) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

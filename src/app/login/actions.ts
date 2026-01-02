@@ -1,4 +1,3 @@
-
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -12,7 +11,7 @@ export async function requestOtp(formData: FormData) {
   const phone = formData.get('phone') as string;
 
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const normalizedPhone = normalizeForSupabaseAuth(phone);
 
     const { error } = await supabase.auth.signInWithOtp({

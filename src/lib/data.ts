@@ -20,6 +20,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     .from('providers')
     .select(`
       id,
+      profile_id,
       name,
       service,
       location,
@@ -52,9 +53,9 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     return [];
   }
 
-  // Map the data to the simplified Provider type
   return data.map(p => ({
     id: p.id,
+    profile_id: p.profile_id,
     name: p.name,
     service: p.service ?? '',
     location: p.location ?? '',
@@ -68,12 +69,11 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    // Portfolio is fetched separately to avoid large joins
     portfolio: [], 
   }));
 }
 
-export async function getProviderByPhone(phone: string): Promise<(Provider & { profile_id: string }) | null> {
+export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   noStore();
   const supabase = createClient();
   const { data, error } = await supabase
@@ -111,7 +111,7 @@ export async function getProviderByPhone(phone: string): Promise<(Provider & { p
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
     portfolio: data.portfolio_items.map((item: any) => ({
-      id: item.id, // Ensure id is passed for deletion
+      id: item.id,
       src: item.image_url,
       aiHint: item.ai_hint,
     })),

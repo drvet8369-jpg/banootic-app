@@ -1,4 +1,3 @@
-
 import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
@@ -16,12 +15,14 @@ export interface Service {
 }
 
 export interface PortfolioItem {
+  id: number;
   src: string;
   aiHint?: string;
 }
 
 export interface Provider {
   id: number;
+  profile_id: string;
   name: string;
   service: string; // The specific service they provide, e.g., "Manicure"
   location: string;
@@ -31,7 +32,7 @@ export interface Provider {
   serviceSlug: string; 
   rating: number;
   reviewsCount: number;
-  profileImage: PortfolioItem;
+  profileImage: { src: string; aiHint?: string; };
   portfolio: PortfolioItem[];
 }
 

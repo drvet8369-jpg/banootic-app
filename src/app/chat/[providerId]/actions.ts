@@ -1,6 +1,6 @@
 'use server';
 
-import { getProviders } from '@/lib/data';
+import { getProviderByPhone } from '@/lib/data';
 
 interface OtherPersonDetails {
   id: string | number;
@@ -16,9 +16,7 @@ interface OtherPersonDetails {
  * @returns {Promise<OtherPersonDetails | null>}
  */
 export async function getChatPartnerDetails(otherPersonIdOrProviderId: string): Promise<OtherPersonDetails | null> {
-  // Since getProviders now takes an object, we call it without arguments to get all providers.
-  const allProviders = await getProviders({});
-  const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+  const provider = await getProviderByPhone(otherPersonIdOrProviderId);
 
   if (provider) {
     return {

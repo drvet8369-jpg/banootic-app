@@ -1,4 +1,3 @@
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -14,13 +13,11 @@ interface AddReviewPayload {
 export async function addReviewAction(payload: AddReviewPayload) {
     const supabase = createClient();
 
-    // 1. Check for authenticated user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return { error: 'برای ثبت نظر باید وارد شوید.' };
     }
 
-    // 2. Get user's profile to get their name
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('full_name')
@@ -31,7 +28,6 @@ export async function addReviewAction(payload: AddReviewPayload) {
         return { error: 'پروفایل کاربری شما یافت نشد.' };
     }
 
-    // 3. Insert the new review
     const { error: reviewError } = await supabase.from('reviews').insert({
         provider_id: payload.providerId,
         user_id: user.id,
@@ -41,15 +37,12 @@ export async function addReviewAction(payload: AddReviewPayload) {
     });
 
     if (reviewError) {
-        // Handle cases where a user might try to review twice if you have a unique constraint
-        if (reviewError.code === '23505') {
+        if (reviewError.code === '23505') { // unique constraint violation
             return { error: 'شما قبلاً برای این هنرمند نظری ثبت کرده‌اید.' };
         }
         return { error: 'خطا در ثبت نظر: ' + reviewError.message };
     }
     
-    // 4. After inserting, recalculate and update the provider's average rating
-    // This is best done in a database function for performance, but we can do it here for simplicity.
     const { data: reviews, error: reviewsError } = await supabase
         .from('reviews')
         .select('rating')
@@ -58,7 +51,7 @@ export async function addReviewAction(payload: AddReviewPayload) {
     if (reviewsError) {
         console.error("Could not fetch reviews to update average rating:", reviewsError);
         revalidatePath(`/provider/[providerId]`, 'page');
-        return { error: null }; // Return success, but log the rating update issue
+        return { error: null };
     }
 
     const totalRating = reviews.reduce((acc, r) => acc + r.rating, 0);
@@ -74,9 +67,7 @@ export async function addReviewAction(payload: AddReviewPayload) {
         console.error("Failed to update provider's average rating:", updateError);
     }
     
-    // 5. Revalidate the path to show the new review instantly
     revalidatePath(`/provider/[providerId]`, 'page');
-
     return { error: null };
 }
 
@@ -85,7 +76,6 @@ export async function deletePortfolioItemAction(portfolioItemId: number) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'دسترسی غیرمجاز' };
 
-    // First, find the provider_id and image_url for this item
     const { data: item, error: itemError } = await supabase
         .from('portfolio_items')
         .select('provider_id, image_url, providers(phone)')
@@ -103,11 +93,9 @@ export async function deletePortfolioItemAction(portfolioItemId: number) {
     if (providerError || !provider) return { error: 'هنرمند یافت نشد.' };
     if (provider.profile_id !== user.id) return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.'};
     
-    // Delete from database
     const { error: dbError } = await supabase.from('portfolio_items').delete().eq('id', portfolioItemId);
     if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
 
-    // Delete from storage
     try {
         const adminSupabase = createAdminClient();
         const filePath = item.image_url.split('/images/')[1];
@@ -123,4 +111,3 @@ export async function deletePortfolioItemAction(portfolioItemId: number) {
     revalidatePath('/profile');
     return { error: null };
 }
-    

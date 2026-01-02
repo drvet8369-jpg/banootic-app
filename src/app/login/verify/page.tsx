@@ -234,13 +234,15 @@ function VerifyPageContent() {
 
   const handleRegistrationComplete = () => {
      setPageState('REDIRECTING');
+     // Redirect to profile after registration
+     setRedirectPath('/profile');
   };
 
   useEffect(() => {
     if (pageState === 'REDIRECTING') {
-      router.push(redirectPath);
-      // We use a timeout to give the toast message time to be seen before the page unloads
-      const timer = setTimeout(() => router.refresh(), 200); 
+      // Use a timeout to allow toast messages to be seen before navigation.
+      // router.refresh() is called to ensure the new auth state is picked up by server components.
+      const timer = setTimeout(() => router.push(redirectPath), 500); 
       return () => clearTimeout(timer);
     }
   }, [pageState, redirectPath, router]);

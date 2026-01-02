@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getChatPartnerDetails } from './actions';
+import type { Profile } from '@/lib/types';
 
 interface Message {
   id: string;
@@ -34,8 +35,8 @@ export default function ChatPage() {
   const otherPersonIdOrProviderId = params.providerId as string;
   
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<{full_name: string} | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean|undefined>(undefined);
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
@@ -55,7 +56,7 @@ export default function ChatPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if(session) {
         setUser(session.user);
-        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         setUserProfile(profile);
         setIsLoggedIn(true);
       } else {
@@ -85,7 +86,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     const loadChatData = async () => {
-        if (!isLoggedIn || !user || !user.phone) {
+        if (!user || !user.phone) {
             setIsLoading(false);
             return;
         }
@@ -94,7 +95,7 @@ export default function ChatPage() {
         const details = await getChatPartnerDetails(otherPersonIdOrProviderId);
         
         if (!details) {
-            toast.error("خطا", { description: "اطلاعات کاربر یا هنرمند یافت نشد." });
+            toast.error("اطلاعات کاربر یا هنرمند یافت نشد.");
             setIsLoading(false);
             return;
         }
@@ -122,17 +123,16 @@ export default function ChatPage() {
         setIsLoading(false);
     }
     
-    // We wait for the user to be loaded before fetching chat data
-    if (isLoggedIn) {
-      loadChatData();
-    } else if (isLoggedIn === false) { // Explicitly check for false to handle initial state
-      setIsLoading(false);
+    if(isLoggedIn === true) {
+        loadChatData();
+    } else if (isLoggedIn === false) {
+        setIsLoading(false);
     }
 
   }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId]);
 
 
-  if (!isLoggedIn) {
+  if (isLoggedIn === false) {
     return (
         <div className="flex flex-col items-center justify-center text-center py-20">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
@@ -145,7 +145,7 @@ export default function ChatPage() {
     );
   }
   
-  if (isLoading) {
+  if (isLoading || isLoggedIn === undefined) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -245,11 +245,11 @@ export default function ChatPage() {
 
             allChats[chatId] = currentChat;
             
-            localStorage.setItem(`chat_${chatId}`, JSON.stringify(allChats));
+            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
-            toast.error("خطا", { description: "پیام شما در حافظه موقت ذخیره نشد."});
+            toast.error("پیام شما در حافظه موقت ذخیره نشد.");
         }
     }
    
@@ -259,7 +259,7 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    // For customers, check if they have any chats, if so link to inbox, otherwise home.
+    if (userProfile?.account_type === 'provider') return '/inbox';
     try {
       if (user?.phone) {
         const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');

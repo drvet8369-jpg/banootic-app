@@ -3,10 +3,10 @@ import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/server';
 import { getProviderByPhone, getReviewsForProvider } from '@/lib/data';
-import type { Review } from '@/lib/types';
+import type { Review, Provider } from '@/lib/types';
 
 import { cn } from "@/lib/utils";
-import { MessageSquare, Phone, User, Trash2 } from 'lucide-react';
+import { MessageSquare, Phone, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';

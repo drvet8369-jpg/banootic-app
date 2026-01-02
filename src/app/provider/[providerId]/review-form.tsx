@@ -1,4 +1,3 @@
-
 'use client';
 
 import { FormEvent, useState } from 'react';
@@ -40,7 +39,7 @@ export function ReviewForm({ providerId, user }: ReviewFormProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
-      toast.error("خطا", { description: "لطفاً امتیاز و متن نظر را وارد کنید." });
+      toast.error("لطفاً امتیاز و متن نظر را وارد کنید.");
       return;
     }
     setIsSubmitting(true);
@@ -108,5 +107,3 @@ export function ReviewForm({ providerId, user }: ReviewFormProps) {
     </Card>
   );
 };
-
-    

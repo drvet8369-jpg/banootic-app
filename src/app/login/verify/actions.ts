@@ -1,10 +1,10 @@
-
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
 import { categories } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
+import { redirect } from 'next/navigation';
 
 type RegistrationFormValues = {
   name: string;
@@ -35,7 +35,7 @@ export async function verifyOtpAction(phone: string, token: string) {
     // Now check if a profile exists
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, account_type')
         .eq('id', session.user.id)
         .single();
     
@@ -51,14 +51,12 @@ export async function verifyOtpAction(phone: string, token: string) {
     if(isNewUser) {
       redirectPath = `/login/verify?phone=${phone}`; // Stay on the same page to show registration form
     } else {
-      const {data: providerProfile} = await supabase.from('providers').select('id').eq('profile_id', session.user.id).single();
-      if(providerProfile) {
+      if(profile.account_type === 'provider') {
         redirectPath = '/profile';
       }
     }
     
-    console.log(`[Action:verifyOtp] Revalidating layout and redirecting to: ${redirectPath}`);
-    // Revalidate all relevant paths after successful login
+    console.log(`[Action:verifyOtp] Revalidating layout and setting redirect path to: ${redirectPath}`);
     revalidatePath('/', 'layout');
     return { error: null, isNewUser, redirectPath };
 }
@@ -79,7 +77,8 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
     full_name: values.name,
     phone: user.phone,
     account_type: values.accountType,
-  });
+    updated_at: new Date().toISOString(),
+  }).select().single();
 
   if (profileError) {
     return { error: 'خطا در ساخت/به‌روزرسانی پروفایل: ' + profileError.message };
@@ -108,7 +107,6 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
     }
   }
 
-  // Revalidate all relevant paths after registration
   revalidatePath('/', 'layout');
   revalidatePath('/profile', 'page');
   return { error: null };

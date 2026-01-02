@@ -1,24 +1,20 @@
-# Firebase Studio
+# بانوتیک
 
-This is a NextJS starter in Firebase Studio.
+This is a Next.js project bootstrapped with Firebase Studio, showcasing a local services marketplace for women artisans. It uses Supabase for authentication and database management.
 
-## Manual Database Setup Instructions
+## Getting Started
 
-To set up or reset the database from scratch, please follow these steps carefully. This process ensures a clean and correct database structure.
+First, ensure you have set up your Supabase project and configured the necessary environment variables in a `.env.local` file:
 
-**Step 1: Run the Cleanup Script**
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase project's anonymous public key.
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase project's service role key (for admin tasks).
+- `KAVENEGAR_API_KEY`: Your Kavenegar API key for sending OTPs.
 
-1.  Go to your Supabase project dashboard.
-2.  Navigate to the **SQL Editor**.
-3.  Copy the entire content of the `supabase/cleanup.sql` file from your project.
-4.  Paste the content into the SQL Editor.
-5.  Click **"Run"**. This will delete any old tables and prepare the database for a fresh start. You might see some "does not exist" notices, which are normal.
+Then, run the development server:
 
-**Step 2: Run the Main Schema Script**
+```bash
+npm run dev
+```
 
-1.  After the cleanup is complete, clear the SQL Editor.
-2.  Copy the entire content of the `supabase/schema.sql` file.
-3.  Paste this new content into the SQL Editor.
-4.  Click **"Run"** again.
-
-This will set up all the necessary tables, relationships, and **security policies** correctly. Your database should now be ready to use.
+Open [http://localhost:9005](http://localhost:9005) with your browser to see the result.

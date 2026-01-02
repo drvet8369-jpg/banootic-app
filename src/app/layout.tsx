@@ -1,15 +1,12 @@
-'use client';
-
+import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import ClientProviders from '@/components/providers/client-providers';
 import Header from '@/components/layout/header';
 import SearchBar from '@/components/ui/search-bar';
-import Footer from '@/components/layout/footer';
+import Footer from '@/components/ui/footer';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
-import ClientUtils from '@/components/layout/client-utils';
-
+import ClientProviders from '@/components/providers/client-providers';
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -17,13 +14,11 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-// This can't be a dynamic export in a client component, 
-// so we define it statically here.
-// export const metadata: Metadata = {
-//   title: 'هنربانو',
-//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
-//   manifest: '/manifest.json',
-// };
+export const metadata: Metadata = {
+  title: 'بانوتیک',
+  description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+  manifest: '/manifest.json',
+};
 
 export default function RootLayout({
   children,
@@ -34,9 +29,6 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
        <head>
-          <title>هنربانو</title>
-          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
-          <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
@@ -55,7 +47,6 @@ export default function RootLayout({
             <Footer />
           </div>
           <SonnerToaster />
-          <ClientUtils />
         </ClientProviders>
       </body>
     </html>

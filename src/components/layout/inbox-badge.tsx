@@ -1,31 +1,19 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface InboxBadgeProps {
   isMenu?: boolean;
+  userPhone: string | null;
 }
 
-export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
-  const supabase = createClient();
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+export function InboxBadge({ isMenu = false, userPhone }: InboxBadgeProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    }
-    getUser();
-  }, [supabase]);
-
-  useEffect(() => {
-    if (!user?.phone) {
+    if (!userPhone) {
       setUnreadCount(0);
       return;
     }
@@ -34,22 +22,19 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
       try {
         const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
         const totalUnread = Object.values(allChatsData)
-          .filter((chat: any) => chat.members?.includes(user.phone))
+          .filter((chat: any) => chat.members?.includes(userPhone))
           .reduce((acc: number, chat: any) => {
-            const selfInfo = chat.participants?.[user.phone];
+            const selfInfo = chat.participants?.[userPhone];
             return acc + (selfInfo?.unreadCount || 0);
           }, 0);
         setUnreadCount(totalUnread);
       } catch (e) {
-        // Silently fail if localStorage is not available or corrupted
         setUnreadCount(0);
       }
     };
 
-    // Initial check
     checkUnread();
 
-    // Listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
         if (event.key === 'inbox_chats') {
             checkUnread();
@@ -57,10 +42,8 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Also check on focus for changes within the same tab
     window.addEventListener('focus', checkUnread);
 
-    // Set up an interval as a fallback
     const intervalId = setInterval(checkUnread, 5000); 
 
     return () => {
@@ -68,7 +51,7 @@ export function InboxBadge({ isMenu = false }: InboxBadgeProps) {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', checkUnread);
     };
-  }, [user?.phone]);
+  }, [userPhone]);
 
   if (unreadCount === 0) {
     return null;

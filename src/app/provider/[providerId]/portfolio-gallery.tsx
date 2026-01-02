@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -17,13 +16,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2, X } from 'lucide-react';
 import { deletePortfolioItemAction } from './actions';
+import type { Provider } from '@/lib/types';
 
 interface PortfolioGalleryProps {
     isOwner: boolean;
-    provider: {
-        phone: string;
-        portfolio_items: { id: number; image_url: string; ai_hint: string | null; }[]
-    };
+    provider: Provider;
 }
 
 export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
@@ -45,7 +42,7 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
         }
     };
     
-    if (!provider.portfolio_items || provider.portfolio_items.length === 0) {
+    if (!provider.portfolio || provider.portfolio.length === 0) {
         return (
             <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
                 <p>هنوز نمونه کاری اضافه نشده است.</p>
@@ -56,18 +53,18 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
     return (
         <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedImage(null)}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {provider.portfolio_items.map((item, index) => (
+                {provider.portfolio.map((item, index) => (
                     <DialogTrigger asChild key={item.id}>
                         <div 
                             className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
-                            onClick={() => setSelectedImage(item.image_url)}
+                            onClick={() => setSelectedImage(item.src)}
                         >
                             <Image
-                                src={item.image_url}
+                                src={item.src}
                                 alt={`نمونه کار ${index + 1}`}
                                 fill
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                data-ai-hint={item.ai_hint || ''}
+                                data-ai-hint={item.aiHint || ''}
                             />
                             {isOwner && (
                             <Button
