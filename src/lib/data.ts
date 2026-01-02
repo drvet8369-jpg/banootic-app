@@ -111,7 +111,7 @@ export async function getProviderByPhone(phone: string): Promise<(Provider & { p
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
     portfolio: data.portfolio_items.map((item: any) => ({
-      id: item.id,
+      id: item.id, // Ensure id is passed for deletion
       src: item.image_url,
       aiHint: item.ai_hint,
     })),

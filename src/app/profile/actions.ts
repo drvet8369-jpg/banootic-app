@@ -16,7 +16,7 @@ async function verifyProviderOwnership(providerId: number) {
 
     const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('profile_id')
+        .select('profile_id, phone')
         .eq('id', providerId)
         .single();
     
@@ -28,7 +28,7 @@ async function verifyProviderOwnership(providerId: number) {
         return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.' };
     }
 
-    return { user, error: null };
+    return { user, provider, error: null };
 }
 
 export async function updateProviderInfoAction(providerId: number, values: { name: string; service: string; bio: string; }) {
@@ -60,7 +60,7 @@ export async function updateProviderInfoAction(providerId: number, values: { nam
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.user.phone}`);
+    revalidatePath(`/provider/${ownership.provider.phone}`);
     return { error: null };
 }
 
@@ -98,39 +98,7 @@ export async function addPortfolioItemAction(providerId: number, base64ImageData
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.user.phone}`);
-    return { error: null };
-}
-
-export async function deletePortfolioItemAction(portfolioItemId: number) {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'دسترسی غیرمجاز' };
-
-    // First, find the provider_id and image_url for this item
-    const { data: item, error: itemError } = await supabase
-        .from('portfolio_items')
-        .select('provider_id, image_url')
-        .eq('id', portfolioItemId)
-        .single();
-
-    if (itemError || !item) return { error: 'نمونه کار یافت نشد.' };
-
-    const ownership = await verifyProviderOwnership(item.provider_id);
-    if (ownership.error) return ownership;
-    
-    // Delete from database
-    const { error: dbError } = await supabase.from('portfolio_items').delete().eq('id', portfolioItemId);
-    if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
-
-    // Delete from storage
-    const adminSupabase = createAdminClient();
-    const filePath = item.image_url.split('/images/')[1];
-    const { error: storageError } = await adminSupabase.storage.from('images').remove([filePath]);
-    if(storageError) console.warn("Could not delete from storage: " + storageError.message);
-
-
-    revalidatePath(`/provider/${ownership.user.phone}`);
+    revalidatePath(`/provider/${ownership.provider.phone}`);
     return { error: null };
 }
 
@@ -164,7 +132,7 @@ export async function updateProviderProfileImageAction(providerId: number, base6
     if(dbError) return { error: 'خطا در به‌روزرسانی پروفایل: ' + dbError.message };
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.user.phone}`);
+    revalidatePath(`/provider/${ownership.provider.phone}`);
     return { error: null };
 }
 
@@ -183,8 +151,6 @@ export async function deleteProviderProfileImageAction(providerId: number) {
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.user.phone}`);
+    revalidatePath(`/provider/${ownership.provider.phone}`);
     return { error: null };
 }
-
-    

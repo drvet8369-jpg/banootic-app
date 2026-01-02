@@ -3,6 +3,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 interface AddReviewPayload {
     providerId: number;
@@ -79,4 +80,47 @@ export async function addReviewAction(payload: AddReviewPayload) {
     return { error: null };
 }
 
+export async function deletePortfolioItemAction(portfolioItemId: number) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'دسترسی غیرمجاز' };
+
+    // First, find the provider_id and image_url for this item
+    const { data: item, error: itemError } = await supabase
+        .from('portfolio_items')
+        .select('provider_id, image_url, providers(phone)')
+        .eq('id', portfolioItemId)
+        .single();
+
+    if (itemError || !item || !item.providers) return { error: 'نمونه کار یافت نشد.' };
+
+    const { data: provider, error: providerError } = await supabase
+        .from('providers')
+        .select('profile_id')
+        .eq('id', item.provider_id)
+        .single();
+    
+    if (providerError || !provider) return { error: 'هنرمند یافت نشد.' };
+    if (provider.profile_id !== user.id) return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.'};
+    
+    // Delete from database
+    const { error: dbError } = await supabase.from('portfolio_items').delete().eq('id', portfolioItemId);
+    if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
+
+    // Delete from storage
+    try {
+        const adminSupabase = createAdminClient();
+        const filePath = item.image_url.split('/images/')[1];
+        if(filePath) {
+            const { error: storageError } = await adminSupabase.storage.from('images').remove([filePath]);
+            if(storageError) console.warn("Could not delete from storage: " + storageError.message);
+        }
+    } catch(e: any) {
+        console.warn("Could not create admin client to delete from storage: " + e.message);
+    }
+
+    revalidatePath(`/provider/${item.providers.phone}`);
+    revalidatePath('/profile');
+    return { error: null };
+}
     

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button';
 import { Trash2, X } from 'lucide-react';
-import { deletePortfolioItemAction } from '../profile/actions';
+import { deletePortfolioItemAction } from './actions';
 
 interface PortfolioGalleryProps {
     isOwner: boolean;
@@ -107,6 +107,3 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
         </Dialog>
     );
 }
-
-
-    
