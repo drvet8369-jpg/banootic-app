@@ -33,8 +33,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { categories } from '@/lib/constants';
+import { categories, services } from '@/lib/constants';
 import { completeRegistrationAction, verifyOtpAction } from './actions';
+import type { Service } from '@/lib/types';
 
 // --- Schemas ---
 
@@ -45,12 +46,16 @@ const OTPSchema = z.object({
 const RegistrationSchema = z.object({
   name: z.string().min(2, { message: 'نام باید حداقل ۲ حرف داشته باشد.' }),
   accountType: z.enum(['customer', 'provider'], { required_error: 'لطفاً نوع حساب کاربری خود را انتخاب کنید.' }),
-  serviceType: z.string().optional(),
+  serviceType: z.string().optional(), // This is the category slug
+  serviceSlug: z.string().optional(), // This is the specific service slug
   bio: z.string().optional(),
   location: z.string().optional(),
 }).refine(data => data.accountType === 'provider' ? !!data.serviceType : true, {
-  message: 'لطفاً نوع خدمات را انتخاب کنید.',
+  message: 'لطفاً دسته‌بندی خدمات را انتخاب کنید.',
   path: ['serviceType'],
+}).refine(data => data.accountType === 'provider' ? !!data.serviceSlug : true, {
+    message: 'لطفاً خدمت تخصصی خود را انتخاب کنید.',
+    path: ['serviceSlug'],
 }).refine(data => data.accountType === 'provider' ? (data.bio && data.bio.length >= 10) : true, {
   message: 'بیوگرافی باید حداقل ۱۰ کاراکتر باشد.',
   path: ['bio'],
@@ -65,11 +70,28 @@ type RegistrationFormValues = z.infer<typeof RegistrationSchema>;
 
 function RegistrationForm({ onComplete }: { onComplete: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [subServices, setSubServices] = useState<Service[]>([]);
+  
   const form = useForm<RegistrationFormValues>({
     resolver: zodResolver(RegistrationSchema),
     defaultValues: { name: '', accountType: 'customer', bio: '', location: 'ارومیه' },
   });
+  
   const accountType = form.watch('accountType');
+  const serviceType = form.watch('serviceType');
+
+  useEffect(() => {
+    if (serviceType) {
+        const category = categories.find(c => c.slug === serviceType);
+        if (category) {
+            const relatedServices = services.filter(s => s.category_id === category.id);
+            setSubServices(relatedServices);
+            form.setValue('serviceSlug', undefined); // Reset sub-service on category change
+        }
+    } else {
+        setSubServices([]);
+    }
+  }, [serviceType, form]);
 
   async function onSubmit(values: RegistrationFormValues) {
     setIsLoading(true);
@@ -119,7 +141,7 @@ function RegistrationForm({ onComplete }: { onComplete: () => void }) {
               <>
                 <FormField control={form.control} name="serviceType" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>نوع خدمات</FormLabel>
+                    <FormLabel>دسته‌بندی خدمات</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                       <FormControl><SelectTrigger><SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" /></SelectTrigger></FormControl>
                       <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}</SelectContent>
@@ -127,10 +149,24 @@ function RegistrationForm({ onComplete }: { onComplete: () => void }) {
                     <FormMessage />
                   </FormItem>
                 )} />
+
+                {subServices.length > 0 && (
+                    <FormField control={form.control} name="serviceSlug" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>خدمت تخصصی</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="خدمت تخصصی خود را انتخاب کنید" /></SelectTrigger></FormControl>
+                                <SelectContent>{subServices.map((s) => <SelectItem key={s.id} value={s.slug}>{s.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                )}
+
                 <FormField control={form.control} name="location" render={({ field }) => (
                     <FormItem>
                         <FormLabel>شهر</FormLabel>
-                        <FormControl><Input placeholder="مثال: ارومیه" {...field} disabled={isLoading} /></FormControl>
+                        <FormControl><Input placeholder="مثال: ارومیه" {...field} disabled /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )} />
@@ -242,7 +278,10 @@ function VerifyPageContent() {
     if (pageState === 'REDIRECTING') {
       // Use a timeout to allow toast messages to be seen before navigation.
       // router.refresh() is called to ensure the new auth state is picked up by server components.
-      const timer = setTimeout(() => router.push(redirectPath), 500); 
+      const timer = setTimeout(() => {
+        router.push(redirectPath);
+        router.refresh();
+      }, 500); 
       return () => clearTimeout(timer);
     }
   }, [pageState, redirectPath, router]);

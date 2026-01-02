@@ -58,5 +58,4 @@ export type Profile = {
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
-  updated_at: string | null;
 };

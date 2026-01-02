@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { categories } from '@/lib/constants';
+import { categories, services } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
 import { normalizeForSupabaseAuth } from '@/lib/utils';
 import { redirect } from 'next/navigation';
@@ -9,7 +9,8 @@ import { redirect } from 'next/navigation';
 type RegistrationFormValues = {
   name: string;
   accountType: 'customer' | 'provider';
-  serviceType?: string;
+  serviceType?: string; // category slug
+  serviceSlug?: string; // specific service slug
   bio?: string;
   location?: string;
 };
@@ -77,7 +78,6 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
     full_name: values.name,
     phone: user.phone,
     account_type: values.accountType,
-    updated_at: new Date().toISOString(),
   }).select().single();
 
   if (profileError) {
@@ -85,10 +85,10 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
   }
 
   if (values.accountType === 'provider') {
-    if (!values.serviceType || !values.bio || !values.location) {
+    if (!values.serviceType || !values.serviceSlug || !values.bio || !values.location) {
       return { error: 'اطلاعات هنرمند ناقص است.' };
     }
-    const category = categories.find(c => c.slug === values.serviceType);
+    const selectedService = services.find(s => s.slug === values.serviceSlug);
 
     const { error: providerError } = await supabase.from('providers').upsert({
       profile_id: user.id,
@@ -96,8 +96,9 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
       location: values.location,
       bio: values.bio,
       phone: user.phone!,
-      service: category?.name || 'خدمات عمومی',
+      service: selectedService?.name || 'خدمات عمومی',
       category_slug: values.serviceType,
+      service_slug: values.serviceSlug,
       rating: 0,
       reviews_count: 0,
     }, { onConflict: 'profile_id' });
