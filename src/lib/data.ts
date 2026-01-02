@@ -12,7 +12,7 @@ type GetProvidersQuery = {
   searchQuery?: string;
 }
 
-export async function getProviders(query?: GetProvidersQuery): Promise<Provider[]> {
+export async function getProviders(query: GetProvidersQuery): Promise<Provider[]> {
   noStore();
   const supabase = createClient();
   
@@ -32,15 +32,16 @@ export async function getProviders(query?: GetProvidersQuery): Promise<Provider[
       profile_image
     `);
 
-  if (query?.categorySlug) {
+  if (query.categorySlug) {
     queryBuilder = queryBuilder.eq('category_slug', query.categorySlug);
   }
-  if (query?.serviceSlug) {
+  if (query.serviceSlug) {
     queryBuilder = queryBuilder.eq('service_slug', query.serviceSlug);
   }
-  if (query?.searchQuery) {
+  if (query.searchQuery) {
+    const searchQuery = query.searchQuery;
     queryBuilder = queryBuilder.or(
-      `name.ilike.%${query.searchQuery}%,bio.ilike.%${query.searchQuery}%,service.ilike.%${query.searchQuery}%`
+      `name.ilike.%${searchQuery}%,bio.ilike.%${searchQuery}%,service.ilike.%${searchQuery}%`
     );
   }
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,9 +9,9 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { Provider } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { getChatPartnerDetails } from './actions';
 
 interface Message {
   id: string;
@@ -91,17 +90,8 @@ export default function ChatPage() {
             return;
         }
 
-        let details: OtherPersonDetails | null = null;
-        // The data fetching is async now
-        const allProviders = await getProviders();
-        const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
-        
-        if (provider) {
-          details = provider;
-        } else {
-          const customerPhone = otherPersonIdOrProviderId;
-          details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
-        }
+        // Use the Server Action to get details
+        const details = await getChatPartnerDetails(otherPersonIdOrProviderId);
         
         if (!details) {
             toast.error("خطا", { description: "اطلاعات کاربر یا هنرمند یافت نشد." });
@@ -133,8 +123,10 @@ export default function ChatPage() {
     }
     
     // We wait for the user to be loaded before fetching chat data
-    if (user !== null) {
+    if (isLoggedIn) {
       loadChatData();
+    } else if (isLoggedIn === false) { // Explicitly check for false to handle initial state
+      setIsLoading(false);
     }
 
   }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId]);
@@ -253,7 +245,7 @@ export default function ChatPage() {
 
             allChats[chatId] = currentChat;
             
-            localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
+            localStorage.setItem(`chat_${chatId}`, JSON.stringify(allChats));
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
