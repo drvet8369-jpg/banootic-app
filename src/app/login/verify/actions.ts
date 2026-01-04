@@ -91,7 +91,7 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
     const selectedService = services.find(s => s.slug === values.serviceSlug);
 
     const { error: providerError } = await supabase.from('providers').upsert({
-      profile_id: user.id,
+      profile_id: user.id, // FIX: Explicitly set profile_id to connect the tables
       name: values.name,
       location: values.location,
       bio: values.bio,
