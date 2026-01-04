@@ -73,25 +73,29 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
 
   const { user } = session;
 
+  // Step 1: Create or update the main user profile.
   const { error: profileError } = await supabase.from('profiles').upsert({
     id: user.id,
     full_name: values.name,
     phone: user.phone,
     account_type: values.accountType,
-  }).select().single();
+  }, { onConflict: 'id' }).select().single();
 
   if (profileError) {
+    console.error('Error creating/updating profile:', profileError);
     return { error: 'خطا در ساخت/به‌روزرسانی پروفایل: ' + profileError.message };
   }
 
+  // Step 2: If the user is a provider, create their provider-specific profile.
   if (values.accountType === 'provider') {
     if (!values.serviceType || !values.serviceSlug || !values.bio || !values.location) {
-      return { error: 'اطلاعات هنرمند ناقص است.' };
+      return { error: 'اطلاعات هنرمند ناقص است. تمام فیلدها باید پر شوند.' };
     }
     const selectedService = services.find(s => s.slug === values.serviceSlug);
 
-    const { error: providerError } = await supabase.from('providers').upsert({
-      profile_id: user.id, // FIX: Explicitly set profile_id to connect the tables
+    // Use .insert() to create a new provider record linked to the profile.
+    const { error: providerError } = await supabase.from('providers').insert({
+      profile_id: user.id, // This is the crucial link to the profiles table.
       name: values.name,
       location: values.location,
       bio: values.bio,
@@ -101,10 +105,11 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
       service_slug: values.serviceSlug,
       rating: 0,
       reviews_count: 0,
-    }, { onConflict: 'profile_id' });
+    });
 
     if (providerError) {
-      return { error: 'خطا در ساخت پروفایل هنرمند: ' + providerError.message };
+        console.error('Error creating provider profile:', providerError);
+        return { error: 'خطا در ساخت پروفایل هنرمند: ' + providerError.message };
     }
   }
 
