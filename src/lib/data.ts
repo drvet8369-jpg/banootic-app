@@ -1,3 +1,4 @@
+
 import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
@@ -16,7 +17,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   noStore();
   const supabase = createClient();
   
-  // The portfolio is now part of the providers table, no need for a relational query here.
+  // This query now joins providers with profiles to get the portfolio data.
   let queryBuilder = supabase
     .from('providers')
     .select(`
@@ -32,7 +33,9 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
       rating,
       reviews_count,
       profile_image,
-      portfolio
+      profiles (
+        portfolio
+      )
     `);
 
   if (query.categorySlug) {
@@ -51,7 +54,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   const { data, error } = await queryBuilder;
 
   if (error) {
-    console.error('Error fetching providers:', error);
+    console.error('Error fetching providers with profiles:', error);
     return [];
   }
 
@@ -71,18 +74,23 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    // Ensure portfolio is always an array
-    portfolio: Array.isArray(p.portfolio) ? p.portfolio : [], 
+    // Portfolio now comes from the joined profiles table
+    portfolio: Array.isArray((p.profiles as any)?.portfolio) ? (p.profiles as any).portfolio : [],
   }));
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   noStore();
   const supabase = createClient();
-  // Simplified query, portfolio is now a direct column.
+
   const { data, error } = await supabase
     .from('providers')
-    .select(`*`)
+    .select(`
+        *,
+        profiles (
+            portfolio
+        )
+    `)
     .eq('phone', phone)
     .single();
 
@@ -107,8 +115,8 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         src: data.profile_image?.src || '',
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
-    // Ensure portfolio is always an array
-    portfolio: Array.isArray(data.portfolio) ? data.portfolio : [],
+    // Portfolio now comes from the joined profiles table
+    portfolio: Array.isArray((data.profiles as any)?.portfolio) ? (data.profiles as any).portfolio : [],
   };
 }
 

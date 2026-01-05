@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
@@ -57,4 +58,5 @@ export type Profile = {
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
+  portfolio: PortfolioItem[] | null;
 };

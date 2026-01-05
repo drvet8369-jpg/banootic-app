@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,12 +28,12 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
     const router = useRouter();
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-    const handleDelete = async (e: React.MouseEvent, itemIndex: number) => {
+    const handleDelete = async (e: React.MouseEvent, itemSrc: string) => {
         e.stopPropagation();
         if(!confirm("آیا از حذف این نمونه کار مطمئن هستید؟")) return;
 
         toast.loading("در حال حذف نمونه کار...");
-        const result = await deletePortfolioItemAction(provider.id, itemIndex);
+        const result = await deletePortfolioItemAction(itemSrc);
         toast.dismiss();
         if(result.error) {
             toast.error("خطا در حذف", { description: result.error });
@@ -71,7 +72,7 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
                                 variant="destructive"
                                 size="icon"
                                 className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                onClick={(e) => handleDelete(e, index)}
+                                onClick={(e) => handleDelete(e, item.src)}
                                 aria-label={`حذف نمونه کار ${index + 1}`}
                             >
                                 <Trash2 className="w-4 h-4" />

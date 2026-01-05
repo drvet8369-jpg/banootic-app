@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -71,31 +72,29 @@ export async function addReviewAction(payload: AddReviewPayload) {
     return { error: null };
 }
 
-export async function deletePortfolioItemAction(providerId: number, itemIndex: number) {
+export async function deletePortfolioItemAction(itemSrc: string) {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'دسترسی غیرمجاز' };
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return { error: 'دسترسی غیرمجاز' };
 
-    const { data: provider, error: providerError } = await supabase
-        .from('providers')
-        .select('profile_id, phone, portfolio')
-        .eq('id', providerId)
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('portfolio')
+        .eq('id', user.id)
         .single();
-    
-    if (providerError || !provider) return { error: 'هنرمند یافت نشد.' };
-    if (provider.profile_id !== user.id) return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.'};
-    
-    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
+
+    if (profileError || !profile) return { error: 'پروفایل کاربر یافت نشد.' };
+
+    const currentPortfolio = Array.isArray(profile.portfolio) ? profile.portfolio : [];
     
     // Find the item to delete to also remove from storage
-    const itemToDelete = currentPortfolio[itemIndex];
-
-    const updatedPortfolio = currentPortfolio.filter((_, index) => index !== itemIndex);
+    const itemToDelete = currentPortfolio.find(item => item.src === itemSrc);
+    const updatedPortfolio = currentPortfolio.filter(item => item.src !== itemSrc);
 
     const { error: dbError } = await supabase
-        .from('providers')
+        .from('profiles')
         .update({ portfolio: updatedPortfolio })
-        .eq('id', providerId);
+        .eq('id', user.id);
         
     if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
 
@@ -113,8 +112,10 @@ export async function deletePortfolioItemAction(providerId: number, itemIndex: n
       }
     }
 
-
-    revalidatePath(`/provider/${provider.phone}`);
+    const {data: provider} = await supabase.from('providers').select('phone').eq('profile_id', user.id).single();
+    if(provider?.phone) {
+        revalidatePath(`/provider/${provider.phone}`);
+    }
     revalidatePath('/profile');
     return { error: null };
 }
