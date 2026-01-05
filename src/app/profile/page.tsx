@@ -14,9 +14,8 @@ export default async function ProfilePage() {
     if (!user) {
         redirect('/login');
     }
-
-    // Since a provider profile is tied to a user profile, we can fetch it this way.
-    // Step 1: Fetch the core provider info. This is a simpler, more reliable query.
+    
+    // Simplified query to only fetch from the 'providers' table
     const { data: providerInfo, error: providerError } = await supabase
         .from('providers')
         .select('*')
@@ -26,10 +25,7 @@ export default async function ProfilePage() {
     // Log the specific error to the server console for easier debugging
     if (providerError) {
         console.error("Supabase error fetching provider profile:", providerError);
-    }
-    
-    // This happens if the user is a customer, or if there's a data loading error.
-    if (!providerInfo) {
+        // This handles the case where the user is a customer and has no provider profile
         const { data: profile } = await supabase.from('profiles').select('account_type').eq('id', user.id).single();
         if (profile?.account_type === 'customer') {
              return (
@@ -45,20 +41,16 @@ export default async function ProfilePage() {
                 </div>
             );
         }
-        return <div>خطا در بارگذاری اطلاعات پروفایل. لطفا با پشتیبانی تماس بگیرید.</div>;
+        return <div>خطا در بارگذاری اطلاعات پروفایل. لطفا با پشتیبانی تماس بگیرید. جزئیات: {providerError.message}</div>;
+    }
+    
+    if (!providerInfo) {
+        return <div>اطلاعات پروفایل هنرمند یافت نشد.</div>
     }
 
-    // Step 2: If provider info was found, fetch their portfolio items separately.
-    const { data: portfolioItems, error: portfolioError } = await supabase
-        .from('portfolio_items')
-        .select('id, image_url, ai_hint')
-        .eq('provider_id', providerInfo.id);
+    // The portfolio is now a JSON column, so we directly use it.
+    const portfolioItems = Array.isArray(providerInfo.portfolio) ? providerInfo.portfolio : [];
 
-    if(portfolioError) {
-        console.error("Supabase error fetching portfolio items:", portfolioError);
-    }
-
-    // Step 3: Combine the data into the final object for the client component.
     const fullProviderData: Provider = {
         id: providerInfo.id,
         profile_id: providerInfo.profile_id,
@@ -75,11 +67,7 @@ export default async function ProfilePage() {
             src: providerInfo.profile_image?.src ?? '',
             aiHint: providerInfo.profile_image?.aiHint ?? 'woman portrait'
         },
-        portfolio: (portfolioItems || []).map((item: any) => ({
-            id: item.id,
-            src: item.image_url,
-            aiHint: item.ai_hint ?? 'new work'
-        }))
+        portfolio: portfolioItems
     }
 
     return <ProfileClientContent providerData={fullProviderData} />;

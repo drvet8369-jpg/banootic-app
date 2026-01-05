@@ -16,6 +16,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   noStore();
   const supabase = createClient();
   
+  // The portfolio is now part of the providers table, no need for a relational query here.
   let queryBuilder = supabase
     .from('providers')
     .select(`
@@ -30,7 +31,8 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
       service_slug,
       rating,
       reviews_count,
-      profile_image
+      profile_image,
+      portfolio
     `);
 
   if (query.categorySlug) {
@@ -69,23 +71,18 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    portfolio: [], 
+    // Ensure portfolio is always an array
+    portfolio: Array.isArray(p.portfolio) ? p.portfolio : [], 
   }));
 }
 
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
   noStore();
   const supabase = createClient();
+  // Simplified query, portfolio is now a direct column.
   const { data, error } = await supabase
     .from('providers')
-    .select(`
-      *,
-      portfolio_items (
-        id,
-        image_url,
-        ai_hint
-      )
-    `)
+    .select(`*`)
     .eq('phone', phone)
     .single();
 
@@ -110,11 +107,8 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         src: data.profile_image?.src || '',
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
-    portfolio: data.portfolio_items.map((item: any) => ({
-      id: item.id,
-      src: item.image_url,
-      aiHint: item.ai_hint,
-    })),
+    // Ensure portfolio is always an array
+    portfolio: Array.isArray(data.portfolio) ? data.portfolio : [],
   };
 }
 

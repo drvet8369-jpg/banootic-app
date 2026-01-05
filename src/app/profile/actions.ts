@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { decode } from 'base64-arraybuffer';
+import type { PortfolioItem } from '@/lib/types';
+
 
 async function verifyProviderOwnership(providerId: number) {
     const supabase = createClient();
@@ -15,7 +17,7 @@ async function verifyProviderOwnership(providerId: number) {
 
     const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('profile_id, phone')
+        .select('profile_id, phone, portfolio')
         .eq('id', providerId)
         .single();
     
@@ -85,12 +87,21 @@ export async function addPortfolioItemAction(providerId: number, base64ImageData
         .from('images')
         .getPublicUrl(filePath);
 
+    // This is the key change: update the JSONB column instead of inserting into a new table
     const supabase = createClient();
-    const { error: dbError } = await supabase.from('portfolio_items').insert({
-        provider_id: providerId,
-        image_url: publicUrl,
-        ai_hint: 'new work'
-    });
+    const currentPortfolio = Array.isArray(ownership.provider.portfolio) ? ownership.provider.portfolio : [];
+
+    const newItem: PortfolioItem = {
+        src: publicUrl,
+        aiHint: 'new work'
+    };
+    
+    const updatedPortfolio = [...currentPortfolio, newItem];
+
+    const { error: dbError } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('id', providerId);
 
     if (dbError) {
         return { error: 'خطا در ذخیره تصویر در دیتابیس: ' + dbError.message };

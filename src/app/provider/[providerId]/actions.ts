@@ -71,43 +71,50 @@ export async function addReviewAction(payload: AddReviewPayload) {
     return { error: null };
 }
 
-export async function deletePortfolioItemAction(portfolioItemId: number) {
+export async function deletePortfolioItemAction(providerId: number, itemIndex: number) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'دسترسی غیرمجاز' };
 
-    const { data: item, error: itemError } = await supabase
-        .from('portfolio_items')
-        .select('provider_id, image_url, providers(phone)')
-        .eq('id', portfolioItemId)
-        .single();
-
-    if (itemError || !item || !item.providers) return { error: 'نمونه کار یافت نشد.' };
-
     const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('profile_id')
-        .eq('id', item.provider_id)
+        .select('profile_id, phone, portfolio')
+        .eq('id', providerId)
         .single();
     
     if (providerError || !provider) return { error: 'هنرمند یافت نشد.' };
     if (provider.profile_id !== user.id) return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.'};
     
-    const { error: dbError } = await supabase.from('portfolio_items').delete().eq('id', portfolioItemId);
+    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
+    
+    // Find the item to delete to also remove from storage
+    const itemToDelete = currentPortfolio[itemIndex];
+
+    const updatedPortfolio = currentPortfolio.filter((_, index) => index !== itemIndex);
+
+    const { error: dbError } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('id', providerId);
+        
     if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
 
-    try {
-        const adminSupabase = createAdminClient();
-        const filePath = item.image_url.split('/images/')[1];
-        if(filePath) {
-            const { error: storageError } = await adminSupabase.storage.from('images').remove([filePath]);
-            if(storageError) console.warn("Could not delete from storage: " + storageError.message);
-        }
-    } catch(e: any) {
-        console.warn("Could not create admin client to delete from storage: " + e.message);
+    // Attempt to delete from storage if URL exists
+    if (itemToDelete && itemToDelete.src) {
+      try {
+          const adminSupabase = createAdminClient();
+          const filePath = itemToDelete.src.split('/images/')[1];
+          if(filePath) {
+              const { error: storageError } = await adminSupabase.storage.from('images').remove([filePath]);
+              if(storageError) console.warn("Could not delete from storage: " + storageError.message);
+          }
+      } catch(e: any) {
+          console.warn("Could not create admin client to delete from storage: " + e.message);
+      }
     }
 
-    revalidatePath(`/provider/${item.providers.phone}`);
+
+    revalidatePath(`/provider/${provider.phone}`);
     revalidatePath('/profile');
     return { error: null };
 }

@@ -15,7 +15,6 @@ export interface Service {
 }
 
 export interface PortfolioItem {
-  id: number;
   src: string;
   aiHint?: string;
 }
