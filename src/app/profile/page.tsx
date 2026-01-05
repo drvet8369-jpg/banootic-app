@@ -51,7 +51,7 @@ export default async function ProfilePage() {
     // Step 2: If provider info was found, fetch their portfolio items separately.
     const { data: portfolioItems, error: portfolioError } = await supabase
         .from('portfolio_items')
-        .select('*')
+        .select('id, image_url, ai_hint')
         .eq('provider_id', providerInfo.id);
 
     if(portfolioError) {
