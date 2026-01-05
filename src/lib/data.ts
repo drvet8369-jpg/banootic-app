@@ -21,19 +21,8 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   let queryBuilder = supabase
     .from('providers')
     .select(`
-      id,
-      profile_id,
-      name,
-      service,
-      location,
-      phone,
-      bio,
-      category_slug,
-      service_slug,
-      rating,
-      reviews_count,
-      profile_image,
-      profiles (
+      *,
+      profiles:profiles!inner (
         portfolio
       )
     `);
@@ -58,6 +47,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     return [];
   }
 
+  // The assertion `p.profiles!` is safe because of `!inner` in the join.
   return data.map(p => ({
     id: p.id,
     profile_id: p.profile_id,
@@ -74,8 +64,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    // Portfolio now comes from the joined profiles table
-    portfolio: Array.isArray((p.profiles as any)?.portfolio) ? (p.profiles as any).portfolio : [],
+    portfolio: Array.isArray(p.profiles!.portfolio) ? p.profiles!.portfolio : [],
   }));
 }
 
@@ -87,7 +76,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     .from('providers')
     .select(`
         *,
-        profiles (
+        profiles:profiles!inner (
             portfolio
         )
     `)
@@ -99,6 +88,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     return null;
   }
 
+  // The assertion `data.profiles!` is safe because of `!inner` in the join.
   return {
     id: data.id,
     profile_id: data.profile_id,
@@ -115,8 +105,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         src: data.profile_image?.src || '',
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
-    // Portfolio now comes from the joined profiles table
-    portfolio: Array.isArray((data.profiles as any)?.portfolio) ? (data.profiles as any).portfolio : [],
+    portfolio: Array.isArray(data.profiles!.portfolio) ? data.profiles!.portfolio : [],
   };
 }
 
