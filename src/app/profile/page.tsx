@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { AlertTriangle, User } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ProfileClientContent } from './profile-client-content';
-import { getProviderByPhone } from '@/lib/data';
 import type { Provider } from '@/lib/types';
 
 
@@ -20,7 +19,18 @@ export default async function ProfilePage() {
     const { data: providerData, error: providerError } = await supabase
         .from('providers')
         .select(`
-            *,
+            id,
+            profile_id,
+            name,
+            service,
+            location,
+            phone,
+            bio,
+            category_slug,
+            service_slug,
+            rating,
+            reviews_count,
+            profile_image,
             portfolio_items (
                 id,
                 image_url,
@@ -30,8 +40,13 @@ export default async function ProfilePage() {
         .eq('profile_id', user.id)
         .single();
     
-    // This happens if the user is a customer, not a provider.
+    // This happens if the user is a customer, or if there's a data loading error.
     if (providerError || !providerData) {
+        // Log the specific error to the server console for easier debugging
+        if(providerError) {
+             console.error("Supabase error fetching provider profile:", providerError);
+        }
+
         const { data: profile } = await supabase.from('profiles').select('account_type').eq('id', user.id).single();
         if (profile?.account_type === 'customer') {
              return (
@@ -47,7 +62,7 @@ export default async function ProfilePage() {
                 </div>
             );
         }
-        return <div>خطا در بارگذاری اطلاعات پروفایل. لطفا دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.</div>;
+        return <div>خطا در بارگذاری اطلاعات پروفایل. لطفا با پشتیبانی تماس بگیرید.</div>;
     }
 
     const fullProviderData: Provider = {
@@ -66,7 +81,7 @@ export default async function ProfilePage() {
             src: providerData.profile_image?.src ?? '',
             aiHint: providerData.profile_image?.aiHint ?? 'woman portrait'
         },
-        portfolio: providerData.portfolio_items.map(item => ({
+        portfolio: providerData.portfolio_items.map((item: any) => ({
             id: item.id,
             src: item.image_url,
             aiHint: item.ai_hint ?? 'new work'
