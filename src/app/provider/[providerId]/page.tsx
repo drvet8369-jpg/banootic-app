@@ -60,8 +60,8 @@ export default async function ProviderProfilePage({ params }: { params: { provid
     notFound();
   }
   
-  // Pass the correct numeric provider.id to fetch reviews
-  const reviews = await getReviewsForProvider(provider.id);
+  // Pass the correct UUID profile_id to fetch reviews
+  const reviews = await getReviewsForProvider(provider.profile_id);
 
   const isOwnerViewing = user && user.id === provider.profile_id;
 

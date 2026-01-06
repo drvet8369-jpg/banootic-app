@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 interface AddReviewPayload {
-    providerId: number;
+    providerId: number; // The numeric id of the provider from the 'providers' table
+    profileId: string; // The UUID of the provider's profile
     rating: number;
     comment: string;
 }
@@ -30,8 +31,8 @@ export async function addReviewAction(payload: AddReviewPayload) {
     }
 
     const { error: reviewError } = await supabase.from('reviews').insert({
-        provider_id: payload.providerId,
-        user_id: user.id,
+        provider_id: payload.profileId, // Use the UUID to link the review
+        author_id: user.id,
         author_name: profile.full_name,
         rating: payload.rating,
         comment: payload.comment,
@@ -44,10 +45,11 @@ export async function addReviewAction(payload: AddReviewPayload) {
         return { error: 'خطا در ثبت نظر: ' + reviewError.message };
     }
     
+    // Now, update the provider's average rating using the numeric providerId
     const { data: reviews, error: reviewsError } = await supabase
         .from('reviews')
         .select('rating')
-        .eq('provider_id', payload.providerId);
+        .eq('provider_id', payload.profileId);
     
     if (reviewsError) {
         console.error("Could not fetch reviews to update average rating:", reviewsError);
@@ -62,7 +64,7 @@ export async function addReviewAction(payload: AddReviewPayload) {
     const { error: updateError } = await supabase
         .from('providers')
         .update({ rating: newAverageRating, reviews_count: reviewsCount })
-        .eq('id', payload.providerId);
+        .eq('id', payload.providerId); // Use the numeric ID to find the provider row
 
     if (updateError) {
         console.error("Failed to update provider's average rating:", updateError);

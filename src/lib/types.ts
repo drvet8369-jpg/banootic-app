@@ -38,8 +38,8 @@ export interface Provider {
 
 export interface Review {
   id: string;
-  provider_id: number; // This remains the numeric ID from the providers table.
-  user_id: string; // UUID of the author
+  provider_id: string; // This should be the UUID of the provider's profile.
+  author_id: string; // UUID of the author
   authorName: string;
   rating: number;
   comment: string;
@@ -59,5 +59,4 @@ export type Profile = {
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
-  // The 'portfolio' column is now correctly associated with the Provider type.
 };

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { FormEvent, useState } from 'react';
@@ -11,13 +12,15 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StarRating } from '@/components/ui/star-rating';
 import { addReviewAction } from './actions';
+import type { Provider } from '@/lib/types';
+
 
 interface ReviewFormProps {
-  providerId: number;
+  provider: Provider;
   user: SupabaseUser | null;
 }
 
-export function ReviewForm({ providerId, user }: ReviewFormProps) {
+export function ReviewForm({ provider, user }: ReviewFormProps) {
   const router = useRouter();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -46,7 +49,8 @@ export function ReviewForm({ providerId, user }: ReviewFormProps) {
     toast.loading("در حال ثبت نظر شما...");
 
     const result = await addReviewAction({
-        providerId,
+        providerId: provider.id, // The numeric ID for updating the provider's stats
+        profileId: provider.profile_id, // The UUID for linking the review
         rating,
         comment,
     });

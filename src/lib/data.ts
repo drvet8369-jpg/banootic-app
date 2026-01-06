@@ -1,3 +1,4 @@
+
 import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review, PortfolioItem } from './types';
@@ -16,7 +17,6 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   noStore();
   const supabase = createClient();
   
-  // Simplified query: Select all directly from providers.
   let queryBuilder = supabase
     .from('providers')
     .select(`*`);
@@ -57,7 +57,6 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    // Portfolio now comes directly from the provider object
     portfolio: (Array.isArray(p.portfolio) ? p.portfolio : []) as PortfolioItem[],
   }));
 }
@@ -66,7 +65,6 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
   noStore();
   const supabase = createClient();
 
-  // Simplified query: Select all directly from providers table. No join needed.
   const { data, error } = await supabase
     .from('providers')
     .select(`*`)
@@ -98,15 +96,14 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
   };
 }
 
-export async function getReviewsForProvider(providerId: number): Promise<Review[]> {
+export async function getReviewsForProvider(profileId: string): Promise<Review[]> {
   noStore();
   const supabase = createClient();
 
-  // The 'reviews' table is linked by the numeric 'provider_id', so this is correct.
   const { data, error } = await supabase
     .from('reviews')
     .select('*')
-    .eq('provider_id', providerId)
+    .eq('provider_id', profileId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -117,7 +114,7 @@ export async function getReviewsForProvider(providerId: number): Promise<Review[
   return data.map(r => ({
     id: r.id.toString(),
     provider_id: r.provider_id,
-    user_id: r.user_id,
+    author_id: r.author_id,
     authorName: r.author_name,
     rating: r.rating,
     comment: r.comment,
