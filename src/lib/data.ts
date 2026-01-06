@@ -1,4 +1,3 @@
-
 import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review, PortfolioItem } from './types';
@@ -17,6 +16,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   noStore();
   const supabase = createClient();
   
+  // Simplified query: Select all directly from providers.
   let queryBuilder = supabase
     .from('providers')
     .select(`*`);
@@ -57,6 +57,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
+    // Portfolio now comes directly from the provider object
     portfolio: (Array.isArray(p.portfolio) ? p.portfolio : []) as PortfolioItem[],
   }));
 }
@@ -65,6 +66,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
   noStore();
   const supabase = createClient();
 
+  // Simplified query: Select all directly from providers table. No join needed.
   const { data, error } = await supabase
     .from('providers')
     .select(`*`)
@@ -99,10 +101,12 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 export async function getReviewsForProvider(providerId: number): Promise<Review[]> {
   noStore();
   const supabase = createClient();
+
+  // The 'reviews' table is linked by the numeric 'provider_id', so this is correct.
   const { data, error } = await supabase
     .from('reviews')
     .select('*')
-    .eq('provider_id', providerId) // Use the numeric provider ID
+    .eq('provider_id', providerId)
     .order('created_at', { ascending: false });
 
   if (error) {
