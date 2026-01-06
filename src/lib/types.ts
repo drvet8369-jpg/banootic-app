@@ -21,8 +21,8 @@ export interface PortfolioItem {
 }
 
 export interface Provider {
-  id: number;
-  profile_id: string;
+  id: number; // Numeric, auto-incrementing ID from the 'providers' table
+  profile_id: string; // UUID from the 'profiles' table (and auth.users)
   name: string;
   service: string; 
   location: string;
@@ -38,7 +38,8 @@ export interface Provider {
 
 export interface Review {
   id: string;
-  providerId: number;
+  provider_id: number; // This remains the numeric ID from the providers table.
+  user_id: string; // UUID of the author
   authorName: string;
   rating: number;
   comment: string;
@@ -54,8 +55,9 @@ export interface Message {
 
 // From Supabase
 export type Profile = {
-  id: string;
+  id: string; // This is the UUID from auth.users
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
+  // The 'portfolio' column is now correctly associated with the Provider type.
 };

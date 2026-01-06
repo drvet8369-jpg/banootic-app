@@ -1,3 +1,4 @@
+
 import { notFound } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -59,6 +60,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
     notFound();
   }
   
+  // Pass the correct numeric provider.id to fetch reviews
   const reviews = await getReviewsForProvider(provider.id);
 
   const isOwnerViewing = user && user.id === provider.profile_id;

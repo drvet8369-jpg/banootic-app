@@ -1,7 +1,7 @@
 
 import 'server-only';
 import { createClient } from './supabase/server';
-import type { Provider, Review } from './types';
+import type { Provider, Review, PortfolioItem } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
 
 // This file is for data fetching on the server.
@@ -34,7 +34,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     );
   }
 
-  const { data, error } = await queryBuilder;
+  const { data, error } = await queryBuilder.order('id');
 
   if (error) {
     console.error('Error fetching providers:', error);
@@ -48,6 +48,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     service: p.service ?? '',
     location: p.location ?? '',
     phone: p.phone,
+    bio: p.bio ?? '',
     categorySlug: p.category_slug as any ?? 'beauty',
     serviceSlug: p.service_slug ?? '',
     rating: p.rating ?? 0,
@@ -56,7 +57,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    portfolio: Array.isArray(p.portfolio) ? p.portfolio : [],
+    portfolio: (Array.isArray(p.portfolio) ? p.portfolio : []) as PortfolioItem[],
   }));
 }
 
@@ -91,7 +92,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         src: data.profile_image?.src || '',
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
-    portfolio: Array.isArray(data.portfolio) ? data.portfolio : [],
+    portfolio: (Array.isArray(data.portfolio) ? data.portfolio : []) as PortfolioItem[],
   };
 }
 
@@ -101,7 +102,7 @@ export async function getReviewsForProvider(providerId: number): Promise<Review[
   const { data, error } = await supabase
     .from('reviews')
     .select('*')
-    .eq('provider_id', providerId)
+    .eq('provider_id', providerId) // Use the numeric provider ID
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -111,7 +112,8 @@ export async function getReviewsForProvider(providerId: number): Promise<Review[
 
   return data.map(r => ({
     id: r.id.toString(),
-    providerId: r.provider_id,
+    provider_id: r.provider_id,
+    user_id: r.user_id,
     authorName: r.author_name,
     rating: r.rating,
     comment: r.comment,
