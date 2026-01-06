@@ -24,6 +24,7 @@ interface ProfileClientContentProps {
 export function ProfileClientContent({ providerData }: ProfileClientContentProps) {
   const router = useRouter();
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editedData, setEditedData] = useState({
     name: providerData.name || '',
     service: providerData.service || '',
@@ -44,8 +45,9 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
       return;
     }
 
+    setIsSubmitting(true);
     toast.loading("در حال ذخیره تغییرات...");
-    const result = await updateProviderInfoAction(providerData.id, editedData);
+    const result = await updateProviderInfoAction(editedData);
     toast.dismiss();
 
     if (result.error) {
@@ -53,8 +55,9 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
     } else {
       toast.success("اطلاعات شما با موفقیت به‌روز شد.");
       setMode('viewing');
-      router.refresh(); // Refresh server component data
+      router.refresh();
     }
+    setIsSubmitting(false);
   };
 
   const handleCancelEdit = () => {
@@ -70,6 +73,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setIsSubmitting(true);
     toast.loading("در حال آپلود و پردازش تصویر...");
 
     const reader = new FileReader();
@@ -79,9 +83,9 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
         
         let result;
         if(action === 'addPortfolio') {
-            result = await addPortfolioItemAction(providerData.id, base64data);
+            result = await addPortfolioItemAction(base64data);
         } else {
-            result = await updateProviderProfileImageAction(providerData.id, base64data);
+            result = await updateProviderProfileImageAction(base64data);
         }
 
         toast.dismiss();
@@ -91,14 +95,16 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
             toast.success("تصویر با موفقیت افزوده شد.");
             router.refresh();
         }
+        setIsSubmitting(false);
     };
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
   };
   
   const handleDeleteProfilePicture = async () => {
       if(!confirm("آیا از حذف عکس پروفایل خود مطمئن هستید؟")) return;
+      setIsSubmitting(true);
       toast.loading("در حال حذف عکس پروفایل...");
-      const result = await deleteProviderProfileImageAction(providerData.id);
+      const result = await deleteProviderProfileImageAction();
       toast.dismiss();
       if(result.error) {
          toast.error("خطا در حذف", { description: result.error });
@@ -106,6 +112,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
         toast.success("عکس پروفایل حذف شد.");
         router.refresh();
       }
+      setIsSubmitting(false);
   }
 
 
@@ -122,6 +129,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                   fill
                   className="object-cover"
                   data-ai-hint={providerData.profileImage.aiHint}
+                  key={providerData.profileImage.src}
                 />
               ) : (
                 <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -130,12 +138,12 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
               )}
             </div>
             {mode === 'editing' ? (
-              <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" />
+              <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" disabled={isSubmitting}/>
             ) : (
               <CardTitle className="font-headline text-3xl">{providerData.name}</CardTitle>
             )}
             {mode === 'editing' ? (
-              <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" />
+              <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" disabled={isSubmitting}/>
             ) : (
               <CardDescription className="text-lg">{providerData.service}</CardDescription>
             )}
@@ -151,7 +159,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
             <CardContent className="p-0 flex-grow">
               <h3 className="font-semibold mb-2">درباره شما</h3>
               {mode === 'editing' ? (
-                <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} />
+                <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} disabled={isSubmitting}/>
               ) : (
                 <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{providerData.bio}</p>
               )}
@@ -160,7 +168,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                 <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
                 <input type="file" ref={portfolioFileInputRef} onChange={(e) => handleFileChange(e, 'addPortfolio')} className="hidden" accept="image/*" />
                 <input type="file" ref={profilePicInputRef} onChange={(e) => handleFileChange(e, 'changeProfilePic')} className="hidden" accept="image/*" />
-                <Button onClick={() => portfolioFileInputRef.current?.click()} size="lg" className="w-full font-bold mb-6">
+                <Button onClick={() => portfolioFileInputRef.current?.click()} size="lg" className="w-full font-bold mb-6" disabled={isSubmitting}>
                   <PlusCircle className="w-5 h-5 ml-2" />
                   افزودن نمونه کار جدید
                 </Button>
@@ -170,10 +178,10 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
               {mode === 'editing' ? (
                 <>
-                  <Button onClick={handleSaveChanges} className="w-full flex-1"><Save className="w-4 h-4 ml-2" /> ذخیره تغییرات</Button>
-                  <Button onClick={() => profilePicInputRef.current?.click()} variant="outline" className="w-full flex-1"><Camera className="w-4 h-4 ml-2" /> تغییر عکس پروفایل</Button>
-                  <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1"><Trash2 className="w-4 h-4 ml-2" /> حذف عکس پروفایل</Button>
-                  <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto"><XCircle className="w-4 h-4 ml-2" /> لغو</Button>
+                  <Button onClick={handleSaveChanges} className="w-full flex-1" disabled={isSubmitting}><Save className="w-4 h-4 ml-2" /> ذخیره تغییرات</Button>
+                  <Button onClick={() => profilePicInputRef.current?.click()} variant="outline" className="w-full flex-1" disabled={isSubmitting}><Camera className="w-4 h-4 ml-2" /> تغییر عکس پروفایل</Button>
+                  <Button onClick={handleDeleteProfilePicture} variant="destructive" className="w-full flex-1" disabled={isSubmitting}><Trash2 className="w-4 h-4 ml-2" /> حذف عکس پروفایل</Button>
+                  <Button onClick={handleCancelEdit} variant="ghost" className="w-full flex-1 mt-2 sm:mt-0 sm:w-auto" disabled={isSubmitting}><XCircle className="w-4 h-4 ml-2" /> لغو</Button>
                 </>
               ) : (
                 <>

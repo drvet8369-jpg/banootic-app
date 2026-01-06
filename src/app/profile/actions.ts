@@ -8,7 +8,11 @@ import { decode } from 'base64-arraybuffer';
 import type { PortfolioItem } from '@/lib/types';
 
 
-async function verifyProviderOwnership(providerId: number) {
+/**
+ * A secure server action that identifies the provider using the current user's session.
+ * It removes the need to pass a provider ID from the client.
+ */
+async function getProviderFromSession() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -18,24 +22,20 @@ async function verifyProviderOwnership(providerId: number) {
 
     const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('profile_id, phone, portfolio')
-        .eq('id', providerId)
+        .select('*')
+        .eq('profile_id', user.id)
         .single();
     
     if (providerError || !provider) {
         return { error: 'پروفایل هنرمند یافت نشد.' };
     }
 
-    if (provider.profile_id !== user.id) {
-        return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.' };
-    }
-
     return { user, provider, error: null };
 }
 
-export async function updateProviderInfoAction(providerId: number, values: { name: string; service: string; bio: string; }) {
-    const ownership = await verifyProviderOwnership(providerId);
-    if (ownership.error) return ownership;
+export async function updateProviderInfoAction(values: { name: string; service: string; bio: string; }) {
+    const { user, provider, error: sessionError } = await getProviderFromSession();
+    if (sessionError) return { error: sessionError };
 
     const supabase = createClient();
     const { error } = await supabase
@@ -45,34 +45,35 @@ export async function updateProviderInfoAction(providerId: number, values: { nam
             service: values.service,
             bio: values.bio,
         })
-        .eq('id', providerId);
+        .eq('id', provider.id);
 
     if (error) {
         return { error: 'خطا در به‌روزرسانی اطلاعات: ' + error.message };
     }
     
+    // Also update the full_name in the main profiles table
     const { error: profileError } = await supabase
         .from('profiles')
         .update({ full_name: values.name })
-        .eq('id', ownership.user.id);
+        .eq('id', user!.id);
     
     if(profileError) {
         console.warn("Could not update profiles table name: ", profileError.message);
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.provider.phone}`);
+    revalidatePath(`/provider/${provider.phone}`);
     return { error: null };
 }
 
 
-export async function addPortfolioItemAction(providerId: number, base64ImageData: string) {
-    const ownership = await verifyProviderOwnership(providerId);
-    if (ownership.error) return ownership;
+export async function addPortfolioItemAction(base64ImageData: string) {
+    const { user, provider, error: sessionError } = await getProviderFromSession();
+    if (sessionError) return { error: sessionError };
 
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-    const filePath = `portfolio/${ownership.user.id}/${Date.now()}`;
+    const filePath = `portfolio/${user!.id}/${Date.now()}`;
     const imageData = decode(base64ImageData.split(',')[1]);
 
     const { error: uploadError } = await adminSupabase.storage
@@ -80,42 +81,44 @@ export async function addPortfolioItemAction(providerId: number, base64ImageData
         .upload(filePath, imageData, { contentType });
     
     if (uploadError) {
-        return { error: 'خطا در آپلود تصویر: ' + uploadError.message };
+        console.error("Supabase Storage upload error:", uploadError);
+        return { error: 'خطا در آپلود تصویر در استوریج: ' + uploadError.message };
     }
 
     const { data: { publicUrl } } = adminSupabase.storage
         .from('images')
         .getPublicUrl(filePath);
 
-    const currentPortfolio = Array.isArray(ownership.provider.portfolio) ? ownership.provider.portfolio : [];
+    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
     const newItem: PortfolioItem = {
         src: publicUrl,
         aiHint: 'new work'
     };
     const updatedPortfolio = [...currentPortfolio, newItem];
-
+    
     const supabase = createClient();
     const { error: dbError } = await supabase
         .from('providers')
         .update({ portfolio: updatedPortfolio })
-        .eq('id', providerId);
+        .eq('id', provider.id);
 
     if (dbError) {
-        return { error: 'خطا در ذخیره تصویر در دیتابیس: ' + dbError.message };
+        console.error("Database update error:", dbError);
+        return { error: 'خطا در ذخیره آدرس تصویر در دیتابیس: ' + dbError.message };
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.provider.phone}`);
+    revalidatePath(`/provider/${provider.phone}`);
     return { error: null };
 }
 
-export async function updateProviderProfileImageAction(providerId: number, base64ImageData: string) {
-    const ownership = await verifyProviderOwnership(providerId);
-    if (ownership.error) return ownership;
+export async function updateProviderProfileImageAction(base64ImageData: string) {
+    const { user, provider, error: sessionError } = await getProviderFromSession();
+    if (sessionError) return { error: sessionError };
 
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-    const filePath = `avatars/${ownership.user.id}/${Date.now()}`;
+    const filePath = `avatars/${user!.id}/${Date.now()}`;
     const imageData = decode(base64ImageData.split(',')[1]);
 
     const { error: uploadError } = await adminSupabase.storage
@@ -123,7 +126,8 @@ export async function updateProviderProfileImageAction(providerId: number, base6
         .upload(filePath, imageData, { contentType, upsert: true });
     
     if (uploadError) {
-        return { error: 'خطا در آپلود تصویر: ' + uploadError.message };
+        console.error("Supabase Storage upload error:", uploadError);
+        return { error: 'خطا در آپلود تصویر پروفایل: ' + uploadError.message };
     }
 
     const { data: { publicUrl } } = adminSupabase.storage
@@ -134,30 +138,66 @@ export async function updateProviderProfileImageAction(providerId: number, base6
     const { error: dbError } = await supabase
         .from('providers')
         .update({ profile_image: { src: publicUrl, aiHint: 'woman portrait' } })
-        .eq('id', providerId);
+        .eq('id', provider.id);
     
     if(dbError) return { error: 'خطا در به‌روزرسانی پروفایل: ' + dbError.message };
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.provider.phone}`);
+    revalidatePath(`/provider/${provider.phone}`);
     return { error: null };
 }
 
-export async function deleteProviderProfileImageAction(providerId: number) {
-    const ownership = await verifyProviderOwnership(providerId);
-    if (ownership.error) return ownership;
+export async function deleteProviderProfileImageAction() {
+    const { provider, error: sessionError } = await getProviderFromSession();
+    if (sessionError) return { error: sessionError };
 
     const supabase = createClient();
     const { error } = await supabase
         .from('providers')
-        .update({ profile_image: { src: '', aiHint: 'woman portrait' }}) // Set to empty
-        .eq('id', providerId);
+        .update({ profile_image: { src: '', aiHint: 'woman portrait' }})
+        .eq('id', provider.id);
 
     if (error) {
         return { error: 'خطا در حذف عکس پروفایل: ' + error.message };
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${ownership.provider.phone}`);
+    revalidatePath(`/provider/${provider.phone}`);
+    return { error: null };
+}
+
+export async function deletePortfolioItemAction(itemSrc: string) {
+    const { provider, error: sessionError } = await getProviderFromSession();
+    if (sessionError) return { error: sessionError };
+
+    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
+    
+    const itemToDelete = currentPortfolio.find(item => item.src === itemSrc);
+    const updatedPortfolio = currentPortfolio.filter(item => item.src !== itemSrc);
+
+    const supabase = createClient();
+    const { error: dbError } = await supabase
+        .from('providers')
+        .update({ portfolio: updatedPortfolio })
+        .eq('id', provider.id);
+        
+    if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
+
+    // Try to delete from storage, but don't block if it fails.
+    if (itemToDelete && itemToDelete.src) {
+      try {
+          const adminSupabase = createAdminClient();
+          const filePath = new URL(itemToDelete.src).pathname.split('/images/')[1];
+          if(filePath) {
+              const { error: storageError } = await adminSupabase.storage.from('images').remove([filePath]);
+              if(storageError) console.warn("Could not delete from storage: " + storageError.message);
+          }
+      } catch(e: any) {
+          console.warn("Could not create admin client to delete from storage: " + e.message);
+      }
+    }
+
+    revalidatePath(`/provider/${provider.phone}`);
+    revalidatePath('/profile');
     return { error: null };
 }

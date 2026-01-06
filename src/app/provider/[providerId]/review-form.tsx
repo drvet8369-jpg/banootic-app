@@ -49,8 +49,8 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
     toast.loading("در حال ثبت نظر شما...");
 
     const result = await addReviewAction({
-        providerId: provider.id, // The numeric ID for updating the provider's stats
-        profileId: provider.profile_id, // The UUID for linking the review
+        providerId: provider.id,
+        profileId: provider.profile_id,
         rating,
         comment,
     });
@@ -63,7 +63,7 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
         toast.success("نظر شما با موفقیت ثبت شد.");
         setRating(0);
         setComment('');
-        router.refresh(); // Reload the page to show the new review and updated rating
+        router.refresh();
     }
 
     setIsSubmitting(false);

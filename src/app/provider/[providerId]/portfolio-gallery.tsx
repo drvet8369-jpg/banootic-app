@@ -33,7 +33,7 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
         if(!confirm("آیا از حذف این نمونه کار مطمئن هستید؟")) return;
 
         toast.loading("در حال حذف نمونه کار...");
-        const result = await deletePortfolioItemAction(provider.id, itemSrc);
+        const result = await deletePortfolioItemAction(itemSrc);
         toast.dismiss();
         if(result.error) {
             toast.error("خطا در حذف", { description: result.error });
@@ -66,6 +66,7 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
                                 fill
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                                 data-ai-hint={item.aiHint || ''}
+                                key={item.src}
                             />
                             {isOwner && (
                             <Button
