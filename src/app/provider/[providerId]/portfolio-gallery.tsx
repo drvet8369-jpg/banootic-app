@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button';
 import { Trash2, X } from 'lucide-react';
-import { deletePortfolioItemAction } from './actions';
+import { deletePortfolioItemAction } from '@/app/profile/actions';
 import type { Provider } from '@/lib/types';
 
 interface PortfolioGalleryProps {
