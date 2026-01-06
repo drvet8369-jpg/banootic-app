@@ -13,13 +13,30 @@ type GetProvidersQuery = {
   searchQuery?: string;
 }
 
+// This function now correctly joins providers and profiles
 export async function getProviders(query: GetProvidersQuery): Promise<Provider[]> {
   noStore();
   const supabase = createClient();
   
   let queryBuilder = supabase
     .from('providers')
-    .select(`*`);
+    .select(`
+      id,
+      profile_id,
+      name,
+      service,
+      location,
+      phone,
+      bio,
+      category_slug,
+      service_slug,
+      rating,
+      reviews_count,
+      profiles (
+        profile_image,
+        portfolio
+      )
+    `);
 
   if (query.categorySlug) {
     queryBuilder = queryBuilder.eq('category_slug', query.categorySlug);
@@ -41,7 +58,8 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     return [];
   }
 
-  return data.map(p => ({
+  // Transform the data to match the Provider type
+  return data.map((p: any) => ({
     id: p.id,
     profile_id: p.profile_id,
     name: p.name,
@@ -53,11 +71,8 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     serviceSlug: p.service_slug ?? '',
     rating: p.rating ?? 0,
     reviewsCount: p.reviews_count ?? 0,
-    profileImage: { 
-        src: p.profile_image?.src || '', 
-        aiHint: p.profile_image?.aiHint || 'woman portrait' 
-    },
-    portfolio: (Array.isArray(p.portfolio) ? p.portfolio : []) as PortfolioItem[],
+    profileImage: p.profiles?.profile_image ?? { src: '', aiHint: 'woman portrait' },
+    portfolio: (Array.isArray(p.profiles?.portfolio) ? p.profiles.portfolio : []) as PortfolioItem[],
   }));
 }
 
@@ -67,7 +82,23 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
   const { data, error } = await supabase
     .from('providers')
-    .select(`*`)
+    .select(`
+      id,
+      profile_id,
+      name,
+      service,
+      location,
+      phone,
+      bio,
+      category_slug,
+      service_slug,
+      rating,
+      reviews_count,
+      profiles (
+        profile_image,
+        portfolio
+      )
+    `)
     .eq('phone', phone)
     .single();
 
@@ -76,23 +107,22 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     return null;
   }
 
+  const p = data as any;
+
   return {
-    id: data.id,
-    profile_id: data.profile_id,
-    name: data.name,
-    service: data.service ?? '',
-    location: data.location ?? '',
-    phone: data.phone,
-    bio: data.bio ?? '',
-    categorySlug: data.category_slug as any ?? 'beauty',
-    serviceSlug: data.service_slug ?? '',
-    rating: data.rating ?? 0,
-    reviewsCount: data.reviews_count ?? 0,
-    profileImage: {
-        src: data.profile_image?.src || '',
-        aiHint: data.profile_image?.aiHint || 'woman portrait'
-    },
-    portfolio: (Array.isArray(data.portfolio) ? data.portfolio : []) as PortfolioItem[],
+    id: p.id,
+    profile_id: p.profile_id,
+    name: p.name,
+    service: p.service ?? '',
+    location: p.location ?? '',
+    phone: p.phone,
+    bio: p.bio ?? '',
+    categorySlug: p.category_slug as any ?? 'beauty',
+    serviceSlug: p.service_slug ?? '',
+    rating: p.rating ?? 0,
+    reviewsCount: p.reviews_count ?? 0,
+    profileImage: p.profiles?.profile_image ?? { src: '', aiHint: 'woman portrait' },
+    portfolio: (Array.isArray(p.profiles?.portfolio) ? p.profiles.portfolio : []) as PortfolioItem[],
   };
 }
 

@@ -20,10 +20,11 @@ export interface PortfolioItem {
   aiHint?: string;
 }
 
+// Represents the joined data from `providers` and `profiles` tables
 export interface Provider {
-  id: number; // Numeric, auto-incrementing ID from the 'providers' table
-  profile_id: string; // UUID from the 'profiles' table (and auth.users)
-  name: string;
+  id: number; // providers.id
+  profile_id: string; // profiles.id (UUID)
+  name: string; // providers.name
   service: string; 
   location: string;
   phone: string;
@@ -32,13 +33,13 @@ export interface Provider {
   serviceSlug: string; 
   rating: number;
   reviewsCount: number;
-  profileImage: { src: string; aiHint?: string; };
-  portfolio: PortfolioItem[];
+  profileImage: { src: string; aiHint?: string; }; // from profiles table
+  portfolio: PortfolioItem[]; // from profiles table
 }
 
 export interface Review {
   id: string;
-  provider_id: string; // This should be the UUID of the provider's profile.
+  provider_id: string; // This is the UUID of the provider's profile.
   author_id: string; // UUID of the author
   authorName: string;
   rating: number;
@@ -53,10 +54,12 @@ export interface Message {
   createdAt: Timestamp;
 }
 
-// From Supabase
+// From Supabase `profiles` table
 export type Profile = {
   id: string; // This is the UUID from auth.users
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
+  profile_image: { src: string; aiHint?: string; } | null;
+  portfolio: PortfolioItem[] | null;
 };

@@ -5,14 +5,14 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { decode } from 'base64-arraybuffer';
-import type { PortfolioItem } from '@/lib/types';
+import type { PortfolioItem, Profile } from '@/lib/types';
 
 
 /**
- * A secure server action that identifies the provider using the current user's session.
- * It removes the need to pass a provider ID from the client.
+ * A secure server action that gets the current user's profile.
+ * It's the single source of truth for identifying the user and their data.
  */
-async function getProviderFromSession() {
+async function getUserProfile() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -20,35 +20,37 @@ async function getProviderFromSession() {
         return { error: 'دسترسی غیرمجاز: کاربر وارد نشده است.' };
     }
 
-    const { data: provider, error: providerError } = await supabase
-        .from('providers')
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('profile_id', user.id)
+        .eq('id', user.id)
         .single();
     
-    if (providerError || !provider) {
-        return { error: 'پروفایل هنرمند یافت نشد.' };
+    if (profileError || !profile) {
+        return { error: 'پروفایل کاربر یافت نشد.' };
     }
 
-    return { user, provider, error: null };
+    return { user, profile: profile as Profile, error: null };
 }
 
 export async function updateProviderInfoAction(values: { name: string; service: string; bio: string; }) {
-    const { user, provider, error: sessionError } = await getProviderFromSession();
+    const { user, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
     const supabase = createClient();
-    const { error } = await supabase
+
+    // Update the providers table
+    const { error: providerError } = await supabase
         .from('providers')
         .update({
             name: values.name,
             service: values.service,
             bio: values.bio,
         })
-        .eq('id', provider.id);
+        .eq('profile_id', user!.id);
 
-    if (error) {
-        return { error: 'خطا در به‌روزرسانی اطلاعات: ' + error.message };
+    if (providerError) {
+        return { error: 'خطا در به‌روزرسانی اطلاعات هنرمند: ' + providerError.message };
     }
     
     // Also update the full_name in the main profiles table
@@ -58,19 +60,21 @@ export async function updateProviderInfoAction(values: { name: string; service: 
         .eq('id', user!.id);
     
     if(profileError) {
+        // This is not critical, but good to know if it fails.
         console.warn("Could not update profiles table name: ", profileError.message);
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${provider.phone}`);
+    revalidatePath(`/provider/${user!.phone}`);
     return { error: null };
 }
 
 
 export async function addPortfolioItemAction(base64ImageData: string) {
-    const { user, provider, error: sessionError } = await getProviderFromSession();
+    const { user, profile, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
+    // --- 1. Upload to Storage (Admin Client) ---
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
     const filePath = `portfolio/${user!.id}/${Date.now()}`;
@@ -89,18 +93,16 @@ export async function addPortfolioItemAction(base64ImageData: string) {
         .from('images')
         .getPublicUrl(filePath);
 
-    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
-    const newItem: PortfolioItem = {
-        src: publicUrl,
-        aiHint: 'new work'
-    };
+    // --- 2. Update profiles table (User Client with RLS) ---
+    const currentPortfolio = Array.isArray(profile.portfolio) ? profile.portfolio : [];
+    const newItem: PortfolioItem = { src: publicUrl, aiHint: 'new work' };
     const updatedPortfolio = [...currentPortfolio, newItem];
     
     const supabase = createClient();
     const { error: dbError } = await supabase
-        .from('providers')
+        .from('profiles')
         .update({ portfolio: updatedPortfolio })
-        .eq('id', provider.id);
+        .eq('id', user!.id);
 
     if (dbError) {
         console.error("Database update error:", dbError);
@@ -108,14 +110,15 @@ export async function addPortfolioItemAction(base64ImageData: string) {
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${provider.phone}`);
+    revalidatePath(`/provider/${user!.phone}`);
     return { error: null };
 }
 
 export async function updateProviderProfileImageAction(base64ImageData: string) {
-    const { user, provider, error: sessionError } = await getProviderFromSession();
+    const { user, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
+    // --- 1. Upload to Storage (Admin Client) ---
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
     const filePath = `avatars/${user!.id}/${Date.now()}`;
@@ -130,59 +133,61 @@ export async function updateProviderProfileImageAction(base64ImageData: string) 
         return { error: 'خطا در آپلود تصویر پروفایل: ' + uploadError.message };
     }
 
-    const { data: { publicUrl } } = adminSupabase.storage
-        .from('images')
-        .getPublicUrl(filePath);
+    const { data: { publicUrl } } = adminSupabase.storage.from('images').getPublicUrl(filePath);
     
+    // --- 2. Update profiles table (User Client with RLS) ---
     const supabase = createClient();
+    const newProfileImage = { src: publicUrl, aiHint: 'woman portrait' };
     const { error: dbError } = await supabase
-        .from('providers')
-        .update({ profile_image: { src: publicUrl, aiHint: 'woman portrait' } })
-        .eq('id', provider.id);
+        .from('profiles')
+        .update({ profile_image: newProfileImage })
+        .eq('id', user!.id);
     
     if(dbError) return { error: 'خطا در به‌روزرسانی پروفایل: ' + dbError.message };
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${provider.phone}`);
+    revalidatePath(`/provider/${user!.phone}`);
     return { error: null };
 }
 
 export async function deleteProviderProfileImageAction() {
-    const { provider, error: sessionError } = await getProviderFromSession();
+    const { user, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
     const supabase = createClient();
     const { error } = await supabase
-        .from('providers')
+        .from('profiles')
         .update({ profile_image: { src: '', aiHint: 'woman portrait' }})
-        .eq('id', provider.id);
+        .eq('id', user!.id);
 
     if (error) {
         return { error: 'خطا در حذف عکس پروفایل: ' + error.message };
     }
 
     revalidatePath(`/profile`);
-    revalidatePath(`/provider/${provider.phone}`);
+    revalidatePath(`/provider/${user!.phone}`);
     return { error: null };
 }
 
 export async function deletePortfolioItemAction(itemSrc: string) {
-    const { provider, error: sessionError } = await getProviderFromSession();
+    const { user, profile, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
-    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
+    const currentPortfolio = Array.isArray(profile.portfolio) ? profile.portfolio : [];
     
     const itemToDelete = currentPortfolio.find(item => item.src === itemSrc);
     const updatedPortfolio = currentPortfolio.filter(item => item.src !== itemSrc);
 
+    // --- 1. Update profiles table (User Client with RLS) ---
     const supabase = createClient();
     const { error: dbError } = await supabase
-        .from('providers')
+        .from('profiles')
         .update({ portfolio: updatedPortfolio })
-        .eq('id', provider.id);
+        .eq('id', user!.id);
         
     if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
 
+    // --- 2. Delete from Storage (Admin Client) ---
     // Try to delete from storage, but don't block if it fails.
     if (itemToDelete && itemToDelete.src) {
       try {
@@ -193,11 +198,11 @@ export async function deletePortfolioItemAction(itemSrc: string) {
               if(storageError) console.warn("Could not delete from storage: " + storageError.message);
           }
       } catch(e: any) {
-          console.warn("Could not create admin client to delete from storage: " + e.message);
+          console.warn("Could not create admin client or delete from storage: " + e.message);
       }
     }
 
-    revalidatePath(`/provider/${provider.phone}`);
+    revalidatePath(`/provider/${user!.phone}`);
     revalidatePath('/profile');
     return { error: null };
 }
