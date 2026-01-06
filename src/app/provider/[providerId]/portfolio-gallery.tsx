@@ -33,7 +33,7 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
         if(!confirm("آیا از حذف این نمونه کار مطمئن هستید؟")) return;
 
         toast.loading("در حال حذف نمونه کار...");
-        const result = await deletePortfolioItemAction(itemSrc);
+        const result = await deletePortfolioItemAction(provider.id, itemSrc);
         toast.dismiss();
         if(result.error) {
             toast.error("خطا در حذف", { description: result.error });

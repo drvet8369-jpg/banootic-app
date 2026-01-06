@@ -79,7 +79,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
         
         let result;
         if(action === 'addPortfolio') {
-            result = await addPortfolioItemAction(base64data);
+            result = await addPortfolioItemAction(providerData.id, base64data);
         } else {
             result = await updateProviderProfileImageAction(providerData.id, base64data);
         }
@@ -164,7 +164,6 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                   <PlusCircle className="w-5 h-5 ml-2" />
                   افزودن نمونه کار جدید
                 </Button>
-                {/* Portfolio items are now rendered on the public profile page for deletion */}
                  <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
               </div>
             </CardContent>
@@ -187,7 +186,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                   </Button>
                   <Button asChild className="w-full flex-1" variant="secondary">
                     <Link href={`/provider/${providerData.phone}`}>
-                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 ml-2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                       مشاهده پروفایل عمومی
                     </Link>
                   </Button>

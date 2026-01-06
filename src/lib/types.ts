@@ -24,7 +24,7 @@ export interface Provider {
   id: number;
   profile_id: string;
   name: string;
-  service: string; // The specific service they provide, e.g., "Manicure"
+  service: string; 
   location: string;
   phone: string;
   bio: string;
@@ -58,5 +58,4 @@ export type Profile = {
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
-  portfolio: PortfolioItem[] | null;
 };

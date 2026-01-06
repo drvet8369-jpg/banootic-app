@@ -17,10 +17,10 @@ export default async function ProfilePage() {
         redirect('/login');
     }
     
-    // Step 1: Fetch the user's main profile which contains account_type and portfolio
+    // Step 1: Fetch the user's main profile to check account_type
     const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('account_type')
         .eq('id', user.id)
         .single();
 
@@ -44,7 +44,7 @@ export default async function ProfilePage() {
         );
     }
     
-    // Step 2: If the user is a provider, fetch their provider-specific details
+    // Step 2: If the user is a provider, fetch their provider-specific details (which now includes portfolio)
     const { data: providerInfo, error: providerError } = await supabase
         .from('providers')
         .select('*')
@@ -60,9 +60,7 @@ export default async function ProfilePage() {
         return <div>اطلاعات پروفایل هنرمند یافت نشد.</div>
     }
 
-    // Step 3: Combine data from both tables
-    const portfolioItems = Array.isArray(userProfile.portfolio) ? userProfile.portfolio : [];
-
+    // Step 3: Combine data into the final object for the client component.
     const fullProviderData: Provider = {
         id: providerInfo.id,
         profile_id: providerInfo.profile_id,
@@ -79,7 +77,7 @@ export default async function ProfilePage() {
             src: providerInfo.profile_image?.src ?? '',
             aiHint: providerInfo.profile_image?.aiHint ?? 'woman portrait'
         },
-        portfolio: portfolioItems // Portfolio comes from the userProfile
+        portfolio: Array.isArray(providerInfo.portfolio) ? providerInfo.portfolio : []
     }
 
     return <ProfileClientContent providerData={fullProviderData} />;

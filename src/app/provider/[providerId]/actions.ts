@@ -72,33 +72,32 @@ export async function addReviewAction(payload: AddReviewPayload) {
     return { error: null };
 }
 
-export async function deletePortfolioItemAction(itemSrc: string) {
+export async function deletePortfolioItemAction(providerId: number, itemSrc: string) {
     const supabase = createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return { error: 'دسترسی غیرمجاز' };
 
-    const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('portfolio')
-        .eq('id', user.id)
+    const { data: provider, error: providerError } = await supabase
+        .from('providers')
+        .select('profile_id, portfolio, phone')
+        .eq('id', providerId)
         .single();
 
-    if (profileError || !profile) return { error: 'پروفایل کاربر یافت نشد.' };
+    if (providerError || !provider) return { error: 'پروفایل هنرمند یافت نشد.' };
+    if (provider.profile_id !== user.id) return { error: 'دسترسی غیرمجاز' };
 
-    const currentPortfolio = Array.isArray(profile.portfolio) ? profile.portfolio : [];
+    const currentPortfolio = Array.isArray(provider.portfolio) ? provider.portfolio : [];
     
-    // Find the item to delete to also remove from storage
     const itemToDelete = currentPortfolio.find(item => item.src === itemSrc);
     const updatedPortfolio = currentPortfolio.filter(item => item.src !== itemSrc);
 
     const { error: dbError } = await supabase
-        .from('profiles')
+        .from('providers')
         .update({ portfolio: updatedPortfolio })
-        .eq('id', user.id);
+        .eq('id', providerId);
         
     if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
 
-    // Attempt to delete from storage if URL exists
     if (itemToDelete && itemToDelete.src) {
       try {
           const adminSupabase = createAdminClient();
@@ -112,10 +111,7 @@ export async function deletePortfolioItemAction(itemSrc: string) {
       }
     }
 
-    const {data: provider} = await supabase.from('providers').select('phone').eq('profile_id', user.id).single();
-    if(provider?.phone) {
-        revalidatePath(`/provider/${provider.phone}`);
-    }
+    revalidatePath(`/provider/${provider.phone}`);
     revalidatePath('/profile');
     return { error: null };
 }

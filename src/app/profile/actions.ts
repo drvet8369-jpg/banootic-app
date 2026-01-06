@@ -16,10 +16,9 @@ async function verifyProviderOwnership(providerId: number) {
         return { error: 'دسترسی غیرمجاز: کاربر وارد نشده است.' };
     }
 
-    // Get provider to find its profile_id and phone
     const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('profile_id, phone')
+        .select('profile_id, phone, portfolio')
         .eq('id', providerId)
         .single();
     
@@ -31,19 +30,7 @@ async function verifyProviderOwnership(providerId: number) {
         return { error: 'دسترسی غیرمجاز: شما مالک این پروفایل نیستید.' };
     }
 
-    // Get profile to access the portfolio
-    const { data: profile, error: profileDataError } = await supabase
-        .from('profiles')
-        .select('portfolio')
-        .eq('id', user.id)
-        .single();
-
-    if(profileDataError || !profile) {
-        return { error: 'پروفایل اصلی کاربر یافت نشد.' };
-    }
-
-
-    return { user, provider, profile, error: null };
+    return { user, provider, error: null };
 }
 
 export async function updateProviderInfoAction(providerId: number, values: { name: string; service: string; bio: string; }) {
@@ -64,7 +51,6 @@ export async function updateProviderInfoAction(providerId: number, values: { nam
         return { error: 'خطا در به‌روزرسانی اطلاعات: ' + error.message };
     }
     
-    // Also update the full_name in the profiles table
     const { error: profileError } = await supabase
         .from('profiles')
         .update({ full_name: values.name })
@@ -80,17 +66,13 @@ export async function updateProviderInfoAction(providerId: number, values: { nam
 }
 
 
-export async function addPortfolioItemAction(base64ImageData: string) {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'دسترسی غیرمجاز: کاربر وارد نشده است.' };
+export async function addPortfolioItemAction(providerId: number, base64ImageData: string) {
+    const ownership = await verifyProviderOwnership(providerId);
+    if (ownership.error) return ownership;
 
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('portfolio').eq('id', user.id).single();
-    if(profileError || !profile) return { error: 'پروفایل کاربر یافت نشد.' };
-    
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-    const filePath = `portfolio/${user.id}/${Date.now()}`;
+    const filePath = `portfolio/${ownership.user.id}/${Date.now()}`;
     const imageData = decode(base64ImageData.split(',')[1]);
 
     const { error: uploadError } = await adminSupabase.storage
@@ -105,28 +87,25 @@ export async function addPortfolioItemAction(base64ImageData: string) {
         .from('images')
         .getPublicUrl(filePath);
 
-    const currentPortfolio = Array.isArray(profile.portfolio) ? profile.portfolio : [];
+    const currentPortfolio = Array.isArray(ownership.provider.portfolio) ? ownership.provider.portfolio : [];
     const newItem: PortfolioItem = {
         src: publicUrl,
         aiHint: 'new work'
     };
     const updatedPortfolio = [...currentPortfolio, newItem];
 
+    const supabase = createClient();
     const { error: dbError } = await supabase
-        .from('profiles')
+        .from('providers')
         .update({ portfolio: updatedPortfolio })
-        .eq('id', user.id);
+        .eq('id', providerId);
 
     if (dbError) {
         return { error: 'خطا در ذخیره تصویر در دیتابیس: ' + dbError.message };
     }
 
     revalidatePath(`/profile`);
-    // Find phone to revalidate public profile
-    const {data: provider} = await supabase.from('providers').select('phone').eq('profile_id', user.id).single();
-    if(provider?.phone) {
-        revalidatePath(`/provider/${provider.phone}`);
-    }
+    revalidatePath(`/provider/${ownership.provider.phone}`);
     return { error: null };
 }
 

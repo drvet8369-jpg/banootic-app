@@ -17,15 +17,9 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   noStore();
   const supabase = createClient();
   
-  // This query now joins providers with profiles to get the portfolio data.
   let queryBuilder = supabase
     .from('providers')
-    .select(`
-      *,
-      profiles:profiles!inner (
-        portfolio
-      )
-    `);
+    .select(`*`);
 
   if (query.categorySlug) {
     queryBuilder = queryBuilder.eq('category_slug', query.categorySlug);
@@ -43,11 +37,10 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
   const { data, error } = await queryBuilder;
 
   if (error) {
-    console.error('Error fetching providers with profiles:', error);
+    console.error('Error fetching providers:', error);
     return [];
   }
 
-  // The assertion `p.profiles!` is safe because of `!inner` in the join.
   return data.map(p => ({
     id: p.id,
     profile_id: p.profile_id,
@@ -55,7 +48,6 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
     service: p.service ?? '',
     location: p.location ?? '',
     phone: p.phone,
-    bio: p.bio ?? '',
     categorySlug: p.category_slug as any ?? 'beauty',
     serviceSlug: p.service_slug ?? '',
     rating: p.rating ?? 0,
@@ -64,7 +56,7 @@ export async function getProviders(query: GetProvidersQuery): Promise<Provider[]
         src: p.profile_image?.src || '', 
         aiHint: p.profile_image?.aiHint || 'woman portrait' 
     },
-    portfolio: Array.isArray(p.profiles!.portfolio) ? p.profiles!.portfolio : [],
+    portfolio: Array.isArray(p.portfolio) ? p.portfolio : [],
   }));
 }
 
@@ -74,12 +66,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
   const { data, error } = await supabase
     .from('providers')
-    .select(`
-        *,
-        profiles:profiles!inner (
-            portfolio
-        )
-    `)
+    .select(`*`)
     .eq('phone', phone)
     .single();
 
@@ -88,7 +75,6 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     return null;
   }
 
-  // The assertion `data.profiles!` is safe because of `!inner` in the join.
   return {
     id: data.id,
     profile_id: data.profile_id,
@@ -105,7 +91,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         src: data.profile_image?.src || '',
         aiHint: data.profile_image?.aiHint || 'woman portrait'
     },
-    portfolio: Array.isArray(data.profiles!.portfolio) ? data.profiles!.portfolio : [],
+    portfolio: Array.isArray(data.portfolio) ? data.portfolio : [],
   };
 }
 
