@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -39,11 +40,14 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+            <SheetHeader>
+                <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
+            </SheetHeader>
             <div className="p-6 border-b">
               <SheetClose asChild>
                 <Link href="/" className="flex items-center gap-2">
                   <Logo className="h-8 w-8 text-primary-foreground" />
-                  <span className="font-display text-2xl font-bold">هنربانو</span>
+                  <span className="font-display text-2xl font-bold">بانوتیک</span>
                 </Link>
               </SheetClose>
             </div>
@@ -68,11 +72,14 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-[300px] sm:w-[340px] flex flex-col p-0">
+        <SheetHeader>
+            <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
+        </SheetHeader>
         <div className="p-6 border-b">
           <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-primary-foreground" />
-              <span className="font-display text-2xl font-bold">هنربانو</span>
+              <span className="font-display text-2xl font-bold">بانوتیک</span>
             </Link>
           </SheetClose>
         </div>
