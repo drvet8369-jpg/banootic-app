@@ -12,12 +12,12 @@ import type { PortfolioItem, Profile } from '@/lib/types';
  * A secure server action that gets the current user's profile.
  * It's the single source of truth for identifying the user and their data.
  */
-async function getUserProfile() {
+async function getUserProfile(): Promise<{ user: import('@supabase/supabase-js').User; profile: Profile; error: null } | { user: null; profile: null; error: string }> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        return { error: 'دسترسی غیرمجاز: کاربر وارد نشده است.' };
+        return { user: null, profile: null, error: 'دسترسی غیرمجاز: کاربر وارد نشده است.' };
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -27,10 +27,10 @@ async function getUserProfile() {
         .single();
     
     if (profileError || !profile) {
-        return { error: 'پروفایل کاربر یافت نشد.' };
+        return { user: null, profile: null, error: 'پروفایل کاربر یافت نشد.' };
     }
 
-    return { user, profile: profile as Profile, error: null };
+    return { user, profile, error: null };
 }
 
 export async function updateProviderInfoAction(values: { name: string; service: string; bio: string; }) {
@@ -60,7 +60,6 @@ export async function updateProviderInfoAction(values: { name: string; service: 
         .eq('id', user!.id);
     
     if(profileError) {
-        // This is not critical, but good to know if it fails.
         console.warn("Could not update profiles table name: ", profileError.message);
     }
 
@@ -74,7 +73,6 @@ export async function addPortfolioItemAction(base64ImageData: string) {
     const { user, profile, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
-    // --- 1. Upload to Storage (Admin Client) ---
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
     const filePath = `portfolio/${user!.id}/${Date.now()}`;
@@ -93,7 +91,6 @@ export async function addPortfolioItemAction(base64ImageData: string) {
         .from('images')
         .getPublicUrl(filePath);
 
-    // --- 2. Update profiles table (User Client with RLS) ---
     const currentPortfolio = Array.isArray(profile.portfolio) ? profile.portfolio : [];
     const newItem: PortfolioItem = { src: publicUrl, aiHint: 'new work' };
     const updatedPortfolio = [...currentPortfolio, newItem];
@@ -118,7 +115,6 @@ export async function updateProviderProfileImageAction(base64ImageData: string) 
     const { user, error: sessionError } = await getUserProfile();
     if (sessionError) return { error: sessionError };
 
-    // --- 1. Upload to Storage (Admin Client) ---
     const adminSupabase = createAdminClient();
     const contentType = base64ImageData.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
     const filePath = `avatars/${user!.id}/${Date.now()}`;
@@ -135,7 +131,6 @@ export async function updateProviderProfileImageAction(base64ImageData: string) 
 
     const { data: { publicUrl } } = adminSupabase.storage.from('images').getPublicUrl(filePath);
     
-    // --- 2. Update profiles table (User Client with RLS) ---
     const supabase = createClient();
     const newProfileImage = { src: publicUrl, aiHint: 'woman portrait' };
     const { error: dbError } = await supabase
@@ -178,7 +173,6 @@ export async function deletePortfolioItemAction(itemSrc: string) {
     const itemToDelete = currentPortfolio.find(item => item.src === itemSrc);
     const updatedPortfolio = currentPortfolio.filter(item => item.src !== itemSrc);
 
-    // --- 1. Update profiles table (User Client with RLS) ---
     const supabase = createClient();
     const { error: dbError } = await supabase
         .from('profiles')
@@ -187,8 +181,6 @@ export async function deletePortfolioItemAction(itemSrc: string) {
         
     if (dbError) return { error: 'خطا در حذف از دیتابیس: ' + dbError.message };
 
-    // --- 2. Delete from Storage (Admin Client) ---
-    // Try to delete from storage, but don't block if it fails.
     if (itemToDelete && itemToDelete.src) {
       try {
           const adminSupabase = createAdminClient();
