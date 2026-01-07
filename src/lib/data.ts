@@ -14,7 +14,7 @@ type GetProvidersQuery = {
 }
 
 // This function now correctly joins providers and profiles
-export async function getProviders(query: GetProvidersQuery): Promise<Provider[]> {
+export async function getProviders(query: GetProvidersQuery = {}): Promise<Provider[]> {
   noStore();
   const supabase = createClient();
   
