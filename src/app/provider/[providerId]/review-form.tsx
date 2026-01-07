@@ -26,6 +26,15 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // The main logic change: check if the logged-in user is the owner of the profile.
+  const isOwner = user?.id === provider.profile_id;
+
+  // If the user is the owner of the profile, do not show the review form at all.
+  if (isOwner) {
+    return null;
+  }
+
+  // If the user is not logged in, show a prompt to log in.
   if (!user) {
     return (
         <Card className="mt-8 bg-muted/40">
@@ -71,6 +80,7 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
   
   const isButtonDisabled = isSubmitting || rating === 0 || !comment.trim();
 
+  // If the user is logged in AND is not the owner, show the review form.
   return (
     <Card className="mt-8 bg-muted/30">
       <CardHeader>
