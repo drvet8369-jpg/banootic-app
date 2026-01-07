@@ -13,7 +13,6 @@ type GetProvidersQuery = {
   searchQuery?: string;
 }
 
-// This function now correctly joins providers and profiles
 export async function getProviders(query: GetProvidersQuery = {}): Promise<Provider[]> {
   noStore();
   const supabase = createClient();
@@ -33,7 +32,7 @@ export async function getProviders(query: GetProvidersQuery = {}): Promise<Provi
       rating,
       reviews_count,
       profiles!inner (
-        profile_image,
+        profile_image_url,
         portfolio
       )
     `);
@@ -58,7 +57,6 @@ export async function getProviders(query: GetProvidersQuery = {}): Promise<Provi
     return [];
   }
 
-  // Transform the data to match the Provider type
   return data.map((p: any) => ({
     id: p.id,
     profile_id: p.profile_id,
@@ -71,7 +69,7 @@ export async function getProviders(query: GetProvidersQuery = {}): Promise<Provi
     serviceSlug: p.service_slug ?? '',
     rating: p.rating ?? 0,
     reviewsCount: p.reviews_count ?? 0,
-    profileImage: p.profiles?.profile_image ?? { src: '', aiHint: 'woman portrait' },
+    profileImage: { src: p.profiles?.profile_image_url ?? '', aiHint: 'woman portrait' },
     portfolio: (Array.isArray(p.profiles?.portfolio) ? p.profiles.portfolio : []) as PortfolioItem[],
   }));
 }
@@ -95,7 +93,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
       rating,
       reviews_count,
       profiles!inner (
-        profile_image,
+        profile_image_url,
         portfolio
       )
     `)
@@ -121,7 +119,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     serviceSlug: p.service_slug ?? '',
     rating: p.rating ?? 0,
     reviewsCount: p.reviews_count ?? 0,
-    profileImage: p.profiles?.profile_image ?? { src: '', aiHint: 'woman portrait' },
+    profileImage: { src: p.profiles?.profile_image_url ?? '', aiHint: 'woman portrait' },
     portfolio: (Array.isArray(p.profiles?.portfolio) ? p.profiles.portfolio : []) as PortfolioItem[],
   };
 }

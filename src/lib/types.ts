@@ -20,7 +20,7 @@ export interface PortfolioItem {
   aiHint?: string;
 }
 
-// Represents the joined data from `providers` and `profiles` tables
+// Represents the joined data from `providers` and `profiles` tables for display purposes
 export interface Provider {
   id: number; // providers.id
   profile_id: string; // profiles.id (UUID)
@@ -33,8 +33,8 @@ export interface Provider {
   serviceSlug: string; 
   rating: number;
   reviewsCount: number;
-  profileImage: { src: string; aiHint?: string; }; // from profiles table
-  portfolio: PortfolioItem[]; // from profiles table
+  profileImage: { src: string; aiHint?: string; }; // From profiles.profile_image_url
+  portfolio: PortfolioItem[]; // from profiles.portfolio
 }
 
 export interface Review {
@@ -54,12 +54,12 @@ export interface Message {
   createdAt: Timestamp;
 }
 
-// From Supabase `profiles` table
+// Represents the exact structure of the `profiles` table in Supabase
 export type Profile = {
   id: string; // This is the UUID from auth.users
   account_type: 'customer' | 'provider';
   full_name: string | null;
   phone: string | null;
-  profile_image: { src: string; aiHint?: string; } | null;
-  portfolio: PortfolioItem[] | null;
+  profile_image_url: string | null; // This is the text column
+  portfolio: PortfolioItem[] | null; // This is the jsonb column
 };
