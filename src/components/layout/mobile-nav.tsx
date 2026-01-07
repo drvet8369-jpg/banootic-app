@@ -39,11 +39,11 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
             <span className="sr-only">باز کردن منو</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="p-0 w-[300px] sm:w-[340px]">
+        <SheetContent side="right" className="w-[300px] sm:w-[340px]">
             <SheetHeader>
                 <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
             </SheetHeader>
-            <div className="p-6 border-b">
+            <div className="border-b pb-6 mb-6">
               <SheetClose asChild>
                 <Link href="/" className="flex items-center gap-2">
                   <Logo className="h-8 w-8 text-primary-foreground" />
@@ -51,7 +51,7 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
                 </Link>
               </SheetClose>
             </div>
-            <nav className="flex-grow p-6 space-y-2">
+            <nav className="flex-grow space-y-2">
                <SheetClose asChild>
                   <Link href="/login" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
@@ -71,11 +71,11 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
           <span className="sr-only">باز کردن منو</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:w-[340px] flex flex-col p-0">
+      <SheetContent side="right" className="w-[300px] sm:w-[340px] flex flex-col">
         <SheetHeader>
             <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
         </SheetHeader>
-        <div className="p-6 border-b">
+        <div className="border-b pb-6">
           <SheetClose asChild>
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-8 w-8 text-primary-foreground" />
@@ -83,7 +83,7 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
             </Link>
           </SheetClose>
         </div>
-        <nav className="flex-grow p-6 space-y-2">
+        <nav className="flex-grow mt-6 space-y-2">
           {userProfile?.account_type === 'provider' && (
             <SheetClose asChild>
               <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
@@ -100,7 +100,7 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
             </Link>
           </SheetClose>
         </nav>
-        <div className="mt-auto p-6 border-t">
+        <div className="mt-auto border-t pt-6">
           <div className="flex items-center gap-3 mb-4">
             <Avatar>
               <AvatarFallback>{getInitials(userProfile.full_name)}</AvatarFallback>
