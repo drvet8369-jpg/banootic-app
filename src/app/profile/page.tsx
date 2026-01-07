@@ -1,4 +1,3 @@
-
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
@@ -6,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ProfileClientContent } from './profile-client-content';
 import type { Provider } from '@/lib/types';
-import type { Profile } from '@/lib/types';
 
 
 export default async function ProfilePage() {
@@ -73,7 +71,6 @@ export default async function ProfilePage() {
         serviceSlug: providerInfo.service_slug ?? '',
         rating: providerInfo.rating ?? 0,
         reviewsCount: providerInfo.reviews_count ?? 0,
-        // Pass the image URL and portfolio from the main profile
         profileImage: {
             src: userProfile.profile_image_url ?? '',
             aiHint: 'woman portrait'
@@ -81,6 +78,9 @@ export default async function ProfilePage() {
         portfolio: Array.isArray(userProfile.portfolio) ? userProfile.portfolio : []
     }
 
-    return <ProfileClientContent providerData={fullProviderData} />;
+    return (
+        <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
+            <ProfileClientContent providerData={fullProviderData} />
+        </div>
+    );
 }
-
