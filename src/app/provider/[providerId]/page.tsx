@@ -65,7 +65,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
   const isOwnerViewing = user && user.id === provider.profile_id;
 
   return (
-    <div className="py-12 md:py-20 flex justify-center">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex justify-center">
         <div className="max-w-2xl w-full">
             <Card className="flex flex-col w-full overflow-hidden h-full">
                 <div className="p-6 flex flex-col items-center text-center bg-muted/30">

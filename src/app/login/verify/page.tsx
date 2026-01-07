@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -110,83 +111,85 @@ function RegistrationForm({ onComplete }: { onComplete: () => void }) {
   }
 
   return (
-     <Card className="mx-auto max-w-lg w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline">تکمیل اطلاعات</CardTitle>
-        <CardDescription>فقط یک قدم دیگر باقی مانده است. لطفاً اطلاعات زیر را کامل کنید.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem>
-                <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
-                <FormControl><Input placeholder="نام خود را وارد کنید" {...field} disabled={isLoading} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="accountType" render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>نوع حساب کاربری:</FormLabel>
-                <FormControl>
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-1" disabled={isLoading}>
-                    <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="customer" /></FormControl><FormLabel className="font-normal">مشتری هستم</FormLabel></FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="provider" /></FormControl><FormLabel className="font-normal">هنرمند هستم</FormLabel></FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            {accountType === 'provider' && (
-              <>
-                <FormField control={form.control} name="serviceType" render={({ field }) => (
+     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+         <Card className="mx-auto max-w-lg w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl font-headline">تکمیل اطلاعات</CardTitle>
+            <CardDescription>فقط یک قدم دیگر باقی مانده است. لطفاً اطلاعات زیر را کامل کنید.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>دسته‌بندی خدمات</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" /></SelectTrigger></FormControl>
-                      <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <FormLabel>نام کامل یا نام کسب‌وکار</FormLabel>
+                    <FormControl><Input placeholder="نام خود را وارد کنید" {...field} disabled={isLoading} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField control={form.control} name="accountType" render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>نوع حساب کاربری:</FormLabel>
+                    <FormControl>
+                      <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-1" disabled={isLoading}>
+                        <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="customer" /></FormControl><FormLabel className="font-normal">مشتری هستم</FormLabel></FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="provider" /></FormControl><FormLabel className="font-normal">هنرمند هستم</FormLabel></FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                {accountType === 'provider' && (
+                  <>
+                    <FormField control={form.control} name="serviceType" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>دسته‌بندی خدمات</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="یک دسته‌بندی خدمات انتخاب کنید" /></SelectTrigger></FormControl>
+                          <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
 
-                {subServices.length > 0 && (
-                    <FormField control={form.control} name="serviceSlug" render={({ field }) => (
+                    {subServices.length > 0 && (
+                        <FormField control={form.control} name="serviceSlug" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>خدمت تخصصی</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="خدمت تخصصی خود را انتخاب کنید" /></SelectTrigger></FormControl>
+                                    <SelectContent>{subServices.map((s) => <SelectItem key={s.id} value={s.slug}>{s.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+
+                    <FormField control={form.control} name="location" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>خدمت تخصصی</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="خدمت تخصصی خود را انتخاب کنید" /></SelectTrigger></FormControl>
-                                <SelectContent>{subServices.map((s) => <SelectItem key={s.id} value={s.slug}>{s.name}</SelectItem>)}</SelectContent>
-                            </Select>
+                            <FormLabel>شهر</FormLabel>
+                            <FormControl><Input placeholder="مثال: ارومیه" {...field} disabled /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
-                )}
-
-                <FormField control={form.control} name="location" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>شهر</FormLabel>
-                        <FormControl><Input placeholder="مثال: ارومیه" {...field} disabled /></FormControl>
+                    <FormField control={form.control} name="bio" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>بیوگرافی کوتاه</FormLabel>
+                        <FormControl><Textarea placeholder="کمی در مورد خدمات و هنر خود به ما بگویید" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="bio" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>بیوگرافی کوتاه</FormLabel>
-                    <FormControl><Textarea placeholder="کمی در مورد خدمات و هنر خود به ما بگویید" {...field} disabled={isLoading} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </>
-            )}
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              تکمیل ثبت‌نام و ورود
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+                      </FormItem>
+                    )} />
+                  </>
+                )}
+                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  تکمیل ثبت‌نام و ورود
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+     </div>
   );
 }
 
@@ -213,38 +216,40 @@ function VerifyOTPForm({ phone, onVerified }: { phone: string, onVerified: (isNe
   }
 
   return (
-    <Card className="mx-auto max-w-sm w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline">تایید شماره تلفن</CardTitle>
-        <CardDescription>کد ۶ رقمی ارسال شده به شماره {phone} را وارد کنید.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...otpForm}>
-          <form onSubmit={otpForm.handleSubmit(onOTPSubmit)} className="space-y-6">
-            <FormField control={otpForm.control} name="pin" render={({ field }) => (
-              <FormItem>
-                <FormLabel>کد تایید</FormLabel>
-                <FormControl>
-                  <div className="flex justify-center">
-                    <InputOTP maxLength={6} {...field}>
-                      <InputOTPGroup dir="ltr">
-                        <InputOTPSlot index={0} /> <InputOTPSlot index={1} /> <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} /> <InputOTPSlot index={4} /> <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              تایید و ورود
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <Card className="mx-auto max-w-sm w-full">
+        <CardHeader>
+            <CardTitle className="text-2xl font-headline">تایید شماره تلفن</CardTitle>
+            <CardDescription>کد ۶ رقمی ارسال شده به شماره {phone} را وارد کنید.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Form {...otpForm}>
+            <form onSubmit={otpForm.handleSubmit(onOTPSubmit)} className="space-y-6">
+                <FormField control={otpForm.control} name="pin" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>کد تایید</FormLabel>
+                    <FormControl>
+                    <div className="flex justify-center">
+                        <InputOTP maxLength={6} {...field}>
+                        <InputOTPGroup dir="ltr">
+                            <InputOTPSlot index={0} /> <InputOTPSlot index={1} /> <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} /> <InputOTPSlot index={4} /> <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                        </InputOTP>
+                    </div>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                تایید و ورود
+                </Button>
+            </form>
+            </Form>
+        </CardContent>
+        </Card>
+    </div>
   );
 }
 
@@ -289,13 +294,15 @@ function VerifyPageContent() {
 
   if (!phone) {
     return (
-      <Card className="mx-auto max-w-sm w-full text-center">
-        <CardHeader><CardTitle>خطا</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-destructive">شماره تلفنی برای تایید یافت نشد.</p>
-          <Button onClick={() => router.push('/login')} className="mt-4">بازگشت به ورود</Button>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <Card className="mx-auto max-w-sm w-full text-center">
+            <CardHeader><CardTitle>خطا</CardTitle></CardHeader>
+            <CardContent>
+            <p className="text-destructive">شماره تلفنی برای تایید یافت نشد.</p>
+            <Button onClick={() => router.push('/login')} className="mt-4">بازگشت به ورود</Button>
+            </CardContent>
+        </Card>
+      </div>
     );
   }
   

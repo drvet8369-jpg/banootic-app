@@ -1,3 +1,4 @@
+
 import { getProviders } from '@/lib/data';
 import { services, categories } from '@/lib/constants';
 import type { Service, Category } from '@/lib/types';
@@ -26,7 +27,7 @@ export default async function ServiceProvidersPage({ params }: PageProps) {
   }
 
   return (
-    <div className="py-12 md:py-20">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">

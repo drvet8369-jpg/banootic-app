@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { categories } from '@/lib/constants';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +16,7 @@ const iconMap: { [key: string]: React.ElementType } = {
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
       <section className="text-center py-20 lg:py-24 w-full">
         <Logo className="mx-auto mb-6 h-32 w-32 text-primary-foreground" />
         <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground/80">

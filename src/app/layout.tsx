@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
@@ -41,7 +42,7 @@ export default function RootLayout({
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <SearchBar />
-            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+            <main className="flex-grow flex flex-col">
               {children}
             </main>
             <Footer />

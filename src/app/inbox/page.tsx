@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -122,7 +123,7 @@ export default function InboxPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center py-20">
         <User className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="font-headline text-2xl">لطفا وارد شوید</h1>
         <p className="text-muted-foreground mt-2">برای مشاهده صندوق ورودی باید وارد حساب کاربری خود شوید.</p>
@@ -135,7 +136,7 @@ export default function InboxPage() {
   
   if (chats.length === 0 && !isLoading && !error && userProfile) {
      return (
-       <div className="max-w-4xl mx-auto py-12">
+       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12">
         <Card>
             <CardHeader>
                 <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
@@ -167,7 +168,7 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>

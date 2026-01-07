@@ -1,3 +1,4 @@
+
 import { getProviders } from '@/lib/data';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX } from 'lucide-react';
@@ -43,7 +44,7 @@ export default function SearchPage({
   const query = searchParams?.q as string || '';
 
   return (
-    <div className="py-12 md:py-20">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">نتایج جستجو</h1>
         {query ? (

@@ -1,3 +1,4 @@
+
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
@@ -24,12 +25,12 @@ export default async function ProfilePage() {
 
     if (profileError || !userProfile) {
         console.error("Supabase error fetching main profile:", profileError);
-        return <div>خطا در بارگذاری پروفایل اصلی. لطفا با پشتیبانی تماس بگیرید.</div>;
+        return <div className="container mx-auto px-4 sm:px-6 lg:px-8">خطا در بارگذاری پروفایل اصلی. لطفا با پشتیبانی تماس بگیرید.</div>;
     }
 
     if (userProfile.account_type === 'customer') {
          return (
-            <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center py-20 md:py-32">
                 <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
                 <h1 className="font-display text-4xl md:text-5xl font-bold">این یک پروفایل هنرمند نیست</h1>
                 <p className="mt-4 text-lg md-text-xl text-muted-foreground max-w-xl mx-auto">
@@ -51,11 +52,11 @@ export default async function ProfilePage() {
     
     if (providerError) {
         console.error("Supabase error fetching provider details:", providerError);
-        return <div>خطا در بارگذاری اطلاعات تکمیلی هنرمند. جزئیات: {providerError.message}</div>;
+        return <div className="container mx-auto px-4 sm:px-6 lg:px-8">خطا در بارگذاری اطلاعات تکمیلی هنرمند. جزئیات: {providerError.message}</div>;
     }
     
     if (!providerInfo) {
-        return <div>اطلاعات پروفایل هنرمند یافت نشد.</div>
+        return <div className="container mx-auto px-4 sm:px-6 lg:px-8">اطلاعات پروفایل هنرمند یافت نشد.</div>
     }
 
     // Step 3: Combine data into the final object for the client component.
@@ -79,7 +80,7 @@ export default async function ProfilePage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12 md:py-20 space-y-8">
             <ProfileClientContent providerData={fullProviderData} />
         </div>
     );
