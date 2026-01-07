@@ -32,7 +32,7 @@ export async function getProviders(query: GetProvidersQuery = {}): Promise<Provi
       service_slug,
       rating,
       reviews_count,
-      profiles (
+      profiles!inner (
         profile_image,
         portfolio
       )
@@ -94,7 +94,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
       service_slug,
       rating,
       reviews_count,
-      profiles (
+      profiles!inner (
         profile_image,
         portfolio
       )
