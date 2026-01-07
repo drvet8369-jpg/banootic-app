@@ -17,10 +17,10 @@ export default async function ProfilePage() {
         redirect('/login');
     }
     
-    // Step 1: Fetch the user's main profile to check account_type
+    // Step 1: Fetch the user's main profile which now contains image and portfolio
     const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('account_type')
+        .select('*')
         .eq('id', user.id)
         .single();
 
@@ -44,7 +44,7 @@ export default async function ProfilePage() {
         );
     }
     
-    // Step 2: If the user is a provider, fetch their provider-specific details (which now includes portfolio)
+    // Step 2: If the user is a provider, fetch their provider-specific details
     const { data: providerInfo, error: providerError } = await supabase
         .from('providers')
         .select('*')
@@ -73,12 +73,14 @@ export default async function ProfilePage() {
         serviceSlug: providerInfo.service_slug ?? '',
         rating: providerInfo.rating ?? 0,
         reviewsCount: providerInfo.reviews_count ?? 0,
+        // Pass the image URL and portfolio from the main profile
         profileImage: {
-            src: providerInfo.profile_image?.src ?? '',
-            aiHint: providerInfo.profile_image?.aiHint ?? 'woman portrait'
+            src: userProfile.profile_image_url ?? '',
+            aiHint: 'woman portrait'
         },
-        portfolio: Array.isArray(providerInfo.portfolio) ? providerInfo.portfolio : []
+        portfolio: Array.isArray(userProfile.portfolio) ? userProfile.portfolio : []
     }
 
     return <ProfileClientContent providerData={fullProviderData} />;
 }
+

@@ -2,9 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-
 import Image from 'next/image';
 import {
   Dialog,
@@ -14,34 +11,15 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
-import { Button } from '@/components/ui/button';
-import { Trash2, X } from 'lucide-react';
-import { deletePortfolioItemAction } from '@/app/profile/actions';
+import { X } from 'lucide-react';
 import type { Provider } from '@/lib/types';
 
 interface PortfolioGalleryProps {
-    isOwner: boolean;
     provider: Provider;
 }
 
-export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
-    const router = useRouter();
+export function PortfolioGallery({ provider }: PortfolioGalleryProps) {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
-    const handleDelete = async (e: React.MouseEvent, itemSrc: string) => {
-        e.stopPropagation();
-        if(!confirm("آیا از حذف این نمونه کار مطمئن هستید؟")) return;
-
-        toast.loading("در حال حذف نمونه کار...");
-        const result = await deletePortfolioItemAction(itemSrc);
-        toast.dismiss();
-        if(result.error) {
-            toast.error("خطا در حذف", { description: result.error });
-        } else {
-            toast.success("نمونه کار حذف شد.");
-            router.refresh();
-        }
-    };
     
     if (!provider.portfolio || provider.portfolio.length === 0) {
         return (
@@ -68,17 +46,6 @@ export function PortfolioGallery({ provider, isOwner }: PortfolioGalleryProps) {
                                 data-ai-hint={item.aiHint || ''}
                                 key={item.src}
                             />
-                            {isOwner && (
-                            <Button
-                                variant="destructive"
-                                size="icon"
-                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                onClick={(e) => handleDelete(e, item.src)}
-                                aria-label={`حذف نمونه کار ${index + 1}`}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
-                            )}
                         </div>
                     </DialogTrigger>
                 ))}

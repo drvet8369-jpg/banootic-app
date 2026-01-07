@@ -13,7 +13,7 @@ import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { MapPin, User, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
-import { addPortfolioItemAction, updateProviderInfoAction, updateProviderProfileImageAction, deleteProviderProfileImageAction } from './actions';
+import { addPortfolioItemAction, updateProviderInfoAction, updateProviderProfileImageAction, deleteProviderProfileImageAction, deletePortfolioItemAction } from './actions';
 import type { Provider } from '@/lib/types';
 
 
@@ -115,6 +115,22 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
       setIsSubmitting(false);
   }
 
+  const handleDeletePortfolioItem = async (itemSrc: string) => {
+    if(!confirm("آیا از حذف این نمونه کار مطمئن هستید؟")) return;
+
+    setIsSubmitting(true);
+    toast.loading("در حال حذف نمونه کار...");
+    const result = await deletePortfolioItemAction(itemSrc);
+    toast.dismiss();
+
+    if(result.error) {
+        toast.error("خطا در حذف", { description: result.error });
+    } else {
+        toast.success("نمونه کار حذف شد.");
+        router.refresh();
+    }
+    setIsSubmitting(false);
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
@@ -164,6 +180,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                 <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{providerData.bio}</p>
               )}
               <Separator className="my-6" />
+              
               <div className="mb-4">
                 <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
                 <input type="file" ref={portfolioFileInputRef} onChange={(e) => handleFileChange(e, 'addPortfolio')} className="hidden" accept="image/*" />
@@ -172,7 +189,36 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                   <PlusCircle className="w-5 h-5 ml-2" />
                   افزودن نمونه کار جدید
                 </Button>
-                 <p className="text-xs text-center text-muted-foreground">برای حذف نمونه‌کارها، به پروفایل عمومی خود مراجعه کرده و روی دکمه سطل زباله کلیک کنید.</p>
+
+                {providerData.portfolio && providerData.portfolio.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {providerData.portfolio.map((item, index) => (
+                      <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
+                        <Image
+                            src={item.src}
+                            alt={`نمونه کار ${index + 1}`}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            data-ai-hint={item.aiHint || ''}
+                        />
+                        <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={() => handleDeletePortfolioItem(item.src)}
+                            disabled={isSubmitting}
+                            aria-label={`حذف نمونه کار ${index + 1}`}
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                   <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                        <p>هنوز نمونه کاری اضافه نکرده‌اید.</p>
+                   </div>
+                )}
               </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row flex-wrap gap-2 pt-6 border-t mt-auto">
