@@ -3,10 +3,11 @@ import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
+import { services } from './constants';
 
 interface ProviderQuery {
     categorySlug?: string;
-    serviceSlug?: string;
+    serviceId?: number; // Changed from serviceSlug to serviceId
     searchQuery?: string;
 }
 
@@ -34,23 +35,25 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             service_slug,
             rating,
             reviews_count,
-            profiles (
+            profiles!inner (
                 profile_image_url,
-                portfolio
+                portfolio,
+                service_id
             )
         `);
 
     // Apply filters independently
-    if (query.serviceSlug) {
-        queryBuilder = queryBuilder.eq('service_slug', query.serviceSlug);
-    } 
+    if (query.serviceId) {
+        // Correctly filter on the profiles table using the service_id
+        queryBuilder = queryBuilder.eq('profiles.service_id', query.serviceId);
+    }
+     
     if (query.categorySlug) {
         queryBuilder = queryBuilder.eq('category_slug', query.categorySlug);
     }
 
     if (query.searchQuery) {
         const cleanedQuery = query.searchQuery.trim();
-        // Use 'or' for a comprehensive search across multiple fields
         queryBuilder = queryBuilder.or(`name.ilike.%${cleanedQuery}%,service.ilike.%${cleanedQuery}%,bio.ilike.%${cleanedQuery}%`);
     }
 
@@ -63,7 +66,6 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     // Transform the data into the final Provider shape
     const providers: Provider[] = providersData.map(p => {
-        // The 'profiles' relation can be an object or null
         const profileData = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
         return {
             id: p.id,

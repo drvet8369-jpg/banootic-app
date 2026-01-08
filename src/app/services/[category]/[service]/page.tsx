@@ -1,3 +1,4 @@
+
 import { services, categories } from '@/lib/constants';
 import { getProviders } from '@/lib/data';
 import type { Provider, Category } from '@/lib/types';
@@ -25,7 +26,8 @@ export default async function ServiceProvidersPage({ params }: PageProps) {
     notFound();
   }
 
-  const serviceProviders = await getProviders({ serviceSlug });
+  // Fetch providers using the correct service ID
+  const serviceProviders = await getProviders({ serviceId: service.id });
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">

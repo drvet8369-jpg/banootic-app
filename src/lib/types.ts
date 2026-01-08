@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface Category {
@@ -61,4 +62,5 @@ export type Profile = {
   phone: string | null;
   profile_image_url: string | null; // This is the text column
   portfolio: PortfolioItem[] | null; // This is the jsonb column
+  service_id: number | null; // The foreign key to the services table
 };

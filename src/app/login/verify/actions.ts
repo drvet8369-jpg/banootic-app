@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -33,7 +34,6 @@ export async function verifyOtpAction(phone: string, token: string) {
     
     console.log(`[Action:verifyOtp] OTP successful. User ID: ${session.user.id}`);
     
-    // Now check if a profile exists
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, account_type')
@@ -50,7 +50,7 @@ export async function verifyOtpAction(phone: string, token: string) {
 
     let redirectPath = '/';
     if(isNewUser) {
-      redirectPath = `/login/verify?phone=${phone}`; // Stay on the same page to show registration form
+      redirectPath = `/login/verify?phone=${phone}`;
     } else {
       if(profile.account_type === 'provider') {
         redirectPath = '/profile';
@@ -72,13 +72,15 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
   }
 
   const { user } = session;
+  const selectedService = services.find(s => s.slug === values.serviceSlug);
 
-  // Step 1: Create or update the main user profile.
+  // Step 1: Create or update the main user profile, including the service_id if applicable.
   const { error: profileError } = await supabase.from('profiles').upsert({
     id: user.id,
     full_name: values.name,
     phone: user.phone,
     account_type: values.accountType,
+    service_id: values.accountType === 'provider' ? selectedService?.id : null,
   }, { onConflict: 'id' }).select().single();
 
   if (profileError) {
@@ -91,11 +93,9 @@ export async function completeRegistrationAction(values: RegistrationFormValues)
     if (!values.serviceType || !values.serviceSlug || !values.bio || !values.location) {
       return { error: 'اطلاعات هنرمند ناقص است. تمام فیلدها باید پر شوند.' };
     }
-    const selectedService = services.find(s => s.slug === values.serviceSlug);
-
-    // Use .insert() to create a new provider record linked to the profile.
+    
     const { error: providerError } = await supabase.from('providers').insert({
-      profile_id: user.id, // This is the crucial link to the profiles table.
+      profile_id: user.id,
       name: values.name,
       location: values.location,
       bio: values.bio,
