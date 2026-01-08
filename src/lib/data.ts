@@ -40,11 +40,11 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             )
         `);
 
-    // Apply filters based on the query object
+    // Apply filters independently
     if (query.serviceSlug) {
-        // Most specific filter, should take precedence
         queryBuilder = queryBuilder.eq('service_slug', query.serviceSlug);
-    } else if (query.categorySlug) {
+    } 
+    if (query.categorySlug) {
         queryBuilder = queryBuilder.eq('category_slug', query.categorySlug);
     }
 
@@ -63,7 +63,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     // Transform the data into the final Provider shape
     const providers: Provider[] = providersData.map(p => {
-        // The 'profiles' relation can be an object or null, not an array, with a .single() join hint.
+        // The 'profiles' relation can be an object or null
         const profileData = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
         return {
             id: p.id,
