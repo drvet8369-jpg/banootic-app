@@ -1,5 +1,4 @@
-
-import { categories, services } from '@/lib/constants';
+import { categories, services } from '@/lib/data';
 import type { Category, Service } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +20,7 @@ export async function generateStaticParams() {
 
 const getCategoryData = (slug: string): { category: Category | undefined, categoryServices: Service[] } => {
   const category = categories.find((c) => c.slug === slug);
-  const categoryServices = services.filter((s) => s.category_id === category?.id);
+  const categoryServices = services.filter((s) => s.categorySlug === slug);
   return { category, categoryServices };
 };
 
@@ -33,7 +32,7 @@ export default function CategoryPage({ params }: PageProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+    <div className="py-12 md:py-20">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{category.name}</h1>
         <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">{category.description}</p>
