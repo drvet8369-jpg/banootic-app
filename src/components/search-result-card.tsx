@@ -9,10 +9,9 @@ import { StarRating } from '@/components/ui/star-rating';
 
 interface SearchResultCardProps {
   provider: Provider;
-  debugSlug?: string; // Prop for temporary debugging
 }
 
-export default function SearchResultCard({ provider, debugSlug }: SearchResultCardProps) {
+export default function SearchResultCard({ provider }: SearchResultCardProps) {
   return (
       <Card className="flex flex-col w-full overflow-hidden h-full">
         <CardHeader className="flex-col items-center text-center p-6">
@@ -37,14 +36,7 @@ export default function SearchResultCard({ provider, debugSlug }: SearchResultCa
         <CardContent className="flex-grow flex flex-col items-center justify-center p-4 pt-0">
           <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
         </CardContent>
-         <CardFooter className="p-4 mt-auto border-t flex-col">
-           {/* Temporary debugging display */}
-           {debugSlug && (
-             <div className="w-full p-2 mb-2 text-center bg-red-100 border border-red-400 text-red-700 rounded-md">
-                <p className="text-xs font-bold">DEBUG INFO</p>
-                <p className="text-sm font-mono break-all">'{debugSlug}'</p>
-             </div>
-           )}
+         <CardFooter className="p-4 mt-auto border-t">
            <Button asChild className="w-full font-bold">
             <Link href={`/provider/${provider.phone}`}>
                 <Eye className="w-4 h-4 ml-2" />
