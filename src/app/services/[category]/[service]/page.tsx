@@ -1,7 +1,6 @@
 
 import { services, categories } from '@/lib/constants';
 import { getProviders } from '@/lib/data';
-import type { Provider, Category } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -26,8 +25,8 @@ export default async function ServiceProvidersPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch providers using the correct service ID
-  const serviceProviders = await getProviders({ serviceId: service.id });
+  // Fetch providers using the service SLUG, which is now the correct filter.
+  const serviceProviders = await getProviders({ serviceSlug: service.slug });
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">

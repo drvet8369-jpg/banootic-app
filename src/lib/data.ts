@@ -3,11 +3,11 @@ import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
-import { services } from './constants';
 
+// The query object now accepts slugs, which are more robust.
 interface ProviderQuery {
     categorySlug?: string;
-    serviceId?: number; // Changed from serviceSlug to serviceId
+    serviceSlug?: string;
     searchQuery?: string;
 }
 
@@ -35,17 +35,16 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             service_slug,
             rating,
             reviews_count,
-            profiles!inner (
+            profiles (
                 profile_image_url,
-                portfolio,
-                service_id
+                portfolio
             )
         `);
 
-    // Apply filters independently
-    if (query.serviceId) {
-        // Correctly filter on the profiles table using the service_id
-        queryBuilder = queryBuilder.eq('profiles.service_id', query.serviceId);
+    // Apply filters independently for better composability.
+    if (query.serviceSlug) {
+        // Corrected: Filter by service_slug directly on the providers table.
+        queryBuilder = queryBuilder.eq('service_slug', query.serviceSlug);
     }
      
     if (query.categorySlug) {
@@ -66,7 +65,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     // Transform the data into the final Provider shape
     const providers: Provider[] = providersData.map(p => {
-        const profileData = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+        const profileData = p.profiles;
         return {
             id: p.id,
             profile_id: p.profile_id,
