@@ -22,19 +22,23 @@ export async function requestOtp(formData: FormData) {
     });
 
     if (error) {
-      // This is the primary error that the user sees.
-      // If it says "unexpected failure", it's an issue with the Auth Hook configuration.
+      // **تغییر کلیدی:** به طور خاص خطای تایم‌اوت را بررسی می‌کنیم
+      if (error.message.includes('Failed to reach hook within maximum time')) {
+        return { error: 'سرویس ارسال پیامک در حال حاضر کند است. لطفاً یک بار دیگر تلاش کنید.' };
+      }
+      
+      // برای هر خطای دیگری از Supabase، پیام فنی را نمایش می‌دهیم
       const detailedError = `Supabase signInWithOtp Error: ${error.message}`;
       console.error(detailedError);
       return { error: detailedError };
     }
   } catch (e: any) {
+    // این قسمت خطاهای دیگر مانند مشکل در نرمال‌سازی شماره را مدیریت می‌کند
     console.error('Critical error in requestOtp action:', e);
-    return { error: `A critical error occurred: ${e.message}` };
+    return { error: `یک خطای پیش‌بینی نشده رخ داد: ${e.message}` };
   }
 
-  // Revalidate the path to ensure the next page isn't cached
+  // در صورت موفقیت، به صفحه تایید هدایت می‌شود
   revalidatePath('/login/verify');
-  // On successful OTP request, redirect to the verification page.
   redirect(`/login/verify?phone=${phone}`);
 }
