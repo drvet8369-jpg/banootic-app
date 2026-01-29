@@ -272,7 +272,7 @@ export default function ChatPage() {
 
 
   return (
-    <div className="flex flex-col h-full py-4">
+    <div className="flex flex-col flex-1 py-4 container mx-auto px-4 sm:px-6 lg:px-8">
       <Card className="flex-1 flex flex-col w-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
