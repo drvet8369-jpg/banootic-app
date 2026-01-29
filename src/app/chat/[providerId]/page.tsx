@@ -1,6 +1,6 @@
+
 'use client';
 
-import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,12 @@ import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-r
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import type { Provider } from '@/lib/types';
+import { toast } from 'sonner';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
+import type { Profile } from '@/lib/types';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { getChatPartnerDetails } from './actions';
 
 
 interface Message {
@@ -34,8 +36,10 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonIdOrProviderId = params.providerId as string;
-  const { user, isLoggedIn } = useAuth();
-  const { toast } = useToast();
+  
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | undefined>(undefined);
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
@@ -48,7 +52,25 @@ export default function ChatPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
-  const getChatId = useCallback((phone1?: string, phone2?: string) => {
+  // Get user session
+  useEffect(() => {
+    const supabase = createClient();
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if(session) {
+          setUser(session.user);
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          setUserProfile(profile);
+          setIsLoggedIn(true);
+      } else {
+          setIsLoggedIn(false);
+          setIsLoading(false);
+      }
+    }
+    getUser();
+  }, []);
+
+  const getChatId = useCallback((phone1?: string | null, phone2?: string) => {
     if (!phone1 || !phone2) return null;
     return [phone1, phone2].sort().join('_');
   }, []);
@@ -67,54 +89,51 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoggedIn || !user) {
-        setIsLoading(false);
+    if (isLoggedIn === false || !userProfile?.phone) {
+        if(isLoggedIn !== undefined) setIsLoading(false);
         return;
     }
 
-    let details: OtherPersonDetails | null = null;
-    const allProviders = getProviders();
-    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
-    
-    if (provider) {
-      details = provider;
-    } else {
-      const customerPhone = otherPersonIdOrProviderId;
-      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
-    }
-    
-    if (!details) {
-        toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
+    async function fetchPartnerAndMessages() {
+        const details = await getChatPartnerDetails(otherPersonIdOrProviderId);
+        
+        if (!details) {
+            toast.error("خطا", { description: "اطلاعات کاربر یا هنرمند یافت نشد." });
+            setIsLoading(false);
+            return;
+        }
+        setOtherPersonDetails(details);
+        
+        const chatId = getChatId(userProfile.phone, details.phone);
+        if (chatId) {
+          try {
+              const storedMessages = localStorage.getItem(`chat_${chatId}`);
+              if (storedMessages) {
+                  setMessages(JSON.parse(storedMessages));
+              }
+
+              // Mark messages as read when chat is opened
+              const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+              if (allChats[chatId] && allChats[chatId].participants && userProfile.phone && allChats[chatId].participants[userProfile.phone]) {
+                  allChats[chatId].participants[userProfile.phone].unreadCount = 0;
+                  localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+              }
+          } catch(e) {
+              console.error("Failed to load/update chat from localStorage", e);
+          }
+        }
+        
         setIsLoading(false);
-        return;
-    }
-    setOtherPersonDetails(details);
-    
-    const chatId = getChatId(user.phone, details.phone);
-    if (chatId) {
-      try {
-          const storedMessages = localStorage.getItem(`chat_${chatId}`);
-          if (storedMessages) {
-              setMessages(JSON.parse(storedMessages));
-          }
-
-          // Mark messages as read when chat is opened
-          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-              allChats[chatId].participants[user.phone].unreadCount = 0;
-              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-          }
-      } catch(e) {
-          console.error("Failed to load/update chat from localStorage", e);
-      }
     }
     
-    setIsLoading(false);
+    if(isLoggedIn) {
+        fetchPartnerAndMessages();
+    }
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
+  }, [otherPersonIdOrProviderId, isLoggedIn, userProfile, getChatId]);
 
 
-  if (!isLoggedIn || !user) {
+  if (isLoggedIn === false) {
     return (
         <div className="flex flex-col items-center justify-center text-center py-20">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
@@ -127,7 +146,7 @@ export default function ChatPage() {
     );
   }
   
-  if (isLoading) {
+  if (isLoading || isLoggedIn === undefined) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -147,9 +166,9 @@ export default function ChatPage() {
   };
   
   const handleSaveEdit = () => {
-    if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
+    if (!editingMessageId || !editingText.trim() || !userProfile?.phone || !otherPersonDetails) return;
 
-    const chatId = getChatId(user.phone, otherPersonDetails.phone);
+    const chatId = getChatId(userProfile.phone, otherPersonDetails.phone);
     if (!chatId) return;
 
     const updatedMessages = messages.map(msg => {
@@ -162,7 +181,6 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
 
-    // Also update the last message in the inbox if this was the last message
     const lastMessage = updatedMessages[updatedMessages.length - 1];
     if (lastMessage.id === editingMessageId) {
         const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
@@ -173,21 +191,21 @@ export default function ChatPage() {
     }
 
     handleCancelEdit();
-    toast({ title: 'پیام ویرایش شد.' });
+    toast.success('پیام ویرایش شد.');
   };
 
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
-    if (!text || isSending || !otherPersonDetails || !user) return;
+    if (!text || isSending || !otherPersonDetails || !userProfile?.phone || !userProfile.full_name) return;
     
     setIsSending(true);
     
     const tempUiMessage: Message = {
       id: Date.now().toString(),
       text: text,
-      senderId: user.phone,
+      senderId: userProfile.phone,
       createdAt: new Date().toISOString(),
     };
     
@@ -195,24 +213,22 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setNewMessage('');
 
-    const chatId = getChatId(user.phone, otherPersonDetails.phone);
+    const chatId = getChatId(userProfile.phone, otherPersonDetails.phone);
     if (chatId) {
         try {
             const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
             const currentChat = allChats[chatId] || {
                 id: chatId,
-                members: [user.phone, otherPersonDetails.phone],
+                members: [userProfile.phone, otherPersonDetails.phone],
                 participants: {
-                    [user.phone]: { name: user.name, unreadCount: 0 },
+                    [userProfile.phone]: { name: userProfile.full_name, unreadCount: 0 },
                     [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
                 }
             };
             
-            // Update last message and timestamp
             currentChat.lastMessage = text;
             currentChat.updatedAt = new Date().toISOString();
 
-            // Increment unread count for the receiver
             const receiverPhone = otherPersonDetails.phone;
             if (currentChat.participants[receiverPhone]) {
                 currentChat.participants[receiverPhone].unreadCount = (currentChat.participants[receiverPhone].unreadCount || 0) + 1;
@@ -220,9 +236,8 @@ export default function ChatPage() {
                  currentChat.participants[receiverPhone] = { name: otherPersonDetails.name, unreadCount: 1 };
             }
 
-            // Ensure sender's participant data exists
-            if (!currentChat.participants[user.phone]) {
-                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
+            if (!currentChat.participants[userProfile.phone]) {
+                currentChat.participants[userProfile.phone] = { name: userProfile.full_name, unreadCount: 0 };
             }
 
             allChats[chatId] = currentChat;
@@ -231,7 +246,7 @@ export default function ChatPage() {
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
-            toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
+            toast.error("خطا", { description: "پیام شما در حافظه موقت ذخیره نشد."});
         }
     }
    
@@ -241,12 +256,14 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    if (user.accountType === 'provider') return '/inbox';
-    // For customers, check if they have any chats, if so link to inbox, otherwise home.
+    if (!userProfile) return '/';
+    if (userProfile.account_type === 'provider') return '/inbox';
     try {
       const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
-      if (userChats.length > 0) return '/inbox';
+      if (userProfile.phone) {
+        const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(userProfile.phone));
+        if (userChats.length > 0) return '/inbox';
+      }
     } catch (e) { /* ignore */ }
     return '/'; 
   }
@@ -280,7 +297,7 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((message) => {
-                const senderIsUser = message.senderId === user?.phone;
+                const senderIsUser = message.senderId === userProfile?.phone;
                 const isEditing = editingMessageId === message.id;
 
                 return (
