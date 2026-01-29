@@ -1,5 +1,6 @@
 'use client';
 
+import { getProviders } from '@/lib/data';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +9,11 @@ import { ArrowLeft, ArrowUp, Loader2, User, Edit, Save, XCircle } from 'lucide-r
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FormEvent, useState, useRef, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { getChatPartnerDetails } from './actions';
-import type { Profile } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import type { Provider } from '@/lib/types';
+import Image from 'next/image';
+
 
 interface Message {
   id: string;
@@ -33,10 +34,8 @@ interface OtherPersonDetails {
 export default function ChatPage() {
   const params = useParams();
   const otherPersonIdOrProviderId = params.providerId as string;
-  
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<Profile | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean|undefined>(undefined);
+  const { user, isLoggedIn } = useAuth();
+  const { toast } = useToast();
 
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
@@ -48,23 +47,6 @@ export default function ChatPage() {
 
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-
-  // Fetch user from Supabase on mount
-  useEffect(() => {
-    const supabase = createClient();
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if(session) {
-        setUser(session.user);
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        setUserProfile(profile);
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-      }
-    }
-    getUser();
-  }, []);
 
   const getChatId = useCallback((phone1?: string, phone2?: string) => {
     if (!phone1 || !phone2) return null;
@@ -85,54 +67,54 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    const loadChatData = async () => {
-        if (!user || !user.phone) {
-            setIsLoading(false);
-            return;
-        }
-
-        // Use the Server Action to get details
-        const details = await getChatPartnerDetails(otherPersonIdOrProviderId);
-        
-        if (!details) {
-            toast.error("اطلاعات کاربر یا هنرمند یافت نشد.");
-            setIsLoading(false);
-            return;
-        }
-        setOtherPersonDetails(details);
-        
-        const chatId = getChatId(user.phone, details.phone);
-        if (chatId) {
-          try {
-              const storedMessages = localStorage.getItem(`chat_${chatId}`);
-              if (storedMessages) {
-                  setMessages(JSON.parse(storedMessages));
-              }
-
-              // Mark messages as read when chat is opened
-              const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-              if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
-                  allChats[chatId].participants[user.phone].unreadCount = 0;
-                  localStorage.setItem('inbox_chats', JSON.stringify(allChats));
-              }
-          } catch(e) {
-              console.error("Failed to load/update chat from localStorage", e);
-          }
-        }
-        
+    if (!isLoggedIn || !user) {
         setIsLoading(false);
+        return;
+    }
+
+    let details: OtherPersonDetails | null = null;
+    const allProviders = getProviders();
+    const provider = allProviders.find(p => p.phone === otherPersonIdOrProviderId);
+    
+    if (provider) {
+      details = provider;
+    } else {
+      const customerPhone = otherPersonIdOrProviderId;
+      details = { id: customerPhone, name: `مشتری ${customerPhone.slice(-4)}`, phone: customerPhone };
     }
     
-    if(isLoggedIn === true) {
-        loadChatData();
-    } else if (isLoggedIn === false) {
+    if (!details) {
+        toast({ title: "خطا", description: "اطلاعات کاربر یا هنرمند یافت نشد.", variant: "destructive" });
         setIsLoading(false);
+        return;
     }
+    setOtherPersonDetails(details);
+    
+    const chatId = getChatId(user.phone, details.phone);
+    if (chatId) {
+      try {
+          const storedMessages = localStorage.getItem(`chat_${chatId}`);
+          if (storedMessages) {
+              setMessages(JSON.parse(storedMessages));
+          }
 
-  }, [otherPersonIdOrProviderId, isLoggedIn, user, getChatId]);
+          // Mark messages as read when chat is opened
+          const allChats = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+          if (allChats[chatId] && allChats[chatId].participants && allChats[chatId].participants[user.phone]) {
+              allChats[chatId].participants[user.phone].unreadCount = 0;
+              localStorage.setItem('inbox_chats', JSON.stringify(allChats));
+          }
+      } catch(e) {
+          console.error("Failed to load/update chat from localStorage", e);
+      }
+    }
+    
+    setIsLoading(false);
+
+  }, [otherPersonIdOrProviderId, isLoggedIn, user, toast, getChatId]);
 
 
-  if (isLoggedIn === false) {
+  if (!isLoggedIn || !user) {
     return (
         <div className="flex flex-col items-center justify-center text-center py-20">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
@@ -145,7 +127,7 @@ export default function ChatPage() {
     );
   }
   
-  if (isLoading || isLoggedIn === undefined) {
+  if (isLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -165,7 +147,7 @@ export default function ChatPage() {
   };
   
   const handleSaveEdit = () => {
-    if (!editingMessageId || !editingText.trim() || !user || !user.phone || !otherPersonDetails) return;
+    if (!editingMessageId || !editingText.trim() || !user || !otherPersonDetails) return;
 
     const chatId = getChatId(user.phone, otherPersonDetails.phone);
     if (!chatId) return;
@@ -191,14 +173,14 @@ export default function ChatPage() {
     }
 
     handleCancelEdit();
-    toast.success('پیام ویرایش شد.');
+    toast({ title: 'پیام ویرایش شد.' });
   };
 
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const text = newMessage.trim();
-    if (!text || isSending || !otherPersonDetails || !user || !user.phone || !userProfile) return;
+    if (!text || isSending || !otherPersonDetails || !user) return;
     
     setIsSending(true);
     
@@ -221,7 +203,7 @@ export default function ChatPage() {
                 id: chatId,
                 members: [user.phone, otherPersonDetails.phone],
                 participants: {
-                    [user.phone]: { name: userProfile.full_name, unreadCount: 0 },
+                    [user.phone]: { name: user.name, unreadCount: 0 },
                     [otherPersonDetails.phone]: { name: otherPersonDetails.name, unreadCount: 0 }
                 }
             };
@@ -240,7 +222,7 @@ export default function ChatPage() {
 
             // Ensure sender's participant data exists
             if (!currentChat.participants[user.phone]) {
-                currentChat.participants[user.phone] = { name: userProfile.full_name, unreadCount: 0 };
+                currentChat.participants[user.phone] = { name: user.name, unreadCount: 0 };
             }
 
             allChats[chatId] = currentChat;
@@ -249,7 +231,7 @@ export default function ChatPage() {
             localStorage.setItem('inbox_chats', JSON.stringify(allChats));
         } catch(e) {
             console.error("Failed to save to localStorage", e);
-            toast.error("پیام شما در حافظه موقت ذخیره نشد.");
+            toast({ title: "خطا", description: "پیام شما در حافظه موقت ذخیره نشد.", variant: "destructive" });
         }
     }
    
@@ -259,20 +241,19 @@ export default function ChatPage() {
   };
 
   const getHeaderLink = () => {
-    if (userProfile?.account_type === 'provider') return '/inbox';
+    if (user.accountType === 'provider') return '/inbox';
+    // For customers, check if they have any chats, if so link to inbox, otherwise home.
     try {
-      if (user?.phone) {
-        const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
-        const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
-        if (userChats.length > 0) return '/inbox';
-      }
+      const allChatsData = JSON.parse(localStorage.getItem('inbox_chats') || '{}');
+      const userChats = Object.values(allChatsData).filter((chat: any) => chat.members?.includes(user.phone));
+      if (userChats.length > 0) return '/inbox';
     } catch (e) { /* ignore */ }
     return '/'; 
   }
 
 
   return (
-    <div className="flex flex-col flex-1 py-4 container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex flex-1 flex-col py-4">
       <Card className="flex-1 flex flex-col w-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
@@ -288,7 +269,7 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <CardTitle className="font-headline text-xl">{otherPersonDetails?.name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم (حالت نمایشی)'}</CardDescription>
+            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
