@@ -2,34 +2,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getPendingAgreementsCount } from '@/app/agreements/actions';
+import { getUnreadConversationsCount } from '@/app/inbox/actions';
 import { Badge } from '@/components/ui/badge';
 import { usePathname } from 'next/navigation';
 
-export function AgreementBadge() {
+export function InboxBadge() {
   const [count, setCount] = useState(0);
   const pathname = usePathname();
 
   useEffect(() => {
-    // When on the agreements page, the badge is not needed as they are visible.
-    // We can also optimistically set to 0.
-    if (pathname === '/agreements') {
-      setCount(0);
-      return;
+    // If we are inside a chat, we don't need to poll or show the badge count.
+    if (pathname.startsWith('/chat/')) {
+        setCount(0);
+        return;
     }
 
     const fetchCount = async () => {
       try {
-        const pendingCount = await getPendingAgreementsCount();
-        setCount(pendingCount);
+        const unreadCount = await getUnreadConversationsCount();
+        setCount(unreadCount);
       } catch (e) {
-        console.error("Failed to fetch pending agreement count", e);
+        console.error("Failed to fetch unread conversations count", e);
         setCount(0);
       }
     };
 
     fetchCount();
-    const intervalId = setInterval(fetchCount, 30000); // Poll every 30 seconds
+    // Poll for new messages every 15 seconds, more frequently than agreements
+    const intervalId = setInterval(fetchCount, 15000); 
 
     return () => clearInterval(intervalId);
   }, [pathname]);
@@ -38,6 +38,6 @@ export function AgreementBadge() {
     return null;
   }
 
-  // Adjust positioning for better visibility in the dropdown
+  // Same style as agreement badge
   return <Badge variant="destructive" className="absolute top-1 right-1 h-4 w-4 justify-center p-0 text-[10px] scale-90 transform translate-x-1/2 -translate-y-1/2">{count}</Badge>;
 }

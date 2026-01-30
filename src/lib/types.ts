@@ -99,6 +99,7 @@ export type Profile = {
 export type AgreementWithCustomer = {
     id: string;
     created_at: string;
+    status: 'pending' | 'accepted' | 'rejected';
     customer: {
         full_name: string | null;
         profile_image_url: string | null;

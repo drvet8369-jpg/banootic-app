@@ -61,17 +61,19 @@ export default async function ProviderProfilePage({ params }: { params: { provid
     notFound();
   }
   
-  // New logic: Check if the current user has already agreed with this provider
   let hasAlreadyAgreed = false;
   if (user) {
-      const { data: existingAgreement } = await supabase
+      const { count, error: agreementError } = await supabase
           .from('agreements')
-          .select('id')
+          .select('*', { count: 'exact', head: true })
           .eq('customer_id', user.id)
-          .eq('provider_id', provider.profile_id)
-          .maybeSingle();
+          .eq('provider_id', provider.profile_id);
       
-      if (existingAgreement) {
+      if (agreementError) {
+          console.error("Error checking for existing agreement:", agreementError);
+      }
+      
+      if (count && count > 0) {
           hasAlreadyAgreed = true;
       }
   }
@@ -108,7 +110,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                     <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
                         <span className="hidden sm:inline text-gray-300">|</span>
-                        <div className="flex items-center gap-1.5" title={`${provider.agreements_count} توافق اولیه`}>
+                        <div className="flex items-center gap-1.5" title={`${provider.agreements_count} توافق تایید شده`}>
                             <ShieldCheck className="w-5 h-5 text-green-500" />
                             <span className="font-bold text-base text-foreground">{provider.agreements_count}</span>
                             <span className="font-medium">توافق</span>

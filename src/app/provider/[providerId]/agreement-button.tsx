@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldCheck, Loader2, ShieldQuestion } from 'lucide-react';
 import { sendAgreementAction } from '@/app/agreements/actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -19,7 +19,7 @@ interface AgreementButtonProps {
 export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAlreadyAgreed }: AgreementButtonProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const [agreed, setAgreed] = useState(hasAlreadyAgreed);
+    const [isSent, setIsSent] = useState(hasAlreadyAgreed);
 
     if (isOwner) {
         return null;
@@ -32,24 +32,24 @@ export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAl
         }
 
         setIsLoading(true);
-        toast.loading('در حال ارسال توافق...');
+        toast.loading('در حال ارسال درخواست...');
         const result = await sendAgreementAction(providerProfileId);
         toast.dismiss();
 
         if (result.error) {
             toast.error('خطا', { description: result.error });
         } else if (result.success) {
-            toast.success('توافق شما با موفقیت ثبت شد!');
-            setAgreed(true);
+            toast.success('درخواست توافق شما ارسال شد! منتظر تایید هنرمند بمانید.');
+            setIsSent(true);
         }
         setIsLoading(false);
     };
 
-    if (agreed) {
+    if (isSent) {
         return (
             <Button size="sm" variant="outline" disabled className="w-full">
-                <ShieldCheck className="w-4 h-4 ml-2 text-green-500" />
-                شما قبلاً توافق کرده‌اید
+                <ShieldQuestion className="w-4 h-4 ml-2 text-blue-500" />
+                درخواست توافق ارسال شده
             </Button>
         );
     }
@@ -61,7 +61,7 @@ export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAl
             ) : (
                 <ShieldCheck className="w-4 h-4 ml-2 text-green-500" />
             )}
-            ارسال توافق اولیه
+            ارسال درخواست توافق
         </Button>
     );
 }
