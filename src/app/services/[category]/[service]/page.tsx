@@ -45,9 +45,9 @@ export default async function ServiceProvidersPage({ params }: PageProps) {
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">هنوز هیچ ارائه‌دهنده‌ای برای این سرویس ثبت‌نام نکرده است.</p>
-          <Button asChild variant="link" className="mt-2">
-            <Link href="/login">اولین نفر باشید!</Link>
-          </Button>
+          <Link href="/login" className="mt-2 inline-block text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground">
+            اولین نفر باشید!
+          </Link>
         </div>
       )}
     </div>
