@@ -54,7 +54,8 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     if (query.searchQuery) {
         const cleanedQuery = query.searchQuery.trim();
-        queryBuilder = queryBuilder.or(`name.ilike.%${cleanedQuery}%,service.ilike.%${cleanedQuery}%,bio.ilike.%${cleanedQuery}%`);
+        // Using fts (Full-Text Search) for a more robust and language-aware search
+        queryBuilder = queryBuilder.or(`name.fts.${cleanedQuery},service.fts.${cleanedQuery},bio.fts.${cleanedQuery}`);
     }
 
     const { data: providersData, error } = await queryBuilder;
