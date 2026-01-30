@@ -78,7 +78,8 @@ export async function getInitialChatData(partnerPhone: string) {
     }
     
     // 5. Mark messages as read by calling the RPC function
-    await supabase.rpc('mark_messages_as_read', { p_conversation_id: conversation.id, p_user_id: currentUserProfile.id });
+    // This is currently disabled as the unread_count is not fully implemented yet.
+    // await supabase.rpc('mark_messages_as_read', { p_conversation_id: conversation.id, p_user_id: currentUserProfile.id });
 
 
     return {
@@ -89,7 +90,7 @@ export async function getInitialChatData(partnerPhone: string) {
 }
 
 
-export async function sendMessageAction(payload: { conversationId: string; text: string; receiverId: string }) {
+export async function sendMessageAction(payload: { conversationId: string; content: string; receiverId: string }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -102,7 +103,7 @@ export async function sendMessageAction(payload: { conversationId: string; text:
         .insert({
             conversation_id: payload.conversationId,
             sender_id: user.id,
-            text: payload.text,
+            content: payload.content,
         });
     
     if (error) {

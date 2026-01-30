@@ -94,7 +94,7 @@ export default async function InboxPage() {
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mt-1">
-                                <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_text}</p>
+                                <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_content}</p>
                                 {convo.unread_count > 0 && (
                                     <Badge variant="destructive" className="flex-shrink-0">{convo.unread_count}</Badge>
                                 )}

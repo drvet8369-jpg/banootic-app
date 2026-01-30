@@ -77,14 +77,14 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const text = newMessage.trim();
-    if (!text || isSending || !conversation) return;
+    const content = newMessage.trim();
+    if (!content || isSending || !conversation) return;
     
     setIsSending(true);
     
     const tempMessage: Message = {
       id: Date.now().toString(), // temporary ID
-      text: text,
+      content: content,
       sender_id: currentUserProfile.id,
       conversation_id: conversation.id,
       created_at: new Date().toISOString(),
@@ -96,7 +96,7 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
     
     const result = await sendMessageAction({
         conversationId: conversation.id,
-        text,
+        content,
         receiverId: partnerProfile.id,
     });
     
@@ -162,7 +162,7 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
                     
                     <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
                         <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                          <p className="text-sm font-semibold">{message.text}</p>
+                          <p className="text-sm font-semibold">{message.content}</p>
                         </div>
                     </div>
 
