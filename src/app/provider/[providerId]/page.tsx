@@ -105,7 +105,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                         <MapPin className="w-4 h-4 ml-2 text-accent" />
                         <span>{provider.location}</span>
                     </div>
-                    <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
+                    <div className="mt-4 flex items-baseline justify-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
                         <span className="hidden sm:inline text-gray-300">|</span>
                         <div className="flex items-center gap-1.5" title={`${provider.agreements_count} توافق اولیه`}>
@@ -124,8 +124,8 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                 </CardContent>
 
                 {!isOwnerViewing && (
-                <CardFooter className="flex flex-col items-center justify-center gap-4 p-6 mt-auto border-t">
-                    <div className="flex w-full gap-3">
+                <CardFooter className="flex flex-col items-center justify-center gap-3 p-6 mt-auto border-t">
+                    <div className="flex w-1/2 flex-col gap-3">
                         <Button asChild size="sm" variant="secondary" className="flex-1">
                             <a href={`tel:${provider.phone}`}>
                                 <Phone className="w-4 h-4 ml-2" />
@@ -139,12 +139,14 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                             </Link>
                         </Button>
                     </div>
-                    <AgreementButton 
-                        providerProfileId={provider.profile_id} 
-                        currentUser={user} 
-                        isOwner={isOwnerViewing}
-                        hasAlreadyAgreed={hasAlreadyAgreed}
-                    />
+                    <div className="w-1/2">
+                        <AgreementButton 
+                            providerProfileId={provider.profile_id} 
+                            currentUser={user} 
+                            isOwner={isOwnerViewing}
+                            hasAlreadyAgreed={hasAlreadyAgreed}
+                        />
+                    </div>
                 </CardFooter>
                 )}
 
