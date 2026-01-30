@@ -48,17 +48,19 @@ export async function getInitialChatData(partnerPhone: string) {
     }
     
     // 3. Get or create the conversation
-    const { data: conversation, error: conversationError } = await supabase
+    const { data: conversationData, error: conversationError } = await supabase
         .rpc('get_or_create_conversation', {
             p_one: currentUserProfile.id,
             p_two: partnerProfile.id
-        })
-        .single();
+        });
 
     if (conversationError) {
         console.error("RPC get_or_create_conversation error:", conversationError);
         return { error: 'Could not get or create conversation.' };
     }
+
+    // The RPC returns an array, so we take the first element.
+    const conversation = (conversationData && conversationData.length > 0) ? conversationData[0] : null;
     
     if (!conversation) {
         return { error: 'Conversation could not be established.' };
