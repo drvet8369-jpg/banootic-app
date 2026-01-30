@@ -1,3 +1,4 @@
+
 import { services, categories } from '@/lib/constants';
 import { getProviders } from '@/lib/data';
 import { notFound } from 'next/navigation';
@@ -21,10 +22,7 @@ export default async function ServiceProvidersPage({ params }: { params: { categ
       <div className="text-center mb-12">
         <h1 className="font-headline text-3xl md:text-4xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">
-          ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی{' '}
-          <Link href={`/services/${category.slug}`} className="text-primary hover:underline">
-            {category.name}
-          </Link>
+          ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی {category.name}
         </p>
       </div>
 
