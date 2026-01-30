@@ -35,6 +35,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             service_slug,
             rating,
             reviews_count,
+            agreements_count,
             profiles (
                 profile_image_url,
                 portfolio
@@ -78,6 +79,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             serviceSlug: p.service_slug,
             rating: p.rating ?? 0,
             reviewsCount: p.reviews_count ?? 0,
+            agreements_count: p.agreements_count ?? 0,
             profileImage: {
                 src: profileData?.profile_image_url ?? '',
                 aiHint: 'woman portrait'
@@ -130,6 +132,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         serviceSlug: data.service_slug,
         rating: data.rating ?? 0,
         reviewsCount: data.reviews_count ?? 0,
+        agreements_count: data.agreements_count ?? 0,
         profileImage: {
             src: profileData?.profile_image_url ?? '',
             aiHint: 'woman portrait'

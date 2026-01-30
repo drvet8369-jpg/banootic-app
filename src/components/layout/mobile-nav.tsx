@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { logout as logoutAction } from './actions';
-import { UserRound, LogOut, Menu } from 'lucide-react';
+import { UserRound, LogOut, Menu, ShieldCheck } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import type { Profile } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { AgreementBadge } from './agreement-badge';
 
 const getInitials = (name: string | null) => {
     if (!name) return '..';
@@ -84,12 +85,21 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
         </div>
         <nav className="flex-grow mt-6 space-y-2">
           {userProfile?.account_type === 'provider' && (
-            <SheetClose asChild>
-              <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
-                <UserRound className="h-5 w-5" />
-                پروفایل من
-              </Link>
-            </SheetClose>
+            <>
+                <SheetClose asChild>
+                    <Link href="/profile" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted">
+                        <UserRound className="h-5 w-5" />
+                        پروفایل من
+                    </Link>
+                </SheetClose>
+                <SheetClose asChild>
+                    <Link href="/agreements" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">
+                        <ShieldCheck className="h-5 w-5" />
+                        <span>توافق‌ها</span>
+                        <AgreementBadge />
+                    </Link>
+                </SheetClose>
+            </>
           )}
           <SheetClose asChild>
             <Link href="/inbox" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary-foreground hover:bg-muted relative">

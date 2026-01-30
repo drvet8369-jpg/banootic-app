@@ -33,6 +33,7 @@ export interface Provider {
   serviceSlug: string; 
   rating: number;
   reviewsCount: number;
+  agreements_count: number;
   profileImage: { src: string; aiHint?: string; }; // From profiles.profile_image_url
   portfolio: PortfolioItem[]; // from profiles.portfolio
 }
@@ -93,4 +94,13 @@ export type Profile = {
   profile_image_url: string | null; // This is the text column
   portfolio: PortfolioItem[] | null; // This is the jsonb column
   service_id: number | null; // The foreign key to the services table
+};
+
+export type AgreementWithCustomer = {
+    id: string;
+    created_at: string;
+    customer: {
+        full_name: string | null;
+        profile_image_url: string | null;
+    } | null;
 };

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { logout as logoutAction } from './actions';
-import { UserRound, LogOut } from 'lucide-react';
+import { UserRound, LogOut, ShieldCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { Profile } from '@/lib/types';
 import MobileNav from './mobile-nav';
+import { AgreementBadge } from './agreement-badge';
 
 
 const getInitials = (name: string | null) => {
@@ -60,11 +61,21 @@ export default function HeaderClient({ userProfile, isLoggedIn }: HeaderClientPr
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {userProfile.account_type === 'provider' && (
-                        <DropdownMenuItem asChild>
-                        <Link href="/profile">
-                            <UserRound className="ml-2 h-4 w-4" />
-                            <span>پروفایل من</span>
-                        </Link>                        </DropdownMenuItem>
+                        <>
+                            <DropdownMenuItem asChild>
+                                <Link href="/profile">
+                                    <UserRound className="ml-2 h-4 w-4" />
+                                    <span>پروفایل من</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/agreements" className="relative">
+                                    <ShieldCheck className="ml-2 h-4 w-4" />
+                                    <span>توافق‌ها</span>
+                                    <AgreementBadge />
+                                </Link>
+                            </DropdownMenuItem>
+                        </>
                     )}
                     <DropdownMenuItem asChild>
                         <Link href="/inbox" className="relative">

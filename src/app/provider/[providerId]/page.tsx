@@ -7,7 +7,7 @@ import { getProviderByPhone, getReviewsForProvider } from '@/lib/data';
 import type { Review } from '@/lib/types';
 
 import { cn } from "@/lib/utils";
-import { MessageSquare, Phone, User } from 'lucide-react';
+import { MessageSquare, Phone, User, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import Link from 'next/link';
 
 import { PortfolioGallery } from './portfolio-gallery';
 import { ReviewForm } from './review-form';
+import { AgreementButton } from './agreement-button';
 
 // Reusable Avatar components for ReviewCard
 const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -60,8 +61,22 @@ export default async function ProviderProfilePage({ params }: { params: { provid
     notFound();
   }
   
-  const reviews = await getReviewsForProvider(provider.profile_id);
+  // New logic: Check if the current user has already agreed with this provider
+  let hasAlreadyAgreed = false;
+  if (user) {
+      const { data: existingAgreement } = await supabase
+          .from('agreements')
+          .select('id')
+          .eq('customer_id', user.id)
+          .eq('provider_id', provider.profile_id)
+          .maybeSingle();
+      
+      if (existingAgreement) {
+          hasAlreadyAgreed = true;
+      }
+  }
 
+  const reviews = await getReviewsForProvider(provider.profile_id);
   const isOwnerViewing = user && user.id === provider.profile_id;
 
   return (
@@ -86,8 +101,14 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
-                    <div className="mt-2">
+                    <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+                        <span className="hidden sm:inline text-gray-300">|</span>
+                        <div className="flex items-center gap-1.5" title={`${provider.agreements_count} توافق اولیه`}>
+                            <ShieldCheck className="w-5 h-5 text-green-500" />
+                            <span className="font-bold text-base text-foreground">{provider.agreements_count}</span>
+                            <span className="font-medium">توافق</span>
+                        </div>
                     </div>
                 </div>
 
@@ -106,12 +127,12 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                             ارسال پیام
                         </Link>
                     </Button>
-                    <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
-                    </Button>
+                    <AgreementButton 
+                        providerProfileId={provider.profile_id} 
+                        currentUser={user} 
+                        isOwner={isOwnerViewing}
+                        hasAlreadyAgreed={hasAlreadyAgreed}
+                    />
                 </CardFooter>
                 )}
 
