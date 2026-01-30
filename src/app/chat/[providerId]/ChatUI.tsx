@@ -17,8 +17,8 @@ import { useRouter } from 'next/navigation';
 
 interface ChatUIProps {
   initialData: {
-    partnerProfile: Profile | {id: string, full_name: string | null, phone: string, profile_image_url: string | null};
-    conversation: Conversation | null;
+    partnerProfile: Profile;
+    conversation: Conversation;
     messages: Message[];
   };
   currentUserProfile: Profile;
@@ -86,6 +86,7 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
       id: Date.now().toString(), // temporary ID
       content: content,
       sender_id: currentUserProfile.id,
+      receiver_id: partnerProfile.id,
       conversation_id: conversation.id,
       created_at: new Date().toISOString(),
     };

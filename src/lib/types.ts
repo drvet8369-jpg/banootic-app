@@ -53,7 +53,8 @@ export type Message = {
   created_at: string; // timestampz
   conversation_id: string; // uuid, fk to conversations.id
   sender_id: string; // uuid, fk to profiles.id
-  content: string; // Corrected from 'text'
+  receiver_id: string; // uuid, fk to profiles.id
+  content: string;
   is_edited?: boolean;
 };
 
@@ -66,14 +67,18 @@ export type Conversation = {
 };
 
 // Type for displaying a conversation in the inbox list
-export type InboxConversation = Conversation & {
+export type InboxConversation = {
+  id: string;
+  created_at: string;
+  participant_one_id: string;
+  participant_two_id: string;
   other_participant: {
     id: string;
     full_name: string | null;
     phone: string | null;
     profile_image_url: string | null;
   };
-  last_message_content: string | null; // Corrected from 'last_message_text'
+  last_message_content: string | null;
   last_message_at: string | null;
   unread_count: number;
 };

@@ -38,13 +38,9 @@ export async function getInitialChatData(partnerPhone: string) {
         .single();
 
     if (partnerProfileError || !partnerProfile) {
-        // Fallback for when partner is not a provider (e.g. just a customer)
-        const name = `مشتری ${partnerPhone.slice(-4)}`;
-        return { 
-            partnerProfile: { id: partnerPhone, full_name: name, phone: partnerPhone, profile_image_url: null },
-            conversation: null,
-            messages: []
-        };
+        // This case is unlikely if we are initiating from a real provider profile,
+        // but it's good practice to handle it.
+        return { error: 'Partner profile not found.' };
     }
     
     // 3. Get or create the conversation
@@ -59,8 +55,7 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Could not get or create conversation.' };
     }
 
-    // The RPC returns an array, so we take the first element.
-    const conversation = (conversationData && conversationData.length > 0) ? conversationData[0] : null;
+    const conversation = conversationData ? conversationData[0] : null;
     
     if (!conversation) {
         return { error: 'Conversation could not be established.' };
@@ -77,11 +72,6 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Could not fetch messages.' };
     }
     
-    // 5. Mark messages as read by calling the RPC function
-    // This is currently disabled as the unread_count is not fully implemented yet.
-    // await supabase.rpc('mark_messages_as_read', { p_conversation_id: conversation.id, p_user_id: currentUserProfile.id });
-
-
     return {
         partnerProfile,
         conversation,
@@ -103,12 +93,13 @@ export async function sendMessageAction(payload: { conversationId: string; conte
         .insert({
             conversation_id: payload.conversationId,
             sender_id: user.id,
+            receiver_id: payload.receiverId,
             content: payload.content,
         });
     
     if (error) {
         console.error("Error sending message:", error);
-        return { error: 'Failed to send message.' };
+        return { error: `Failed to send message: ${error.message}` };
     }
 
     return { error: null };
