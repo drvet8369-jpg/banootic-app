@@ -125,7 +125,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col items-center justify-center gap-3 p-6 mt-auto border-t">
-                    <div className="flex w-1/2 flex-col gap-3">
+                    <div className="flex w-full gap-3">
                         <Button asChild size="sm" variant="secondary" className="flex-1">
                             <a href={`tel:${provider.phone}`}>
                                 <Phone className="w-4 h-4 ml-2" />
@@ -139,7 +139,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                             </Link>
                         </Button>
                     </div>
-                    <div className="w-1/2">
+                    <div className="w-full">
                         <AgreementButton 
                             providerProfileId={provider.profile_id} 
                             currentUser={user} 
