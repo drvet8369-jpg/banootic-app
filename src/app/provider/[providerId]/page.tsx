@@ -7,7 +7,7 @@ import { getProviderByPhone, getReviewsForProvider } from '@/lib/data';
 import type { Review } from '@/lib/types';
 
 import { cn } from "@/lib/utils";
-import { MessageSquare, Phone, User, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Phone, User, ShieldCheck, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -101,6 +101,10 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                     </div>
                     <CardTitle className="font-headline text-2xl">{provider.name}</CardTitle>
                     <CardDescription className="text-base">{provider.service}</CardDescription>
+                    <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 ml-2 text-accent" />
+                        <span>{provider.location}</span>
+                    </div>
                     <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
                         <span className="hidden sm:inline text-gray-300">|</span>
@@ -120,19 +124,21 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                 </CardContent>
 
                 {!isOwnerViewing && (
-                <CardFooter className="flex flex-col justify-center items-center gap-3 p-6 mt-auto border-t">
-                    <Button asChild size="sm" variant="secondary" className="w-1/2">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
-                    </Button>
-                    <Button asChild size="sm" className="w-1/2">
-                        <Link href={user ? `/chat/${provider.phone}` : '/login'}>
-                            <MessageSquare className="w-4 h-4 ml-2" />
-                            ارسال پیام
-                        </Link>
-                    </Button>
+                <CardFooter className="flex flex-col items-center justify-center gap-4 p-6 mt-auto border-t">
+                    <div className="flex w-full gap-3">
+                        <Button asChild size="sm" variant="secondary" className="flex-1">
+                            <a href={`tel:${provider.phone}`}>
+                                <Phone className="w-4 h-4 ml-2" />
+                                تماس
+                            </a>
+                        </Button>
+                        <Button asChild size="sm" className="flex-1">
+                            <Link href={user ? `/chat/${provider.phone}` : '/login'}>
+                                <MessageSquare className="w-4 h-4 ml-2" />
+                                ارسال پیام
+                            </Link>
+                        </Button>
+                    </div>
                     <AgreementButton 
                         providerProfileId={provider.profile_id} 
                         currentUser={user} 
