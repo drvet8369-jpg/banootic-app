@@ -47,7 +47,7 @@ export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAl
 
     if (agreed) {
         return (
-            <Button size="sm" variant="outline" disabled>
+            <Button size="sm" variant="outline" disabled className="px-2">
                 <ShieldCheck className="w-4 h-4 ml-2 text-green-500" />
                 شما قبلاً توافق کرده‌اید
             </Button>
@@ -55,7 +55,7 @@ export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAl
     }
     
     return (
-        <Button onClick={handleClick} size="sm" variant="outline" disabled={isLoading}>
+        <Button onClick={handleClick} size="sm" variant="outline" disabled={isLoading} className="px-2">
             {isLoading ? (
                 <Loader2 className="w-4 h-4 ml-2 animate-spin" />
             ) : (
