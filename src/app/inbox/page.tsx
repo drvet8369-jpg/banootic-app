@@ -76,7 +76,7 @@ export default async function InboxPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
-          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید. پیام‌ها در دیتابیس ذخیره می‌شوند.</CardDescription>
+          <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

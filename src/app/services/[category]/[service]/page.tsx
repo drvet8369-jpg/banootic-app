@@ -33,7 +33,7 @@ export default async function ServiceProvidersPage({ params }: PageProps) {
         <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">
           ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی{' '}
-          <Link href={`/services/${category.slug}`} className="hover:underline text-accent">
+          <Link href={`/services/${category.slug}`} className="hover:underline text-primary">
             {category.name}
           </Link>
         </p>
