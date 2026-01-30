@@ -59,7 +59,9 @@ export function StarRating({
         })}
       </div>
       {reviewsCount !== undefined && (
-         <span className="text-muted-foreground text-xs">({reviewsCount} نظر)</span>
+         <div className="w-full text-center">
+            <span className="text-muted-foreground text-xs">({reviewsCount} نظر)</span>
+         </div>
       )}
     </div>
   );
