@@ -105,7 +105,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                         <MapPin className="w-4 h-4 ml-2 text-accent" />
                         <span>{provider.location}</span>
                     </div>
-                    <div className="mt-4 flex items-baseline justify-center gap-4 text-sm text-muted-foreground flex-wrap">
+                    <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
                         <span className="hidden sm:inline text-gray-300">|</span>
                         <div className="flex items-center gap-1.5" title={`${provider.agreements_count} توافق اولیه`}>
