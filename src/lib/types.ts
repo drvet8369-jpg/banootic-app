@@ -47,12 +47,37 @@ export interface Review {
   createdAt: string; // ISO String format
 }
 
-export interface Message {
+// Represents a message in the database
+export type Message = {
+  id: string; // uuid
+  created_at: string; // timestampz
+  conversation_id: string; // uuid, fk to conversations.id
+  sender_id: string; // uuid, fk to profiles.id
   text: string;
-  senderId: string;
-  receiverId?: string;
-  createdAt: Timestamp;
-}
+  is_edited?: boolean;
+};
+
+// Represents a conversation in the database
+export type Conversation = {
+  id: string; // uuid
+  created_at: string; // timestampz
+  participant_one: string; // uuid, fk to profiles.id
+  participant_two: string; // uuid, fk to profiles.id
+};
+
+// Type for displaying a conversation in the inbox list
+export type InboxConversation = Conversation & {
+  other_participant: {
+    id: string;
+    full_name: string | null;
+    phone: string | null;
+    profile_image_url: string | null;
+  };
+  last_message_text: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+};
+
 
 // Represents the exact structure of the `profiles` table in Supabase
 export type Profile = {
