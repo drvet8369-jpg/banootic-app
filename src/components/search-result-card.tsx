@@ -33,11 +33,13 @@ export default function SearchResultCard({ provider }: SearchResultCardProps) {
           <CardTitle className="font-headline text-xl">{provider.name}</CardTitle>
           <CardDescription className="text-base">{provider.service}</CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow flex flex-col items-center justify-center p-4 pt-0 gap-2">
-          <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
-          <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="w-4 h-4 ml-1 text-accent" />
-            <span>{provider.location}</span>
+        <CardContent className="flex-grow flex items-center justify-center p-4 pt-0">
+          <div className="flex flex-col items-center gap-2">
+            <StarRating rating={provider.rating} reviewsCount={provider.reviewsCount} readOnly />
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 ml-1 text-accent" />
+              <span>{provider.location}</span>
+            </div>
           </div>
         </CardContent>
          <CardFooter className="p-4 mt-auto border-t">
