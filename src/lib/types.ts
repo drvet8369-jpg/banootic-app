@@ -57,6 +57,7 @@ export type Message = {
   receiver_id: string; // uuid, fk to profiles.id
   content: string;
   is_edited?: boolean;
+  is_read?: boolean;
 };
 
 // Represents a conversation in the database

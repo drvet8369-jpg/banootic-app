@@ -15,7 +15,9 @@ export async function getConversationsForUser(): Promise<InboxConversation[]> {
         return [];
     }
 
-    const { data, error } = await supabase.rpc('get_user_conversations_with_unread');
+    const { data, error } = await supabase.rpc('get_user_conversations_with_unread', {
+        p_user_id: user.id,
+    });
     
     if (error) {
         console.error("Error fetching conversations from RPC:", error);
@@ -23,7 +25,7 @@ export async function getConversationsForUser(): Promise<InboxConversation[]> {
     }
 
     // The RPC function is expected to return data in the shape of InboxConversation
-    return data as InboxConversation[];
+    return (data as InboxConversation[]) || [];
 }
 
 
@@ -36,7 +38,9 @@ export async function getUnreadConversationsCount(): Promise<number> {
         return 0;
     }
 
-    const { data, error } = await supabase.rpc('get_user_conversations_with_unread');
+    const { data, error } = await supabase.rpc('get_user_conversations_with_unread', {
+        p_user_id: user.id,
+    });
     
     if (error) {
         console.error("Error fetching conversations from RPC for count:", error);

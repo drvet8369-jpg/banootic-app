@@ -72,6 +72,18 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Could not fetch messages.' };
     }
     
+    // 5. Mark messages as read for this conversation
+    if (conversation) {
+        const { error: readError } = await supabase.rpc('mark_messages_as_read', {
+            p_conversation_id: conversation.id,
+            p_user_id: user.id
+        });
+        if (readError) {
+            console.error("Error marking messages as read:", readError);
+            // Non-critical, so we don't return an error to the client
+        }
+    }
+    
     return {
         partnerProfile,
         conversation,
