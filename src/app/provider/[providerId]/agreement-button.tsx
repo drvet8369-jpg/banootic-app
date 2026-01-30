@@ -59,7 +59,7 @@ export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAl
             {isLoading ? (
                 <Loader2 className="w-4 h-4 ml-2 animate-spin" />
             ) : (
-                <ShieldCheck className="w-4 h-4 ml-2" />
+                <ShieldCheck className="w-4 h-4 ml-2 text-green-500" />
             )}
             ارسال توافق اولیه
         </Button>

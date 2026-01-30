@@ -127,6 +127,12 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                             ارسال پیام
                         </Link>
                     </Button>
+                     <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
                     <AgreementButton 
                         providerProfileId={provider.profile_id} 
                         currentUser={user} 
