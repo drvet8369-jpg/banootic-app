@@ -47,8 +47,8 @@ export default async function InboxPage() {
         return (
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12">
             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
+                <CardHeader className="text-center">
+                    <CardTitle className="font-headline text-2xl">صندوق ورودی پیام‌ها</CardTitle>
                     <CardDescription>
                         {profile?.account_type === 'provider' 
                             ? 'آخرین گفتگوهای خود با مشتریان را در اینجا مشاهده کنید.' 
@@ -74,8 +74,8 @@ export default async function InboxPage() {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12">
       <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-3xl">صندوق ورودی پیام‌ها</CardTitle>
+        <CardHeader className="text-center">
+          <CardTitle className="font-headline text-2xl">صندوق ورودی پیام‌ها</CardTitle>
           <CardDescription>آخرین گفتگوهای خود را در اینجا مشاهده کنید.</CardDescription>
         </CardHeader>
         <CardContent>
