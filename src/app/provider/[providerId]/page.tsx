@@ -120,7 +120,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                 </CardContent>
 
                 {!isOwnerViewing && (
-                <CardFooter className="grid sm:grid-cols-3 gap-3 p-6 mt-auto border-t">
+                <CardFooter className="flex flex-col sm:flex-row justify-center gap-3 p-6 mt-auto border-t">
                     <Button asChild size="sm" variant="secondary">
                         <a href={`tel:${provider.phone}`}>
                             <Phone className="w-4 h-4 ml-2" />
