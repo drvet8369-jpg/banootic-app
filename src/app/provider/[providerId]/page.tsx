@@ -121,17 +121,17 @@ export default async function ProviderProfilePage({ params }: { params: { provid
 
                 {!isOwnerViewing && (
                 <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t">
+                    <Button asChild className="w-full" variant="secondary">
+                        <a href={`tel:${provider.phone}`}>
+                            <Phone className="w-4 h-4 ml-2" />
+                            تماس
+                        </a>
+                    </Button>
                     <Button asChild className="w-full">
                         <Link href={user ? `/chat/${provider.phone}` : '/login'}>
                             <MessageSquare className="w-4 h-4 ml-2" />
                             ارسال پیام
                         </Link>
-                    </Button>
-                     <Button asChild className="w-full" variant="secondary">
-                        <a href={`tel:${provider.phone}`}>
-                            <Phone className="w-4 h-4 ml-2" />
-                            تماس
-                        </a>
                     </Button>
                     <AgreementButton 
                         providerProfileId={provider.profile_id} 
