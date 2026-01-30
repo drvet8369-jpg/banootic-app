@@ -38,7 +38,7 @@ export function StarRating({
   const effectiveRating = hoverRating > 0 ? hoverRating : rating;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-1">
       <div
         className={cn("flex items-center text-yellow-400", !readOnly && "cursor-pointer")}
         onMouseLeave={() => handleStarHover(0)}
@@ -59,7 +59,7 @@ export function StarRating({
         })}
       </div>
       {reviewsCount !== undefined && (
-         <span className="text-muted-foreground text-sm">({reviewsCount} نظر)</span>
+         <span className="text-muted-foreground text-xs">({reviewsCount} نظر)</span>
       )}
     </div>
   );
