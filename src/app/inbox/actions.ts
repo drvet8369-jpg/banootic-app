@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -38,21 +37,17 @@ export async function getUnreadConversationsCount(): Promise<number> {
         return 0;
     }
 
-    const { data, error } = await supabase.rpc('get_user_conversations_with_unread', {
+    // Call the new, more efficient function
+    const { data, error } = await supabase.rpc('get_total_unread_message_count', {
         p_user_id: user.id,
     });
     
     if (error) {
-        console.error("Error fetching conversations from RPC for count:", error);
+        // Updated error message for clarity
+        console.error("Error fetching total unread message count:", error);
         return 0;
     }
-
-    if (!data) {
-        return 0;
-    }
-
-    // Sum up the unread_count from all conversations
-    const totalUnread = data.reduce((acc: number, convo: { unread_count: number }) => acc + (convo.unread_count || 0), 0);
     
-    return totalUnread;
+    // The new function directly returns the count
+    return data ?? 0;
 }
