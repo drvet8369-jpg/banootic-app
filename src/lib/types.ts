@@ -71,7 +71,7 @@ export type Conversation = {
 // Type for displaying a conversation in the inbox list
 export type InboxConversation = {
   id: string;
-  created_at: string;
+  conversation_created_at: string; // Renamed to fix ambiguity
   participant_one_id: string;
   participant_two_id: string;
   other_participant: {
