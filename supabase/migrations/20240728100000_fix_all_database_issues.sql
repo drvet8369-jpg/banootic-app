@@ -1,27 +1,34 @@
--- =========== Final App Features Migration ===========
--- This script FIXES all database issues by dropping old functions
--- before recreating them, and ensuring all columns and policies are correct.
--- It is safe to run this script multiple times.
+-- =========== Final & Definitive Database Cleanup & Fix ===========
+-- This script performs a "scorched earth" cleanup by dropping ALL possible
+-- versions of the problematic functions before creating the single, correct version.
+-- It also includes all previous necessary schema changes.
 
 BEGIN;
 
--- Step 1: Drop potentially conflicting old functions first.
--- This resolves the "cannot change return type" error.
+-- 1. Add `status` column to `agreements` table if it doesn't exist
+ALTER TABLE public.agreements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+
+-- 2. Add `agreements_count` column to `providers` table if it doesn't exist
+ALTER TABLE public.providers ADD COLUMN IF NOT EXISTS agreements_count INTEGER NOT NULL DEFAULT 0;
+
+-- 3. Add `is_read` column to `messages` table if it doesn't exist
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Ensure content column is text
+ALTER TABLE public.messages ALTER COLUMN content TYPE TEXT;
+
+-- 4. Drop ALL possible old/faulty functions to ensure a clean state
+DROP FUNCTION IF EXISTS public.get_user_conversations_with_unread(); -- Drop parameter-less version
+DROP FUNCTION IF EXISTS public.get_user_conversations_with_unread(uuid); -- Drop parameterized version
+DROP FUNCTION IF EXISTS public.get_total_unread_message_count(); -- Drop parameter-less version
+DROP FUNCTION IF EXISTS public.get_total_unread_message_count(uuid); -- Drop parameterized version
 DROP FUNCTION IF EXISTS public.get_or_create_conversation(uuid, uuid);
-DROP FUNCTION IF EXISTS public.get_user_conversations_with_unread(uuid);
 DROP FUNCTION IF EXISTS public.increment_agreements(uuid);
 DROP FUNCTION IF EXISTS public.mark_messages_as_read(uuid, uuid);
 
--- Step 2: Ensure all necessary columns exist.
--- Using ADD COLUMN IF NOT EXISTS is safe and idempotent.
-ALTER TABLE public.agreements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE public.providers ADD COLUMN IF NOT EXISTS agreements_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE public.messages ALTER COLUMN content TYPE TEXT;
+-- 5. Create/Recreate all functions from scratch with the correct and final logic
 
--- Step 3: Recreate all functions with the correct definitions.
-
--- Function to increment agreements count on the providers table
+-- Function to increment agreements
 CREATE OR REPLACE FUNCTION public.increment_agreements(provider_profile_id_in UUID)
 RETURNS VOID AS $$
 BEGIN
@@ -31,7 +38,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to find an existing conversation or create a new one
+-- Function to get or create a conversation
 CREATE OR REPLACE FUNCTION public.get_or_create_conversation(p_one UUID, p_two UUID)
 RETURNS TABLE(id UUID, created_at TIMESTAMPTZ, participant_one_id UUID, participant_two_id UUID) AS $$
 DECLARE
@@ -52,8 +59,34 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to mark messages as read
+CREATE OR REPLACE FUNCTION public.mark_messages_as_read(p_conversation_id UUID, p_user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.messages
+  SET is_read = TRUE
+  WHERE conversation_id = p_conversation_id
+    AND receiver_id = p_user_id
+    AND is_read = FALSE;
+END;
+$$ LANGUAGE plpgsql;
 
--- Function to get all user conversations with details about the other participant and unread message count
+-- Efficient function for counting total unread messages
+CREATE OR REPLACE FUNCTION public.get_total_unread_message_count(p_user_id UUID)
+RETURNS BIGINT AS $$
+DECLARE
+    total_unread BIGINT;
+BEGIN
+    SELECT count(*)
+    INTO total_unread
+    FROM public.messages msg
+    WHERE msg.receiver_id = p_user_id AND msg.is_read = FALSE;
+
+    RETURN total_unread;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Final, rewritten inbox function using LATERAL JOIN
 CREATE OR REPLACE FUNCTION public.get_user_conversations_with_unread(p_user_id UUID)
 RETURNS TABLE (
     id UUID,
@@ -67,61 +100,44 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   RETURN QUERY
-  WITH user_conversations AS (
-    SELECT
-      c.id,
-      c.created_at,
-      c.participant_one_id,
-      c.participant_two_id,
-      CASE
-        WHEN c.participant_one_id = p_user_id THEN c.participant_two_id
-        ELSE c.participant_one_id
-      END AS other_participant_id
-    FROM public.conversations c
-    WHERE c.participant_one_id = p_user_id OR c.participant_two_id = p_user_id
-  ),
-  latest_messages AS (
-    SELECT
-      conversation_id,
-      MAX(created_at) AS last_message_at
-    FROM public.messages
-    GROUP BY conversation_id
-  )
   SELECT
-    uc.id,
-    uc.created_at,
-    uc.participant_one_id,
-    uc.participant_two_id,
+    c.id,
+    c.created_at,
+    c.participant_one_id,
+    c.participant_two_id,
     json_build_object(
       'id', p.id,
       'full_name', p.full_name,
       'phone', p.phone,
       'profile_image_url', p.profile_image_url
     ) AS other_participant,
-    m.content AS last_message_content,
-    lm.last_message_at,
-    (SELECT count(*) FROM public.messages msg WHERE msg.conversation_id = uc.id AND msg.receiver_id = p_user_id AND msg.is_read = FALSE) AS unread_count
-  FROM user_conversations uc
-  JOIN public.profiles p ON p.id = uc.other_participant_id
-  LEFT JOIN latest_messages lm ON lm.conversation_id = uc.id
-  LEFT JOIN public.messages m ON m.conversation_id = lm.conversation_id AND m.created_at = lm.last_message_at
-  ORDER BY lm.last_message_at DESC NULLS LAST;
+    last_msg.content,
+    last_msg.created_at AS last_message_at,
+    (SELECT count(*) FROM public.messages msg WHERE msg.conversation_id = c.id AND msg.receiver_id = p_user_id AND msg.is_read = FALSE) AS unread_count
+  FROM
+    public.conversations c
+  JOIN public.profiles p ON p.id = (
+    CASE
+      WHEN c.participant_one_id = p_user_id THEN c.participant_two_id
+      ELSE c.participant_one_id
+    END
+  )
+  LEFT JOIN LATERAL (
+    SELECT content, created_at
+    FROM public.messages
+    WHERE conversation_id = c.id
+    ORDER BY created_at DESC
+    LIMIT 1
+  ) last_msg ON true
+  WHERE
+    c.participant_one_id = p_user_id OR c.participant_two_id = p_user_id
+  ORDER BY
+    last_msg.created_at DESC NULLS LAST;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to mark messages in a conversation as read for a specific user
-CREATE OR REPLACE FUNCTION public.mark_messages_as_read(p_conversation_id UUID, p_user_id UUID)
-RETURNS VOID AS $$
-BEGIN
-  UPDATE public.messages
-  SET is_read = TRUE
-  WHERE conversation_id = p_conversation_id
-    AND receiver_id = p_user_id
-    AND is_read = FALSE;
-END;
-$$ LANGUAGE plpgsql;
 
--- Step 4: Re-apply Row Level Security (RLS) policies for all tables.
+-- 6. Enable Row Level Security (RLS) on all relevant tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
@@ -129,7 +145,7 @@ ALTER TABLE public.agreements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies to prevent conflicts before recreating them
+-- 7. Drop existing policies to prevent conflicts, then (re)create them
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
@@ -144,18 +160,28 @@ DROP POLICY IF EXISTS "Conversations are visible to participants." ON public.con
 DROP POLICY IF EXISTS "Messages are visible to participants." ON public.messages;
 DROP POLICY IF EXISTS "Users can insert their own messages." ON public.messages;
 
--- Recreate all policies
+-- Create policies for PROFILES
 CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Create policies for PROVIDERS (read-only for users)
 CREATE POLICY "Providers are viewable by everyone." ON public.providers FOR SELECT USING (true);
+
+-- Create policies for REVIEWS
 CREATE POLICY "Reviews are viewable by everyone." ON public.reviews FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own reviews." ON public.reviews FOR INSERT WITH CHECK (auth.uid() = author_id);
 CREATE POLICY "Users can update their own reviews." ON public.reviews FOR UPDATE USING (auth.uid() = author_id);
+
+-- Create policies for AGREEMENTS
 CREATE POLICY "Agreements are visible to participants." ON public.agreements FOR SELECT USING (auth.uid() = customer_id OR auth.uid() = provider_id);
 CREATE POLICY "Customers can create agreements." ON public.agreements FOR INSERT WITH CHECK (auth.uid() = customer_id);
 CREATE POLICY "Providers can update agreements." ON public.agreements FOR UPDATE USING (auth.uid() = provider_id);
+
+-- Create policies for CONVERSATIONS
 CREATE POLICY "Conversations are visible to participants." ON public.conversations FOR SELECT USING (auth.uid() = participant_one_id OR auth.uid() = participant_two_id);
+
+-- Create policies for MESSAGES
 CREATE POLICY "Messages are visible to participants." ON public.messages FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 CREATE POLICY "Users can insert their own messages." ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
