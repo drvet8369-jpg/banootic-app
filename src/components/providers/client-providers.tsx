@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
+import { AuthProvider } from './auth-provider';
 
-// This component wraps client-side logic that needs to be at the root of the application,
-// like service worker registration, without turning the entire root layout into a client component.
+// This component wraps all client-side providers for the application.
+// This keeps the root layout as a Server Component.
 
 export default function ClientProviders({
   children,
@@ -18,5 +19,9 @@ export default function ClientProviders({
     }
   }, []);
 
-  return <>{children}</>;
+  return (
+      <AuthProvider>
+          {children}
+      </AuthProvider>
+  );
 }
