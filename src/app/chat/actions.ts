@@ -43,11 +43,11 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Partner profile not found.' };
     }
     
-    // 3. Get or create the conversation
+    // 3. Get or create the conversation using the corrected RPC parameter names
     const { data: conversationData, error: conversationError } = await supabase
         .rpc('get_or_create_conversation', {
-            p_one: currentUserProfile.id,
-            p_two: partnerProfile.id
+            p_user_one_id: currentUserProfile.id,
+            p_user_two_id: partnerProfile.id
         });
 
     if (conversationError) {
