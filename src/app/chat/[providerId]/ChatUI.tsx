@@ -3,7 +3,7 @@
 
 import { FormEvent, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Loader2, Edit, Save, XCircle } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 import type { Conversation, Message, Profile } from '@/lib/types';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { sendMessageAction } from '../actions';
+import { sendMessageAction, editMessageAction } from '../actions';
 import { useRouter } from 'next/navigation';
 
 interface ChatUIProps {
@@ -40,6 +40,9 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,16 +57,21 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'messages',
             filter: `conversation_id=eq.${conversation.id}`,
           },
           (payload) => {
-            const newMessage = payload.new as Message;
-            // Prevent adding own message twice (optimistic update + real-time)
-            if (newMessage.sender_id !== currentUserProfile.id) {
-               setMessages((prevMessages) => [...prevMessages, newMessage]);
+            if (payload.eventType === 'INSERT') {
+                const newMessage = payload.new as Message;
+                // Prevent adding own message twice
+                if (newMessage.sender_id !== currentUserProfile.id) {
+                   setMessages((prevMessages) => [...prevMessages, newMessage]);
+                }
+            } else if (payload.eventType === 'UPDATE') {
+                const updatedMessage = payload.new as Message;
+                setMessages((prevMessages) => prevMessages.map(m => m.id === updatedMessage.id ? updatedMessage : m));
             }
           }
         )
@@ -73,6 +81,57 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
         supabase.removeChannel(channel);
       };
     }, [conversation, currentUserProfile.id]);
+
+
+    const handleStartEdit = (message: Message) => {
+      setEditingMessageId(message.id);
+      setEditingText(message.content);
+    };
+
+    const handleCancelEdit = () => {
+      setEditingMessageId(null);
+      setEditingText('');
+    };
+    
+    const handleSaveEdit = async () => {
+      if (!editingMessageId || !editingText.trim()) {
+          handleCancelEdit();
+          return;
+      }
+      
+      const originalMessage = messages.find(m => m.id === editingMessageId);
+      if (originalMessage?.content === editingText.trim()) {
+          handleCancelEdit();
+          return;
+      }
+
+      const tempOriginalMessages = [...messages];
+      // Optimistic update
+      const tempMessages = messages.map(msg => {
+        if (msg.id === editingMessageId) {
+          return { ...msg, content: editingText.trim(), is_edited: true };
+        }
+        return msg;
+      });
+      setMessages(tempMessages);
+      
+      const messageIdToSave = editingMessageId;
+      const newContentToSave = editingText.trim();
+      
+      handleCancelEdit();
+
+      const result = await editMessageAction({
+          messageId: messageIdToSave,
+          newContent: newContentToSave,
+      });
+
+      if (result.error) {
+          toast.error("خطا در ویرایش پیام", { description: result.error });
+          setMessages(tempOriginalMessages);
+      } else {
+          toast.success("پیام با موفقیت ویرایش شد.");
+      }
+    };
 
 
   const handleSubmit = async (e: FormEvent) => {
@@ -146,6 +205,7 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
             )}
             {messages.map((message) => {
                 const senderIsUser = message.sender_id === currentUserProfile.id;
+                const isEditing = editingMessageId === message.id;
 
                 return (
                   <div 
@@ -161,13 +221,41 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
                       </Avatar>
                     )}
                     
-                    <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
-                        <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                          <p className="text-sm font-semibold">{message.content}</p>
+                    {isEditing ? (
+                         <div className="flex-1 flex items-center gap-1">
+                            <Input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="h-9"
+                                onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
+                                autoFocus
+                            />
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
                         </div>
-                    </div>
+                    ) : (
+                         <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
+                             <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                <p className="text-sm font-semibold">
+                                  {message.content}
+                                  {message.is_edited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
+                                </p>
+                            </div>
+                            {senderIsUser && (
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleStartEdit(message)}
+                                >
+                                    <Edit className="w-4 h-4"/>
+                                </Button>
+                            )}
+                        </div>
+                    )}
 
-                     {senderIsUser && (
+                     {senderIsUser && !isEditing && (
                        <Avatar className="h-8 w-8 select-none">
                           <AvatarFallback>شما</AvatarFallback>
                       </Avatar>
@@ -185,9 +273,9 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
                 className="flex-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || !conversation}
+                disabled={isSending || !conversation || !!editingMessageId}
               />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || !conversation}>
+              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || !conversation || !!editingMessageId}>
                   {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
               </Button>
           </form>

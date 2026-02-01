@@ -116,3 +116,41 @@ export async function sendMessageAction(payload: { conversationId: string; conte
 
     return { error: null };
 }
+
+export async function editMessageAction(payload: { messageId: string; newContent: string; }) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { error: "User not authenticated" };
+    }
+    
+    const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .eq('id', payload.messageId)
+        .single();
+        
+    if (fetchError || !message) {
+        return { error: "Message not found." };
+    }
+    
+    if (message.sender_id !== user.id) {
+        return { error: "You are not authorized to edit this message." };
+    }
+
+    const { error: updateError } = await supabase
+        .from('messages')
+        .update({
+            content: payload.newContent,
+            is_edited: true,
+        })
+        .eq('id', payload.messageId);
+    
+    if (updateError) {
+        console.error("Error editing message:", updateError);
+        return { error: `Failed to edit message: ${updateError.message}` };
+    }
+
+    return { error: null };
+}
