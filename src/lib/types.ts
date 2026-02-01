@@ -67,16 +67,18 @@ export type Conversation = {
   participant_two_id: string; // uuid, fk to profiles.id
 };
 
-// Type for displaying a conversation in the inbox list
+// Type for displaying a conversation in the inbox list, matches the RPC function output
 export type InboxConversation = {
-  id: string; // conversation_id
-  conversation_created_at: string; 
+  id: string;
+  conversation_created_at: string;
   participant_one_id: string;
   participant_two_id: string;
-  other_participant_id: string;
-  other_participant_full_name: string;
-  other_participant_phone: string;
-  other_participant_profile_image_url: string;
+  other_participant: {
+    id: string;
+    full_name: string;
+    phone: string;
+    profile_image_url: string;
+  };
   last_message_content: string | null;
   last_message_at: string | null;
   unread_count: number;

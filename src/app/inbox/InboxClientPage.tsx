@@ -79,15 +79,15 @@ export function InboxClientPage({ initialConversations }: { initialConversations
     return (
         <div className="space-y-4">
             {conversations.map((convo) => (
-                <Link href={`/chat/${convo.other_participant_phone}`} key={convo.id}>
+                <Link href={`/chat/${convo.other_participant.phone}`} key={convo.id}>
                     <div className="flex items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                         <Avatar className="h-12 w-12 ml-4">
-                           {convo.other_participant_profile_image_url && <AvatarImage src={convo.other_participant_profile_image_url} alt={convo.other_participant_full_name} />}
-                            <AvatarFallback>{getInitials(convo.other_participant_full_name)}</AvatarFallback>
+                           {convo.other_participant.profile_image_url && <AvatarImage src={convo.other_participant.profile_image_url} alt={convo.other_participant.full_name} />}
+                            <AvatarFallback>{getInitials(convo.other_participant.full_name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
-                                <h4 className="font-bold">{convo.other_participant_full_name}</h4>
+                                <h4 className="font-bold">{convo.other_participant.full_name}</h4>
                                 {convo.last_message_at && (
                                     <p className="text-xs text-muted-foreground flex-shrink-0">
                                         {formatDistanceToNow(new Date(convo.last_message_at), { addSuffix: true, locale: faIR })}
@@ -95,7 +95,7 @@ export function InboxClientPage({ initialConversations }: { initialConversations
                                 )}
                             </div>
                             <div className="flex justify-between items-center mt-1">
-                                <p className="text-base text-muted-foreground truncate font-semibold">{convo.last_message_content}</p>
+                                <p className="text-sm text-muted-foreground truncate font-semibold">{convo.last_message_content}</p>
                                 {convo.unread_count > 0 && (
                                     <Badge variant="destructive" className="flex-shrink-0">{convo.unread_count}</Badge>
                                 )}
