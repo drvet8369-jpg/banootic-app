@@ -1,9 +1,8 @@
-
 import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import Header from '@/components/layout/header';
+import Header from '@/components/layout/Header';
 import SearchBar from '@/components/ui/search-bar';
 import Footer from '@/components/ui/footer';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';

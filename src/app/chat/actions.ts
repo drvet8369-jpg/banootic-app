@@ -1,4 +1,3 @@
-
 'use server';
 
 import 'server-only';
@@ -38,8 +37,6 @@ export async function getInitialChatData(partnerPhone: string) {
         .single();
 
     if (partnerProfileError || !partnerProfile) {
-        // This case is unlikely if we are initiating from a real provider profile,
-        // but it's good practice to handle it.
         return { error: 'Partner profile not found.' };
     }
     
@@ -74,14 +71,10 @@ export async function getInitialChatData(partnerPhone: string) {
     
     // 5. Mark messages as read for this conversation
     if (conversation) {
-        const { error: readError } = await supabase.rpc('mark_messages_as_read', {
+        await supabase.rpc('mark_messages_as_read', {
             p_conversation_id: conversation.id,
             p_user_id: user.id
         });
-        if (readError) {
-            console.error("Error marking messages as read:", readError);
-            // Non-critical, so we don't return an error to the client
-        }
     }
     
     return {

@@ -14,7 +14,7 @@ export async function getConversationsForUser(): Promise<InboxConversation[]> {
         return [];
     }
 
-    const { data, error } = await supabase.rpc('get_user_conversations_with_unread', {
+    const { data, error } = await supabase.rpc('get_user_conversations_with_unread_v2', {
         p_user_id: user.id,
     });
     
@@ -37,17 +37,14 @@ export async function getUnreadConversationsCount(): Promise<number> {
         return 0;
     }
 
-    // Call the new, more efficient function
     const { data, error } = await supabase.rpc('get_total_unread_message_count', {
         p_user_id: user.id,
     });
     
     if (error) {
-        // Updated error message for clarity
         console.error("Error fetching total unread message count:", error);
         return 0;
     }
     
-    // The new function directly returns the count
     return data ?? 0;
 }

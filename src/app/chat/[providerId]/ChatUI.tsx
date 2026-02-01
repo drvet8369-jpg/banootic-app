@@ -1,4 +1,3 @@
-
 'use client';
 
 import { FormEvent, useState, useRef, useEffect } from 'react';
@@ -237,7 +236,7 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
                     ) : (
                          <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
                              <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                <p className="text-sm font-semibold">
+                                <p className="text-base font-semibold">
                                   {message.content}
                                   {message.is_edited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
                                 </p>
