@@ -152,12 +152,13 @@ export async function getReviewsForProvider(profileId: string): Promise<Review[]
     noStore();
     const supabase = createClient();
 
-    // Join with the profiles table to get the author's name
+    // Join with the profiles table to get the author's name,
+    // explicitly using the foreign key relationship name to resolve ambiguity.
     const { data: reviewsData, error } = await supabase
         .from('reviews')
         .select(`
             *,
-            profiles ( full_name )
+            author:profiles!reviews_author_id_fkey ( full_name )
         `)
         .eq('provider_id', profileId)
         .order('created_at', { ascending: false });
@@ -171,8 +172,8 @@ export async function getReviewsForProvider(profileId: string): Promise<Review[]
         id: r.id,
         provider_id: r.provider_id,
         author_id: r.author_id,
-        // Safely access the joined profile's name
-        authorName: r.profiles?.full_name || 'کاربر حذف شده',
+        // Safely access the aliased joined profile's name
+        authorName: r.author?.full_name || 'کاربر حذف شده',
         rating: r.rating,
         comment: r.comment,
         createdAt: r.created_at,
