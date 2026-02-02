@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -36,7 +35,7 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon">
-            <Menu className="h-6 w-6" />
+            <Menu className="h-9 w-9" />
             <span className="sr-only">باز کردن منو</span>
           </Button>
         </SheetTrigger>
@@ -68,7 +67,7 @@ export default function MobileNav({ userProfile, isLoggedIn }: { userProfile: Pr
     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
-          <Menu className="h-6 w-6" />
+          <Menu className="h-9 w-9" />
           <span className="sr-only">باز کردن منو</span>
         </Button>
       </SheetTrigger>
