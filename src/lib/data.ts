@@ -152,9 +152,13 @@ export async function getReviewsForProvider(profileId: string): Promise<Review[]
     noStore();
     const supabase = createClient();
 
-    const { data: reviews, error } = await supabase
+    // Join with the profiles table to get the author's name
+    const { data: reviewsData, error } = await supabase
         .from('reviews')
-        .select('*')
+        .select(`
+            *,
+            profiles ( full_name )
+        `)
         .eq('provider_id', profileId)
         .order('created_at', { ascending: false });
 
@@ -163,11 +167,12 @@ export async function getReviewsForProvider(profileId: string): Promise<Review[]
         return [];
     }
 
-    return reviews.map(r => ({
+    return reviewsData.map((r: any) => ({
         id: r.id,
         provider_id: r.provider_id,
         author_id: r.author_id,
-        authorName: r.author_name,
+        // Safely access the joined profile's name
+        authorName: r.profiles?.full_name || 'کاربر حذف شده',
         rating: r.rating,
         comment: r.comment,
         createdAt: r.created_at,
