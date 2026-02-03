@@ -1,7 +1,15 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
+  // If in mock data mode, bypass the Supabase session management entirely.
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+    return NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+  }
   return await updateSession(request);
 }
 
