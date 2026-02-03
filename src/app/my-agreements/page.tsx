@@ -1,3 +1,4 @@
+
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -89,14 +90,14 @@ export default async function MyAgreementsPage() {
                                                 درخواست شما {formatDistanceToNow(new Date(agreement.created_at), { addSuffix: true, locale: faIR })} ارسال شد.
                                             </p>
                                             {agreement.status === 'accepted' && providerPhone && (
-                                                <div className="flex gap-2 mt-3">
-                                                    <Button asChild size="sm">
+                                                <div className="flex w-full justify-center gap-2 mt-3">
+                                                    <Button asChild size="sm" className="w-36">
                                                         <Link href={`/chat/${providerPhone}`}>
                                                             <MessageSquare className="w-4 h-4 ml-2" />
                                                             شروع گفتگو
                                                         </Link>
                                                     </Button>
-                                                    <Button asChild size="sm" variant="secondary">
+                                                    <Button asChild size="sm" variant="secondary" className="w-36">
                                                         <a href={`tel:${providerPhone}`}>
                                                             <Phone className="w-4 h-4 ml-2" />
                                                             تماس
