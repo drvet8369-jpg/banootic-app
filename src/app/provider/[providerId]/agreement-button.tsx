@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Loader2, ShieldQuestion } from 'lucide-react';
+import { ShieldCheck, Loader2, ShieldQuestion, ShieldX, ShieldAlert } from 'lucide-react';
 import { sendAgreementAction } from '@/app/agreements/actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -13,14 +13,13 @@ interface AgreementButtonProps {
     providerProfileId: string;
     currentUser: SupabaseUser | null;
     isOwner: boolean;
-    hasAlreadyAgreed: boolean;
+    agreementStatus: 'accepted' | 'pending' | 'rejected' | 'none';
 }
 
-export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAlreadyAgreed }: AgreementButtonProps) {
+export function AgreementButton({ providerProfileId, currentUser, isOwner, agreementStatus }: AgreementButtonProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const [isSent, setIsSent] = useState(hasAlreadyAgreed);
-
+    
     if (isOwner) {
         return null;
     }
@@ -34,34 +33,51 @@ export function AgreementButton({ providerProfileId, currentUser, isOwner, hasAl
         setIsLoading(true);
         toast.loading('در حال ارسال درخواست...');
         const result = await sendAgreementAction(providerProfileId);
-        toast.dismiss();
-
+        
         if (result.error) {
+            toast.dismiss();
             toast.error('خطا', { description: result.error });
         } else if (result.success) {
+            toast.dismiss();
             toast.success('درخواست توافق شما ارسال شد! منتظر تایید هنرمند بمانید.');
-            setIsSent(true);
+            router.refresh(); 
         }
         setIsLoading(false);
     };
 
-    if (isSent) {
-        return (
-            <Button size="sm" variant="outline" disabled className="w-full">
-                <ShieldQuestion className="w-4 h-4 ml-2 text-blue-500" />
-                درخواست توافق ارسال شده
-            </Button>
-        );
+    switch (agreementStatus) {
+        case 'accepted':
+            return (
+                <Button size="sm" variant="outline" disabled className="w-full bg-green-100 border-green-400 text-green-800">
+                    <ShieldCheck className="w-4 h-4 ml-2" />
+                    توافق تایید شده
+                </Button>
+            );
+        case 'pending':
+            return (
+                <Button size="sm" variant="outline" disabled className="w-full bg-blue-100 border-blue-400 text-blue-800">
+                    <ShieldAlert className="w-4 h-4 ml-2" />
+                    درخواست ارسال شده
+                </Button>
+            );
+        case 'rejected':
+             return (
+                <Button size="sm" variant="outline" disabled className="w-full bg-red-100 border-red-400 text-red-800">
+                    <ShieldX className="w-4 h-4 ml-2" />
+                    درخواست رد شده
+                </Button>
+            );
+        case 'none':
+        default:
+            return (
+                <Button onClick={handleClick} size="sm" variant="outline" disabled={isLoading} className="w-full">
+                    {isLoading ? (
+                        <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    ) : (
+                        <ShieldCheck className="w-4 h-4 ml-2 text-green-500" />
+                    )}
+                    ارسال درخواست توافق
+                </Button>
+            );
     }
-    
-    return (
-        <Button onClick={handleClick} size="sm" variant="outline" disabled={isLoading} className="w-full">
-            {isLoading ? (
-                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-            ) : (
-                <ShieldCheck className="w-4 h-4 ml-2 text-green-500" />
-            )}
-            ارسال درخواست توافق
-        </Button>
-    );
 }

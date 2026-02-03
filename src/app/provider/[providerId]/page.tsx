@@ -62,20 +62,21 @@ export default async function ProviderProfilePage({ params }: { params: { provid
     notFound();
   }
   
-  let hasAlreadyAgreed = false;
+  let agreementStatus: 'accepted' | 'pending' | 'rejected' | 'none' = 'none';
   if (user) {
-      const { count, error: agreementError } = await supabase
+      const { data: agreement, error: agreementError } = await supabase
           .from('agreements')
-          .select('*', { count: 'exact', head: true })
+          .select('status')
           .eq('customer_id', user.id)
-          .eq('provider_id', provider.profile_id);
+          .eq('provider_id', provider.profile_id)
+          .single();
       
-      if (agreementError) {
+      if (agreementError && agreementError.code !== 'PGRST116') { // PGRST116 = no rows found
           console.error("Error checking for existing agreement:", agreementError);
       }
       
-      if (count && count > 0) {
-          hasAlreadyAgreed = true;
+      if (agreement) {
+          agreementStatus = agreement.status;
       }
   }
 
@@ -128,51 +129,74 @@ export default async function ProviderProfilePage({ params }: { params: { provid
 
                 {!isOwnerViewing && (
                     <CardFooter className="flex flex-col items-center justify-center gap-3 p-6 mt-auto border-t bg-muted/20">
-                        <p className="text-sm text-center text-muted-foreground px-4">
-                          برای تماس یا ارسال پیام، ابتدا باید درخواست توافق ارسال کنید و منتظر تایید هنرمند بمانید.
-                        </p>
-                        <TooltipProvider>
-                          <div className="flex w-full gap-3 mt-2">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex-1">
-                                  <Button size="sm" variant="secondary" className="w-full" disabled>
-                                    <Phone className="w-4 h-4 ml-2" />
-                                    تماس
+                      {agreementStatus === 'accepted' ? (
+                          <>
+                              <p className="text-sm text-center text-green-700 font-semibold px-4">
+                                  توافق شما با این هنرمند تایید شده است. می‌توانید ارتباط برقرار کنید.
+                              </p>
+                              <div className="flex w-full gap-3 mt-2">
+                                  <Button asChild size="sm" variant="secondary" className="flex-1">
+                                      <a href={`tel:${provider.phone}`}>
+                                          <Phone className="w-4 h-4 ml-2" />
+                                          تماس
+                                      </a>
                                   </Button>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>پس از تایید توافق توسط هنرمند، فعال می‌شود.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex-1">
-                                  <Button size="sm" className="w-full" disabled>
-                                    <MessageSquare className="w-4 h-4 ml-2" />
-                                    ارسال پیام
+                                  <Button asChild size="sm" className="flex-1">
+                                      <Link href={`/chat/${provider.phone}`}>
+                                          <MessageSquare className="w-4 h-4 ml-2" />
+                                          ارسال پیام
+                                      </Link>
                                   </Button>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>پس از تایید توافق توسط هنرمند، فعال می‌شود.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TooltipProvider>
-                
-                        <div className="w-full mt-2">
-                            <AgreementButton 
-                                providerProfileId={provider.profile_id} 
-                                currentUser={user} 
-                                isOwner={isOwnerViewing}
-                                hasAlreadyAgreed={hasAlreadyAgreed}
-                            />
-                        </div>
+                              </div>
+                          </>
+                      ) : (
+                          <>
+                              <p className="text-sm text-center text-muted-foreground px-4">
+                                  برای تماس یا ارسال پیام، ابتدا باید درخواست توافق ارسال کنید و منتظر تایید هنرمند بمانید.
+                              </p>
+                              <TooltipProvider>
+                                  <div className="flex w-full gap-3 mt-2">
+                                      <Tooltip>
+                                          <TooltipTrigger asChild>
+                                              <div className="flex-1">
+                                                  <Button size="sm" variant="secondary" className="w-full" disabled>
+                                                      <Phone className="w-4 h-4 ml-2" />
+                                                      تماس
+                                                  </Button>
+                                              </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                              <p>پس از تایید توافق توسط هنرمند، فعال می‌شود.</p>
+                                          </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                          <TooltipTrigger asChild>
+                                              <div className="flex-1">
+                                                  <Button size="sm" className="w-full" disabled>
+                                                      <MessageSquare className="w-4 h-4 ml-2" />
+                                                      ارسال پیام
+                                                  </Button>
+                                              </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                              <p>پس از تایید توافق توسط هنرمند، فعال می‌شود.</p>
+                                          </TooltipContent>
+                                      </Tooltip>
+                                  </div>
+                              </TooltipProvider>
+                              <div className="w-full mt-2">
+                                  <AgreementButton
+                                      providerProfileId={provider.profile_id}
+                                      currentUser={user}
+                                      isOwner={isOwnerViewing}
+                                      agreementStatus={agreementStatus}
+                                  />
+                              </div>
+                          </>
+                      )}
                     </CardFooter>
                 )}
+
 
                 <Separator />
                 
