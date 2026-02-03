@@ -105,3 +105,17 @@ export type AgreementWithCustomer = {
         profile_image_url: string | null;
     } | null;
 };
+
+export type AgreementWithProviderDetails = {
+    id: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    created_at: string;
+    provider_profile: {
+        id: string;
+        providers: {
+            name: string;
+            phone: string;
+        }[];
+        profile_image_url: string | null;
+    } | null;
+};
