@@ -58,6 +58,12 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
         queryBuilder = queryBuilder.or(`name.fts.${cleanedQuery},service.fts.${cleanedQuery},bio.fts.${cleanedQuery}`);
     }
 
+    // Meritocracy sorting algorithm
+    queryBuilder = queryBuilder.order('rating', { ascending: false, nullsFirst: false })
+                               .order('reviews_count', { ascending: false })
+                               .order('agreements_count', { ascending: false });
+
+
     const { data: providersData, error } = await queryBuilder;
 
     if (error) {
