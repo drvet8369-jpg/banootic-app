@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -22,9 +21,49 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 
 // --------------------
-// Provider
+// Mock Provider for testing
+// --------------------
+const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // Mock a logged-in customer user for UI testing purposes
+  const mockUser: SupabaseUser = {
+    id: 'mock-customer-id',
+    app_metadata: { provider: 'email', providers: ['email'] },
+    user_metadata: { full_name: 'مشتری آزمایشی' },
+    aud: 'authenticated',
+    created_at: new Date().toISOString(),
+  };
+
+  const mockProfile: Profile = {
+    id: 'mock-customer-id',
+    account_type: 'customer',
+    full_name: 'مشتری آزمایشی',
+    phone: '09123456789',
+    profile_image_url: null,
+    portfolio: [],
+    service_id: null,
+  };
+
+  const value: AuthContextType = {
+    session: null, // Session can be null in mock mode
+    user: mockUser,
+    profile: mockProfile,
+    isLoggedIn: true,
+    loading: false,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+
+// --------------------
+// Main Provider
 // --------------------
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // If mock data mode is on, use the mock provider to avoid real auth
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+    return <MockAuthProvider>{children}</MockAuthProvider>;
+  }
+
   const supabase = createClient();
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
