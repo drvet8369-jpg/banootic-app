@@ -18,18 +18,23 @@ export async function addReviewAction(payload: AddReviewPayload) {
     if (!user) {
         return { error: 'برای ثبت نظر باید وارد شوید.' };
     }
+    
+    // Defensive check: Ensure user has a name in their profile before allowing a review.
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+    if (!profile?.full_name) {
+        return { error: 'لطفا ابتدا ثبت‌نام خود را تکمیل کنید تا بتوانید نظر دهید.' };
+    }
 
-    // The user's name will be fetched via a JOIN when reviews are displayed.
-    // We only need to insert the ID of the author.
+    // Insert the review into the database.
     const { error: reviewError } = await supabase.from('reviews').insert({
         provider_id: payload.profileId,
-        author_id: user.id, // This is sufficient
+        author_id: user.id,
         rating: payload.rating,
         comment: payload.comment,
     });
 
     if (reviewError) {
-        // The unique constraint on (provider_id, author_id) will trigger this.
+        // The unique constraint, added by our migration, will trigger this error.
         if (reviewError.code === '23505') { 
             return { error: 'شما قبلاً برای این هنرمند نظری ثبت کرده‌اید.' };
         }
@@ -37,20 +42,18 @@ export async function addReviewAction(payload: AddReviewPayload) {
         return { error: 'خطا در ثبت نظر: ' + reviewError.message };
     }
     
-    // Recalculate average rating for the provider using an RPC function
-    // for atomicity and better performance.
-    const { error: rpcError } = await supabase.rpc('update_provider_rating', {
-        provider_profile_id: payload.profileId
+    // Call the new, comprehensive RPC function to update all provider statistics.
+    const { error: rpcError } = await supabase.rpc('update_provider_stats', {
+        p_provider_profile_id: payload.profileId
     });
 
     if (rpcError) {
-        // This is not a critical error for the user, so we just log it.
-        // The review was submitted successfully.
-        console.error("Failed to update provider's average rating via RPC:", rpcError);
+        // This is not a critical error for the user, but it's important to log it.
+        console.error("Failed to update provider stats via RPC:", rpcError);
     }
     
-    // Revalidate the provider's public page to show the new review and rating
-    const { data: provider } = await supabase.from('providers').select('phone').eq('id', payload.providerId).single();
+    // Revalidate the provider's public page to show the new review and updated stats.
+    const { data: provider } = await supabase.from('providers').select('phone').eq('profile_id', payload.profileId).single();
     if (provider?.phone) {
         revalidatePath(`/provider/${provider.phone}`);
     }
