@@ -58,7 +58,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     // New meritocracy sorting algorithm with recency
     queryBuilder = queryBuilder
-                               .order('last_activity_at', { ascending: false, nullsFirst: false })
+                               .order('last_activity_at', { ascending: false, nullsFirst: true })
                                .order('rating', { ascending: false, nullsFirst: false })
                                .order('reviews_count', { ascending: false })
                                .order('agreements_count', { ascending: false });

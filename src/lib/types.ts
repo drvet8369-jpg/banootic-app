@@ -33,7 +33,7 @@ export interface Provider {
   rating: number;
   reviewsCount: number;
   agreements_count: number;
-  last_activity_at: string;
+  last_activity_at: string | null;
   profileImage: { src: string; aiHint?: string; }; // From profiles.profile_image_url
   portfolio: PortfolioItem[]; // from profiles.portfolio
 }
