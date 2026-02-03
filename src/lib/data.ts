@@ -56,10 +56,10 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
         queryBuilder = queryBuilder.or(`name.fts.${cleanedQuery},service.fts.${cleanedQuery},bio.fts.${cleanedQuery}`);
     }
 
-    // New meritocracy sorting algorithm with recency
+    // Corrected meritocracy sorting algorithm
     queryBuilder = queryBuilder
-                               .order('last_activity_at', { ascending: false, nullsFirst: true })
-                               .order('rating', { ascending: false, nullsFirst: false })
+                               .order('last_activity_at', { ascending: false, nullsLast: true })
+                               .order('rating', { ascending: false })
                                .order('reviews_count', { ascending: false })
                                .order('agreements_count', { ascending: false });
 
