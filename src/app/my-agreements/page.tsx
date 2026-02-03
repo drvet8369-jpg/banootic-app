@@ -56,8 +56,8 @@ export default async function MyAgreementsPage() {
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12">
             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-3xl">توافق‌های من</CardTitle>
+                <CardHeader className="text-center">
+                    <CardTitle className="font-headline text-2xl">توافق‌های من</CardTitle>
                     <CardDescription>در این صفحه می‌توانید وضعیت درخواست‌های توافق خود با هنرمندان را پیگیری کنید.</CardDescription>
                 </CardHeader>
                 <CardContent>
