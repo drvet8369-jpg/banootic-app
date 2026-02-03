@@ -52,6 +52,16 @@ export async function addReviewAction(payload: AddReviewPayload) {
         console.error("Failed to update provider stats via RPC:", rpcError);
     }
     
+    // Also update the provider's last activity timestamp
+    const { error: activityError } = await supabase
+        .from('providers')
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq('profile_id', payload.profileId);
+
+    if (activityError) {
+        console.warn(`Failed to update last_activity_at for provider ${payload.profileId}:`, activityError);
+    }
+
     // Revalidate the provider's public page to show the new review and updated stats.
     const { data: provider } = await supabase.from('providers').select('phone').eq('profile_id', payload.profileId).single();
     if (provider?.phone) {

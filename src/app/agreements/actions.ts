@@ -72,6 +72,16 @@ export async function acceptAgreementAction(agreementId: string, providerProfile
         console.error('Supabase increment_agreements RPC error after acceptance:', rpcError);
     }
     
+    // 3. Update the provider's last activity timestamp
+    const { error: activityError } = await supabase
+        .from('providers')
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq('profile_id', providerProfileId);
+
+    if (activityError) {
+        console.warn(`Failed to update last_activity_at for provider ${providerProfileId}:`, activityError);
+    }
+
     revalidatePath('/agreements');
     const { data: provider } = await supabase.from('providers').select('phone').eq('profile_id', providerProfileId).single();
     if (provider?.phone) {

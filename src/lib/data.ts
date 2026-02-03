@@ -1,4 +1,3 @@
-
 import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
@@ -36,6 +35,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             rating,
             reviews_count,
             agreements_count,
+            last_activity_at,
             profiles (
                 profile_image_url,
                 portfolio
@@ -44,7 +44,6 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     // Apply filters independently for better composability.
     if (query.serviceSlug) {
-        // Corrected: Filter by service_slug directly on the providers table.
         queryBuilder = queryBuilder.eq('service_slug', query.serviceSlug);
     }
      
@@ -54,12 +53,13 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
     if (query.searchQuery) {
         const cleanedQuery = query.searchQuery.trim();
-        // Using fts (Full-Text Search) for a more robust and language-aware search
         queryBuilder = queryBuilder.or(`name.fts.${cleanedQuery},service.fts.${cleanedQuery},bio.fts.${cleanedQuery}`);
     }
 
-    // Meritocracy sorting algorithm
-    queryBuilder = queryBuilder.order('rating', { ascending: false, nullsFirst: false })
+    // New meritocracy sorting algorithm with recency
+    queryBuilder = queryBuilder
+                               .order('last_activity_at', { ascending: false, nullsFirst: false })
+                               .order('rating', { ascending: false, nullsFirst: false })
                                .order('reviews_count', { ascending: false })
                                .order('agreements_count', { ascending: false });
 
@@ -87,6 +87,7 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
             rating: p.rating ?? 0,
             reviewsCount: p.reviews_count ?? 0,
             agreements_count: p.agreements_count ?? 0,
+            last_activity_at: p.last_activity_at,
             profileImage: {
                 src: profileData?.profile_image_url ?? '',
                 aiHint: 'woman portrait'
@@ -140,6 +141,7 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
         rating: data.rating ?? 0,
         reviewsCount: data.reviews_count ?? 0,
         agreements_count: data.agreements_count ?? 0,
+        last_activity_at: data.last_activity_at,
         profileImage: {
             src: profileData?.profile_image_url ?? '',
             aiHint: 'woman portrait'
