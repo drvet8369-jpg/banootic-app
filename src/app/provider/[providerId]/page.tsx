@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { PortfolioGallery } from './portfolio-gallery';
 import { ReviewForm } from './review-form';
@@ -126,30 +127,51 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                 </CardContent>
 
                 {!isOwnerViewing && (
-                <CardFooter className="flex flex-col items-center justify-center gap-3 p-6 mt-auto border-t">
-                    <div className="flex w-full gap-3">
-                        <Button asChild size="sm" variant="secondary" className="flex-1">
-                            <a href={`tel:${provider.phone}`}>
-                                <Phone className="w-4 h-4 ml-2" />
-                                تماس
-                            </a>
-                        </Button>
-                        <Button asChild size="sm" className="flex-1">
-                            <Link href={user ? `/chat/${provider.phone}` : '/login'}>
-                                <MessageSquare className="w-4 h-4 ml-2" />
-                                ارسال پیام
-                            </Link>
-                        </Button>
-                    </div>
-                    <div className="w-full">
-                        <AgreementButton 
-                            providerProfileId={provider.profile_id} 
-                            currentUser={user} 
-                            isOwner={isOwnerViewing}
-                            hasAlreadyAgreed={hasAlreadyAgreed}
-                        />
-                    </div>
-                </CardFooter>
+                    <CardFooter className="flex flex-col items-center justify-center gap-3 p-6 mt-auto border-t bg-muted/20">
+                        <p className="text-sm text-center text-muted-foreground px-4">
+                          برای تماس یا ارسال پیام، ابتدا باید درخواست توافق ارسال کنید و منتظر تایید هنرمند بمانید.
+                        </p>
+                        <TooltipProvider>
+                          <div className="flex w-full gap-3 mt-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex-1">
+                                  <Button size="sm" variant="secondary" className="w-full" disabled>
+                                    <Phone className="w-4 h-4 ml-2" />
+                                    تماس
+                                  </Button>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>پس از تایید توافق توسط هنرمند، فعال می‌شود.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex-1">
+                                  <Button size="sm" className="w-full" disabled>
+                                    <MessageSquare className="w-4 h-4 ml-2" />
+                                    ارسال پیام
+                                  </Button>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>پس از تایید توافق توسط هنرمند، فعال می‌شود.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                
+                        <div className="w-full mt-2">
+                            <AgreementButton 
+                                providerProfileId={provider.profile_id} 
+                                currentUser={user} 
+                                isOwner={isOwnerViewing}
+                                hasAlreadyAgreed={hasAlreadyAgreed}
+                            />
+                        </div>
+                    </CardFooter>
                 )}
 
                 <Separator />
