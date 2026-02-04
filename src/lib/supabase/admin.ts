@@ -12,19 +12,6 @@ export const createAdminClient = () => {
   if (adminClient) {
     return adminClient;
   }
-  
-  // If mock data mode is on, return a mock client.
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
-    return {
-      storage: {
-        from: () => ({
-          upload: () => Promise.resolve({ data: null, error: null }),
-          getPublicUrl: () => ({ data: { publicUrl: 'https://placehold.co/600x400' } }),
-          remove: () => Promise.resolve({ data: null, error: null }),
-        }),
-      },
-    } as any;
-  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

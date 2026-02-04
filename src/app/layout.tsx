@@ -26,6 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
+  const isSupabaseConfigured = 
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   return (
     <html lang="fa" dir="rtl">
        <head>
@@ -37,17 +41,39 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        <ClientProviders>
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <SearchBar />
-            <main className="flex-grow flex flex-col">
-              {children}
-            </main>
-            <Footer />
+        {isSupabaseConfigured ? (
+            <ClientProviders>
+              <div className="relative flex min-h-screen flex-col">
+                <Header />
+                <SearchBar />
+                <main className="flex-grow flex flex-col">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+              <SonnerToaster />
+            </ClientProviders>
+        ) : (
+          <div className="flex h-screen w-full items-center justify-center bg-background">
+            <div className="mx-auto max-w-md rounded-lg border bg-card p-8 text-center text-card-foreground shadow-sm">
+                <h1 className="text-2xl font-bold text-destructive">پیکربندی Supabase یافت نشد</h1>
+                <p className="mt-4">
+                  برای اجرای برنامه، لطفاً متغیرهای محیطی مربوط به پروژه Supabase خود را در فایل <code className="font-mono text-sm bg-muted p-1 rounded-sm">.env.local</code> تنظیم کنید.
+                </p>
+                <div className="mt-6 text-left text-sm text-muted-foreground space-y-2">
+                    <p>
+                        <code className="font-semibold text-foreground">NEXT_PUBLIC_SUPABASE_URL</code>
+                    </p>
+                    <p>
+                        <code className="font-semibold text-foreground">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+                    </p>
+                </div>
+                <p className="mt-4 text-xs text-muted-foreground">
+                    این مقادیر را می‌توانید از داشبورد پروژه خود در Supabase پیدا کنید.
+                </p>
+            </div>
           </div>
-          <SonnerToaster />
-        </ClientProviders>
+        )}
       </body>
     </html>
   );

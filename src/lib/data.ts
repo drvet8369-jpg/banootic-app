@@ -2,7 +2,6 @@ import 'server-only';
 import { createClient } from './supabase/server';
 import type { Provider, Review } from './types';
 import { unstable_noStore as noStore } from 'next/cache';
-import { mockProviders, mockReviews } from './mock-data';
 
 // --- NEW: Merit Score Calculation Logic ---
 
@@ -61,39 +60,6 @@ interface ProviderQuery {
 
 export async function getProviders(query: ProviderQuery = {}): Promise<Provider[]> {
     noStore(); 
-
-    // --- MOCK DATA MODE ---
-    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
-        console.log("--- Using Mock Data with Weighted Sort ---");
-        let filteredProviders = [...mockProviders];
-
-        // Apply filtering first
-        if (query.serviceSlug) {
-            filteredProviders = filteredProviders.filter(p => p.serviceSlug === query.serviceSlug);
-        }
-        if (query.categorySlug) {
-            filteredProviders = filteredProviders.filter(p => p.categorySlug === query.categorySlug);
-        }
-        if (query.searchQuery) {
-            const cleanedQuery = query.searchQuery.toLowerCase().trim();
-            filteredProviders = filteredProviders.filter(p => 
-                p.name.toLowerCase().includes(cleanedQuery) ||
-                p.service.toLowerCase().includes(cleanedQuery) ||
-                p.bio.toLowerCase().includes(cleanedQuery)
-            );
-        }
-
-        // --- NEW: Calculate merit score and sort ---
-        const maxReviews = Math.max(...filteredProviders.map(p => p.reviewsCount), 0);
-        const maxAgreements = Math.max(...filteredProviders.map(p => p.agreements_count), 0);
-
-        const scoredProviders = filteredProviders.map(provider => ({
-            ...provider,
-            meritScore: calculateMeritScore(provider, maxReviews, maxAgreements),
-        }));
-
-        return scoredProviders.sort((a, b) => b.meritScore - a.meritScore);
-    }
 
     // --- LIVE DATA MODE ---
     const supabase = createClient();
@@ -176,19 +142,12 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
 
 /**
  * Fetches a single provider by their phone number.
- * If mock mode is on, it returns a provider from the mock list.
  * @param phone - The phone number of the provider to fetch.
  * @returns A promise that resolves to a Provider object or null if not found.
  */
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     noStore();
     
-    // --- MOCK DATA MODE ---
-    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
-        const provider = mockProviders.find(p => p.phone === phone) || null;
-        return Promise.resolve(provider);
-    }
-
     // --- LIVE DATA MODE ---
     const supabase = createClient();
     const { data, error } = await supabase
@@ -234,20 +193,11 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
 
 /**
  * Fetches all reviews for a specific provider profile.
- * If mock mode is on, it returns reviews from the mock list.
  * @param profileId - The UUID of the provider's profile.
  * @returns A promise that resolves to an array of Review objects.
  */
 export async function getReviewsForProvider(profileId: string): Promise<Review[]> {
     noStore();
-    
-    // --- MOCK DATA MODE ---
-    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
-        const provider = mockProviders.find(p => p.profile_id === profileId);
-        if(!provider) return Promise.resolve([]);
-        const reviews = mockReviews.filter(r => r.provider_id === provider.profile_id);
-        return Promise.resolve(reviews);
-    }
 
     // --- LIVE DATA MODE ---
     const supabase = createClient();
