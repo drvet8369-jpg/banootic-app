@@ -58,7 +58,9 @@ export default function RootLayout({
             <div className="mx-auto max-w-md rounded-lg border bg-card p-8 text-center text-card-foreground shadow-sm">
                 <h1 className="text-2xl font-bold text-destructive">پیکربندی Supabase یافت نشد</h1>
                 <p className="mt-4">
-                  برای اجرای برنامه، لطفاً متغیرهای محیطی مربوط به پروژه Supabase خود را در فایل <code className="font-mono text-sm bg-muted p-1 rounded-sm">.env.local</code> تنظیم کنید.
+                  پس از پاکسازی اخیر پروژه، لازم است متغیرهای Supabase را مجدداً در فایل 
+                  <code className="font-mono text-sm bg-muted p-1 rounded-sm">.env.local</code> 
+                  تنظیم کنید.
                 </p>
                 <div className="mt-6 text-left text-sm text-muted-foreground space-y-2">
                     <p>
