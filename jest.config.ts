@@ -12,11 +12,9 @@ const customJestConfig: Config = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // FIX: Force Jest to use the CommonJS version of lucide-react that it can understand.
+    'lucide-react': '<rootDir>/node_modules/lucide-react/dist/cjs/lucide-react.js'
   },
-  // Add this to instruct Jest to transform the lucide-react package
-  transformIgnorePatterns: [
-    '/node_modules/(?!(lucide-react)/)',
-  ],
 }
  
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
