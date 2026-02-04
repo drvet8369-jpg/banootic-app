@@ -18,7 +18,9 @@ describe('LoginPage', () => {
   it('renders the login form correctly', () => {
     render(<LoginPage />);
 
-    expect(screen.getByRole('heading', { name: /ورود یا ثبت‌نام/i })).toBeInTheDocument();
+    // FIX: Changed getByRole('heading') to getByText to make the query more resilient,
+    // as the CardTitle component is a div, not a semantic heading element.
+    expect(screen.getByText(/ورود یا ثبت‌نام/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/شماره تلفن/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ارسال کد تایید/i })).toBeInTheDocument();
   });
