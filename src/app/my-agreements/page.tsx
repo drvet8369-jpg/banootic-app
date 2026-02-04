@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck, ShieldAlert, ShieldX, MessageSquare, Phone, UserX } from 'lucide-react';
 import type { AgreementWithProviderDetails } from '@/lib/types';
+import { formatForTelLink } from '@/lib/utils';
 
 const getInitials = (name: string | null) => {
   if (!name) return '?';
@@ -98,7 +99,7 @@ export default async function MyAgreementsPage() {
                                                         </Link>
                                                     </Button>
                                                     <Button asChild size="sm" variant="secondary" className="w-36">
-                                                        <a href={`tel:${providerPhone}`}>
+                                                        <a href={`tel:${formatForTelLink(providerPhone)}`}>
                                                             <Phone className="w-4 h-4 ml-2" />
                                                             تماس
                                                         </a>

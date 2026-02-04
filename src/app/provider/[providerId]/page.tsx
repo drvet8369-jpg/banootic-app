@@ -5,6 +5,7 @@ import { faIR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/server';
 import { getProviderByPhone, getReviewsForProvider } from '@/lib/data';
 import type { Review } from '@/lib/types';
+import { formatForTelLink } from '@/lib/utils';
 
 import { cn } from "@/lib/utils";
 import { MessageSquare, Phone, User, ShieldCheck, MapPin } from 'lucide-react';
@@ -136,7 +137,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                               </p>
                               <div className="flex w-full gap-3 mt-2">
                                   <Button asChild size="sm" variant="secondary" className="flex-1">
-                                      <a href={`tel:${provider.phone}`}>
+                                      <a href={`tel:${formatForTelLink(provider.phone)}`}>
                                           <Phone className="w-4 h-4 ml-2" />
                                           تماس
                                       </a>

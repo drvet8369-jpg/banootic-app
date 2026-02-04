@@ -38,3 +38,36 @@ export function normalizeForSupabaseAuth(phone: string): string {
 
   return `+98${digits}`;
 }
+
+
+/**
+ * Formats a phone number for use in a 'tel:' link, ensuring it has a '+' prefix.
+ * This function is safe and does not throw errors.
+ * @param phone The phone number string to format.
+ * @returns The formatted phone number for a tel link.
+ */
+export function formatForTelLink(phone: string | null | undefined): string {
+  if (!phone) {
+    return '';
+  }
+  const cleaned = phone.toString().replace(/\s/g, '');
+  if (cleaned.startsWith('+')) {
+    return cleaned;
+  }
+  if (cleaned.startsWith('00')) {
+    return `+${cleaned.substring(2)}`;
+  }
+  // For this app, we assume non-prefixed numbers are Iranian
+  if (cleaned.startsWith('09')) {
+    return `+98${cleaned.substring(1)}`;
+  }
+   if (cleaned.startsWith('98')) {
+    return `+${cleaned}`;
+  }
+  // Fallback for numbers like 912...
+  if (cleaned.length === 10 && cleaned.startsWith('9')) {
+      return `+98${cleaned}`;
+  }
+  // If we can't parse it, return it as is and let the device try.
+  return cleaned;
+}
