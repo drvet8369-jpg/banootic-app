@@ -30,15 +30,23 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Partner profile not found.' };
     }
     
-    // 2. Check for an accepted agreement between the two users
+    // 2. Check for an accepted agreement between the two users (FIXED QUERY)
     const { data: agreement, error: agreementError } = await supabase
         .from('agreements')
         .select('status')
-        .or(`(customer_id.eq.${user.id},provider_id.eq.${partnerProfile.id}),(customer_id.eq.${partnerProfile.id},provider_id.eq.${user.id})`)
-        .eq('status', 'accepted')
+        .or(
+            `and(customer_id.eq.${user.id},provider_id.eq.${partnerProfile.id},status.eq.accepted),` +
+            `and(customer_id.eq.${partnerProfile.id},provider_id.eq.${user.id},status.eq.accepted)`
+        )
+        .limit(1)
         .single();
     
-    if (agreementError || !agreement) {
+    if (agreementError && agreementError.code !== 'PGRST116') { // PGRST116 = no rows found, which is not an error here
+        console.error("Supabase agreement check error:", agreementError);
+        return { error: 'An error occurred while checking for an agreement.' };
+    }
+
+    if (!agreement) {
         return { error: 'Agreement not accepted.' };
     }
 
