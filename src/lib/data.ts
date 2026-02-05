@@ -61,7 +61,6 @@ interface ProviderQuery {
 export async function getProviders(query: ProviderQuery = {}): Promise<Provider[]> {
     noStore(); 
 
-    // --- LIVE DATA MODE ---
     const supabase = createClient();
     let queryBuilder = supabase
         .from('providers')
@@ -96,7 +95,6 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
         queryBuilder = queryBuilder.or(`name.fts.${cleanedQuery},service.fts.${cleanedQuery},bio.fts.${cleanedQuery}`);
     }
 
-    // We no longer sort in the DB, we fetch and then sort in code
     const { data: providersData, error } = await queryBuilder;
 
     if (error) {
@@ -128,7 +126,6 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
         };
     });
 
-    // --- NEW: Calculate merit score and sort for live data ---
     const maxReviews = Math.max(...mappedProviders.map(p => p.reviewsCount), 0);
     const maxAgreements = Math.max(...mappedProviders.map(p => p.agreements_count), 0);
 
@@ -140,15 +137,9 @@ export async function getProviders(query: ProviderQuery = {}): Promise<Provider[
     return scoredProviders.sort((a, b) => b.meritScore - a.meritScore);
 }
 
-/**
- * Fetches a single provider by their phone number.
- * @param phone - The phone number of the provider to fetch.
- * @returns A promise that resolves to a Provider object or null if not found.
- */
 export async function getProviderByPhone(phone: string): Promise<Provider | null> {
     noStore();
     
-    // --- LIVE DATA MODE ---
     const supabase = createClient();
     const { data, error } = await supabase
         .from('providers')
@@ -191,15 +182,9 @@ export async function getProviderByPhone(phone: string): Promise<Provider | null
     };
 }
 
-/**
- * Fetches all reviews for a specific provider profile.
- * @param profileId - The UUID of the provider's profile.
- * @returns A promise that resolves to an array of Review objects.
- */
 export async function getReviewsForProvider(profileId: string): Promise<Review[]> {
     noStore();
 
-    // --- LIVE DATA MODE ---
     const supabase = createClient();
     const { data: reviewsData, error } = await supabase
         .from('reviews')

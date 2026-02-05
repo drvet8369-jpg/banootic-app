@@ -1,4 +1,3 @@
-
 import { services, categories } from '@/lib/constants';
 import { getProviders } from '@/lib/data';
 import { notFound } from 'next/navigation';

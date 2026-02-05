@@ -1,4 +1,3 @@
-
 import { getProviders } from '@/lib/data';
 import SearchResultCard from '@/components/search-result-card';
 import { SearchX } from 'lucide-react';

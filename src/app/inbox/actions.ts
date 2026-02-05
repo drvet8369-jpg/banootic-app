@@ -14,7 +14,6 @@ export async function getConversationsForUser(): Promise<InboxConversation[]> {
         return [];
     }
 
-    // FIX: Corrected RPC function name from _v2 to the one that actually exists.
     const { data, error } = await supabase.rpc('get_user_conversations_with_unread', {
         p_user_id: user.id,
     });
@@ -24,7 +23,6 @@ export async function getConversationsForUser(): Promise<InboxConversation[]> {
         return [];
     }
 
-    // The RPC function is expected to return data in the shape of InboxConversation
     return (data as InboxConversation[]) || [];
 }
 

@@ -1,4 +1,3 @@
-
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
@@ -13,7 +12,7 @@ export default async function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        redirect('/login');
+        redirect('/login?redirect=/profile');
     }
     
     // Step 1: Fetch the user's main profile which now contains image and portfolio
@@ -72,6 +71,8 @@ export default async function ProfilePage() {
         serviceSlug: providerInfo.service_slug ?? '',
         rating: providerInfo.rating ?? 0,
         reviewsCount: providerInfo.reviews_count ?? 0,
+        agreements_count: providerInfo.agreements_count ?? 0,
+        last_activity_at: providerInfo.last_activity_at,
         profileImage: {
             src: userProfile.profile_image_url ?? '',
             aiHint: 'woman portrait'

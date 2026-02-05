@@ -3,6 +3,7 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { unstable_noStore as noStore } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 
 /**
  * Gets initial data needed for the chat page.
@@ -18,18 +19,7 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: "User not authenticated" };
     }
 
-    // 1. Fetch current user's profile
-    const { data: currentUserProfile, error: currentUserProfileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-    
-    if (currentUserProfileError || !currentUserProfile) {
-        return { error: "Current user profile not found." };
-    }
-
-    // 2. Fetch partner's profile using their phone number
+    // 1. Fetch partner's profile using their phone number
     const { data: partnerProfile, error: partnerProfileError } = await supabase
         .from('profiles')
         .select('*')
@@ -40,10 +30,22 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Partner profile not found.' };
     }
     
+    // 2. Check for an accepted agreement between the two users
+    const { data: agreement, error: agreementError } = await supabase
+        .from('agreements')
+        .select('status')
+        .or(`(customer_id.eq.${user.id},provider_id.eq.${partnerProfile.id}),(customer_id.eq.${partnerProfile.id},provider_id.eq.${user.id})`)
+        .eq('status', 'accepted')
+        .single();
+    
+    if (agreementError || !agreement) {
+        return { error: 'Agreement not accepted.' };
+    }
+
     // 3. Get or create the conversation using the corrected RPC parameter names
     const { data: conversationData, error: conversationError } = await supabase
         .rpc('get_or_create_conversation', {
-            p_user_one_id: currentUserProfile.id,
+            p_user_one_id: user.id,
             p_user_two_id: partnerProfile.id
         });
 
@@ -69,12 +71,13 @@ export async function getInitialChatData(partnerPhone: string) {
         return { error: 'Could not fetch messages.' };
     }
     
-    // 5. Mark messages as read for this conversation
+    // 5. Mark messages as read for this conversation and user
     if (conversation) {
         await supabase.rpc('mark_messages_as_read', {
             p_conversation_id: conversation.id,
             p_user_id: user.id
         });
+        revalidatePath('/inbox');
     }
     
     return {

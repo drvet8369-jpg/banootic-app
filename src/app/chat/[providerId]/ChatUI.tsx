@@ -170,14 +170,12 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
   };
   
   const getHeaderLink = () => {
-    if (currentUserProfile.account_type === 'provider') return '/inbox';
-    // Simplified: always link back to inbox if they get here.
     return '/inbox';
   }
 
   return (
-    <div className="flex flex-1 flex-col py-4 container mx-auto">
-      <Card className="flex-1 flex flex-col w-full">
+    <div className="flex-1 flex flex-col">
+      <Card className="flex-1 flex flex-col w-full h-full">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
              <Button variant="ghost" size="icon">

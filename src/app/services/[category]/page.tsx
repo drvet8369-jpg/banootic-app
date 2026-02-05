@@ -1,5 +1,4 @@
 import { categories, services } from '@/lib/constants';
-import type { Category, Service } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft } from 'lucide-react';
