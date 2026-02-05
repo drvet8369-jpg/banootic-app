@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react';
 import SearchResultCard from '../search-result-card';
 import type { Provider } from '@/lib/types';
 import '@testing-library/jest-dom';
+import React from 'react'; // Ensure React is in scope for JSX in the mock
 
-// Mock next/image
+// Mock next/image, which doesn't work in the JSDOM test environment
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props: any) => {
@@ -12,16 +13,18 @@ jest.mock('next/image', () => ({
   },
 }));
 
-// Targeted local mock for lucide-react to solve the ESM/CJS issue definitively for this test file.
+// NEW, more explicit mock for lucide-react to avoid ESM/Proxy issues in Jest
 jest.mock('lucide-react', () => {
-    // This is a proxy to mock any icon from lucide-react
-    return new Proxy({}, {
-        get: function (target, prop) {
-            // Return a dummy React component for any requested icon
-            // This will mock User, Eye, MapPin, ShieldCheck, etc.
-            return (props: any) => <svg {...props} data-testid={`lucide-icon-mock-${String(prop)}`} />;
-        }
-    });
+    const mockIcon = (props: React.SVGProps<SVGSVGElement>) => React.createElement('svg', props);
+    mockIcon.displayName = 'MockIcon';
+    return {
+        __esModule: true,
+        User: mockIcon,
+        Eye: mockIcon,
+        MapPin: mockIcon,
+        ShieldCheck: mockIcon,
+        Star: mockIcon,
+    };
 });
 
 
@@ -69,7 +72,6 @@ describe('SearchResultCard', () => {
     const providerWithoutImage = { ...mockProvider, profileImage: { src: '' } };
     render(<SearchResultCard provider={providerWithoutImage} />);
     
-    // We can check for the presence of the User icon via its containing div
     const userIconContainer = screen.getByText('هنرمند نمونه').closest('.flex-col')?.querySelector('.bg-muted');
     expect(userIconContainer).toBeInTheDocument();
   });
