@@ -12,12 +12,9 @@ const customJestConfig: Config = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // This line mocks the lucide-react library for all tests.
+    'lucide-react': '<rootDir>/jest.lucide-mock.js',
   },
-  // FIX: This pattern tells Jest to NOT ignore lucide-react when transforming modules.
-  // This allows Babel to convert its ESM syntax into a format Jest can understand.
-  transformIgnorePatterns: [
-    '/node_modules/(?!lucide-react)/'
-  ],
 }
  
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
