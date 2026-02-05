@@ -12,6 +12,19 @@ jest.mock('next/image', () => ({
   },
 }));
 
+// Targeted local mock for lucide-react to solve the ESM/CJS issue definitively for this test file.
+jest.mock('lucide-react', () => {
+    // This is a proxy to mock any icon from lucide-react
+    return new Proxy({}, {
+        get: function (target, prop) {
+            // Return a dummy React component for any requested icon
+            // This will mock User, Eye, MapPin, ShieldCheck, etc.
+            return (props: any) => <svg {...props} data-testid={`lucide-icon-mock-${String(prop)}`} />;
+        }
+    });
+});
+
+
 describe('SearchResultCard', () => {
   const mockProvider: Provider = {
     id: 1,
