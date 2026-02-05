@@ -13,10 +13,11 @@ describe('Home Page', () => {
   it('renders all service category cards', () => {
     render(<Home />);
     
-    expect(screen.getByRole('heading', { name: 'خدمات زیبایی بانوان' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'آشپزی و غذای خانگی' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'خیاطی و طراحی مد' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'صنایع دستی و تزئینی' })).toBeInTheDocument();
+    // FIX: Changed from getByRole('heading') to getByText because CardTitle is a div.
+    expect(screen.getByText('خدمات زیبایی بانوان')).toBeInTheDocument();
+    expect(screen.getByText('آشپزی و غذای خانگی')).toBeInTheDocument();
+    expect(screen.getByText('خیاطی و طراحی مد')).toBeInTheDocument();
+    expect(screen.getByText('صنایع دستی و تزئینی')).toBeInTheDocument();
   });
 
   it('renders the "Join our community" button', () => {
