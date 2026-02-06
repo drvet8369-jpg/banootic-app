@@ -13,7 +13,7 @@ import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { MapPin, User, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
-import { updateProviderInfoAction, updateProviderProfileImageAction, deleteProviderProfileImageAction, deletePortfolioItemAction } from './actions';
+import { updateProviderInfoAction, addPortfolioItemAction, updateProviderProfileImageAction, deleteProviderProfileImageAction, deletePortfolioItemAction } from './actions';
 import type { Provider } from '@/lib/types';
 
 
@@ -153,9 +153,9 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
             )}
           </div>
           {mode === 'editing' ? (
-            <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-3xl mb-1" disabled={isSubmitting}/>
+            <UiInput name="name" value={editedData.name} onChange={handleEditInputChange} className="text-center font-headline text-2xl mb-1" disabled={isSubmitting}/>
           ) : (
-            <CardTitle className="font-headline text-3xl">{providerData.name}</CardTitle>
+            <CardTitle className="font-headline text-2xl">{providerData.name}</CardTitle>
           )}
           {mode === 'editing' ? (
             <UiInput name="service" value={editedData.service} onChange={handleEditInputChange} className="text-center text-lg text-muted-foreground" disabled={isSubmitting}/>
@@ -169,7 +169,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
         </div>
         <div className="md:col-span-2 p-6 flex flex-col">
           <CardHeader className="p-0 pb-4">
-            <CardTitle className="font-headline text-2xl">داشبورد مدیریت</CardTitle>
+            <CardTitle className="font-headline text-xl">داشبورد مدیریت</CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex-grow">
             <h3 className="font-semibold mb-2">درباره شما</h3>
@@ -195,7 +195,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                     <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
                       <Image
                           src={item.src}
-                          alt={`نمونه کار ${index + 1}`}
+                          alt={`نمونه کار ${'${index + 1}'}`}
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                           data-ai-hint={item.aiHint || ''}
@@ -207,7 +207,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                           className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           onClick={() => handleDeletePortfolioItem(item.src)}
                           disabled={isSubmitting}
-                          aria-label={`حذف نمونه کار ${index + 1}`}
+                          aria-label={`حذف نمونه کار ${'${index + 1}'}`}
                       >
                           <Trash2 className="w-4 h-4" />
                       </Button>
