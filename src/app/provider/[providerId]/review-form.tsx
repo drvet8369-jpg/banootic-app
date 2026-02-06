@@ -55,8 +55,7 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
       return;
     }
     setIsSubmitting(true);
-    toast.loading("در حال ثبت نظر شما...");
-
+    
     const result = await addReviewAction({
         providerId: provider.id,
         profileId: provider.profile_id,
@@ -64,10 +63,10 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
         comment,
     });
     
-    toast.dismiss();
-
     if (result.error) {
         toast.error("خطا در ثبت نظر", { description: result.error });
+        setRating(0);
+        setComment('');
     } else {
         toast.success("نظر شما با موفقیت ثبت شد.");
         setRating(0);
