@@ -85,7 +85,6 @@ export async function getInitialChatData(partnerPhone: string) {
             p_conversation_id: conversation.id,
             p_user_id: user.id
         });
-        revalidatePath('/inbox');
     }
     
     return {
@@ -117,6 +116,9 @@ export async function sendMessageAction(payload: { conversationId: string; conte
         console.error("Error sending message:", error);
         return { error: `Failed to send message: ${error.message}` };
     }
+
+    // Revalidate the inbox to update last message preview and unread counts
+    revalidatePath('/inbox');
 
     return { error: null };
 }
@@ -155,6 +157,9 @@ export async function editMessageAction(payload: { messageId: string; newContent
         console.error("Error editing message:", updateError);
         return { error: `Failed to edit message: ${updateError.message}` };
     }
+
+    // Revalidate the inbox to update last message preview if it was edited
+    revalidatePath('/inbox');
 
     return { error: null };
 }
