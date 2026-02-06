@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, ChangeEvent } from 'react';
@@ -12,8 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Input as UiInput } from '@/components/ui/input';
 import { Textarea as UiTextarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, User, PlusCircle, Trash2, Camera, Edit, Save, XCircle } from 'lucide-react';
-import { updateProviderInfoAction, addPortfolioItemAction, updateProviderProfileImageAction, deleteProviderProfileImageAction, deletePortfolioItemAction } from './actions';
+import { MapPin, User, PlusCircle, Trash2, Camera, Edit, Save, XCircle, Sparkles, Loader2 } from 'lucide-react';
+import { 
+  updateProviderInfoAction, 
+  addPortfolioItemAction, 
+  updateProviderProfileImageAction, 
+  deleteProviderProfileImageAction, 
+  deletePortfolioItemAction,
+  generateBioAction
+} from './actions';
 import type { Provider } from '@/lib/types';
 
 
@@ -25,6 +31,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
   const router = useRouter();
   const [mode, setMode] = useState<'viewing' | 'editing'>('viewing');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingBio, setIsGeneratingBio] = useState(false);
   const [editedData, setEditedData] = useState({
     name: providerData.name || '',
     service: providerData.service || '',
@@ -55,9 +62,32 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
     } else {
       toast.success("اطلاعات شما با موفقیت به‌روز شد.");
       setMode('viewing');
-      router.refresh();
+      router.refresh(); // Refresh server-fetched props
     }
     setIsSubmitting(false);
+  };
+  
+    const handleGenerateBio = async () => {
+    if (!editedData.name || !editedData.service) {
+      toast.error("اطلاعات ناقص", { description: "لطفاً ابتدا نام و نوع خدمت را وارد کنید." });
+      return;
+    }
+    setIsGeneratingBio(true);
+    toast.loading("در حال پردازش...", {description: "دستیار هوش مصنوعی در حال نوشتن بیوگرافی است."});
+
+    const result = await generateBioAction({
+        providerName: editedData.name,
+        serviceType: editedData.service,
+    });
+    toast.dismiss();
+    
+    if (result.error) {
+        toast.error("خطا در تولید بیوگرافی", { description: result.error });
+    } else if (result.biography) {
+        setEditedData(prev => ({...prev, bio: result.biography!}));
+        toast.success("موفق", { description: "بیوگرافی جدید در کادر زیر قرار گرفت. می‌توانید آن را ویرایش کنید." });
+    }
+    setIsGeneratingBio(false);
   };
 
   const handleCancelEdit = () => {
@@ -69,20 +99,53 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
     setMode('viewing');
   };
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>, action: 'addPortfolio' | 'changeProfilePic') => {
+  const resizeAndCallback = (file: File, callback: (dataUrl: string) => void) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageSrc = e.target?.result as string;
+        const img = document.createElement('img');
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            callback(canvas.toDataURL('image/jpeg', 0.8));
+          }
+        };
+        img.src = imageSrc;
+      };
+      reader.readAsDataURL(file);
+  }
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>, actionType: 'addPortfolio' | 'changeProfilePic') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsSubmitting(true);
     toast.loading("در حال آپلود و پردازش تصویر...");
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        
+    resizeAndCallback(file, async (base64data) => {
         let result;
-        if(action === 'addPortfolio') {
+        if(actionType === 'addPortfolio') {
             result = await addPortfolioItemAction(base64data);
         } else {
             result = await updateProviderProfileImageAction(base64data);
@@ -96,7 +159,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
             router.refresh();
         }
         setIsSubmitting(false);
-    };
+    });
     event.target.value = '';
   };
   
@@ -144,7 +207,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                 fill
                 className="object-cover"
                 data-ai-hint={providerData.profileImage.aiHint}
-                key={providerData.profileImage.src}
+                key={providerData.profileImage.src} // Force re-render on src change
               />
             ) : (
               <div className="bg-muted w-full h-full flex items-center justify-center">
@@ -172,7 +235,21 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
             <CardTitle className="font-headline text-xl">داشبورد مدیریت</CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex-grow">
-            <h3 className="font-semibold mb-2">درباره شما</h3>
+            <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold">درباره شما</h3>
+                {mode === 'editing' && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateBio}
+                        disabled={isGeneratingBio || isSubmitting}
+                    >
+                        {isGeneratingBio ? <Loader2 className="animate-spin ml-2" /> : <Sparkles className="ml-2" />}
+                        نوشتن با هوش مصنوعی
+                    </Button>
+                )}
+              </div>
             {mode === 'editing' ? (
               <UiTextarea name="bio" value={editedData.bio} onChange={handleEditInputChange} className="text-base text-foreground/80 leading-relaxed" rows={4} disabled={isSubmitting}/>
             ) : (
@@ -184,6 +261,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
               <h3 className="font-headline text-xl font-semibold mb-4">مدیریت نمونه کارها</h3>
               <input type="file" ref={portfolioFileInputRef} onChange={(e) => handleFileChange(e, 'addPortfolio')} className="hidden" accept="image/*" />
               <input type="file" ref={profilePicInputRef} onChange={(e) => handleFileChange(e, 'changeProfilePic')} className="hidden" accept="image/*" />
+              
               <Button onClick={() => portfolioFileInputRef.current?.click()} size="lg" className="w-full font-bold mb-6" disabled={isSubmitting}>
                 <PlusCircle className="w-5 h-5 ml-2" />
                 افزودن نمونه کار جدید
@@ -195,7 +273,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                     <div key={index} className="group relative w-full aspect-square overflow-hidden rounded-lg shadow-md">
                       <Image
                           src={item.src}
-                          alt={`نمونه کار ${'${index + 1}'}`}
+                          alt={`نمونه کار ${index + 1}`}
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                           data-ai-hint={item.aiHint || ''}
@@ -207,7 +285,7 @@ export function ProfileClientContent({ providerData }: ProfileClientContentProps
                           className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           onClick={() => handleDeletePortfolioItem(item.src)}
                           disabled={isSubmitting}
-                          aria-label={`حذف نمونه کار ${'${index + 1}'}`}
+                          aria-label={`حذف نمونه کار ${index + 1}`}
                       >
                           <Trash2 className="w-4 h-4" />
                       </Button>
