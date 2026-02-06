@@ -61,7 +61,7 @@ export default async function RegisterPage() {
     return (
         <div className="max-w-2xl mx-auto py-12 md:py-20">
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-headline font-bold">به جامعه هنرمندان بانوتیک بپیوندید</h1>
+            <h1 className="text-3xl md:text-4xl font-headline font-bold">به جامعه هنرمندان بانوتیک بپیوندید</h1>
             <p className="mt-3 text-lg text-muted-foreground">
               با تکمیل فرم زیر، حساب کاربری خود را به حساب هنرمند ارتقا دهید.
             </p>
