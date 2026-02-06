@@ -1,3 +1,4 @@
+
 'use client';
 
 import { FormEvent, useState, useRef, useEffect } from 'react';
@@ -174,8 +175,8 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <Card className="flex-1 flex flex-col w-full h-full">
+    <div className="flex flex-col h-full">
+      <Card className="flex flex-col flex-1 w-full overflow-hidden">
         <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
            <Link href={getHeaderLink()}>
              <Button variant="ghost" size="icon">
