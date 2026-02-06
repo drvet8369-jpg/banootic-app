@@ -34,7 +34,7 @@ export default async function ServiceProvidersPage({ params }: { params: { categ
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">هنوز هیچ ارائه‌دهنده‌ای برای این سرویس ثبت‌نام نکرده است.</p>
-          <Link href="/login" className="mt-2 inline-block text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary">
+          <Link href="/register" className="mt-2 inline-block text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary">
             اولین نفر باشید!
           </Link>
         </div>
