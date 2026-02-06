@@ -1,9 +1,9 @@
 'use server';
 
 import { genkit, Plugin } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
-import firebase from '@genkit-ai/firebase';
-import next from '@genkit-ai/next';
+import { googleAI } from '@genkit-ai/googleai';
+import { firebase } from '@genkit-ai/firebase';
+import { next } from '@genkit-ai/next';
 
 // This file configures the Genkit AI framework.
 // It initializes plugins for Next.js, Firebase, and Google AI (for Gemini models).

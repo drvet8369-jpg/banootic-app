@@ -3,7 +3,6 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { generateBiography } from '@/ai/flows/biography-writer-flow';
 import type { PortfolioItem, Profile } from '@/lib/types';
 
 
@@ -14,12 +13,25 @@ interface GenerateBioPayload {
 }
 
 export async function generateBioAction(payload: GenerateBioPayload): Promise<{ biography: string | null; error: string | null; }> {
-    if (!process.env.GEMINI_API_KEY) {
-        return { biography: null, error: "The AI feature is not configured on the server. GEMINI_API_KEY is missing." };
-    }
-
+    // This function now calls our internal API route.
     try {
-        const result = await generateBiography(payload);
+        // The fetch URL must be absolute when called from a Server Action.
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9003';
+        const response = await fetch(`${baseUrl}/api/ai/generate-bio`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            // If response is not ok, result.error should contain the message from the API route.
+            throw new Error(result.error || `Request failed with status ${response.status}`);
+        }
+
         return { biography: result.biography, error: null };
     } catch (e: any) {
         console.error("Error in generateBioAction:", e);
