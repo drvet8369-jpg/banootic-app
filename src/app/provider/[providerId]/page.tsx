@@ -86,7 +86,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex justify-center">
-        <div className="max-w-2xl w-full">
+        <div className="max-w-4xl w-full">
             <Card className="flex flex-col w-full overflow-hidden h-full">
                 <div className="p-6 flex flex-col items-center text-center bg-muted/30">
                     <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-lg mb-4">
