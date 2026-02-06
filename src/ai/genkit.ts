@@ -1,8 +1,8 @@
 'use server';
 
 import { genkit, Plugin } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
-import { firebase } from '@genkit-ai/firebase';
+import { googleAI } from '@genkit-ai/google-genai';
+import firebase from '@genkit-ai/firebase';
 import { next } from '@genkit-ai/next';
 
 // This file configures the Genkit AI framework.
@@ -19,6 +19,4 @@ if (process.env.GEMINI_API_KEY) {
 
 export const ai = genkit({
   plugins,
-  logLevel: 'debug',
-  enableTracingAndMetrics: true,
 });
