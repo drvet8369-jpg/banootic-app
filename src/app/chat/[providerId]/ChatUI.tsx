@@ -175,110 +175,108 @@ export function ChatUI({ initialData, currentUserProfile }: ChatUIProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <Card className="flex flex-col flex-1 w-full overflow-hidden">
-        <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
-           <Link href={getHeaderLink()}>
-             <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5"/>
-             </Button>
-           </Link>
-           <Avatar>
-            {partnerProfile?.profile_image_url ? (
-                <AvatarImage src={partnerProfile.profile_image_url} alt={partnerProfile.full_name ?? ''} />
-            ) : null }
-            <AvatarFallback>{getInitials(partnerProfile?.full_name ?? '')}</AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="font-headline text-xl">{partnerProfile?.full_name}</CardTitle>
-            <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {messages.length === 0 && (
-              <div className="text-center text-muted-foreground p-8">
-                <p>هیچ پیامی در این گفتگو وجود ندارد.</p>
-                <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
-              </div>
-            )}
-            {messages.map((message) => {
-                const senderIsUser = message.sender_id === currentUserProfile.id;
-                const isEditing = editingMessageId === message.id;
-
-                return (
-                  <div 
-                    key={message.id} 
-                    className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {!senderIsUser && (
-                      <Avatar className="h-8 w-8 select-none">
-                        {partnerProfile?.profile_image_url ? (
-                            <AvatarImage src={partnerProfile.profile_image_url} alt={partnerProfile.full_name ?? ''} />
-                        ) : null }
-                        <AvatarFallback>{getInitials(partnerProfile?.full_name ?? '')}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    
-                    {isEditing ? (
-                         <div className="flex-1 flex items-center gap-1">
-                            <Input
-                                type="text"
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                className="h-9"
-                                onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
-                                autoFocus
-                            />
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
-                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
-                        </div>
-                    ) : (
-                         <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
-                             <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                <p className="text-base font-semibold">
-                                  {message.content}
-                                  {message.is_edited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
-                                </p>
-                            </div>
-                            {senderIsUser && (
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleStartEdit(message)}
-                                >
-                                    <Edit className="w-4 h-4"/>
-                                </Button>
-                            )}
-                        </div>
-                    )}
-
-                     {senderIsUser && !isEditing && (
-                       <Avatar className="h-8 w-8 select-none">
-                          <AvatarFallback>شما</AvatarFallback>
-                      </Avatar>
-                    )}
-                </div>
-                )
-            })}
-            <div ref={messagesEndRef} />
-        </CardContent>
-        <div className="p-4 border-t bg-background shrink-0">
-          <form onSubmit={handleSubmit} className="flex items-center gap-2">
-              <Input 
-                type="text" 
-                placeholder="پیام خود را بنویسید..." 
-                className="flex-1"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending || !conversation || !!editingMessageId}
-              />
-              <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || !conversation || !!editingMessageId}>
-                  {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
-              </Button>
-          </form>
+    <Card className="flex flex-col flex-1 w-full overflow-hidden">
+      <CardHeader className="flex flex-row items-center gap-4 border-b shrink-0">
+         <Link href={getHeaderLink()}>
+           <Button variant="ghost" size="icon">
+              <ArrowLeft className="w-5 h-5"/>
+           </Button>
+         </Link>
+         <Avatar>
+          {partnerProfile?.profile_image_url ? (
+              <AvatarImage src={partnerProfile.profile_image_url} alt={partnerProfile.full_name ?? ''} />
+          ) : null }
+          <AvatarFallback>{getInitials(partnerProfile?.full_name ?? '')}</AvatarFallback>
+        </Avatar>
+        <div>
+          <CardTitle className="font-headline text-xl">{partnerProfile?.full_name}</CardTitle>
+          <CardDescription>{'گفتگوی مستقیم'}</CardDescription>
         </div>
-      </Card>
-    </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-6 space-y-4 overflow-y-auto">
+          {messages.length === 0 && (
+            <div className="text-center text-muted-foreground p-8">
+              <p>هیچ پیامی در این گفتگو وجود ندارد.</p>
+              <p className="text-xs mt-2">شما اولین پیام را ارسال کنید.</p>
+            </div>
+          )}
+          {messages.map((message) => {
+              const senderIsUser = message.sender_id === currentUserProfile.id;
+              const isEditing = editingMessageId === message.id;
+
+              return (
+                <div 
+                  key={message.id} 
+                  className={`flex items-end gap-2 group ${senderIsUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  {!senderIsUser && (
+                    <Avatar className="h-8 w-8 select-none">
+                      {partnerProfile?.profile_image_url ? (
+                          <AvatarImage src={partnerProfile.profile_image_url} alt={partnerProfile.full_name ?? ''} />
+                      ) : null }
+                      <AvatarFallback>{getInitials(partnerProfile?.full_name ?? '')}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  
+                  {isEditing ? (
+                       <div className="flex-1 flex items-center gap-1">
+                          <Input
+                              type="text"
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              className="h-9"
+                              onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
+                              autoFocus
+                          />
+                          <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleSaveEdit}><Save className="w-4 h-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleCancelEdit}><XCircle className="w-4 h-4" /></Button>
+                      </div>
+                  ) : (
+                       <div className={`flex items-center gap-2 ${senderIsUser ? 'flex-row-reverse' : ''}`}>
+                           <div className={`p-3 rounded-lg max-w-xs md:max-w-md relative select-none ${senderIsUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                              <p className="text-base font-semibold">
+                                {message.content}
+                                {message.is_edited && <span className="text-xs opacity-70 mr-2">(ویرایش شده)</span>}
+                              </p>
+                          </div>
+                          {senderIsUser && (
+                              <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => handleStartEdit(message)}
+                              >
+                                  <Edit className="w-4 h-4"/>
+                              </Button>
+                          )}
+                      </div>
+                  )}
+
+                   {senderIsUser && !isEditing && (
+                     <Avatar className="h-8 w-8 select-none">
+                        <AvatarFallback>شما</AvatarFallback>
+                    </Avatar>
+                  )}
+              </div>
+              )
+          })}
+          <div ref={messagesEndRef} />
+      </CardContent>
+      <div className="p-4 border-t bg-background shrink-0">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <Input 
+              type="text" 
+              placeholder="پیام خود را بنویسید..." 
+              className="flex-1"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              disabled={isSending || !conversation || !!editingMessageId}
+            />
+            <Button size="icon" type="submit" className="h-10 w-10 shrink-0" disabled={isSending || !newMessage.trim() || !conversation || !!editingMessageId}>
+                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
+            </Button>
+        </form>
+      </div>
+    </Card>
   );
 }

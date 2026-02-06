@@ -41,11 +41,9 @@ export default async function ChatPage({ params }: { params: { providerId: strin
   }
 
   return (
-    <div className="flex flex-col flex-1">
-      <ChatUI 
-        initialData={initialData}
-        currentUserProfile={currentUserProfile as Profile}
-      />
-    </div>
+    <ChatUI 
+      initialData={initialData}
+      currentUserProfile={currentUserProfile as Profile}
+    />
   );
 }
