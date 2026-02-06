@@ -209,7 +209,11 @@ export default async function ProviderProfilePage({ params }: { params: { provid
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                            <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                            {isOwnerViewing ? (
+                                <p>شما هنوز نظری دریافت نکرده‌اید.</p>
+                            ) : (
+                                <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                            )}
                         </div>
                     )}
                     <ReviewForm provider={provider} user={user} />
