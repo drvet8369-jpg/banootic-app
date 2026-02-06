@@ -1,7 +1,6 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { services } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -30,17 +29,25 @@ export async function upgradeCustomerToProviderAction(values: UpgradeFormValues)
         return { error: 'حساب شما در حال حاضر یک حساب هنرمند است.' };
     }
 
-    const selectedService = services.find(s => s.slug === values.serviceSlug);
-    if (!selectedService) {
-        return { error: 'خدمت انتخاب شده معتبر نیست.' };
+    // Fetch the correct service ID and name from the database using the slug
+    const { data: selectedService, error: serviceError } = await supabase
+      .from('services')
+      .select('id, name')
+      .eq('slug', values.serviceSlug)
+      .single();
+
+    if (serviceError || !selectedService) {
+        console.error('Error fetching service by slug:', serviceError);
+        return { error: 'خدمت انتخاب شده در پایگاه داده یافت نشد.' };
     }
 
-    // Step 1: Update the user's account_type in the profiles table
+
+    // Step 1: Update the user's account_type in the profiles table with the correct ID
     const { error: updateProfileError } = await supabase
         .from('profiles')
         .update({ 
             account_type: 'provider',
-            service_id: selectedService.id,
+            service_id: selectedService.id, // Use the correct ID from DB
         })
         .eq('id', user.id);
 
@@ -56,7 +63,7 @@ export async function upgradeCustomerToProviderAction(values: UpgradeFormValues)
         location: values.location,
         bio: values.bio,
         phone: profile.phone!,
-        service: selectedService.name,
+        service: selectedService.name, // Use the correct name from DB
         category_slug: values.serviceType,
         service_slug: values.serviceSlug,
         rating: 0,
