@@ -1,12 +1,18 @@
+'use client';
+
 import type { Metadata } from 'next';
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import Header from '@/components/layout/Header';
-import SearchBar from '@/components/ui/search-bar';
-import Footer from '@/components/ui/footer';
+import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
-import ClientProviders from '@/components/providers/client-providers';
+
+const AuthProvider = dynamic(() => import('@/context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
+const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
+const SearchBar = dynamic(() => import('@/components/ui/search-bar'), { ssr: false });
+const Footer = dynamic(() => import('@/components/layout/footer'), { ssr: false });
+
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic'],
@@ -14,11 +20,13 @@ const vazirmatn = Vazirmatn({
   variable: '--font-sans',
 });
 
-export const metadata: Metadata = {
-  title: 'بانوتیک',
-  description: 'بازاری برای خدمات خانگی بانوان هنرمند',
-  manifest: '/manifest.json',
-};
+// This can't be a dynamic export in a client component, 
+// so we define it statically here.
+// export const metadata: Metadata = {
+//   title: 'هنربانو',
+//   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
+//   manifest: '/manifest.json',
+// };
 
 export default function RootLayout({
   children,
@@ -26,13 +34,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const isSupabaseConfigured = 
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .catch(error => console.log('Service Worker registration failed:', error));
+    }
+  }, []);
 
   return (
     <html lang="fa" dir="rtl">
        <head>
+          <title>هنربانو</title>
+          <meta name="description" content="بازاری برای خدمات خانگی بانوان هنرمند" />
+          <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#A3BEA6" />
       </head>
       <body
@@ -41,41 +56,17 @@ export default function RootLayout({
           vazirmatn.variable
         )}
       >
-        {isSupabaseConfigured ? (
-            <ClientProviders>
-              <div className="relative flex min-h-screen flex-col">
-                <Header />
-                <SearchBar />
-                <main className="flex-grow flex flex-col">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-              <SonnerToaster />
-            </ClientProviders>
-        ) : (
-          <div className="flex h-screen w-full items-center justify-center bg-background">
-            <div className="mx-auto max-w-md rounded-lg border bg-card p-8 text-center text-card-foreground shadow-sm">
-                <h1 className="text-2xl font-bold text-destructive">پیکربندی Supabase یافت نشد</h1>
-                <p className="mt-4">
-                  لطفا متغیرهای محیطی Supabase را در فایل 
-                  <code className="font-mono text-sm bg-muted p-1 rounded-sm">.env.local</code> 
-                  تنظیم کنید.
-                </p>
-                <div className="mt-6 text-left text-sm text-muted-foreground space-y-2">
-                    <p>
-                        <code className="font-semibold text-foreground">NEXT_PUBLIC_SUPABASE_URL</code>
-                    </p>
-                    <p>
-                        <code className="font-semibold text-foreground">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
-                    </p>
-                </div>
-                <p className="mt-4 text-xs text-muted-foreground">
-                    این مقادیر را می‌توانید از داشبورد پروژه خود در Supabase پیدا کنید.
-                </p>
-            </div>
+        <AuthProvider>
+          <div className="relative flex min-h-screen flex-col">
+            <Header />
+            <SearchBar />
+            <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+              {children}
+            </main>
+            <Footer />
           </div>
-        )}
+          <SonnerToaster />
+        </AuthProvider>
       </body>
     </html>
   );

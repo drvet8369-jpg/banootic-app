@@ -5,7 +5,7 @@ import { useParams, notFound } from 'next/navigation';
 import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '../../../hooks/use-toast';
+import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
@@ -60,7 +60,6 @@ const ReviewCard = ({ review }: { review: Review }) => (
 // Review Form Component
 const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: () => void }) => {
   const { user, isLoggedIn } = useAuth();
-  const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +71,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !comment.trim()) {
-      toast({ title: "خطا", description: "لطفاً امتیاز و متن نظر را وارد کنید.", variant: "destructive" });
+      toast.error("خطا", { description: "لطفاً امتیاز و متن نظر را وارد کنید." });
       return;
     }
     setIsSubmitting(true);
@@ -105,7 +104,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
             saveProviders(allProviders);
         }
 
-        toast({ title: "موفق", description: "نظر شما با موفقیت ثبت شد." });
+        toast.success("موفق", { description: "نظر شما با موفقیت ثبت شد." });
         setRating(0);
         setComment('');
         setIsSubmitting(false);
@@ -160,7 +159,6 @@ export default function ProviderProfilePage() {
   const params = useParams();
   const providerPhone = params.providerId as string;
   const { user } = useAuth();
-  const { toast } = useToast();
   const [provider, setProvider] = useState<Provider | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -201,9 +199,9 @@ export default function ProviderProfilePage() {
         allProviders[providerIndex].portfolio = allProviders[providerIndex].portfolio.filter((_, index) => index !== itemIndex);
         saveProviders(allProviders);
         loadData(); // Refresh data
-        toast({ title: 'موفق', description: 'نمونه کار حذف شد.' });
+        toast.success('موفق', { description: 'نمونه کار حذف شد.' });
     } else {
-        toast({ title: 'خطا', description: 'هنرمند یافت نشد.', variant: 'destructive' });
+        toast.error('خطا', { description: 'هنرمند یافت نشد.' });
     }
   };
 

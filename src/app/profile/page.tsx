@@ -13,12 +13,11 @@ import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const { toast } = useToast();
   const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +53,7 @@ export default function ProfilePage() {
 
   const handleSaveChanges = () => {
     if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
-        toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
+        toast.error("خطا", { description: "تمام فیلدها باید پر شوند."});
         return;
     }
 
@@ -73,10 +72,10 @@ export default function ProfilePage() {
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
-        toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
+        toast.success("موفق", { description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+        toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
     }
   }
 
@@ -154,9 +153,9 @@ export default function ProfilePage() {
       p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
     });
     if (success) {
-      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+      toast.success('موفقیت‌آمیز', { description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+      toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
     }
   };
   
@@ -166,9 +165,9 @@ export default function ProfilePage() {
         p.profileImage.src = newImageSrc;
       });
       if (success) {
-        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
+        toast.success('موفقیت‌آمیز', { description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } else {
-        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+        toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
       }
   }
 
@@ -177,9 +176,9 @@ export default function ProfilePage() {
       if (p.profileImage) p.profileImage.src = '';
     });
     if (success) {
-      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+      toast.success('موفقیت‌آمیز', { description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } else {
-      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
+      toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
     }
   };
 
@@ -234,7 +233,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto py-12 md:py-20 space-y-8">
+    <div className="py-12 md:py-20 space-y-8">
       <Card>
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">

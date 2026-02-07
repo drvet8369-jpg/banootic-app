@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import Link from "next/link";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,47 +25,76 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
-import { requestOtp } from './actions';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { getProviders } from '@/lib/data';
+import type { User } from '@/context/AuthContext';
 
-// This schema performs a basic client-side check.
-// The robust normalization and validation happens on the server.
-const LoginSchema = z.object({
-  phone: z.string().min(10, {
-    message: 'شماره تلفن باید حداقل ۱۰ رقم باشد.',
+
+const formSchema = z.object({
+  phone: z.string().regex(/^09\d{9}$/, {
+    message: 'لطفاً یک شماره تلفن معتبر ایرانی وارد کنید (مثال: 09123456789).',
   }),
 });
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof LoginSchema>>({
-    resolver: zodResolver(LoginSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       phone: '',
     },
   });
 
-  async function onSubmit(values: z.infer<typeof LoginSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-
-    const formData = new FormData();
-    formData.append('phone', values.phone);
-
     try {
-      const result = await requestOtp(formData);
-      if (result?.error) {
-          toast.error('خطا در ارسال کد', { description: result.error });
-      }
-      // On success, the server action handles the redirect itself.
-    } catch (e: any) {
-        toast.error('خطای پیش‌بینی نشده', { description: e.message || "لطفاً دوباره تلاش کنید." });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const allProviders = getProviders();
+        const existingProvider = allProviders.find(p => p.phone === values.phone);
+
+        let userToLogin: User;
+
+        if (existingProvider) {
+          // User is a known provider
+          userToLogin = {
+            name: existingProvider.name,
+            phone: existingProvider.phone,
+            accountType: 'provider',
+          };
+        } else {
+          // User is a customer
+          userToLogin = {
+            name: `کاربر ${values.phone.slice(-4)}`,
+            phone: values.phone,
+            accountType: 'customer',
+          };
+        }
+        
+        login(userToLogin);
+
+        toast.success('ورود با موفقیت انجام شد!', {
+          description: `خوش آمدید ${userToLogin.name}! به صفحه اصلی هدایت می‌شوید.`,
+        });
+        
+        router.push('/');
+
+    } catch (error) {
+        console.error("Login failed:", error);
+        toast.error('خطا در ورود', {
+            description: 'مشکلی پیش آمده است، لطفاً دوباره تلاش کنید.',
+        });
     } finally {
         setIsLoading(false);
     }
   }
 
   return (
-    <div className="flex items-center justify-center py-12 md:py-20 flex-grow">
+    <div className="flex items-center justify-center py-12 md:py-20">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">ورود یا ثبت‌نام</CardTitle>
@@ -82,13 +112,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>شماره تلفن</FormLabel>
                     <FormControl>
-                       <Input 
-                          placeholder="مثال: 09123456789" 
-                          {...field}
-                          disabled={isLoading}
-                          dir="ltr"
-                          className="text-center"
-                        />
+                      <Input placeholder="09123456789" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -96,10 +120,16 @@ export default function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                ارسال کد تایید
+                ورود
               </Button>
             </form>
           </Form>
+          <div className="mt-4 text-center text-sm">
+            هنرمند هستید؟{" "}
+            <Link href="/register" className="underline">
+              از اینجا ثبت‌نام کنید
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
