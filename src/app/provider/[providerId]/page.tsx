@@ -15,6 +15,7 @@ async function getReviewsForProvider(providerProfileId: string): Promise<Review[
             rating,
             comment,
             author:profiles!reviews_author_id_fkey (
+                id,
                 full_name
             )
         `)
@@ -29,7 +30,8 @@ async function getReviewsForProvider(providerProfileId: string): Promise<Review[
     // Map the data to the frontend Review type
     return data.map(r => ({
         id: r.id,
-        providerId: providerProfileId, // This is not in the query but we know it
+        provider_id: providerProfileId,
+        author_id: r.author!.id,
         authorName: r.author?.full_name || 'کاربر ناشناس',
         rating: r.rating,
         comment: r.comment,
