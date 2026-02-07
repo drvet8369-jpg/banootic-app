@@ -8,12 +8,13 @@ export default async function ServiceProvidersPage({ params }: { params: { categ
   const { category: categorySlug, service: serviceSlug } = params;
 
   const category = categories.find((c) => c.slug === categorySlug);
-  const service = services.find((s) => s.slug === serviceSlug && s.category_id === category?.id);
+  const service = services.find((s) => s.slug === serviceSlug);
 
   if (!service || !category) {
     notFound();
   }
 
+  // Use the Supabase-powered getProviders function
   const serviceProviders = await getProviders({ serviceSlug });
 
   return (
@@ -21,7 +22,10 @@ export default async function ServiceProvidersPage({ params }: { params: { categ
       <div className="text-center mb-12">
         <h1 className="font-headline text-3xl md:text-4xl font-bold">{service.name}</h1>
         <p className="mt-3 text-lg text-foreground font-semibold">
-          ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی {category.name}
+          ارائه‌دهندگان خدمات برای {service.name} در دسته‌ی {' '}
+          <Link href={`/services/${category.slug}`} className="hover:underline text-primary">
+            {category.name}
+          </Link>
         </p>
       </div>
 

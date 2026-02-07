@@ -10,6 +10,7 @@ interface SearchResultsProps {
 }
 
 async function SearchResults({ query }: SearchResultsProps) {
+  // Use the Supabase-powered getProviders function
   const searchResults: Provider[] = await getProviders({ searchQuery: query });
 
   return (

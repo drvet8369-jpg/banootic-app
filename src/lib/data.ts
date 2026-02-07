@@ -9,6 +9,7 @@ interface GetProvidersOptions {
     categorySlug?: string;
     serviceSlug?: string;
     searchQuery?: string;
+    phone?: string;
 }
 
 // This is the new, Supabase-powered data fetching function.
@@ -21,7 +22,8 @@ export async function getProviders(options: GetProvidersOptions = {}): Promise<P
         sortBy = 'last_activity_at', 
         categorySlug, 
         serviceSlug,
-        searchQuery
+        searchQuery,
+        phone
     } = options;
 
     let query = supabase
@@ -53,6 +55,9 @@ export async function getProviders(options: GetProvidersOptions = {}): Promise<P
     }
     if (serviceSlug) {
         query = query.eq('service_slug', serviceSlug);
+    }
+    if (phone) {
+      query = query.eq('phone', phone);
     }
     if(searchQuery) {
         // Use textSearch for a more powerful and efficient search across multiple columns
