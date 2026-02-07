@@ -35,7 +35,7 @@ export default function ChatPage() {
   const params = useParams();
   const otherPersonIdOrProviderId = params.providerId as string;
   const { user, isLoggedIn } = useAuth();
-  
+
   const [otherPersonDetails, setOtherPersonDetails] = useState<OtherPersonDetails | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);

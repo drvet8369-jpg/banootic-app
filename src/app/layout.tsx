@@ -6,7 +6,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Toaster as SonnerToaster } from '@/components/ui/sonner';
+import { Toaster as SonnerToaster } from 'sonner';
 
 const AuthProvider = dynamic(() => import('../context/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 const Header = dynamic(() => import('@/components/layout/header'), { ssr: false });
@@ -65,7 +65,7 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-          <SonnerToaster />
+          <SonnerToaster richColors />
         </AuthProvider>
       </body>
     </html>
