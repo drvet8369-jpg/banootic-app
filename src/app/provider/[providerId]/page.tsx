@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getProviders } from '@/lib/data';
 import type { Review } from '@/lib/types';
-import ProviderProfileClientPage from './ProviderProfileClientPage';
+import ProviderClientPage from './ProviderClientPage';
 
 async function getReviewsForProvider(providerProfileId: string): Promise<Review[]> {
     const supabase = createClient();
@@ -72,7 +72,7 @@ export default async function ProviderProfilePage({ params }: { params: { provid
 
 
   return (
-      <ProviderProfileClientPage 
+      <ProviderClientPage 
           provider={provider} 
           initialReviews={reviews} 
           currentUser={user}
