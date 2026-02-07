@@ -1,4 +1,3 @@
-
 'use client';
 
 import { FormEvent, useState } from 'react';
@@ -65,8 +64,6 @@ export function ReviewForm({ provider, user }: ReviewFormProps) {
     
     if (result.error) {
         toast.error("خطا در ثبت نظر", { description: result.error });
-        setRating(0);
-        setComment('');
     } else {
         toast.success("نظر شما با موفقیت ثبت شد.");
         setRating(0);
