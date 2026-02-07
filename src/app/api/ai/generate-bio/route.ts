@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   // 3. Initialize Google AI and the model
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     const prompt = `You are an expert copywriter specializing in creating engaging and professional biographies for local service providers in Iran. Your tone should be warm, trustworthy, and professional.
 
