@@ -233,7 +233,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="py-12 md:py-20 space-y-8">
+    <div className="mx-auto py-12 md:py-20 space-y-8">
       <Card>
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
