@@ -14,7 +14,7 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: 'بانوتیک',
+  title: 'هنربانو',
   description: 'بازاری برای خدمات خانگی بانوان هنرمند',
   manifest: '/manifest.json',
 };
