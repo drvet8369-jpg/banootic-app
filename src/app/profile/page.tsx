@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export default function ProfilePage() {
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   const loadProviderData = useCallback(() => {
-    if (user && user.accountType === 'provider') {
+    if (user && user.account_type === 'provider') {
         const allProviders = getProviders();
         let currentProvider = allProviders.find(p => p.phone === user.phone);
         
@@ -213,7 +213,7 @@ export default function ProfilePage() {
      )
   }
 
-  if (user?.accountType !== 'provider') {
+  if (user?.account_type !== 'provider') {
      return (
         <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
@@ -233,7 +233,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20 space-y-8">
+    <div className="py-12 md:py-20 space-y-8">
       <Card>
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">

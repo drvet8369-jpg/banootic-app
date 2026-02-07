@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { AuthProvider } from './auth-provider';
+import { AuthProvider } from '@/components/providers/auth-provider';
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 
 // This component wraps all client-side providers for the application.
 // This keeps the root layout as a Server Component.
@@ -22,6 +23,7 @@ export default function ClientProviders({
   return (
       <AuthProvider>
           {children}
+          <SonnerToaster richColors />
       </AuthProvider>
   );
 }

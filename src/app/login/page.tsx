@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from "@/components/ui/input";
 import { toast } from 'sonner';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/components/providers/auth-provider';
 import { getProviders } from '@/lib/data';
 import type { User } from '@/context/AuthContext';
 

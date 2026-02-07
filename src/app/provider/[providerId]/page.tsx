@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import { getProviders, getReviews, saveProviders, saveReviews } from '@/lib/data';
 import type { Provider, Review } from '@/lib/types';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -64,7 +64,7 @@ const ReviewForm = ({ providerId, onSubmit }: { providerId: number, onSubmit: ()
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isLoggedIn || user?.accountType !== 'customer') {
+  if (!isLoggedIn || user?.account_type !== 'customer') {
     return null;
   }
 
