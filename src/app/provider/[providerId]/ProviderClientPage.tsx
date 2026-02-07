@@ -138,7 +138,7 @@ export default function ProviderProfileClientPage({ provider, initialReviews, cu
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
-                            <p>هنوز نظری برای این هنرمند ثبت نشده است. اولین نفر باشید!</p>
+                            <p>هنوز نظری برای این هنرمند ثبت نشده است.{!isOwnerViewing && " اولین نفر باشید!"}</p>
                         </div>
                     )}
                     <ReviewForm provider={provider} user={currentUser} />
