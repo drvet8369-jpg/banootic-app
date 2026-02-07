@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,12 @@ import { Separator } from '@/components/ui/separator';
 import type { Provider } from '@/lib/types';
 import { getProviders, saveProviders } from '@/lib/data';
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const { user, isLoggedIn, login } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
+  const { toast } = useToast();
   const router = useRouter();
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +27,7 @@ export default function ProfilePage() {
   const [editedData, setEditedData] = useState({ name: '', service: '', bio: '' });
 
   const loadProviderData = useCallback(() => {
-    if (user && user.account_type === 'provider') {
+    if (user && user.accountType === 'provider') {
         const allProviders = getProviders();
         let currentProvider = allProviders.find(p => p.phone === user.phone);
         
@@ -53,7 +54,7 @@ export default function ProfilePage() {
 
   const handleSaveChanges = () => {
     if(!editedData.name.trim() || !editedData.service.trim() || !editedData.bio.trim()){
-        toast.error("خطا", { description: "تمام فیلدها باید پر شوند."});
+        toast({ title: "خطا", description: "تمام فیلدها باید پر شوند.", variant: "destructive"});
         return;
     }
 
@@ -72,10 +73,10 @@ export default function ProfilePage() {
             const updatedUser = { ...user, name: editedData.name };
             login(updatedUser); 
         }
-        toast.success("موفق", { description: "اطلاعات شما با موفقیت به‌روز شد."});
+        toast({ title: "موفق", description: "اطلاعات شما با موفقیت به‌روز شد."});
         setMode('viewing');
     } else {
-        toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   }
 
@@ -153,9 +154,9 @@ export default function ProfilePage() {
       p.portfolio.push({ src: imageSrc, aiHint: 'new work' });
     });
     if (success) {
-      toast.success('موفقیت‌آمیز', { description: 'نمونه کار جدید با موفقیت اضافه شد.' });
+      toast({ title: 'موفقیت‌آمیز', description: 'نمونه کار جدید با موفقیت اضافه شد.' });
     } else {
-      toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   };
   
@@ -165,9 +166,9 @@ export default function ProfilePage() {
         p.profileImage.src = newImageSrc;
       });
       if (success) {
-        toast.success('موفقیت‌آمیز', { description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
+        toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت به‌روز شد.' });
       } else {
-        toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
+        toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
       }
   }
 
@@ -176,9 +177,9 @@ export default function ProfilePage() {
       if (p.profileImage) p.profileImage.src = '';
     });
     if (success) {
-      toast.success('موفقیت‌آمیز', { description: 'عکس پروفایل شما با موفقیت حذف شد.' });
+      toast({ title: 'موفقیت‌آمیز', description: 'عکس پروفایل شما با موفقیت حذف شد.' });
     } else {
-      toast.error('خطا', { description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.' });
+      toast({ title: 'خطا', description: 'اطلاعات هنرمند برای به‌روزرسانی یافت نشد.', variant: 'destructive' });
     }
   };
 
@@ -213,7 +214,7 @@ export default function ProfilePage() {
      )
   }
 
-  if (user?.account_type !== 'provider') {
+  if (user?.accountType !== 'provider') {
      return (
         <div className="flex flex-col items-center justify-center text-center py-20 md:py-32">
             <AlertTriangle className="w-24 h-24 text-destructive mb-6" />
@@ -233,7 +234,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="py-12 md:py-20 space-y-8">
+    <div className="mx-auto py-12 md:py-20 space-y-8">
       <Card>
         <div className="grid md:grid-cols-3">
           <div className="md:col-span-1 p-6 flex flex-col items-center text-center border-b md:border-b-0 md:border-l">
