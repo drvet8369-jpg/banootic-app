@@ -46,7 +46,7 @@ export default async function CategoryPage({ params }: PageProps) {
 
       {categoryServices.length > 0 && (
           <div className="mb-16">
-            <h2 className="text-2xl font-headline font-bold text-center mb-8">زیرشاخه‌های تخصصی</h2>
+            <h2 className="text-xl md:text-2xl font-headline font-bold text-center mb-8">زیرشاخه‌های تخصصی</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {categoryServices.map((service) => (
                 <Link href={`/services/${category.slug}/${service.slug}`} key={service.slug}>
@@ -65,7 +65,7 @@ export default async function CategoryPage({ params }: PageProps) {
       <Separator className="my-12" />
 
       <div className='mt-16'>
-        <h2 className="text-2xl font-headline font-bold text-center mb-12">هنرمندان این دسته</h2>
+        <h2 className="text-xl md:text-2xl font-headline font-bold text-center mb-12">هنرمندان این دسته</h2>
         {providers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {providers.map((provider) => (
