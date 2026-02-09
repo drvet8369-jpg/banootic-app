@@ -22,8 +22,8 @@ export default async function ServiceProvidersPage({ params }: { params: { categ
   return (
     <div className="py-12 md:py-20">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold">{service.name}</h1>
-        <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
+        <h1 className="font-headline text-3xl md:text-4xl font-bold">{service.name}</h1>
+        <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
           لیست بهترین هنرمندان متخصص در این رشته را مشاهده کنید.
         </p>
       </div>
