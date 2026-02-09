@@ -1,23 +1,23 @@
-import { services, categories, getProviders } from '@/lib/data';
+import { services, categories } from '@/lib/constants';
+import { getProviders } from '@/lib/data';
 import type { Service, Provider, Category } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import SearchResultCard from '@/components/search-result-card';
 
-export default function ServiceProvidersPage({ params }: { params: { category: string; service: string } }) {
+export default async function ServiceProvidersPage({ params }: { params: { category: string; service: string } }) {
   const { category: categorySlug, service: serviceSlug } = params;
 
   const category = categories.find((c) => c.slug === categorySlug);
-  const service = services.find((s) => s.slug === serviceSlug && s.categorySlug === categorySlug);
+  const service = services.find((s) => s.slug === serviceSlug && s.category_id === category?.id);
     
   if (!category || !service) {
     notFound();
   }
 
   // Fetch data directly on the server
-  const allProviders = getProviders();
-  const serviceProviders = allProviders.filter((p) => p.serviceSlug === serviceSlug);
+  const serviceProviders = await getProviders({serviceSlug: serviceSlug});
 
   return (
     <div className="py-12 md:py-20">
