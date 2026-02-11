@@ -1,2 +1,2 @@
-# banootic-app
+# banootik-app
 Women app
